@@ -1,0 +1,40 @@
+# 编译输出
+*.class
+out/
+build/
+
+# IDE 配置
+.idea/
+*.iml
+.vscode/
+*.swp
+*.swo
+*~
+
+# 操作系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# 数据文件（敏感信息）
+data/
+*.txt
+!IFLOW.md
+!FLATLAF_README.md
+!FLATLAF_UPGRADE_SUMMARY.md
+!ICON_FIX_SUMMARY.md
+
+# 日志文件
+*.log
+
+# 临时文件
+*.tmp
+*.bak
+*.backup
+
+# 备份文件
+backup_*/
+
+# JAR 文件（如果使用包管理器则忽略）
+*.jar
+!flatlaf-3.5.jar

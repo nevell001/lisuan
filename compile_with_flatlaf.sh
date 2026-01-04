@@ -1,0 +1,2 @@
+#!/bin/bash
+javac -cp flatlaf-3.5.jar Category.java Product.java Transaction.java Member.java Promotion.java RechargeRecord.java User.java OperationLog.java Shift.java DataManager.java CashierSystemGUI.java
