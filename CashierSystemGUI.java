@@ -28,6 +28,123 @@ public class CashierSystemGUI extends JFrame {
     private static final Color TEXT_COLOR = new Color(51, 51, 51);           // 文本色
     private static final Color SECONDARY_TEXT = new Color(127, 140, 141);    // 次要文本
 
+    /**
+     * 根据操作系统获取合适的中文字体
+     * @param style 字体样式 (Font.PLAIN, Font.BOLD, Font.ITALIC)
+     * @param size 字体大小
+     * @return 支持中文的 Font 对象
+     */
+    private static Font getChineseFont(int style, int size) {
+        String osName = System.getProperty("os.name", "").toLowerCase();
+
+        // 按优先级尝试字体列表
+        String[] preferredFonts = {
+            // Windows 系统字体
+            "Microsoft YaHei", "微软雅黑", "SimSun", "宋体", "SimHei", "黑体",
+
+            // macOS 系统字体
+            "PingFang SC", "PingFang TC", "Heiti SC", "STHeiti", "Hiragino Sans GB",
+
+            // Linux 开源字体
+            "Noto Sans CJK SC", "Noto Sans CJK TC", "Noto Sans CJK",
+            "WenQuanYi Micro Hei", "WenQuanYi Zen Hei",
+            "Source Han Sans CN", "Source Han Sans",
+            "AR PL UMing CN", "AR PL UKai CN",
+            "UMing CN", "UKai CN",
+
+            // 通用后备字体
+            "DejaVu Sans", "Liberation Sans", "Ubuntu", "Roboto",
+            "Dialog", "SanSerif", "Serif", "Monospaced"
+        };
+
+        // 获取系统中所有可用的字体
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        String[] availableFonts = ge.getAvailableFontFamilyNames();
+
+        // 尝试找到第一个可用的字体
+        for (String preferredFont : preferredFonts) {
+            for (String available : availableFonts) {
+                // 宽松匹配：忽略大小写和空格
+                if (available.replaceAll("\\s+", "").equalsIgnoreCase(preferredFont.replaceAll("\\s+", ""))) {
+                    Font font = new Font(available, style, size);
+                    // 验证字体是否能显示中文
+                    if (canDisplayChinese(font)) {
+                        return font;
+                    }
+                }
+            }
+        }
+
+        // 如果所有字体都不支持中文，使用系统默认字体
+        return new Font(Font.SANS_SERIF, style, size);
+    }
+
+    /**
+     * 检查字体是否能显示中文字符
+     * @param font 要检查的字体
+     * @return 如果字体能显示中文返回 true
+     */
+    private static boolean canDisplayChinese(Font font) {
+        // 测试一些常用的中文字符
+        String testChars = "中文字符测试收银系统";
+        for (char c : testChars.toCharArray()) {
+            if (!font.canDisplay(c)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * 获取通用字体（用于数字、英文和中文）
+     * @param style 字体样式
+     * @param size 字体大小
+     * @return Font 对象
+     */
+    private static Font getGeneralFont(int style, int size) {
+        // 按优先级尝试字体列表（同时包含中英文字体）
+        String[] preferredFonts = {
+            // Windows 系统字体
+            "Microsoft YaHei", "微软雅黑", "Arial", "Segoe UI", "Tahoma", "Verdana",
+            "SimSun", "宋体", "SimHei", "黑体",
+
+            // macOS 系统字体
+            "PingFang SC", "SF Pro Text", "Helvetica Neue", "Helvetica", "Geneva",
+            "Heiti SC", "STHeiti", "Hiragino Sans GB",
+
+            // Linux 开源字体
+            "Noto Sans CJK SC", "Noto Sans CJK TC", "Noto Sans CJK",
+            "WenQuanYi Micro Hei", "WenQuanYi Zen Hei",
+            "Source Han Sans CN", "Source Han Sans",
+            "DejaVu Sans", "Liberation Sans", "Ubuntu", "Roboto",
+            "Droid Sans", "Bitstream Vera Sans",
+
+            // 通用后备字体
+            "Dialog", "SanSerif", "SansSerif"
+        };
+
+        // 获取系统中所有可用的字体
+        GraphicsEnvironment ge = GraphicsEnvironment.getLocalGraphicsEnvironment();
+        String[] availableFonts = ge.getAvailableFontFamilyNames();
+
+        // 尝试找到第一个可用的字体
+        for (String preferredFont : preferredFonts) {
+            for (String available : availableFonts) {
+                // 宽松匹配：忽略大小写和空格
+                if (available.replaceAll("\\s+", "").equalsIgnoreCase(preferredFont.replaceAll("\\s+", ""))) {
+                    Font font = new Font(available, style, size);
+                    // 验证字体是否能显示中文
+                    if (canDisplayChinese(font)) {
+                        return font;
+                    }
+                }
+            }
+        }
+
+        // 如果找不到，使用系统默认字体
+        return new Font(Font.SANS_SERIF, style, size);
+    }
+
     private List<Product> cart = new ArrayList<>();
     private Map<String, Product> inventory = new HashMap<>();
     private List<Transaction> transactions = new ArrayList<>();
@@ -67,6 +184,31 @@ public class CashierSystemGUI extends JFrame {
             try {
                 // 使用FlatLaf Light主题
                 FlatLightLaf.setup();
+
+                // 设置全局默认字体，确保中文正确显示
+                Font defaultFont = getChineseFont(Font.PLAIN, 12);
+                UIManager.put("Label.font", defaultFont);
+                UIManager.put("Button.font", defaultFont);
+                UIManager.put("TextField.font", defaultFont);
+                UIManager.put("TextArea.font", defaultFont);
+                UIManager.put("Table.font", defaultFont);
+                UIManager.put("TableHeader.font", getChineseFont(Font.BOLD, 12));
+                UIManager.put("ComboBox.font", defaultFont);
+                UIManager.put("CheckBox.font", defaultFont);
+                UIManager.put("RadioButton.font", defaultFont);
+                UIManager.put("Panel.font", defaultFont);
+                UIManager.put("TitledBorder.font", defaultFont);
+                UIManager.put("ToolTip.font", defaultFont);
+                UIManager.put("TabbedPane.font", getChineseFont(Font.BOLD, 12));
+                UIManager.put("Menu.font", defaultFont);
+                UIManager.put("MenuItem.font", defaultFont);
+
+                // 设置对话框字体
+                UIManager.put("OptionPane.font", defaultFont);
+                UIManager.put("OptionPane.buttonFont", defaultFont);
+                UIManager.put("OptionPane.messageFont", defaultFont);
+                UIManager.put("OptionPane.buttonFont", defaultFont);
+
             } catch (Exception e) {
                 e.printStackTrace();
             }
@@ -100,7 +242,7 @@ public class CashierSystemGUI extends JFrame {
         gbc.gridy = 0;
         gbc.gridwidth = 2;
         JLabel titleLabel = new JLabel("收银系统");
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 24));
+        titleLabel.setFont(getChineseFont(Font.BOLD, 24));
         titleLabel.setForeground(new Color(74, 144, 226));
         panel.add(titleLabel, gbc);
 
@@ -111,7 +253,7 @@ public class CashierSystemGUI extends JFrame {
 
         gbc.gridx = 1;
         JTextField usernameField = new JTextField(20);
-        usernameField.setFont(new Font("Arial", Font.PLAIN, 13));
+        usernameField.setFont(getChineseFont(Font.PLAIN, 13));
         panel.add(usernameField, gbc);
 
         // 密码
@@ -121,7 +263,7 @@ public class CashierSystemGUI extends JFrame {
 
         gbc.gridx = 1;
         JPasswordField passwordField = new JPasswordField(20);
-        passwordField.setFont(new Font("Arial", Font.PLAIN, 13));
+        passwordField.setFont(getChineseFont(Font.PLAIN, 13));
         panel.add(passwordField, gbc);
 
         // 按钮
@@ -131,13 +273,13 @@ public class CashierSystemGUI extends JFrame {
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
 
         JButton loginButton = new JButton("登录");
-        loginButton.setFont(new Font("Arial", Font.PLAIN, 13));
+        loginButton.setFont(getChineseFont(Font.PLAIN, 13));
         loginButton.setBackground(new Color(46, 204, 113));
         loginButton.setForeground(Color.WHITE);
         loginButton.setFocusPainted(false);
 
         JButton exitButton = new JButton("退出");
-        exitButton.setFont(new Font("Arial", Font.PLAIN, 13));
+        exitButton.setFont(getChineseFont(Font.PLAIN, 13));
         exitButton.setBackground(new Color(231, 76, 60));
         exitButton.setForeground(Color.WHITE);
         exitButton.setFocusPainted(false);
@@ -215,7 +357,7 @@ public class CashierSystemGUI extends JFrame {
         });
 
         JTabbedPane tabbedPane = new JTabbedPane();
-        tabbedPane.setFont(new Font("微软雅黑", Font.BOLD, 13));
+        tabbedPane.setFont(getChineseFont(Font.BOLD, 13));
 
         tabbedPane.addTab("库存管理", createInventoryPanel());
         tabbedPane.addTab("购物车 & 结账", createCartPanel());
@@ -230,11 +372,11 @@ public class CashierSystemGUI extends JFrame {
         
         // 系统菜单
         JMenu systemMenu = new JMenu("系统");
-        systemMenu.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        systemMenu.setFont(getChineseFont(Font.PLAIN, 13));
         
         // 退出登录菜单项
         JMenuItem logoutMenuItem = new JMenuItem("退出登录");
-        logoutMenuItem.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        logoutMenuItem.setFont(getChineseFont(Font.PLAIN, 13));
         logoutMenuItem.addActionListener(e -> logout());
         systemMenu.add(logoutMenuItem);
         
@@ -242,17 +384,17 @@ public class CashierSystemGUI extends JFrame {
         
         // 管理菜单
         JMenu manageMenu = new JMenu("管理");
-        manageMenu.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        manageMenu.setFont(getChineseFont(Font.PLAIN, 13));
         
         // 用户管理菜单项
         JMenuItem userManageMenuItem = new JMenuItem("用户管理");
-        userManageMenuItem.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        userManageMenuItem.setFont(getChineseFont(Font.PLAIN, 13));
         userManageMenuItem.addActionListener(e -> showUserManagementDialog());
         manageMenu.add(userManageMenuItem);
         
         // 交接班管理菜单项
         JMenuItem shiftManageMenuItem = new JMenuItem("交接班管理");
-        shiftManageMenuItem.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        shiftManageMenuItem.setFont(getChineseFont(Font.PLAIN, 13));
         shiftManageMenuItem.addActionListener(e -> showShiftManagementDialog());
         manageMenu.add(shiftManageMenuItem);
         
@@ -260,11 +402,11 @@ public class CashierSystemGUI extends JFrame {
         
         // 数据菜单
         JMenu dataMenu = new JMenu("数据");
-        dataMenu.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        dataMenu.setFont(getChineseFont(Font.PLAIN, 13));
         
         // 备份数据菜单项
         JMenuItem backupDataMenuItem = new JMenuItem("备份数据");
-        backupDataMenuItem.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        backupDataMenuItem.setFont(getChineseFont(Font.PLAIN, 13));
         backupDataMenuItem.addActionListener(e -> backupData());
         dataMenu.add(backupDataMenuItem);
         
@@ -1098,7 +1240,7 @@ public class CashierSystemGUI extends JFrame {
         rightInfoPanel.setBackground(new Color(255, 255, 255));
         
         JLabel shortcutHint = new JLabel("💡 快捷键: F1-添加 F2-编辑 F3-删除 Esc-清空");
-        shortcutHint.setFont(new Font("Arial", Font.PLAIN, 11));
+        shortcutHint.setFont(getGeneralFont(Font.PLAIN, 11));
         shortcutHint.setForeground(new Color(107, 114, 128));
         
         rightInfoPanel.add(shortcutHint);
@@ -1115,11 +1257,11 @@ public class CashierSystemGUI extends JFrame {
         ));
 
         JLabel quickLabel = new JLabel("🔍 扫码/搜索商品:");
-        quickLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        quickLabel.setFont(getGeneralFont(Font.BOLD, 13));
         quickLabel.setForeground(new Color(34, 197, 94));
         
         JTextField quickInputField = new JTextField();
-        quickInputField.setFont(new Font("Arial", Font.PLAIN, 14));
+        quickInputField.setFont(getGeneralFont(Font.PLAIN, 14));
         quickInputField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(209, 213, 219), 1),
             BorderFactory.createEmptyBorder(8, 12, 8, 12)
@@ -1184,24 +1326,24 @@ public class CashierSystemGUI extends JFrame {
         cartHeader.setBorder(BorderFactory.createEmptyBorder(12, 15, 12, 15));
 
         JLabel cartTitle = new JLabel("🛒 购物车");
-        cartTitle.setFont(new Font("Arial", Font.BOLD, 14));
+        cartTitle.setFont(getGeneralFont(Font.BOLD, 14));
         cartTitle.setForeground(Color.WHITE);
 
         JPanel cartStats = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
         cartStats.setBackground(new Color(59, 130, 246));
         
         cartTypeCountLabel = new JLabel("0种");
-        cartTypeCountLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        cartTypeCountLabel.setFont(getGeneralFont(Font.BOLD, 12));
         cartTypeCountLabel.setForeground(Color.WHITE);
         JLabel typeLabel = new JLabel("种商品");
-        typeLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        typeLabel.setFont(getGeneralFont(Font.PLAIN, 12));
         typeLabel.setForeground(new Color(200, 200, 200));
         
         cartTotalQuantityLabel = new JLabel("0件");
-        cartTotalQuantityLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        cartTotalQuantityLabel.setFont(getGeneralFont(Font.BOLD, 12));
         cartTotalQuantityLabel.setForeground(Color.WHITE);
         JLabel quantityLabel = new JLabel("总数");
-        quantityLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        quantityLabel.setFont(getGeneralFont(Font.PLAIN, 12));
         quantityLabel.setForeground(new Color(200, 200, 200));
 
         cartStats.add(cartTypeCountLabel);
@@ -1242,11 +1384,11 @@ public class CashierSystemGUI extends JFrame {
         footerLeft.setBackground(new Color(255, 255, 255));
         
         JLabel footerLabel = new JLabel("💰 购物车合计:");
-        footerLabel.setFont(new Font("Arial", Font.BOLD, 13));
+        footerLabel.setFont(getGeneralFont(Font.BOLD, 13));
         footerLabel.setForeground(new Color(107, 114, 128));
         
         cartTotalLabel = new JLabel("¥0.00");
-        cartTotalLabel.setFont(new Font("Arial", Font.BOLD, 20));
+        cartTotalLabel.setFont(getGeneralFont(Font.BOLD, 20));
         cartTotalLabel.setForeground(new Color(239, 68, 68));
 
         footerLeft.add(footerLabel);
@@ -1274,7 +1416,7 @@ public class CashierSystemGUI extends JFrame {
         memberHeader.setBackground(new Color(255, 255, 255));
         
         JLabel memberTitle = new JLabel("👤 会员信息");
-        memberTitle.setFont(new Font("Arial", Font.BOLD, 13));
+        memberTitle.setFont(getGeneralFont(Font.BOLD, 13));
         memberTitle.setForeground(new Color(59, 130, 246));
 
         memberHeader.add(memberTitle, BorderLayout.WEST);
@@ -1287,7 +1429,7 @@ public class CashierSystemGUI extends JFrame {
         for (Member member : members.values()) {
             memberComboBox.addItem(member.phone + " - " + member.name + " (" + member.level + ")");
         }
-        memberComboBox.setFont(new Font("Arial", Font.PLAIN, 12));
+        memberComboBox.setFont(getGeneralFont(Font.PLAIN, 12));
         memberComboBox.setBorder(BorderFactory.createLineBorder(new Color(209, 213, 219), 1));
 
         JButton memberManageButton = createStyledButton("管理", new Color(59, 130, 246));
@@ -1297,7 +1439,7 @@ public class CashierSystemGUI extends JFrame {
         memberSelectPanel.add(memberManageButton);
 
         JLabel currentMemberLabel = new JLabel("当前: 无会员");
-        currentMemberLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        currentMemberLabel.setFont(getGeneralFont(Font.PLAIN, 12));
         currentMemberLabel.setForeground(new Color(107, 114, 128));
 
         memberCard.add(memberHeader, BorderLayout.NORTH);
@@ -1316,7 +1458,7 @@ public class CashierSystemGUI extends JFrame {
         amountHeader.setBackground(new Color(255, 255, 255));
         
         JLabel amountTitle = new JLabel("💵 金额明细");
-        amountTitle.setFont(new Font("Arial", Font.BOLD, 13));
+        amountTitle.setFont(getGeneralFont(Font.BOLD, 13));
         amountTitle.setForeground(new Color(59, 130, 246));
 
         amountHeader.add(amountTitle, BorderLayout.WEST);
@@ -1325,52 +1467,52 @@ public class CashierSystemGUI extends JFrame {
         amountPanel.setBackground(new Color(255, 255, 255));
 
         JLabel checkoutTypeCountLabel = new JLabel("商品种类");
-        checkoutTypeCountLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        checkoutTypeCountLabel.setFont(getGeneralFont(Font.PLAIN, 12));
         checkoutTypeCountLabel.setForeground(new Color(107, 114, 128));
         JLabel checkoutTypeCountValue = new JLabel("0种");
-        checkoutTypeCountValue.setFont(new Font("Arial", Font.BOLD, 12));
+        checkoutTypeCountValue.setFont(getGeneralFont(Font.BOLD, 12));
         checkoutTypeCountValue.setForeground(new Color(34, 197, 94));
 
         JLabel checkoutQuantityLabel = new JLabel("商品总数");
-        checkoutQuantityLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        checkoutQuantityLabel.setFont(getGeneralFont(Font.PLAIN, 12));
         checkoutQuantityLabel.setForeground(new Color(107, 114, 128));
         JLabel checkoutQuantityValue = new JLabel("0件");
-        checkoutQuantityValue.setFont(new Font("Arial", Font.BOLD, 12));
+        checkoutQuantityValue.setFont(getGeneralFont(Font.BOLD, 12));
         checkoutQuantityValue.setForeground(new Color(34, 197, 94));
 
         JLabel subtotalLabel = new JLabel("小计");
-        subtotalLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        subtotalLabel.setFont(getGeneralFont(Font.PLAIN, 12));
         subtotalLabel.setForeground(new Color(107, 114, 128));
         JLabel subtotalValue = new JLabel("¥0.00");
-        subtotalValue.setFont(new Font("Arial", Font.BOLD, 12));
+        subtotalValue.setFont(getGeneralFont(Font.BOLD, 12));
         subtotalValue.setForeground(new Color(59, 130, 246));
 
         JLabel discountLabel = new JLabel("会员折扣");
-        discountLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        discountLabel.setFont(getGeneralFont(Font.PLAIN, 12));
         discountLabel.setForeground(new Color(107, 114, 128));
         JLabel discountValue = new JLabel("-¥0.00");
-        discountValue.setFont(new Font("Arial", Font.BOLD, 12));
+        discountValue.setFont(getGeneralFont(Font.BOLD, 12));
         discountValue.setForeground(new Color(34, 197, 94));
 
         JLabel taxLabel = new JLabel("税费");
-        taxLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        taxLabel.setFont(getGeneralFont(Font.PLAIN, 12));
         taxLabel.setForeground(new Color(107, 114, 128));
         JLabel taxValue = new JLabel("¥0.00");
-        taxValue.setFont(new Font("Arial", Font.BOLD, 12));
+        taxValue.setFont(getGeneralFont(Font.BOLD, 12));
         taxValue.setForeground(new Color(245, 158, 11));
 
         JLabel totalLabel = new JLabel("应付金额");
-        totalLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        totalLabel.setFont(getGeneralFont(Font.BOLD, 12));
         totalLabel.setForeground(new Color(107, 114, 128));
         JLabel totalValue = new JLabel("¥0.00");
-        totalValue.setFont(new Font("Arial", Font.BOLD, 16));
+        totalValue.setFont(getGeneralFont(Font.BOLD, 16));
         totalValue.setForeground(new Color(239, 68, 68));
 
         JLabel changeLabel = new JLabel("找零");
-        changeLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        changeLabel.setFont(getGeneralFont(Font.PLAIN, 12));
         changeLabel.setForeground(new Color(107, 114, 128));
         JLabel changeValue = new JLabel("¥0.00");
-        changeValue.setFont(new Font("Arial", Font.BOLD, 14));
+        changeValue.setFont(getGeneralFont(Font.BOLD, 14));
         changeValue.setForeground(new Color(34, 197, 94));
 
         amountPanel.add(checkoutTypeCountLabel);
@@ -1403,7 +1545,7 @@ public class CashierSystemGUI extends JFrame {
         paymentHeader.setBackground(new Color(255, 255, 255));
         
         JLabel paymentTitle = new JLabel("💳 收款");
-        paymentTitle.setFont(new Font("Arial", Font.BOLD, 13));
+        paymentTitle.setFont(getGeneralFont(Font.BOLD, 13));
         paymentTitle.setForeground(new Color(59, 130, 246));
 
         paymentHeader.add(paymentTitle, BorderLayout.WEST);
@@ -1417,14 +1559,14 @@ public class CashierSystemGUI extends JFrame {
         gbc.gridx = 0;
         gbc.gridy = 0;
         JLabel paymentMethodLabel = new JLabel("支付方式:");
-        paymentMethodLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        paymentMethodLabel.setFont(getGeneralFont(Font.PLAIN, 12));
         paymentMethodLabel.setForeground(new Color(107, 114, 128));
         paymentInputPanel.add(paymentMethodLabel, gbc);
 
         gbc.gridx = 1;
         gbc.weightx = 1.0;
         JComboBox<String> paymentMethodComboBox = new JComboBox<>(new String[]{"现金", "微信支付", "支付宝", "银行卡", "组合支付"});
-        paymentMethodComboBox.setFont(new Font("Arial", Font.PLAIN, 12));
+        paymentMethodComboBox.setFont(getGeneralFont(Font.PLAIN, 12));
         paymentMethodComboBox.setBorder(BorderFactory.createLineBorder(new Color(209, 213, 219), 1));
         paymentInputPanel.add(paymentMethodComboBox, gbc);
 
@@ -1432,14 +1574,14 @@ public class CashierSystemGUI extends JFrame {
         gbc.gridy = 1;
         gbc.weightx = 0.0;
         JLabel receivedLabel = new JLabel("实收金额:");
-        receivedLabel.setFont(new Font("Arial", Font.PLAIN, 12));
+        receivedLabel.setFont(getGeneralFont(Font.PLAIN, 12));
         receivedLabel.setForeground(new Color(107, 114, 128));
         paymentInputPanel.add(receivedLabel, gbc);
 
         gbc.gridx = 1;
         gbc.weightx = 1.0;
         JTextField receivedField = new JTextField();
-        receivedField.setFont(new Font("Arial", Font.PLAIN, 13));
+        receivedField.setFont(getGeneralFont(Font.PLAIN, 13));
         receivedField.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(209, 213, 219), 1),
             BorderFactory.createEmptyBorder(8, 12, 8, 12)
@@ -1737,7 +1879,7 @@ public class CashierSystemGUI extends JFrame {
         // 交易信息
         JTextArea infoArea = new JTextArea();
         infoArea.setEditable(false);
-        infoArea.setFont(new Font("Arial", Font.PLAIN, 13));
+        infoArea.setFont(getGeneralFont(Font.PLAIN, 13));
         String discountText = discountAmount > 0 ? "\n总优惠金额: ¥" + String.format("%.2f", discountAmount) : "";
         infoArea.setText(
             "交易成功！\n\n" +
@@ -1880,7 +2022,7 @@ public class CashierSystemGUI extends JFrame {
                         g2d.translate(pageFormat.getImageableX(), pageFormat.getImageableY());
 
                         // 设置字体
-                        g2d.setFont(new Font("微软雅黑", Font.PLAIN, 10));
+                        g2d.setFont(getChineseFont(Font.PLAIN, 10));
 
                         // 绘制小票内容
                         String[] lines = receiptContent.split("\n");
@@ -1913,7 +2055,7 @@ public class CashierSystemGUI extends JFrame {
         // 小票内容
         JTextArea receiptArea = new JTextArea();
         receiptArea.setEditable(false);
-        receiptArea.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+        receiptArea.setFont(getChineseFont(Font.PLAIN, 12));
         receiptArea.setText(generateReceiptContent(transactionId, total, received, change, tax, memberInfo, promotionInfo, items, discountedSubtotal, discountAmount));
 
         JScrollPane scrollPane = new JScrollPane(receiptArea);
@@ -2000,15 +2142,15 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         statsPanel.setBorder(BorderFactory.createTitledBorder("交易统计"));
 
         transactionTotalRevenueLabel = new JLabel("总销售额: ¥0.00");
-        transactionTotalRevenueLabel.setFont(new Font("微软雅黑", Font.BOLD, 12));
+        transactionTotalRevenueLabel.setFont(getChineseFont(Font.BOLD, 12));
         transactionTotalRevenueLabel.setForeground(SUCCESS_COLOR);
 
         transactionCountLabel = new JLabel("交易次数: 0次");
-        transactionCountLabel.setFont(new Font("微软雅黑", Font.BOLD, 12));
+        transactionCountLabel.setFont(getChineseFont(Font.BOLD, 12));
         transactionCountLabel.setForeground(INFO_COLOR);
 
         transactionAvgRevenueLabel = new JLabel("平均交易额: ¥0.00");
-        transactionAvgRevenueLabel.setFont(new Font("微软雅黑", Font.BOLD, 12));
+        transactionAvgRevenueLabel.setFont(getChineseFont(Font.BOLD, 12));
         transactionAvgRevenueLabel.setForeground(PURPLE_COLOR);
 
         transactionTotalTaxLabel = new JLabel("总税费: ¥0.00");
@@ -2068,26 +2210,26 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 0;
         gbc.gridy = 0;
         JLabel taxTitleLabel = new JLabel("税率设置:");
-        taxTitleLabel.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        taxTitleLabel.setFont(getChineseFont(Font.BOLD, 14));
         taxTitleLabel.setForeground(PRIMARY_COLOR);
         panel.add(taxTitleLabel, gbc);
 
         gbc.gridx = 1;
         taxRateLabel = new JLabel("当前税率: 0%");
-        taxRateLabel.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        taxRateLabel.setFont(getChineseFont(Font.BOLD, 14));
         taxRateLabel.setForeground(SUCCESS_COLOR);
         panel.add(taxRateLabel, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 1;
         JLabel newTaxLabel = new JLabel("设置新税率 (%):");
-        newTaxLabel.setFont(new Font("微软雅黑", Font.BOLD, 13));
+        newTaxLabel.setFont(getChineseFont(Font.BOLD, 13));
         newTaxLabel.setForeground(TEXT_COLOR);
         panel.add(newTaxLabel, gbc);
 
         gbc.gridx = 1;
         JTextField taxRateField = new JTextField(15);
-        taxRateField.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        taxRateField.setFont(getChineseFont(Font.PLAIN, 13));
         taxRateField.setBorder(BorderFactory.createLineBorder(BORDER_COLOR, 1));
         panel.add(taxRateField, gbc);
 
@@ -2105,7 +2247,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.weighty = 0.0;
 
         JLabel themeTitleLabel = new JLabel("主题设置:");
-        themeTitleLabel.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        themeTitleLabel.setFont(getChineseFont(Font.BOLD, 14));
         themeTitleLabel.setForeground(PRIMARY_COLOR);
         panel.add(themeTitleLabel, gbc);
 
@@ -2115,7 +2257,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
             "深色主题 (Dark)",
             "IntelliJ主题"
         });
-        themeComboBox.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        themeComboBox.setFont(getChineseFont(Font.PLAIN, 13));
         panel.add(themeComboBox, gbc);
 
         gbc.gridx = 1;
@@ -2136,7 +2278,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         JButton backupButton = createStyledButton("备份数据", INFO_COLOR);
         JButton restoreButton = createStyledButton("恢复数据", PURPLE_COLOR);
         JLabel autoSaveLabel = new JLabel("自动保存: 已启用");
-        autoSaveLabel.setFont(new Font("微软雅黑", Font.BOLD, 12));
+        autoSaveLabel.setFont(getChineseFont(Font.BOLD, 12));
         autoSaveLabel.setForeground(SUCCESS_COLOR);
 
         backupRestorePanel.add(backupButton);
@@ -2184,7 +2326,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
             "提示: 税费由商家承担，不计入消费者应付金额"
         );
         infoText.setEditable(false);
-        infoText.setFont(new Font("微软雅黑", Font.PLAIN, 12));
+        infoText.setFont(getChineseFont(Font.PLAIN, 12));
         infoText.setBorder(BorderFactory.createTitledBorder("使用说明"));
         panel.add(infoText, gbc);
 
@@ -2347,7 +2489,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
     private JButton createStyledButton(String text, Color color) {
         JButton button = new JButton(text);
-        button.setFont(new Font("微软雅黑", Font.PLAIN, 13));
+        button.setFont(getChineseFont(Font.PLAIN, 13));
         button.setPreferredSize(new Dimension(120, 32));
         
         // 设置背景色和前景色，确保按钮可见
@@ -2366,10 +2508,10 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         table.setGridColor(BORDER_COLOR);
         table.setBackground(CARD_BACKGROUND);
         table.setForeground(TEXT_COLOR);
-        table.setFont(new Font("Arial", Font.PLAIN, 12));
+        table.setFont(getGeneralFont(Font.PLAIN, 12));
 
         // 表头样式
-        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
+        table.getTableHeader().setFont(getGeneralFont(Font.BOLD, 13));
         table.getTableHeader().setBackground(PRIMARY_COLOR);
         table.getTableHeader().setForeground(Color.WHITE);
         table.getTableHeader().setOpaque(true);
@@ -2451,7 +2593,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
             statsLabel.setText("共有 " + warningProducts.size() + " 种商品需要补货，请及时处理！");
             statsLabel.setForeground(DANGER_COLOR);
         }
-        statsLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        statsLabel.setFont(getGeneralFont(Font.BOLD, 14));
 
         panel.add(statsLabel, BorderLayout.NORTH);
         panel.add(scrollPane, BorderLayout.CENTER);
@@ -2493,7 +2635,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         for (Product product : products) {
             model.addRow(new Object[]{product.name, product.quantity, ""});
             JTextField field = new JTextField(10);
-            field.setFont(new Font("Arial", Font.PLAIN, 13));
+            field.setFont(getGeneralFont(Font.PLAIN, 13));
             quantityFields.add(field);
         }
 
@@ -2585,7 +2727,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField nameField = new JTextField(25);
-        nameField.setFont(new Font("Arial", Font.PLAIN, 13));
+        nameField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(nameField, gbc);
 
         gbc.gridx = 0;
@@ -2595,9 +2737,9 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JPanel barcodePanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         JTextField barcodeField = new JTextField(20);
-        barcodeField.setFont(new Font("Arial", Font.PLAIN, 13)); // 使用Arial字体，避免数字显示问题
+        barcodeField.setFont(getGeneralFont(Font.PLAIN, 13)); // 使用Arial字体，避免数字显示问题
         JButton generateBarcodeButton = new JButton("生成条形码");
-        generateBarcodeButton.setFont(new Font("Arial", Font.PLAIN, 11));
+        generateBarcodeButton.setFont(getGeneralFont(Font.PLAIN, 11));
         barcodePanel.add(barcodeField);
         barcodePanel.add(generateBarcodeButton);
         panel.add(barcodePanel, gbc);
@@ -2608,7 +2750,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField priceField = new JTextField(25);
-        priceField.setFont(new Font("Arial", Font.PLAIN, 13));
+        priceField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(priceField, gbc);
 
         gbc.gridx = 0;
@@ -2617,7 +2759,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField costField = new JTextField(25);
-        costField.setFont(new Font("Arial", Font.PLAIN, 13));
+        costField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(costField, gbc);
 
         gbc.gridx = 0;
@@ -2631,7 +2773,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         JPanel quantityPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 0));
         JTextField quantityField = new JTextField(15);
         quantityField.setPreferredSize(new Dimension(100, 25));
-        quantityField.setFont(new Font("Arial", Font.PLAIN, 13));
+        quantityField.setFont(getGeneralFont(Font.PLAIN, 13));
         JButton plusButton = new JButton("+");
         plusButton.setPreferredSize(new Dimension(30, 25));
         JButton minusButton = new JButton("-");
@@ -2654,7 +2796,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         for (Category category : categories) {
             categoryComboBox.addItem(category.name);
         }
-        categoryComboBox.setFont(new Font("Arial", Font.PLAIN, 13));
+        categoryComboBox.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(categoryComboBox, gbc);
 
         gbc.gridx = 0;
@@ -2663,7 +2805,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JComboBox<String> unitComboBox = new JComboBox<>(new String[]{"个", "kg", "瓶", "盒", "包", "箱", "件", "套", "条", "双"});
-        unitComboBox.setFont(new Font("Arial", Font.PLAIN, 13));
+        unitComboBox.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(unitComboBox, gbc);
 
         gbc.gridx = 0;
@@ -2672,7 +2814,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField brandField = new JTextField(25);
-        brandField.setFont(new Font("Arial", Font.PLAIN, 13));
+        brandField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(brandField, gbc);
 
         gbc.gridx = 0;
@@ -2681,7 +2823,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField supplierField = new JTextField(25);
-        supplierField.setFont(new Font("Arial", Font.PLAIN, 13));
+        supplierField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(supplierField, gbc);
 
         gbc.gridx = 0;
@@ -2690,7 +2832,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField specField = new JTextField(25);
-        specField.setFont(new Font("Arial", Font.PLAIN, 13));
+        specField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(specField, gbc);
 
         gbc.gridx = 0;
@@ -2700,7 +2842,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField minStockField = new JTextField(25);
         minStockField.setText("10");
-        minStockField.setFont(new Font("Arial", Font.PLAIN, 13));
+        minStockField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(minStockField, gbc);
 
         gbc.gridx = 0;
@@ -2715,7 +2857,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         JTextArea descriptionArea = new JTextArea(3, 25);
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
-        descriptionArea.setFont(new Font("Arial", Font.PLAIN, 13));
+        descriptionArea.setFont(getGeneralFont(Font.PLAIN, 13));
         JScrollPane descScrollPane = new JScrollPane(descriptionArea);
         panel.add(descScrollPane, gbc);
 
@@ -2746,7 +2888,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridy = 14;
         gbc.gridwidth = 2;
         JLabel tipLabel = new JLabel("提示: 带 * 号的为必填项");
-        tipLabel.setFont(new Font("微软雅黑", Font.PLAIN, 11));
+        tipLabel.setFont(getChineseFont(Font.PLAIN, 11));
         tipLabel.setForeground(GRAY_COLOR);
         panel.add(tipLabel, gbc);
 
@@ -2980,7 +3122,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         nameField.setText(product.name);
         nameField.setEditable(false); // 商品名称不可修改
         nameField.setBackground(new Color(240, 240, 240));
-        nameField.setFont(new Font("Arial", Font.PLAIN, 13));
+        nameField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(nameField, gbc);
 
         gbc.gridx = 0;
@@ -2993,7 +3135,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         barcodeField.setText(product.barcode != null ? product.barcode : "");
         barcodeField.setEditable(false); // 条形码不可修改
         barcodeField.setBackground(new Color(240, 240, 240));
-        barcodeField.setFont(new Font("Arial", Font.PLAIN, 13));
+        barcodeField.setFont(getGeneralFont(Font.PLAIN, 13));
         barcodePanel.add(barcodeField);
         panel.add(barcodePanel, gbc);
 
@@ -3004,7 +3146,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField priceField = new JTextField(25);
         priceField.setText(String.format("%.2f", product.price));
-        priceField.setFont(new Font("Arial", Font.PLAIN, 13));
+        priceField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(priceField, gbc);
 
         gbc.gridx = 0;
@@ -3014,7 +3156,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField costField = new JTextField(25);
         costField.setText(String.format("%.2f", product.cost));
-        costField.setFont(new Font("Arial", Font.PLAIN, 13));
+        costField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(costField, gbc);
 
         gbc.gridx = 0;
@@ -3029,7 +3171,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         JTextField quantityField = new JTextField(15);
         quantityField.setPreferredSize(new Dimension(100, 25));
         quantityField.setText(String.valueOf(product.quantity));
-        quantityField.setFont(new Font("Arial", Font.PLAIN, 13));
+        quantityField.setFont(getGeneralFont(Font.PLAIN, 13));
         JButton plusButton = new JButton("+");
         plusButton.setPreferredSize(new Dimension(30, 25));
         JButton minusButton = new JButton("-");
@@ -3055,7 +3197,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         if (product.category != null) {
             categoryComboBox.setSelectedItem(product.category);
         }
-        categoryComboBox.setFont(new Font("Arial", Font.PLAIN, 13));
+        categoryComboBox.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(categoryComboBox, gbc);
 
         gbc.gridx = 0;
@@ -3067,7 +3209,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         if (product.unit != null) {
             unitComboBox.setSelectedItem(product.unit);
         }
-        unitComboBox.setFont(new Font("Arial", Font.PLAIN, 13));
+        unitComboBox.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(unitComboBox, gbc);
 
         gbc.gridx = 0;
@@ -3077,7 +3219,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField brandField = new JTextField(25);
         brandField.setText(product.brand != null ? product.brand : "");
-        brandField.setFont(new Font("Arial", Font.PLAIN, 13));
+        brandField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(brandField, gbc);
 
         gbc.gridx = 0;
@@ -3087,7 +3229,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField supplierField = new JTextField(25);
         supplierField.setText(product.supplier != null ? product.supplier : "");
-        supplierField.setFont(new Font("Arial", Font.PLAIN, 13));
+        supplierField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(supplierField, gbc);
 
         gbc.gridx = 0;
@@ -3097,7 +3239,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField specField = new JTextField(25);
         specField.setText(product.spec != null ? product.spec : "");
-        specField.setFont(new Font("Arial", Font.PLAIN, 13));
+        specField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(specField, gbc);
 
         gbc.gridx = 0;
@@ -3107,7 +3249,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField minStockField = new JTextField(25);
         minStockField.setText(String.valueOf(product.minStock));
-        minStockField.setFont(new Font("Arial", Font.PLAIN, 13));
+        minStockField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(minStockField, gbc);
 
         gbc.gridx = 0;
@@ -3122,7 +3264,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         JTextArea descriptionArea = new JTextArea(3, 25);
         descriptionArea.setLineWrap(true);
         descriptionArea.setWrapStyleWord(true);
-        descriptionArea.setFont(new Font("Arial", Font.PLAIN, 13));
+        descriptionArea.setFont(getGeneralFont(Font.PLAIN, 13));
         descriptionArea.setText(product.description != null ? product.description : "");
         JScrollPane descScrollPane = new JScrollPane(descriptionArea);
         panel.add(descScrollPane, gbc);
@@ -3152,7 +3294,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridy = 14;
         gbc.gridwidth = 2;
         JLabel tipLabel = new JLabel("提示: 商品名称和条形码不可修改");
-        tipLabel.setFont(new Font("微软雅黑", Font.PLAIN, 11));
+        tipLabel.setFont(getChineseFont(Font.PLAIN, 11));
         tipLabel.setForeground(GRAY_COLOR);
         panel.add(tipLabel, gbc);
 
@@ -4211,7 +4353,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
             gbc.gridx = 1;
             JTextField phoneField = new JTextField(20);
-            phoneField.setFont(new Font("Arial", Font.PLAIN, 13));
+            phoneField.setFont(getGeneralFont(Font.PLAIN, 13));
             addPanel.add(phoneField, gbc);
 
             gbc.gridx = 0;
@@ -4220,7 +4362,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
             gbc.gridx = 1;
             JTextField nameField = new JTextField(20);
-            nameField.setFont(new Font("Arial", Font.PLAIN, 13));
+            nameField.setFont(getGeneralFont(Font.PLAIN, 13));
             addPanel.add(nameField, gbc);
 
             gbc.gridx = 0;
@@ -4230,7 +4372,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
             gbc.gridx = 1;
             JTextField balanceField = new JTextField(20);
             balanceField.setText("0.00");
-            balanceField.setFont(new Font("Arial", Font.PLAIN, 13));
+            balanceField.setFont(getGeneralFont(Font.PLAIN, 13));
             addPanel.add(balanceField, gbc);
 
             gbc.gridx = 0;
@@ -4239,7 +4381,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
             gbc.gridx = 1;
             JTextField birthdayField = new JTextField(20);
-            birthdayField.setFont(new Font("Arial", Font.PLAIN, 13));
+            birthdayField.setFont(getGeneralFont(Font.PLAIN, 13));
             addPanel.add(birthdayField, gbc);
 
             gbc.gridx = 0;
@@ -4371,7 +4513,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
             gbc.gridx = 1;
             JTextField nameField = new JTextField(20);
             nameField.setText(selectedMember.name);
-            nameField.setFont(new Font("Arial", Font.PLAIN, 13));
+            nameField.setFont(getGeneralFont(Font.PLAIN, 13));
             editPanel.add(nameField, gbc);
 
             gbc.gridx = 0;
@@ -4381,7 +4523,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
             gbc.gridx = 1;
             JTextField pointsField = new JTextField(20);
             pointsField.setText(String.format("%.0f", selectedMember.points));
-            pointsField.setFont(new Font("Arial", Font.PLAIN, 13));
+            pointsField.setFont(getGeneralFont(Font.PLAIN, 13));
             editPanel.add(pointsField, gbc);
 
             gbc.gridx = 0;
@@ -4391,7 +4533,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
             gbc.gridx = 1;
             JTextField balanceField = new JTextField(20);
             balanceField.setText(String.format("%.2f", selectedMember.balance));
-            balanceField.setFont(new Font("Arial", Font.PLAIN, 13));
+            balanceField.setFont(getGeneralFont(Font.PLAIN, 13));
             editPanel.add(balanceField, gbc);
 
             gbc.gridx = 0;
@@ -4401,7 +4543,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
             gbc.gridx = 1;
             JTextField birthdayField = new JTextField(20);
             birthdayField.setText(selectedMember.birthday != null ? selectedMember.birthday : "");
-            birthdayField.setFont(new Font("Arial", Font.PLAIN, 13));
+            birthdayField.setFont(getGeneralFont(Font.PLAIN, 13));
             editPanel.add(birthdayField, gbc);
 
             gbc.gridx = 0;
@@ -4747,7 +4889,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 10, 10));
         JLabel currentLabel = new JLabel("当前促销: ");
         JLabel currentPromotionLabel = new JLabel("无");
-        currentPromotionLabel.setFont(new Font("微软雅黑", Font.BOLD, 12));
+        currentPromotionLabel.setFont(getChineseFont(Font.BOLD, 12));
         currentPromotionLabel.setForeground(PRIMARY_COLOR);
         bottomPanel.add(currentLabel);
         bottomPanel.add(currentPromotionLabel);
@@ -4894,7 +5036,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField nameField = new JTextField(20);
-        nameField.setFont(new Font("Arial", Font.PLAIN, 13));
+        nameField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(nameField, gbc);
 
         gbc.gridx = 0;
@@ -4903,7 +5045,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JComboBox<String> typeComboBox = new JComboBox<>(new String[]{"满减", "打折", "优惠券"});
-        typeComboBox.setFont(new Font("Arial", Font.PLAIN, 13));
+        typeComboBox.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(typeComboBox, gbc);
 
         gbc.gridx = 0;
@@ -4913,7 +5055,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField thresholdField = new JTextField(20);
         thresholdField.setText("0");
-        thresholdField.setFont(new Font("Arial", Font.PLAIN, 13));
+        thresholdField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(thresholdField, gbc);
 
         gbc.gridx = 0;
@@ -4922,7 +5064,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField discountField = new JTextField(20);
-        discountField.setFont(new Font("Arial", Font.PLAIN, 13));
+        discountField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(discountField, gbc);
 
         gbc.gridx = 0;
@@ -4931,7 +5073,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField descriptionField = new JTextField(20);
-        descriptionField.setFont(new Font("Arial", Font.PLAIN, 13));
+        descriptionField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(descriptionField, gbc);
 
         gbc.gridx = 0;
@@ -4941,7 +5083,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField maxUsageField = new JTextField(20);
         maxUsageField.setText("-1");
-        maxUsageField.setFont(new Font("Arial", Font.PLAIN, 13));
+        maxUsageField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(maxUsageField, gbc);
 
         gbc.gridx = 0;
@@ -4961,7 +5103,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 0;
         gbc.gridy = 7;
         JLabel tipLabel = new JLabel("提示: 满减和打折需要设置门槛金额，优惠券无门槛");
-        tipLabel.setFont(new Font("微软雅黑", Font.PLAIN, 11));
+        tipLabel.setFont(getChineseFont(Font.PLAIN, 11));
         tipLabel.setForeground(GRAY_COLOR);
         panel.add(tipLabel, gbc);
 
@@ -5072,7 +5214,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField nameField = new JTextField(20);
         nameField.setText(promotion.name);
-        nameField.setFont(new Font("Arial", Font.PLAIN, 13));
+        nameField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(nameField, gbc);
 
         gbc.gridx = 0;
@@ -5083,7 +5225,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         JComboBox<String> typeComboBox = new JComboBox<>(new String[]{"满减", "打折", "优惠券"});
         typeComboBox.setSelectedItem(promotion.type);
         typeComboBox.setEnabled(false); // 类型不可修改
-        typeComboBox.setFont(new Font("Arial", Font.PLAIN, 13));
+        typeComboBox.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(typeComboBox, gbc);
 
         gbc.gridx = 0;
@@ -5093,7 +5235,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField thresholdField = new JTextField(20);
         thresholdField.setText(String.valueOf(promotion.threshold));
-        thresholdField.setFont(new Font("Arial", Font.PLAIN, 13));
+        thresholdField.setFont(getGeneralFont(Font.PLAIN, 13));
         if ("优惠券".equals(promotion.type)) {
             thresholdField.setEnabled(false);
         }
@@ -5106,7 +5248,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField discountField = new JTextField(20);
         discountField.setText(String.valueOf(promotion.discount));
-        discountField.setFont(new Font("Arial", Font.PLAIN, 13));
+        discountField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(discountField, gbc);
 
         gbc.gridx = 0;
@@ -5116,7 +5258,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField descriptionField = new JTextField(20);
         descriptionField.setText(promotion.description);
-        descriptionField.setFont(new Font("Arial", Font.PLAIN, 13));
+        descriptionField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(descriptionField, gbc);
 
         gbc.gridx = 0;
@@ -5276,7 +5418,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         card.setBackground(CARD_BACKGROUND);
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 14));
+        titleLabel.setFont(getChineseFont(Font.BOLD, 14));
         titleLabel.setForeground(color);
         card.add(titleLabel, BorderLayout.NORTH);
 
@@ -5371,7 +5513,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
     private void addStatItem(JPanel card, String text) {
         JPanel contentPanel = (JPanel) card.getComponent(1);
         JLabel label = new JLabel(text);
-        label.setFont(new Font("Arial", Font.PLAIN, 12));
+        label.setFont(getGeneralFont(Font.PLAIN, 12));
         label.setForeground(TEXT_COLOR);
         contentPanel.add(label);
     }
@@ -5946,8 +6088,8 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         JTable table = new JTable(tableModel);
         table.setRowHeight(28);
-        table.setFont(new Font("Arial", Font.PLAIN, 12));
-        table.getTableHeader().setFont(new Font("Arial", Font.BOLD, 13));
+        table.setFont(getGeneralFont(Font.PLAIN, 12));
+        table.getTableHeader().setFont(getGeneralFont(Font.BOLD, 13));
 
         // 填充商品数据
         for (Product product : inventory.values()) {
@@ -6249,7 +6391,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField cashField = new JTextField(10);
-        cashField.setFont(new Font("Arial", Font.PLAIN, 13));
+        cashField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(cashField, gbc);
 
         gbc.gridx = 0;
@@ -6258,7 +6400,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField wechatField = new JTextField(10);
-        wechatField.setFont(new Font("Arial", Font.PLAIN, 13));
+        wechatField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(wechatField, gbc);
 
         gbc.gridx = 0;
@@ -6267,7 +6409,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField alipayField = new JTextField(10);
-        alipayField.setFont(new Font("Arial", Font.PLAIN, 13));
+        alipayField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(alipayField, gbc);
 
         gbc.gridx = 0;
@@ -6276,14 +6418,14 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField cardField = new JTextField(10);
-        cardField.setFont(new Font("Arial", Font.PLAIN, 13));
+        cardField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(cardField, gbc);
 
         gbc.gridx = 0;
         gbc.gridy = 5;
         gbc.gridwidth = 2;
         JLabel totalPaidLabel = new JLabel("已支付: ¥0.00");
-        totalPaidLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        totalPaidLabel.setFont(getGeneralFont(Font.BOLD, 14));
         totalPaidLabel.setForeground(DANGER_COLOR);
         panel.add(totalPaidLabel, gbc);
 
@@ -6555,7 +6697,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JLabel nameLabel = new JLabel(member.name);
-        nameLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        nameLabel.setFont(getGeneralFont(Font.BOLD, 14));
         panel.add(nameLabel, gbc);
 
         gbc.gridx = 0;
@@ -6564,7 +6706,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JLabel balanceLabel = new JLabel("¥" + String.format("%.2f", member.balance));
-        balanceLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        balanceLabel.setFont(getGeneralFont(Font.BOLD, 14));
         balanceLabel.setForeground(DANGER_COLOR);
         panel.add(balanceLabel, gbc);
 
@@ -6574,7 +6716,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField amountField = new JTextField(20);
-        amountField.setFont(new Font("Arial", Font.PLAIN, 13));
+        amountField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(amountField, gbc);
 
         gbc.gridx = 0;
@@ -6583,7 +6725,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JComboBox<String> paymentMethodComboBox = new JComboBox<>(new String[]{"现金", "微信支付", "支付宝", "银行卡"});
-        paymentMethodComboBox.setFont(new Font("Arial", Font.PLAIN, 13));
+        paymentMethodComboBox.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(paymentMethodComboBox, gbc);
 
         gbc.gridx = 0;
@@ -6681,7 +6823,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         JTable recordTable = new JTable(recordTableModel);
         recordTable.setRowHeight(25);
-        recordTable.setFont(new Font("Arial", Font.PLAIN, 12));
+        recordTable.setFont(getGeneralFont(Font.PLAIN, 12));
 
         JScrollPane scrollPane = new JScrollPane(recordTable);
         panel.add(scrollPane, BorderLayout.CENTER);
@@ -6759,7 +6901,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         JTable levelTable = new JTable(levelTableModel);
         levelTable.setRowHeight(25);
-        levelTable.setFont(new Font("Arial", Font.PLAIN, 12));
+        levelTable.setFont(getGeneralFont(Font.PLAIN, 12));
 
         JScrollPane levelScrollPane = new JScrollPane(levelTable);
         levelPanel.add(levelScrollPane, BorderLayout.CENTER);
@@ -6787,11 +6929,11 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         ));
 
         JLabel titleLabel = new JLabel(title);
-        titleLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        titleLabel.setFont(getGeneralFont(Font.BOLD, 12));
         titleLabel.setForeground(color);
 
         JLabel valueLabel = new JLabel(value);
-        valueLabel.setFont(new Font("Arial", Font.BOLD, 18));
+        valueLabel.setFont(getGeneralFont(Font.BOLD, 18));
         valueLabel.setForeground(TEXT_COLOR);
 
         card.add(titleLabel, BorderLayout.NORTH);
@@ -6831,7 +6973,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
             currentShiftLabel = new JLabel("当前班次: 未开始");
             currentShiftLabel.setForeground(PRIMARY_COLOR);
         }
-        currentShiftLabel.setFont(new Font("Arial", Font.BOLD, 14));
+        currentShiftLabel.setFont(getGeneralFont(Font.BOLD, 14));
         buttonPanel.add(currentShiftLabel);
 
         panel.add(buttonPanel, BorderLayout.NORTH);
@@ -7119,9 +7261,9 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         searchPanel.setBorder(BorderFactory.createEmptyBorder(0, 0, 10, 0));
         
         JLabel searchLabel = new JLabel("搜索:");
-        searchLabel.setFont(new Font("Arial", Font.BOLD, 12));
+        searchLabel.setFont(getGeneralFont(Font.BOLD, 12));
         JTextField searchField = new JTextField(20);
-        searchField.setFont(new Font("Arial", Font.PLAIN, 12));
+        searchField.setFont(getGeneralFont(Font.PLAIN, 12));
         JButton searchButton = createStyledButton("搜索", new Color(59, 130, 246));
         JButton clearButton = createStyledButton("清除", new Color(149, 165, 166));
         
@@ -7379,7 +7521,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField usernameField = new JTextField(20);
-        usernameField.setFont(new Font("Arial", Font.PLAIN, 13));
+        usernameField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(usernameField, gbc);
 
         gbc.gridx = 0;
@@ -7388,7 +7530,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JPasswordField passwordField = new JPasswordField(20);
-        passwordField.setFont(new Font("Arial", Font.PLAIN, 13));
+        passwordField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(passwordField, gbc);
 
         gbc.gridx = 0;
@@ -7397,7 +7539,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JPasswordField confirmPasswordField = new JPasswordField(20);
-        confirmPasswordField.setFont(new Font("Arial", Font.PLAIN, 13));
+        confirmPasswordField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(confirmPasswordField, gbc);
 
         gbc.gridx = 0;
@@ -7406,7 +7548,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JTextField nameField = new JTextField(20);
-        nameField.setFont(new Font("Arial", Font.PLAIN, 13));
+        nameField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(nameField, gbc);
 
         gbc.gridx = 0;
@@ -7415,7 +7557,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JComboBox<String> roleComboBox = new JComboBox<>(new String[]{"管理员", "收银员", "财务"});
-        roleComboBox.setFont(new Font("Arial", Font.PLAIN, 13));
+        roleComboBox.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(roleComboBox, gbc);
 
         gbc.gridx = 0;
@@ -7532,7 +7674,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         JTextField usernameField = new JTextField(20);
         usernameField.setText(user.username);
         usernameField.setEditable(false);
-        usernameField.setFont(new Font("Arial", Font.PLAIN, 13));
+        usernameField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(usernameField, gbc);
 
         gbc.gridx = 0;
@@ -7542,7 +7684,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         gbc.gridx = 1;
         JTextField nameField = new JTextField(20);
         nameField.setText(user.name);
-        nameField.setFont(new Font("Arial", Font.PLAIN, 13));
+        nameField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(nameField, gbc);
 
         gbc.gridx = 0;
@@ -7551,7 +7693,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JComboBox<String> roleComboBox = new JComboBox<>(new String[]{"管理员", "收银员", "财务"});
-        roleComboBox.setFont(new Font("Arial", Font.PLAIN, 13));
+        roleComboBox.setFont(getGeneralFont(Font.PLAIN, 13));
 
         switch (user.role) {
             case "admin": roleComboBox.setSelectedIndex(0); break;
@@ -7639,7 +7781,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         JTextField usernameField = new JTextField(20);
         usernameField.setText(user.username);
         usernameField.setEditable(false);
-        usernameField.setFont(new Font("Arial", Font.PLAIN, 13));
+        usernameField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(usernameField, gbc);
 
         gbc.gridx = 0;
@@ -7648,7 +7790,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JPasswordField passwordField = new JPasswordField(20);
-        passwordField.setFont(new Font("Arial", Font.PLAIN, 13));
+        passwordField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(passwordField, gbc);
 
         gbc.gridx = 0;
@@ -7657,7 +7799,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
 
         gbc.gridx = 1;
         JPasswordField confirmPasswordField = new JPasswordField(20);
-        confirmPasswordField.setFont(new Font("Arial", Font.PLAIN, 13));
+        confirmPasswordField.setFont(getGeneralFont(Font.PLAIN, 13));
         panel.add(confirmPasswordField, gbc);
 
         gbc.gridx = 0;

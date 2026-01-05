@@ -19,10 +19,12 @@ desktop.ini
 # 数据文件（敏感信息）
 data/
 *.txt
-!IFLOW.md
 !FLATLAF_README.md
 !FLATLAF_UPGRADE_SUMMARY.md
 !ICON_FIX_SUMMARY.md
+
+# 项目文档
+IFLOW.md
 
 # 日志文件
 *.log
@@ -38,3 +40,6 @@ backup_*/
 # JAR 文件（如果使用包管理器则忽略）
 *.jar
 !flatlaf-3.5.jar
+
+# 字体文件
+fonts/
