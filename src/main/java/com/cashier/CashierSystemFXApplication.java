@@ -1,5 +1,7 @@
-package com.cashier;
+﻿package com.cashier;
 
+import com.cashier.controller.LoginController;
+import com.cashier.controller.MainController;
 import com.cashier.constant.FXConstants;
 import com.cashier.constant.SpacingConstants;
 import com.cashier.model.DataManager;
@@ -39,8 +41,8 @@ public class CashierSystemFXApplication extends Application {
         // 设置应用图标
         setupApplicationIcon();
 
-        // 加载主界面
-        loadMainScene();
+        // 加载登录界面
+        loadLoginScene();
 
         // 配置主窗口
         configurePrimaryStage();
@@ -64,11 +66,10 @@ public class CashierSystemFXApplication extends Application {
     }
 
     /**
-     * 加载主界面
+     * 加载登录界面
      */
-    private void loadMainScene() {
+    private void loadLoginScene() {
         try {
-            // 加载登录界面
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(getClass().getResource("/com/cashier/view/LoginView.fxml"));
             Parent root = loader.load();
@@ -87,9 +88,38 @@ public class CashierSystemFXApplication extends Application {
             primaryStage.setScene(scene);
 
         } catch (IOException e) {
-            System.err.println("加载主界面失败: " + e.getMessage());
+            System.err.println("加载登录界面失败: " + e.getMessage());
             e.printStackTrace();
             System.exit(1);
+        }
+    }
+
+    /**
+     * 加载主界面
+     */
+    private void loadMainScene() {
+        try {
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/MainView.fxml"));
+            Parent root = loader.load();
+
+            // 获取控制器并设置应用程序引用
+            MainController controller = loader.getController();
+            controller.setApplication(this);
+
+            // 创建场景
+            Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+            // 应用主题
+            String currentTheme = DataManager.loadThemePreference();
+            applyTheme(scene, currentTheme);
+
+            // 设置场景
+            primaryStage.setScene(scene);
+
+        } catch (IOException e) {
+            System.err.println("加载主界面失败: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 
