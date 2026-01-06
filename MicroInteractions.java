@@ -10,93 +10,20 @@ import java.awt.geom.RoundRectangle2D;
 public class MicroInteractions {
 
     /**
-     * 为按钮添加悬停和点击动画效果
-     * @param button 目标按钮
-     */
-    public static void addButtonEffects(JButton button) {
-        // 悬停效果
-        button.addMouseListener(new MouseAdapter() {
-            private Timer timer;
-            private float alpha = 0f;
-            private boolean isHovering = false;
 
-            @Override
-            public void mouseEntered(MouseEvent e) {
-                isHovering = true;
-                startAnimation(0f, 0.15f, 200);
-            }
+         * 为按钮添加基本效果（不包含变色）
 
-            @Override
-            public void mouseExited(MouseEvent e) {
-                isHovering = false;
-                startAnimation(alpha, 0f, 200);
-            }
+         * @param button 目标按钮
 
-            @Override
-            public void mousePressed(MouseEvent e) {
-                // 点击时缩小效果
-                button.setBorderPainted(true);
-                button.setBorder(BorderFactory.createLineBorder(
-                    new Color(0, 0, 0, 50), 2, true
-                ));
-            }
+         */
 
-            @Override
-            public void mouseReleased(MouseEvent e) {
-                button.setBorderPainted(false);
-                if (isHovering) {
-                    startAnimation(0f, 0.15f, 150);
-                }
-            }
+        public static void addButtonEffects(JButton button) {
 
-            private void startAnimation(float startAlpha, float endAlpha, int duration) {
-                if (timer != null) {
-                    timer.stop();
-                }
+            // 按钮效果已禁用（变色功能已取消）
 
-                final float start = startAlpha;
-                final float end = endAlpha;
-                final long startTime = System.currentTimeMillis();
+            // 保留此方法以维持代码兼容性
 
-                timer = new Timer(16, e -> {
-                    long elapsed = System.currentTimeMillis() - startTime;
-                    float progress = Math.min(1f, (float) elapsed / duration);
-                    alpha = start + (end - start) * easeInOutCubic(progress);
-
-                    // 更新按钮背景色
-                    Color originalColor = button.getBackground();
-                    if (originalColor != null) {
-                        int r = originalColor.getRed();
-                        int g = originalColor.getGreen();
-                        int b = originalColor.getBlue();
-                        Color overlay = new Color(0, 0, 0, (int) (alpha * 255));
-                        Color newColor = blendColors(originalColor, overlay, alpha);
-                        button.setBackground(newColor);
-                    }
-
-                    if (progress >= 1f) {
-                        timer.stop();
-                    }
-                });
-                timer.start();
-            }
-        });
-
-        // 添加键盘焦点效果
-        button.addFocusListener(new FocusAdapter() {
-            @Override
-            public void focusGained(FocusEvent e) {
-                button.setBorder(BorderFactory.createLineBorder(
-                    new Color(63, 81, 181), 2, true
-                ));
-            }
-
-            @Override
-            public void focusLost(FocusEvent e) {
-                button.setBorderPainted(false);
-            }
-        });
-    }
+        }
 
     /**
      * 为文本框添加焦点动画效果
