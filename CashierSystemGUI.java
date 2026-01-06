@@ -13,20 +13,62 @@ import java.util.*;
 import java.util.List;
 
 public class CashierSystemGUI extends JFrame {
-    // 现代配色方案
-    private static final Color PRIMARY_COLOR = new Color(74, 144, 226);      // 主色调 - 蓝色
-    private static final Color SUCCESS_COLOR = new Color(46, 204, 113);     // 成功 - 绿色
-    private static final Color WARNING_COLOR = new Color(241, 196, 15);     // 警告 - 黄色
-    private static final Color DANGER_COLOR = new Color(231, 76, 60);       // 危险 - 红色
-    private static final Color INFO_COLOR = new Color(52, 152, 219);        // 信息 - 浅蓝
-    private static final Color PURPLE_COLOR = new Color(155, 89, 182);      // 紫色
-    private static final Color GRAY_COLOR = new Color(149, 165, 166);       // 灰色
+    // 现代配色方案 - 优化版
+    // 语义化颜色
+    private static final Color PRIMARY_COLOR = new Color(63, 81, 181);       // 主色调 - 深靛蓝
+    private static final Color PRIMARY_LIGHT = new Color(99, 125, 255);      // 主色调浅色
+    private static final Color PRIMARY_DARK = new Color(30, 55, 153);        // 主色调深色
 
-    private static final Color BACKGROUND_COLOR = new Color(245, 247, 250); // 背景色
-    private static final Color CARD_BACKGROUND = new Color(255, 255, 255);   // 卡片背景
-    private static final Color BORDER_COLOR = new Color(224, 224, 224);      // 边框色
-    private static final Color TEXT_COLOR = new Color(51, 51, 51);           // 文本色
-    private static final Color SECONDARY_TEXT = new Color(127, 140, 141);    // 次要文本
+    private static final Color SUCCESS_COLOR = new Color(76, 175, 80);       // 成功 - 绿色
+    private static final Color SUCCESS_LIGHT = new Color(129, 199, 132);     // 成功浅色
+    private static final Color SUCCESS_DARK = new Color(56, 142, 60);        // 成功深色
+
+    private static final Color WARNING_COLOR = new Color(255, 152, 0);       // 警告 - 橙色
+    private static final Color WARNING_LIGHT = new Color(255, 183, 77);      // 警告浅色
+    private static final Color WARNING_DARK = new Color(230, 81, 0);         // 警告深色
+
+    private static final Color DANGER_COLOR = new Color(244, 67, 54);        // 危险 - 红色
+    private static final Color DANGER_LIGHT = new Color(239, 83, 80);        // 危险浅色
+    private static final Color DANGER_DARK = new Color(198, 40, 40);         // 危险深色
+
+    private static final Color INFO_COLOR = new Color(33, 150, 243);         // 信息 - 亮蓝
+    private static final Color INFO_LIGHT = new Color(100, 181, 246);        // 信息浅色
+    private static final Color INFO_DARK = new Color(13, 71, 161);           // 信息深色
+
+    // 功能性颜色
+    private static final Color PURPLE_COLOR = new Color(156, 39, 176);       // 紫色
+    private static final Color PINK_COLOR = new Color(233, 30, 99);          // 粉色
+    private static final Color CYAN_COLOR = new Color(0, 188, 212);          // 青色
+    private static final Color TEAL_COLOR = new Color(0, 150, 136);          // 蓝绿色
+
+    // 中性色系
+    private static final Color GRAY_50 = new Color(250, 250, 250);
+    private static final Color GRAY_100 = new Color(245, 245, 245);
+    private static final Color GRAY_200 = new Color(238, 238, 238);
+    private static final Color GRAY_300 = new Color(224, 224, 224);
+    private static final Color GRAY_400 = new Color(189, 189, 189);
+    private static final Color GRAY_500 = new Color(158, 158, 158);
+    private static final Color GRAY_600 = new Color(117, 117, 117);
+    private static final Color GRAY_700 = new Color(97, 97, 97);
+    private static final Color GRAY_800 = new Color(66, 66, 66);
+    private static final Color GRAY_900 = new Color(33, 33, 33);
+
+    // 保留旧颜色常量以兼容（标记为废弃）
+    @Deprecated
+    private static final Color GRAY_COLOR = GRAY_500;
+
+    // UI 背景和文本颜色
+    private static final Color BACKGROUND_COLOR = new Color(248, 249, 250);  // 背景色 - 更柔和
+    private static final Color CARD_BACKGROUND = new Color(255, 255, 255);   // 卡片背景 - 纯白
+    private static final Color BORDER_COLOR = GRAY_300;                       // 边框色
+    private static final Color TEXT_COLOR = GRAY_900;                         // 文本色 - 深灰
+    private static final Color SECONDARY_TEXT = GRAY_600;                    // 次要文本
+    private static final Color DISABLED_TEXT = GRAY_400;                     // 禁用文本
+
+    // 特殊用途颜色
+    private static final Color HOVER_COLOR = new Color(0, 0, 0, 8);          // 悬停效果
+    private static final Color FOCUS_COLOR = new Color(63, 81, 181, 12);     // 焦点效果
+    private static final Color SHADOW_COLOR = new Color(0, 0, 0, 10);        // 阴影效果
 
     /**
      * 根据操作系统获取合适的中文字体
@@ -254,6 +296,7 @@ public class CashierSystemGUI extends JFrame {
         gbc.gridx = 1;
         JTextField usernameField = new JTextField(20);
         usernameField.setFont(getChineseFont(Font.PLAIN, 13));
+        MicroInteractions.addTextFieldEffects(usernameField);
         panel.add(usernameField, gbc);
 
         // 密码
@@ -264,6 +307,7 @@ public class CashierSystemGUI extends JFrame {
         gbc.gridx = 1;
         JPasswordField passwordField = new JPasswordField(20);
         passwordField.setFont(getChineseFont(Font.PLAIN, 13));
+        MicroInteractions.addPasswordFieldEffects(passwordField);
         panel.add(passwordField, gbc);
 
         // 按钮
@@ -277,12 +321,14 @@ public class CashierSystemGUI extends JFrame {
         loginButton.setBackground(new Color(46, 204, 113));
         loginButton.setForeground(Color.WHITE);
         loginButton.setFocusPainted(false);
+        MicroInteractions.addButtonEffects(loginButton);
 
         JButton exitButton = new JButton("退出");
         exitButton.setFont(getChineseFont(Font.PLAIN, 13));
         exitButton.setBackground(new Color(231, 76, 60));
         exitButton.setForeground(Color.WHITE);
         exitButton.setFocusPainted(false);
+        MicroInteractions.addButtonEffects(exitButton);
 
         buttonPanel.add(loginButton);
         buttonPanel.add(exitButton);
@@ -296,29 +342,32 @@ public class CashierSystemGUI extends JFrame {
             String password = new String(passwordField.getPassword());
 
             if (username.isEmpty() || password.isEmpty()) {
-                JOptionPane.showMessageDialog(loginDialog, "用户名和密码不能为空！", "错误", JOptionPane.ERROR_MESSAGE);
+                ToastNotification.showError(loginDialog, "用户名和密码不能为空！");
                 return;
             }
 
             User user = users.get(username);
             if (user == null) {
-                JOptionPane.showMessageDialog(loginDialog, "用户名不存在！", "错误", JOptionPane.ERROR_MESSAGE);
+                ToastNotification.showError(loginDialog, "用户名不存在！");
                 return;
             }
 
             if (!user.password.equals(password)) {
-                JOptionPane.showMessageDialog(loginDialog, "密码错误！", "错误", JOptionPane.ERROR_MESSAGE);
+                ToastNotification.showError(loginDialog, "密码错误！");
                 return;
             }
 
             if (!user.active) {
-                JOptionPane.showMessageDialog(loginDialog, "该账户已被禁用！", "错误", JOptionPane.ERROR_MESSAGE);
+                ToastNotification.showError(loginDialog, "该账户已被禁用！");
                 return;
             }
 
             // 更新最后登录时间
             user.lastLoginTime = new Date();
             DataManager.saveUsers(users);
+
+            // 显示登录成功提示
+            ToastNotification.showSuccess(loginDialog, "登录成功！欢迎 " + user.name);
 
             // 关闭登录对话框，显示主窗口
             loginDialog.dispose();
@@ -1001,18 +1050,23 @@ public class CashierSystemGUI extends JFrame {
     }
 
     private JPanel createInventoryPanel() {
-        JPanel panel = new JPanel(new BorderLayout(15, 15));
-        panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
+        JPanel panel = new JPanel(new BorderLayout(SpacingConstants.PANEL_GAP, SpacingConstants.PANEL_GAP));
+        panel.setBorder(SpacingConstants.getPadding(SpacingConstants.PANEL_PADDING,
+                                                    SpacingConstants.PANEL_PADDING,
+                                                    SpacingConstants.PANEL_PADDING,
+                                                    SpacingConstants.PANEL_PADDING));
 
         // 顶部按钮面板
-        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 5));
+        JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.LEFT,
+                                                      SpacingConstants.BUTTON_GAP,
+                                                      SpacingConstants.BUTTON_GAP));
 
         JButton addButton = createStyledButton("添加商品", SUCCESS_COLOR);
         JButton restockButton = createStyledButton("补货", INFO_COLOR);
         JButton deleteButton = createStyledButton("删除商品", DANGER_COLOR);
         JButton categoryButton = createStyledButton("分类管理", PURPLE_COLOR);
         JButton promotionButton = createStyledButton("促销管理", INFO_COLOR);
-        JButton stockWarningButton = createStyledButton("库存预警", new Color(255, 152, 0));
+        JButton stockWarningButton = createStyledButton("库存预警", WARNING_COLOR);
 
         buttonPanel.add(addButton);
         buttonPanel.add(restockButton);
@@ -1022,16 +1076,19 @@ public class CashierSystemGUI extends JFrame {
         buttonPanel.add(stockWarningButton);
 
         // 搜索和排序面板
-        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 5, 5));
+        JPanel searchPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT,
+                                                       SpacingConstants.TOOLBAR_BUTTON_GAP,
+                                                       SpacingConstants.TOOLBAR_BUTTON_GAP));
         searchField = new JTextField(15);
         searchField.setToolTipText("输入商品名称搜索");
         JButton searchButton = createStyledButton("搜索", PURPLE_COLOR);
-        JButton clearSearchButton = createStyledButton("清除", GRAY_COLOR);
+        JButton clearSearchButton = createStyledButton("清除", GRAY_500);
 
         sortComboBox = new JComboBox<>(new String[]{"默认排序", "按名称", "按价格(低→高)", "按价格(高→低)", "按库存(多→少)"});
         sortComboBox.addActionListener(e -> sortInventory());
 
         searchPanel.add(new JLabel("搜索:"));
+        MicroInteractions.addTextFieldEffects(searchField);
         searchPanel.add(searchField);
         searchPanel.add(searchButton);
         searchPanel.add(clearSearchButton);
@@ -1041,8 +1098,10 @@ public class CashierSystemGUI extends JFrame {
         // 顶部面板合并
         JPanel topPanel = new JPanel();
         topPanel.setLayout(new BoxLayout(topPanel, BoxLayout.Y_AXIS));
+        topPanel.setBorder(SpacingConstants.getVerticalGap(SpacingConstants.TABLE_TOOLBAR_GAP));
 
         topPanel.add(buttonPanel);
+        topPanel.add(Box.createVerticalStrut(SpacingConstants.TABLE_TOOLBAR_GAP));
         topPanel.add(searchPanel);
 
         // 库存表格
@@ -1196,8 +1255,11 @@ public class CashierSystemGUI extends JFrame {
     }
 
     private JPanel createCartPanel() {
-        JPanel panel = new JPanel(new BorderLayout(20, 20));
-        panel.setBorder(BorderFactory.createEmptyBorder(25, 25, 25, 25));
+        JPanel panel = new JPanel(new BorderLayout(SpacingConstants.PANEL_GAP, SpacingConstants.PANEL_GAP));
+        panel.setBorder(SpacingConstants.getPadding(SpacingConstants.PANEL_PADDING + 5,
+                                                    SpacingConstants.PANEL_PADDING + 5,
+                                                    SpacingConstants.PANEL_PADDING + 5,
+                                                    SpacingConstants.PANEL_PADDING + 5));
         panel.setBackground(new Color(240, 242, 245));
 
         // ========== 顶部操作区域 ==========
@@ -1206,11 +1268,14 @@ public class CashierSystemGUI extends JFrame {
         topContainer.setBackground(new Color(240, 242, 245));
 
         // 按钮工具栏
-        JPanel toolbarPanel = new JPanel(new BorderLayout(10, 0));
+        JPanel toolbarPanel = new JPanel(new BorderLayout(SpacingConstants.TOOLBAR_BUTTON_GAP, 0));
         toolbarPanel.setBackground(new Color(255, 255, 255));
         toolbarPanel.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-            BorderFactory.createEmptyBorder(12, 15, 12, 15)
+            SpacingConstants.getPadding(SpacingConstants.TOOLBAR_PADDING_TOP,
+                                        SpacingConstants.TOOLBAR_PADDING_LEFT,
+                                        SpacingConstants.TOOLBAR_PADDING_BOTTOM,
+                                        SpacingConstants.TOOLBAR_PADDING_RIGHT)
         ));
 
         // 左侧按钮组
@@ -1297,7 +1362,7 @@ public class CashierSystemGUI extends JFrame {
         });
 
         topContainer.add(toolbarPanel);
-        topContainer.add(Box.createVerticalStrut(10));
+        topContainer.add(Box.createVerticalStrut(SpacingConstants.FORM_FIELD_GAP));
         topContainer.add(quickCheckoutPanel);
 
         panel.add(topContainer, BorderLayout.NORTH);
@@ -1309,7 +1374,7 @@ public class CashierSystemGUI extends JFrame {
         splitPane.setBorder(null);
 
         // ========== 左侧：购物车区域 ==========
-        JPanel leftPanel = new JPanel(new BorderLayout(15, 15));
+        JPanel leftPanel = new JPanel(new BorderLayout(SpacingConstants.PANEL_GAP, SpacingConstants.PANEL_GAP));
         leftPanel.setBackground(new Color(240, 242, 245));
 
         // 购物车表格容器
@@ -1317,12 +1382,12 @@ public class CashierSystemGUI extends JFrame {
         cartContainer.setBackground(new Color(255, 255, 255));
         cartContainer.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-            BorderFactory.createEmptyBorder(0, 0, 0, 0)
+            SpacingConstants.getPadding(0, 0, 0, 0)
         ));
 
         // 表格标题栏
-        JPanel cartHeader = new JPanel(new BorderLayout(10, 0));
-        cartHeader.setBackground(new Color(59, 130, 246));
+        JPanel cartHeader = new JPanel(new BorderLayout(SpacingConstants.TOOLBAR_BUTTON_GAP, 0));
+        cartHeader.setBackground(PRIMARY_COLOR);
         cartHeader.setBorder(BorderFactory.createEmptyBorder(12, 15, 12, 15));
 
         JLabel cartTitle = new JLabel("🛒 购物车");
@@ -1330,21 +1395,21 @@ public class CashierSystemGUI extends JFrame {
         cartTitle.setForeground(Color.WHITE);
 
         JPanel cartStats = new JPanel(new FlowLayout(FlowLayout.LEFT, 15, 0));
-        cartStats.setBackground(new Color(59, 130, 246));
-        
+        cartStats.setBackground(PRIMARY_COLOR);
+
         cartTypeCountLabel = new JLabel("0种");
         cartTypeCountLabel.setFont(getGeneralFont(Font.BOLD, 12));
         cartTypeCountLabel.setForeground(Color.WHITE);
         JLabel typeLabel = new JLabel("种商品");
         typeLabel.setFont(getGeneralFont(Font.PLAIN, 12));
-        typeLabel.setForeground(new Color(200, 200, 200));
-        
+        typeLabel.setForeground(GRAY_200);
+
         cartTotalQuantityLabel = new JLabel("0件");
         cartTotalQuantityLabel.setFont(getGeneralFont(Font.BOLD, 12));
         cartTotalQuantityLabel.setForeground(Color.WHITE);
         JLabel quantityLabel = new JLabel("总数");
         quantityLabel.setFont(getGeneralFont(Font.PLAIN, 12));
-        quantityLabel.setForeground(new Color(200, 200, 200));
+        quantityLabel.setForeground(GRAY_200);
 
         cartStats.add(cartTypeCountLabel);
         cartStats.add(typeLabel);
@@ -1401,15 +1466,18 @@ public class CashierSystemGUI extends JFrame {
         splitPane.setLeftComponent(leftPanel);
 
         // ========== 右侧：结账信息区域 ==========
-        JPanel rightPanel = new JPanel(new BorderLayout(15, 15));
+        JPanel rightPanel = new JPanel(new BorderLayout(SpacingConstants.PANEL_GAP, SpacingConstants.PANEL_GAP));
         rightPanel.setBackground(new Color(240, 242, 245));
 
         // 会员信息卡片
-        JPanel memberCard = new JPanel(new BorderLayout(12, 12));
+        JPanel memberCard = new JPanel(new BorderLayout(SpacingConstants.CARD_GAP, SpacingConstants.CARD_GAP));
         memberCard.setBackground(new Color(255, 255, 255));
         memberCard.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+            SpacingConstants.getPadding(SpacingConstants.CARD_PADDING,
+                                        SpacingConstants.CARD_PADDING,
+                                        SpacingConstants.CARD_PADDING,
+                                        SpacingConstants.CARD_PADDING)
         ));
 
         JPanel memberHeader = new JPanel(new BorderLayout(0, 0));
@@ -1447,11 +1515,14 @@ public class CashierSystemGUI extends JFrame {
         memberCard.add(currentMemberLabel, BorderLayout.SOUTH);
 
         // 金额明细卡片
-        JPanel amountCard = new JPanel(new BorderLayout(12, 12));
+        JPanel amountCard = new JPanel(new BorderLayout(SpacingConstants.CARD_GAP, SpacingConstants.CARD_GAP));
         amountCard.setBackground(new Color(255, 255, 255));
         amountCard.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+            SpacingConstants.getPadding(SpacingConstants.CARD_PADDING,
+                                        SpacingConstants.CARD_PADDING,
+                                        SpacingConstants.CARD_PADDING,
+                                        SpacingConstants.CARD_PADDING)
         ));
 
         JPanel amountHeader = new JPanel(new BorderLayout(0, 0));
@@ -1534,11 +1605,14 @@ public class CashierSystemGUI extends JFrame {
         amountCard.add(amountPanel, BorderLayout.CENTER);
 
         // 收款卡片
-        JPanel paymentCard = new JPanel(new BorderLayout(12, 12));
+        JPanel paymentCard = new JPanel(new BorderLayout(SpacingConstants.CARD_GAP, SpacingConstants.CARD_GAP));
         paymentCard.setBackground(new Color(255, 255, 255));
         paymentCard.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
-            BorderFactory.createEmptyBorder(15, 15, 15, 15)
+            SpacingConstants.getPadding(SpacingConstants.CARD_PADDING,
+                                        SpacingConstants.CARD_PADDING,
+                                        SpacingConstants.CARD_PADDING,
+                                        SpacingConstants.CARD_PADDING)
         ));
 
         JPanel paymentHeader = new JPanel(new BorderLayout(0, 0));
@@ -1873,7 +1947,8 @@ public class CashierSystemGUI extends JFrame {
         successDialog.setSize(400, 350);
         successDialog.setLocationRelativeTo(this);
 
-        JPanel panel = new JPanel(new BorderLayout(15, 15));
+        JPanel panel = new JPanel(new BorderLayout(SpacingConstants.DIALOG_CONTENT_BUTTON_GAP,
+                                                    SpacingConstants.DIALOG_CONTENT_BUTTON_GAP));
         panel.setBorder(BorderFactory.createEmptyBorder(20, 20, 20, 20));
 
         // 交易信息
@@ -1902,7 +1977,7 @@ public class CashierSystemGUI extends JFrame {
 
         JButton printButton = createStyledButton("打印小票", SUCCESS_COLOR);
         JButton previewButton = createStyledButton("预览小票", INFO_COLOR);
-        JButton closeButton = createStyledButton("关闭", GRAY_COLOR);
+        JButton closeButton = createStyledButton("关闭", GRAY_500);
 
         buttonPanel.add(printButton);
         buttonPanel.add(previewButton);
@@ -1914,7 +1989,7 @@ public class CashierSystemGUI extends JFrame {
 
         // 打印小票
         printButton.addActionListener(e -> {
-            printReceipt(transactionId, total, received, change, tax, memberInfo, promotionInfo, items, discountedSubtotal, discountAmount);
+            printReceipt(transactionId, total, received, change, tax, memberInfo, promotionInfo, items, discountedSubtotal, discountAmount, successDialog);
         });
 
         // 预览小票
@@ -1998,7 +2073,7 @@ public class CashierSystemGUI extends JFrame {
         return receipt.toString();
     }
 
-    private void printReceipt(String transactionId, double total, double received, double change, double tax, String memberInfo, String promotionInfo, List<Product> items, double discountedSubtotal, double discountAmount) {
+    private void printReceipt(String transactionId, double total, double received, double change, double tax, String memberInfo, String promotionInfo, List<Product> items, double discountedSubtotal, double discountAmount, JDialog previewDialog) {
         String receiptContent = generateReceiptContent(transactionId, total, received, change, tax, memberInfo, promotionInfo, items, discountedSubtotal, discountAmount);
 
         // 选择打印机
@@ -2038,6 +2113,10 @@ public class CashierSystemGUI extends JFrame {
 
                 job.print();
                 JOptionPane.showMessageDialog(this, "小票打印成功！", "成功", JOptionPane.INFORMATION_MESSAGE);
+                // 打印成功后自动关闭预览对话框
+                if (previewDialog != null) {
+                    previewDialog.dispose();
+                }
             } catch (java.awt.print.PrinterException ex) {
                 JOptionPane.showMessageDialog(this, "打印失败：" + ex.getMessage(), "错误", JOptionPane.ERROR_MESSAGE);
             }
@@ -2066,7 +2145,7 @@ public class CashierSystemGUI extends JFrame {
 
         JButton printButton = createStyledButton("打印", SUCCESS_COLOR);
         JButton saveButton = createStyledButton("保存", INFO_COLOR);
-        JButton closeButton = createStyledButton("关闭", GRAY_COLOR);
+        JButton closeButton = createStyledButton("关闭", GRAY_500);
 
         buttonPanel.add(printButton);
         buttonPanel.add(saveButton);
@@ -2078,7 +2157,7 @@ public class CashierSystemGUI extends JFrame {
 
         // 打印
         printButton.addActionListener(e -> {
-            printReceipt(transactionId, total, received, change, tax, memberInfo, promotionInfo, items, discountedSubtotal, discountAmount);
+            printReceipt(transactionId, total, received, change, tax, memberInfo, promotionInfo, items, discountedSubtotal, discountAmount, previewDialog);
         });
 
         // 保存小票
@@ -2491,36 +2570,22 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         JButton button = new JButton(text);
         button.setFont(getChineseFont(Font.PLAIN, 13));
         button.setPreferredSize(new Dimension(120, 32));
-        
+
         // 设置背景色和前景色，确保按钮可见
         button.setBackground(color);
         button.setForeground(Color.WHITE);
         button.setFocusPainted(false);
         button.setOpaque(true);
-        
+
+        // 添加微交互效果
+        MicroInteractions.addButtonEffects(button);
+
         return button;
     }
 
     private void styleTable(JTable table, DefaultTableModel model) {
-        table.setModel(model);
-        table.setSelectionMode(ListSelectionModel.MULTIPLE_INTERVAL_SELECTION);  // 支持多选
-        table.setRowHeight(28);
-        table.setGridColor(BORDER_COLOR);
-        table.setBackground(CARD_BACKGROUND);
-        table.setForeground(TEXT_COLOR);
-        table.setFont(getGeneralFont(Font.PLAIN, 12));
-
-        // 表头样式
-        table.getTableHeader().setFont(getGeneralFont(Font.BOLD, 13));
-        table.getTableHeader().setBackground(PRIMARY_COLOR);
-        table.getTableHeader().setForeground(Color.WHITE);
-        table.getTableHeader().setOpaque(true);
-        table.getTableHeader().setReorderingAllowed(false);
-        table.getTableHeader().setResizingAllowed(true);
-
-        // 选择行样式
-        table.setSelectionBackground(new Color(74, 144, 226, 50));
-        table.setSelectionForeground(TEXT_COLOR);
+        // 使用新的表格样式助手
+        TableStyleHelper.styleTable(table, model);
     }
 
     private void showStockWarningDialog() {
@@ -5412,14 +5477,14 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
     private JPanel createStatCard(String title, Color color) {
         JPanel card = new JPanel(new BorderLayout(10, 10));
         card.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(color, 2),
+            BorderFactory.createLineBorder(color, 1),
             BorderFactory.createEmptyBorder(15, 15, 15, 15)
         ));
         card.setBackground(CARD_BACKGROUND);
 
         JLabel titleLabel = new JLabel(title);
         titleLabel.setFont(getChineseFont(Font.BOLD, 14));
-        titleLabel.setForeground(color);
+        titleLabel.setForeground(PRIMARY_DARK);
         card.add(titleLabel, BorderLayout.NORTH);
 
         JPanel contentPanel = new JPanel(new GridLayout(4, 1, 5, 5));

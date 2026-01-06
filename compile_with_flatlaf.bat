@@ -1,8 +1,8 @@
 @echo off
-javac -cp flatlaf-3.5.jar Category.java Product.java Transaction.java Member.java Promotion.java RechargeRecord.java User.java OperationLog.java Shift.java DataManager.java CashierSystemGUI.java
+javac -encoding UTF-8 -cp flatlaf-3.5.jar Category.java Product.java Transaction.java Member.java Promotion.java RechargeRecord.java User.java OperationLog.java Shift.java DataManager.java MicroInteractions.java ToastNotification.java ToastIntegrationHelper.java StyledTableCellRenderer.java TableStyleHelper.java SpacingConstants.java CashierSystemGUI.java
 if %errorlevel% neq 0 (
-    echo 编译失败！
+    echo Compile failed!
 ) else (
-    echo 编译成功！
+    echo Compile success!
 )
 pause
