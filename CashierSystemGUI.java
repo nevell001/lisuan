@@ -3649,7 +3649,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
                 cart.add(new Product(productName, inventoryProduct.price, quantity));
                 refreshCartTable();
                 dialog.dispose();
-                JOptionPane.showMessageDialog(this, "成功添加 " + quantity + " 个 " + productName + " 到购物车！", "成功", JOptionPane.INFORMATION_MESSAGE);
+                // 商品已添加到购物车，直接在购物车中显示
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(dialog, "请输入有效的整数！", "错误", JOptionPane.ERROR_MESSAGE);
             }
@@ -3728,7 +3728,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
                 cartProduct.quantity = newQuantity;
                 refreshCartTable();
                 dialog.dispose();
-                JOptionPane.showMessageDialog(this, "数量修改成功！", "成功", JOptionPane.INFORMATION_MESSAGE);
+                // 数量已修改，直接在购物车中显示
             } catch (NumberFormatException ex) {
                 JOptionPane.showMessageDialog(dialog, "请输入有效的整数！", "错误", JOptionPane.ERROR_MESSAGE);
             }
@@ -3758,7 +3758,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         if (confirm == JOptionPane.YES_OPTION) {
             cart.remove(selectedRow);
             refreshCartTable();
-            JOptionPane.showMessageDialog(this, "商品已移除！", "成功", JOptionPane.INFORMATION_MESSAGE);
+            // 商品已移除，直接在购物车中显示
         }
     }
 
@@ -3779,7 +3779,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         if (confirm == JOptionPane.YES_OPTION) {
             cart.clear();
             refreshCartTable();
-            JOptionPane.showMessageDialog(this, "购物车已清空！", "成功", JOptionPane.INFORMATION_MESSAGE);
+            // 购物车已清空，直接在购物车中显示
         }
     }
 
@@ -6243,7 +6243,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
             if (addedCount > 0) {
                 refreshCartTable();
                 dialog.dispose();
-                JOptionPane.showMessageDialog(this, "成功添加 " + addedCount + " 种商品到购物车！", "成功", JOptionPane.INFORMATION_MESSAGE);
+                // 商品已添加到购物车，直接在购物车中显示
             } else {
                 JOptionPane.showMessageDialog(dialog, "请选择要添加的商品！", "提示", JOptionPane.INFORMATION_MESSAGE);
             }
@@ -6292,7 +6292,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         }
 
         refreshCartTable();
-        JOptionPane.showMessageDialog(this, "已添加 1 件 " + lastProduct.name + " 到购物车！", "成功", JOptionPane.INFORMATION_MESSAGE);
+        // 商品已添加到购物车，直接在购物车中显示
     }
 
     // 购物车排序
@@ -6401,12 +6401,7 @@ JPanel statsPanel = new JPanel(new GridLayout(1, 4, 10, 5));
         }
 
         refreshCartTable();
-        JOptionPane.showMessageDialog(this, 
-            "✓ 已添加 " + product.name + " 到购物车！\n" +
-            "  单价：¥" + String.format("%.2f", product.price) + "\n" +
-            "  数量：1", 
-            "添加成功", 
-            JOptionPane.INFORMATION_MESSAGE);
+        // 商品已添加到购物车，直接在购物车中显示
     }
 
     // 组合支付对话框
