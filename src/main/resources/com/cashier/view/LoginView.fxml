@@ -1,0 +1,63 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.LoginController"
+      alignment="CENTER"
+      spacing="20"
+      styleClass="scene">
+
+    <padding>
+        <Insets top="40" right="40" bottom="40" left="40"/>
+    </padding>
+
+    <!-- 标题 -->
+    <Label text="收银系统"
+           styleClass="title"
+           style="-fx-font-size: 24px; -fx-text-fill: #3F51B5;"/>
+
+    <!-- 登录表单 -->
+    <VBox spacing="15" styleClass="card">
+        <padding>
+            <Insets top="30" right="30" bottom="30" left="30"/>
+        </padding>
+
+        <!-- 用户名 -->
+        <VBox spacing="5">
+            <Label text="用户名:"/>
+            <TextField fx:id="usernameField"
+                       promptText="请输入用户名"
+                       prefWidth="250"/>
+        </VBox>
+
+        <!-- 密码 -->
+        <VBox spacing="5">
+            <Label text="密码:"/>
+            <PasswordField fx:id="passwordField"
+                          promptText="请输入密码"
+                          prefWidth="250"/>
+        </VBox>
+
+        <!-- 按钮 -->
+        <HBox spacing="10" alignment="CENTER">
+            <Button text="登录"
+                    onAction="#handleLogin"
+                    prefWidth="100"
+                    styleClass="success"/>
+            <Button text="退出"
+                    onAction="#handleExit"
+                    prefWidth="100"
+                    styleClass="danger"/>
+        </HBox>
+    </VBox>
+
+    <!-- 提示信息 -->
+    <Label fx:id="messageLabel"
+           styleClass="secondary"
+           text=""/>
+
+</VBox>

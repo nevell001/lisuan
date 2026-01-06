@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<BorderPane xmlns="http://javafx.com/javafx"
+            xmlns:fx="http://javafx.com/fxml"
+            fx:controller="com.cashier.controller.MainController"
+            styleClass="scene">
+
+    <!-- 顶部菜单栏 -->
+    <top>
+        <MenuBar>
+            <Menu text="系统">
+                <MenuItem text="退出" onAction="#handleExit"/>
+            </Menu>
+            <Menu text="管理">
+                <MenuItem text="用户管理" onAction="#handleUserManagement"/>
+            </Menu>
+            <Menu text="数据">
+                <MenuItem text="数据备份" onAction="#handleDataBackup"/>
+                <MenuItem text="数据恢复" onAction="#handleDataRestore"/>
+            </Menu>
+            <Menu text="帮助">
+                <MenuItem text="关于" onAction="#handleAbout"/>
+            </Menu>
+        </MenuBar>
+    </top>
+
+    <!-- 左侧导航栏 -->
+    <left>
+        <VBox spacing="5" styleClass="card" prefWidth="200">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <Button text="库存管理" onAction="#handleInventory" styleClass="info"/>
+            <Button text="购物车" onAction="#handleCart" styleClass="success"/>
+            <Button text="交易记录" onAction="#handleTransactions" styleClass="warning"/>
+            <Button text="会员管理" onAction="#handleMembers" styleClass="primary"/>
+            <Button text="数据统计" onAction="#handleStatistics" styleClass="info"/>
+            <Button text="促销管理" onAction="#handlePromotions" styleClass="warning"/>
+            <Button text="交接班" onAction="#handleShift" styleClass="danger"/>
+            <Button text="设置" onAction="#handleSettings" styleClass="secondary"/>
+        </VBox>
+    </left>
+
+    <!-- 主内容区域 -->
+    <center>
+        <StackPane>
+            <Label text="欢迎使用收银系统"
+                   styleClass="title"
+                   style="-fx-font-size: 24px;"/>
+        </StackPane>
+    </center>
+
+    <!-- 底部状态栏 -->
+    <bottom>
+        <HBox spacing="10" styleClass="card" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="5" right="10" bottom="5" left="10"/>
+            </padding>
+            <Label fx:id="statusLabel" text="就绪"/>
+            <Region HBox.hgrow="ALWAYS"/>
+            <Label fx:id="userLabel" text="用户: "/>
+        </HBox>
+    </bottom>
+
+</BorderPane>
