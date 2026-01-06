@@ -2,6 +2,7 @@
 *.class
 out/
 build/
+target/
 
 # IDE 配置
 .idea/
