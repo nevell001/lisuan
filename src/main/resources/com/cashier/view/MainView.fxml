@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+﻿<?xml version="1.0" encoding="UTF-8"?>
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
@@ -9,61 +9,209 @@
             fx:controller="com.cashier.controller.MainController"
             styleClass="scene">
 
-    <!-- 顶部菜单栏 -->
+    <!-- 顶部标题栏 -->
     <top>
-        <MenuBar>
-            <Menu text="系统">
-                <MenuItem text="退出" onAction="#handleExit"/>
-            </Menu>
-            <Menu text="管理">
-                <MenuItem text="用户管理" onAction="#handleUserManagement"/>
-            </Menu>
-            <Menu text="数据">
-                <MenuItem text="数据备份" onAction="#handleDataBackup"/>
-                <MenuItem text="数据恢复" onAction="#handleDataRestore"/>
-            </Menu>
-            <Menu text="帮助">
-                <MenuItem text="关于" onAction="#handleAbout"/>
-            </Menu>
-        </MenuBar>
+        <VBox>
+            <!-- 菜单栏 -->
+            <MenuBar>
+                <Menu text="系统">
+                    <MenuItem text="退出登录" onAction="#handleLogout"/>
+                    <SeparatorMenuItem/>
+                    <MenuItem text="退出程序" onAction="#handleExit"/>
+                </Menu>
+                <Menu text="管理">
+                    <MenuItem text="用户管理" onAction="#handleUserManagement"/>
+                    <MenuItem text="交接班" onAction="#handleShift"/>
+                </Menu>
+                <Menu text="数据">
+                    <MenuItem text="数据备份" onAction="#handleDataBackup"/>
+                    <MenuItem text="数据恢复" onAction="#handleDataRestore"/>
+                    <MenuItem text="导出数据" onAction="#handleExportData"/>
+                </Menu>
+                <Menu text="主题">
+                    <MenuItem text="浅色主题" onAction="#handleLightTheme"/>
+                    <MenuItem text="深色主题" onAction="#handleDarkTheme"/>
+                    <MenuItem text="IntelliJ 主题" onAction="#handleIntelliJTheme"/>
+                </Menu>
+                <Menu text="帮助">
+                    <MenuItem text="快捷键" onAction="#handleShortcuts"/>
+                    <MenuItem text="关于" onAction="#handleAbout"/>
+                </Menu>
+            </MenuBar>
+
+            <!-- 工具栏 -->
+            <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
+                <padding>
+                    <Insets top="8" right="10" bottom="8" left="10"/>
+                </padding>
+                
+                <Label text="收银系统" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                <Region HBox.hgrow="ALWAYS"/>
+                <Label fx:id="currentUserLabel" style="-fx-font-size: 13px; -fx-text-fill: #757575;"/>
+                <Label fx:id="currentTimeLabel" style="-fx-font-size: 13px; -fx-text-fill: #757575;"/>
+            </HBox>
+        </VBox>
     </top>
 
     <!-- 左侧导航栏 -->
     <left>
-        <VBox spacing="5" styleClass="card" prefWidth="200">
-            <padding>
-                <Insets top="10" right="10" bottom="10" left="10"/>
-            </padding>
+        <VBox spacing="0" styleClass="sidebar" prefWidth="220">
+            <!-- 用户信息卡片 -->
+            <VBox spacing="8" styleClass="user-card">
+                <padding>
+                    <Insets top="20" right="15" bottom="20" left="15"/>
+                </padding>
+                <Label fx:id="userNameLabel" 
+                       text="用户名"
+                       style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #212121;"/>
+                <Label fx:id="userRoleLabel" 
+                       text="角色"
+                       style="-fx-font-size: 12px; -fx-text-fill: #757575;"/>
+            </VBox>
 
-            <Button text="库存管理" onAction="#handleInventory" styleClass="info"/>
-            <Button text="购物车" onAction="#handleCart" styleClass="success"/>
-            <Button text="交易记录" onAction="#handleTransactions" styleClass="warning"/>
-            <Button text="会员管理" onAction="#handleMembers" styleClass="primary"/>
-            <Button text="数据统计" onAction="#handleStatistics" styleClass="info"/>
-            <Button text="促销管理" onAction="#handlePromotions" styleClass="warning"/>
-            <Button text="交接班" onAction="#handleShift" styleClass="danger"/>
-            <Button text="设置" onAction="#handleSettings" styleClass="secondary"/>
+            <!-- 导航按钮 -->
+            <ScrollPane fitToWidth="true" fitToHeight="true" hbarPolicy="NEVER">
+                <VBox spacing="2" styleClass="nav-buttons">
+                    <padding>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
+                    </padding>
+
+                    <Button fx:id="inventoryBtn" 
+                            text="库存管理" 
+                            onAction="#handleInventory"
+                            styleClass="nav-button, nav-button-active">
+                        <graphic>
+                            <Label text="📦" style="-fx-font-size: 16px;"/>
+                        </graphic>
+                    </Button>
+
+                    <Button fx:id="cartBtn" 
+                            text="购物车" 
+                            onAction="#handleCart"
+                            styleClass="nav-button">
+                        <graphic>
+                            <Label text="🛒" style="-fx-font-size: 16px;"/>
+                        </graphic>
+                    </Button>
+
+                    <Button fx:id="checkoutBtn" 
+                            text="结账" 
+                            onAction="#handleCheckout"
+                            styleClass="nav-button">
+                        <graphic>
+                            <Label text="💳" style="-fx-font-size: 16px;"/>
+                        </graphic>
+                    </Button>
+
+                    <Button fx:id="transactionsBtn" 
+                            text="交易记录" 
+                            onAction="#handleTransactions"
+                            styleClass="nav-button">
+                        <graphic>
+                            <Label text="📊" style="-fx-font-size: 16px;"/>
+                        </graphic>
+                    </Button>
+
+                    <Button fx:id="membersBtn" 
+                            text="会员管理" 
+                            onAction="#handleMembers"
+                            styleClass="nav-button">
+                        <graphic>
+                            <Label text="👥" style="-fx-font-size: 16px;"/>
+                        </graphic>
+                    </Button>
+
+                    <Button fx:id="statisticsBtn" 
+                            text="数据统计" 
+                            onAction="#handleStatistics"
+                            styleClass="nav-button">
+                        <graphic>
+                            <Label text="📈" style="-fx-font-size: 16px;"/>
+                        </graphic>
+                    </Button>
+
+                    <Button fx:id="promotionsBtn" 
+                            text="促销管理" 
+                            onAction="#handlePromotions"
+                            styleClass="nav-button">
+                        <graphic>
+                            <Label text="🎉" style="-fx-font-size: 16px;"/>
+                        </graphic>
+                    </Button>
+
+                    <Button fx:id="shiftBtn" 
+                            text="交接班" 
+                            onAction="#handleShift"
+                            styleClass="nav-button">
+                        <graphic>
+                            <Label text="🔄" style="-fx-font-size: 16px;"/>
+                        </graphic>
+                    </Button>
+
+                    <Button fx:id="settingsBtn" 
+                            text="设置" 
+                            onAction="#handleSettings"
+                            styleClass="nav-button">
+                        <graphic>
+                            <Label text="⚙️" style="-fx-font-size: 16px;"/>
+                        </graphic>
+                    </Button>
+                </VBox>
+            </ScrollPane>
         </VBox>
     </left>
 
     <!-- 主内容区域 -->
     <center>
-        <StackPane>
-            <Label text="欢迎使用收银系统"
-                   styleClass="title"
-                   style="-fx-font-size: 24px;"/>
+        <StackPane fx:id="contentPane">
+            <!-- 默认欢迎界面 -->
+            <VBox alignment="CENTER" spacing="20" styleClass="welcome-panel">
+                <padding>
+                    <Insets top="40" right="40" bottom="40" left="40"/>
+                </padding>
+                
+                <Label text="欢迎使用收银系统" 
+                       style="-fx-font-size: 32px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                <Label text="Cashier System v2.0" 
+                       style="-fx-font-size: 16px; -fx-text-fill: #9E9E9E;"/>
+                
+                <HBox spacing="20" alignment="CENTER" style="-fx-padding-top: 30;">
+                    <Button text="开始使用" 
+                            onAction="#handleInventory"
+                            prefWidth="120"
+                            prefHeight="40"
+                            styleClass="primary-button"/>
+                    <Button text="查看帮助" 
+                            onAction="#handleAbout"
+                            prefWidth="120"
+                            prefHeight="40"
+                            styleClass="secondary-button"/>
+                </HBox>
+                
+                <VBox spacing="10" alignment="CENTER" style="-fx-padding-top: 40;">
+                    <Label text="快捷键提示" 
+                           style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #424242;"/>
+                    <Label text="F1 - 添加商品 | F2 - 补货 | F3 - 删除商品 | F4 - 搜索" 
+                           style="-fx-font-size: 12px; -fx-text-fill: #757575;"/>
+                    <Label text="F5 - 刷新 | F6 - 分类 | F7 - 会员 | F8 - 结账" 
+                           style="-fx-font-size: 12px; -fx-text-fill: #757575;"/>
+                </VBox>
+            </VBox>
         </StackPane>
     </center>
 
     <!-- 底部状态栏 -->
     <bottom>
-        <HBox spacing="10" styleClass="card" alignment="CENTER_LEFT">
+        <HBox spacing="10" styleClass="status-bar" alignment="CENTER_LEFT">
             <padding>
                 <Insets top="5" right="10" bottom="5" left="10"/>
             </padding>
-            <Label fx:id="statusLabel" text="就绪"/>
+            
+            <Label fx:id="statusLabel" text="就绪" style="-fx-text-fill: #757575;"/>
             <Region HBox.hgrow="ALWAYS"/>
-            <Label fx:id="userLabel" text="用户: "/>
+            <Label fx:id="currentShiftLabel" text="班次: 未开始" style="-fx-text-fill: #757575;"/>
+            <Separator orientation="VERTICAL"/>
+            <Label fx:id="dateLabel" style="-fx-text-fill: #757575;"/>
         </HBox>
     </bottom>
 

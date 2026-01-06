@@ -256,3 +256,70 @@
     -fx-text-fill: #BDBDBD;
     -fx-border-color: #E0E0E0;
 }
+/* ========== 工具栏样式 ========== */
+.toolbar {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 0 0 1 0;
+}
+
+/* ========== 侧边栏样式 ========== */
+.sidebar {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 0 1 0 0;
+}
+
+/* ========== 用户卡片样式 ========== */
+.user-card {
+    -fx-background-color: #F5F5F5;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 0 0 1 0;
+}
+
+/* ========== 导航按钮样式 ========== */
+.nav-buttons {
+    -fx-background-color: #FFFFFF;
+}
+
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #212121;
+    -fx-font-size: 14px;
+    -fx-background-radius: 4px;
+    -fx-cursor: hand;
+    -fx-alignment: CENTER_LEFT;
+    -fx-padding: 10 15 10 15;
+    -fx-graphic-text-gap: 10;
+}
+
+.nav-button:hover {
+    -fx-background-color: #E8EAF6;
+}
+
+.nav-button:active {
+    -fx-background-color: #C5CAE9;
+}
+
+.nav-button-active {
+    -fx-background-color: #3F51B5;
+    -fx-text-fill: #FFFFFF;
+}
+
+.nav-button-active:hover {
+    -fx-background-color: #5C6BC0;
+}
+
+/* ========== 欢迎面板样式 ========== */
+.welcome-panel {
+    -fx-background-color: #F5F5F5;
+    -fx-background-radius: 8px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 10, 0, 0, 5);
+}
+
+/* ========== 状态栏样式 ========== */
+.status-bar {
+    -fx-background-color: #F5F5F5;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1 0 0 0;
+}
