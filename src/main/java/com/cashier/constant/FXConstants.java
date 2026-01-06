@@ -106,19 +106,19 @@ public class FXConstants {
     public static final String PRIMARY_FONT_FAMILY = "Microsoft YaHei";
 
     /** 默认字体大小 */
-    public static final double FONT_SIZE_NORMAL = 13;
+    public static final double FONT_SIZE_NORMAL = 14;
 
     /** 大字体大小 */
-    public static final double FONT_SIZE_LARGE = 15;
+    public static final double FONT_SIZE_LARGE = 16;
 
     /** 小字体大小 */
-    public static final double FONT_SIZE_SMALL = 11;
+    public static final double FONT_SIZE_SMALL = 12;
 
     /** 标题字体大小 */
-    public static final double FONT_SIZE_TITLE = 18;
+    public static final double FONT_SIZE_TITLE = 20;
 
     /** 头部字体大小 */
-    public static final double FONT_SIZE_HEADING = 16;
+    public static final double FONT_SIZE_HEADING = 18;
 
     // ========== 动画常量 ==========
 

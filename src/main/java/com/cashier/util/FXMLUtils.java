@@ -48,7 +48,7 @@ public class FXMLUtils {
      */
     public static Parent loadFXML(String fxmlPath, Object controller, ResourceBundle resources) throws IOException {
         FXMLLoader loader = new FXMLLoader();
-        loader.setLocation(getClass().getResource(fxmlPath));
+        loader.setLocation(FXMLUtils.class.getResource(fxmlPath));
 
         if (controller != null) {
             loader.setController(controller);
@@ -92,7 +92,7 @@ public class FXMLUtils {
      */
     public static FXMLLoader loadFXMLLoader(String fxmlPath, Object controller, ResourceBundle resources) throws IOException {
         FXMLLoader loader = new FXMLLoader();
-        URL location = getClass().getResource(fxmlPath);
+        URL location = FXMLUtils.class.getResource(fxmlPath);
 
         if (location == null) {
             throw new IOException("无法找到 FXML 文件: " + fxmlPath);
@@ -201,6 +201,6 @@ public class FXMLUtils {
      * @return 如果存在返回 true，否则返回 false
      */
     public static boolean existsFXML(String fxmlPath) {
-        return getClass().getResource(fxmlPath) != null;
+        return FXMLUtils.class.getResource(fxmlPath) != null;
     }
 }

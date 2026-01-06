@@ -1,0 +1,259 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.SettingsController"
+      spacing="0"
+      styleClass="settings-view">
+
+    <!-- 顶部工具栏 -->
+    <HBox spacing="10" styleClass="toolbar" alignment="CENTER_RIGHT">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <Button text="重置所有设置"
+                onAction="#handleResetAll"
+                prefWidth="120"
+                styleClass="warning-button"/>
+    </HBox>
+
+    <!-- 设置标签页 -->
+    <TabPane fx:id="settingsTabPane" VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
+
+        <!-- 基本设置标签页 -->
+        <Tab text="基本设置">
+            <ScrollPane fitToWidth="true" fitToHeight="true">
+                <VBox spacing="20" styleClass="settings-content">
+                    <padding>
+                        <Insets top="20" right="20" bottom="20" left="20"/>
+                    </padding>
+
+                    <Label text="店铺信息" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    
+                    <GridPane hgap="10" vgap="10">
+                        <padding>
+                            <Insets top="10" right="0" bottom="0" left="0"/>
+                        </padding>
+
+                        <Label text="店铺名称:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <TextField fx:id="storeNameField" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="300"/>
+
+                        <Label text="店铺地址:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <TextField fx:id="storeAddressField" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="300"/>
+
+                        <Label text="联系电话:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <TextField fx:id="storePhoneField" GridPane.columnIndex="1" GridPane.rowIndex="2" prefWidth="300"/>
+                    </GridPane>
+
+                    <Separator/>
+
+                    <Label text="财务设置" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    
+                    <GridPane hgap="10" vgap="10">
+                        <padding>
+                            <Insets top="10" right="0" bottom="0" left="0"/>
+                        </padding>
+
+                        <Label text="税率:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <TextField fx:id="taxRateField" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="150" promptText="0.0-1.0"/>
+                        <Label text="(0.0-1.0)" GridPane.columnIndex="2" GridPane.rowIndex="0" style="-fx-text-fill: #757575;"/>
+
+                        <Label text="货币:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <ComboBox fx:id="currencyComboBox" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="150"/>
+                    </GridPane>
+
+                    <Separator/>
+
+                    <Label text="界面设置" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    
+                    <GridPane hgap="10" vgap="10">
+                        <padding>
+                            <Insets top="10" right="0" bottom="0" left="0"/>
+                        </padding>
+
+                        <Label text="语言:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <ComboBox fx:id="languageComboBox" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="150"/>
+
+                        <Label text="主题:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <ComboBox fx:id="themeComboBox" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="150"/>
+                    </GridPane>
+
+                    <Separator/>
+
+                    <HBox spacing="10" alignment="CENTER_RIGHT">
+                        <Button text="保存设置"
+                                onAction="#handleSaveBasicSettings"
+                                prefWidth="120"
+                                styleClass="primary-button"/>
+                    </HBox>
+                </VBox>
+            </ScrollPane>
+        </Tab>
+
+        <!-- 打印设置标签页 -->
+        <Tab text="打印设置">
+            <ScrollPane fitToWidth="true" fitToHeight="true">
+                <VBox spacing="20" styleClass="settings-content">
+                    <padding>
+                        <Insets top="20" right="20" bottom="20" left="20"/>
+                    </padding>
+
+                    <CheckBox fx:id="enablePrintCheckBox" text="启用打印功能"/>
+
+                    <Separator/>
+
+                    <Label text="打印机设置" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    
+                    <GridPane hgap="10" vgap="10">
+                        <padding>
+                            <Insets top="10" right="0" bottom="0" left="0"/>
+                        </padding>
+
+                        <Label text="打印机名称:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <TextField fx:id="printerNameField" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="300"/>
+
+                        <Label text="纸张大小:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <ComboBox fx:id="paperSizeComboBox" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="150"/>
+                    </GridPane>
+
+                    <Separator/>
+
+                    <Label text="打印选项" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    
+                    <VBox spacing="10">
+                        <padding>
+                            <Insets top="10" right="0" bottom="0" left="0"/>
+                        </padding>
+
+                        <CheckBox fx:id="printLogoCheckBox" text="打印店铺Logo"/>
+                        <CheckBox fx:id="printBarcodeCheckBox" text="打印商品条形码"/>
+                    </VBox>
+
+                    <Separator/>
+
+                    <HBox spacing="10" alignment="CENTER_RIGHT">
+                        <Button text="保存设置"
+                                onAction="#handleSavePrintSettings"
+                                prefWidth="120"
+                                styleClass="primary-button"/>
+                    </HBox>
+                </VBox>
+            </ScrollPane>
+        </Tab>
+
+        <!-- 备份设置标签页 -->
+        <Tab text="备份设置">
+            <ScrollPane fitToWidth="true" fitToHeight="true">
+                <VBox spacing="20" styleClass="settings-content">
+                    <padding>
+                        <Insets top="20" right="20" bottom="20" left="20"/>
+                    </padding>
+
+                    <CheckBox fx:id="autoBackupCheckBox" text="启用自动备份"/>
+
+                    <Separator/>
+
+                    <Label text="自动备份设置" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    
+                    <GridPane hgap="10" vgap="10">
+                        <padding>
+                            <Insets top="10" right="0" bottom="0" left="0"/>
+                        </padding>
+
+                        <Label text="备份频率:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <ComboBox fx:id="backupFrequencyComboBox" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="150"/>
+
+                        <Label text="备份路径:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1">
+                            <TextField fx:id="backupPathField" prefWidth="250" promptText="输入备份路径或点击浏览选择"/>
+                            <Button text="浏览" onAction="#handleBrowseBackupPath" prefWidth="80" styleClass="secondary-button"/>
+                        </HBox>
+                    </GridPane>
+
+                    <Separator/>
+
+                    <Label text="手动操作" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    
+                    <HBox spacing="10">
+                        <Button fx:id="backupNowButton"
+                                text="立即备份"
+                                onAction="#handleBackupNow"
+                                prefWidth="120"
+                                styleClass="primary-button"/>
+                        <Button fx:id="restoreButton"
+                                text="恢复数据"
+                                onAction="#handleRestore"
+                                prefWidth="120"
+                                styleClass="warning-button"/>
+                    </HBox>
+
+                    <Separator/>
+
+                    <HBox spacing="10" alignment="CENTER_RIGHT">
+                        <Button text="保存设置"
+                                onAction="#handleSaveBackupSettings"
+                                prefWidth="120"
+                                styleClass="primary-button"/>
+                    </HBox>
+                </VBox>
+            </ScrollPane>
+        </Tab>
+
+        <!-- 安全设置标签页 -->
+        <Tab text="安全设置">
+            <ScrollPane fitToWidth="true" fitToHeight="true">
+                <VBox spacing="20" styleClass="settings-content">
+                    <padding>
+                        <Insets top="20" right="20" bottom="20" left="20"/>
+                    </padding>
+
+                    <Label text="会话安全" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    
+                    <GridPane hgap="10" vgap="10">
+                        <padding>
+                            <Insets top="10" right="0" bottom="0" left="0"/>
+                        </padding>
+
+                        <CheckBox fx:id="autoLogoutCheckBox" text="启用自动登出" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Label text="自动登出时间(分钟):" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <Spinner fx:id="autoLogoutMinutesSpinner" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="150"/>
+                    </GridPane>
+
+                    <Separator/>
+
+                    <Label text="密码策略" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    
+                    <GridPane hgap="10" vgap="10">
+                        <padding>
+                            <Insets top="10" right="0" bottom="0" left="0"/>
+                        </padding>
+
+                        <CheckBox fx:id="passwordComplexityCheckBox" text="启用密码复杂度检查" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Label text="密码最小长度:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <Spinner fx:id="passwordMinLengthSpinner" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="150"/>
+                        <Label text="最大尝试次数:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <Spinner fx:id="passwordMaxAttemptsSpinner" GridPane.columnIndex="1" GridPane.rowIndex="2" prefWidth="150"/>
+                    </GridPane>
+
+                    <Separator/>
+
+                    <HBox spacing="10" alignment="CENTER_RIGHT">
+                        <Button text="保存设置"
+                                onAction="#handleSaveSecuritySettings"
+                                prefWidth="120"
+                                styleClass="primary-button"/>
+                    </HBox>
+                </VBox>
+            </ScrollPane>
+        </Tab>
+
+    </TabPane>
+
+</VBox>

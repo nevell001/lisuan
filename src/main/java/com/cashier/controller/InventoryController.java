@@ -1,4 +1,4 @@
-﻿package com.cashier.controller;
+package com.cashier.controller;
 
 import com.cashier.model.DataManager;
 import com.cashier.model.Product;
@@ -6,9 +6,15 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
+import java.io.IOException;
 import java.util.Map;
 
 /**
@@ -99,7 +105,7 @@ public class InventoryController {
      */
     private void setupTableColumns() {
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
-        priceColumn.setCellValueFactory(cellData -> 
+        priceColumn.setCellValueFactory(cellData ->
             new SimpleStringProperty(String.format("%.2f", cellData.getValue().price)));
         quantityColumn.setCellValueFactory(new PropertyValueFactory<>("quantity"));
         minStockColumn.setCellValueFactory(new PropertyValueFactory<>("minStock"));
@@ -148,12 +154,48 @@ public class InventoryController {
      */
     @FXML
     private void handleAddProduct() {
-        // TODO: 实现添加商品对话框
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("添加商品");
-        alert.setHeaderText(null);
-        alert.setContentText("添加商品功能正在开发中...");
-        alert.showAndWait();
+        try {
+            // 加载商品编辑对话框
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/ProductEditView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            ProductEditController controller = loader.getController();
+
+            // 创建对话框
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("添加商品");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(inventoryTable.getScene().getWindow());
+            dialogStage.setResizable(false);
+
+            // 设置场景
+            Scene scene = new Scene(root);
+            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
+
+            dialogStage.setScene(scene);
+
+            // 设置控制器引用
+            controller.setDialogStage(dialogStage);
+            controller.setProduct(null);
+
+            // 显示对话框并等待响应
+            dialogStage.showAndWait();
+
+            // 如果用户点击了保存
+            if (controller.isOkClicked()) {
+                Product newProduct = controller.getProduct();
+                inventory.put(newProduct.name, newProduct);
+                DataManager.saveInventory(inventory);
+                loadInventory();
+                updateStatus("商品添加成功: " + newProduct.name);
+            }
+
+        } catch (IOException e) {
+            showError("加载添加商品对话框失败: " + e.getMessage());
+        }
     }
 
     /**
@@ -163,12 +205,48 @@ public class InventoryController {
     private void handleEditProduct() {
         Product selected = inventoryTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
-            // TODO: 实现编辑商品对话框
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("编辑商品");
-            alert.setHeaderText(null);
-            alert.setContentText("编辑商品功能正在开发中...\n商品: " + selected.name);
-            alert.showAndWait();
+            try {
+                // 加载商品编辑对话框
+                FXMLLoader loader = new FXMLLoader();
+                loader.setLocation(getClass().getResource("/com/cashier/view/ProductEditView.fxml"));
+                VBox root = loader.load();
+
+                // 获取控制器
+                ProductEditController controller = loader.getController();
+
+                // 创建对话框
+                Stage dialogStage = new Stage();
+                dialogStage.setTitle("编辑商品");
+                dialogStage.initModality(Modality.WINDOW_MODAL);
+                dialogStage.initOwner(inventoryTable.getScene().getWindow());
+                dialogStage.setResizable(false);
+
+                // 设置场景
+                Scene scene = new Scene(root);
+                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
+
+                dialogStage.setScene(scene);
+
+                // 设置控制器引用
+                controller.setDialogStage(dialogStage);
+                controller.setProduct(selected);
+
+                // 显示对话框并等待响应
+                dialogStage.showAndWait();
+
+                // 如果用户点击了保存
+                if (controller.isOkClicked()) {
+                    Product updatedProduct = controller.getProduct();
+                    inventory.put(updatedProduct.name, updatedProduct);
+                    DataManager.saveInventory(inventory);
+                    loadInventory();
+                    updateStatus("商品更新成功: " + updatedProduct.name);
+                }
+
+            } catch (IOException e) {
+                showError("加载编辑商品对话框失败: " + e.getMessage());
+            }
         }
     }
 
@@ -199,12 +277,45 @@ public class InventoryController {
     private void handleRestock() {
         Product selected = inventoryTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
-            // TODO: 实现补货对话框
-            Alert alert = new Alert(Alert.AlertType.INFORMATION);
-            alert.setTitle("补货");
-            alert.setHeaderText(null);
-            alert.setContentText("补货功能正在开发中...\n商品: " + selected.name);
-            alert.showAndWait();
+            try {
+                // 加载补货对话框
+                FXMLLoader loader = new FXMLLoader();
+                loader.setLocation(getClass().getResource("/com/cashier/view/RestockView.fxml"));
+                VBox root = loader.load();
+
+                // 获取控制器
+                RestockController controller = loader.getController();
+
+                // 创建对话框
+                Stage dialogStage = new Stage();
+                dialogStage.setTitle("补货");
+                dialogStage.initModality(Modality.WINDOW_MODAL);
+                dialogStage.initOwner(inventoryTable.getScene().getWindow());
+                dialogStage.setResizable(false);
+
+                // 设置场景
+                Scene scene = new Scene(root);
+                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
+
+                dialogStage.setScene(scene);
+
+                // 设置控制器引用
+                controller.setDialogStage(dialogStage);
+                controller.setProduct(selected);
+
+                // 显示对话框并等待响应
+                dialogStage.showAndWait();
+
+                // 如果用户点击了确认
+                if (controller.isOkClicked()) {
+                    loadInventory();
+                    updateStatus("补货成功: " + selected.name + " (+" + controller.getRestockQuantity() + ")");
+                }
+
+            } catch (IOException e) {
+                showError("加载补货对话框失败: " + e.getMessage());
+            }
         }
     }
 
@@ -267,5 +378,26 @@ public class InventoryController {
      */
     public void refreshInventory() {
         loadInventory();
+    }
+
+    /**
+     * 更新状态
+     * @param status 状态文本
+     */
+    private void updateStatus(String status) {
+        // TODO: 更新主界面的状态栏
+        System.out.println("状态: " + status);
+    }
+
+    /**
+     * 显示错误信息
+     * @param message 错误消息
+     */
+    private void showError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("错误");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }

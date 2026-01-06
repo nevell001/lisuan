@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.RestockController"
+      spacing="15"
+      styleClass="restock-view"
+      prefWidth="400"
+      prefHeight="300">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <!-- 标题 -->
+    <Label fx:id="titleLabel" 
+           text="补货" 
+           style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
+    <!-- 商品信息 -->
+    <VBox spacing="5" styleClass="product-info-box">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+        <Label fx:id="productLabel" text="" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+        <Label fx:id="currentStockLabel" text="" style="-fx-font-size: 12px; -fx-text-fill: #757575;"/>
+    </VBox>
+
+    <!-- 表单 -->
+    <GridPane hgap="10" vgap="10">
+        <padding>
+            <Insets top="10" right="0" bottom="10" left="0"/>
+        </padding>
+
+        <!-- 补货数量 -->
+        <Label text="补货数量:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <TextField fx:id="quantityField" 
+                   GridPane.columnIndex="1" GridPane.rowIndex="0" 
+                   prefWidth="200" promptText="输入补货数量"/>
+
+        <!-- 补货原因 -->
+        <Label text="补货原因:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <TextField fx:id="reasonField" 
+                   GridPane.columnIndex="1" GridPane.rowIndex="1" 
+                   prefWidth="200" promptText="可选"/>
+    </GridPane>
+
+    <!-- 错误提示 -->
+    <Label fx:id="errorLabel" 
+           text="" 
+           style="-fx-text-fill: #F44336; -fx-font-size: 12px;"/>
+
+    <!-- 按钮区域 -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button fx:id="cancelButton"
+                text="取消"
+                onAction="#handleCancel"
+                prefWidth="80"
+                styleClass="secondary-button"/>
+        <Button fx:id="confirmButton"
+                text="确认"
+                onAction="#handleConfirm"
+                prefWidth="80"
+                styleClass="primary-button"/>
+    </HBox>
+
+</VBox>

@@ -1,3 +1,5 @@
+package com.cashier.model;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -5,6 +7,7 @@ public class User {
     public String username;      // 用户名
     public String password;      // 密码（实际应用中应该加密存储）
     public String name;          // 真实姓名
+    public String email;         // 邮箱
     public String role;          // 角色：admin(管理员)、cashier(收银员)、finance(财务)
     public Date createTime;      // 创建时间
     public Date lastLoginTime;   // 最后登录时间
@@ -63,5 +66,38 @@ public class User {
             case "finance": return "财务";
             default: return "未知";
         }
+    }
+
+    // Getter方法
+    public String getUsername() {
+        return username;
+    }
+
+    public String getPassword() {
+        return password;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public Date getCreateTime() {
+        return createTime;
+    }
+
+    public Date getLastLoginTime() {
+        return lastLoginTime;
+    }
+
+    public boolean isActive() {
+        return active;
     }
 }

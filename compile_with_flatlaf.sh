@@ -1,2 +1,0 @@
-#!/bin/bash
-javac -encoding UTF-8 -cp flatlaf-3.5.jar Category.java Product.java Transaction.java Member.java Promotion.java RechargeRecord.java User.java OperationLog.java Shift.java DataManager.java MicroInteractions.java ToastNotification.java ToastIntegrationHelper.java StyledTableCellRenderer.java TableStyleHelper.java SpacingConstants.java CashierSystemGUI.java

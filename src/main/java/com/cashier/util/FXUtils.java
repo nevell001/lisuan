@@ -235,7 +235,7 @@ public class FXUtils {
      * @param node 目标节点
      * @param cssFile CSS 文件路径
      */
-    public static void applyStylesheet(Node node, String cssFile) {
+    public static void applyStylesheet(javafx.scene.Parent node, String cssFile) {
         node.getStylesheets().add(cssFile);
     }
 
@@ -243,7 +243,7 @@ public class FXUtils {
      * 移除节点的所有 CSS 样式
      * @param node 目标节点
      */
-    public static void clearStylesheets(Node node) {
+    public static void clearStylesheets(javafx.scene.Parent node) {
         node.getStylesheets().clear();
     }
 

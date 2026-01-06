@@ -1,0 +1,87 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.MemberController"
+      spacing="0"
+      styleClass="member-view">
+
+    <!-- 顶部工具栏 -->
+    <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+
+        <!-- 操作按钮 -->
+        <Button fx:id="addButton"
+                text="添加会员"
+                onAction="#handleAddMember"
+                prefWidth="100"
+                styleClass="primary-button"/>
+
+        <Button fx:id="editButton"
+                text="编辑"
+                onAction="#handleEditMember"
+                prefWidth="80"
+                styleClass="secondary-button"/>
+
+        <Button fx:id="deleteButton"
+                text="删除"
+                onAction="#handleDeleteMember"
+                prefWidth="80"
+                styleClass="danger-button"/>
+
+        <Button fx:id="rechargeButton"
+                text="充值"
+                onAction="#handleRecharge"
+                prefWidth="80"
+                styleClass="info-button"/>
+
+        <Separator orientation="VERTICAL"/>
+
+        <!-- 搜索 -->
+        <Label text="搜索:"/>
+        <TextField fx:id="searchField"
+                  promptText="输入手机号或姓名"
+                  prefWidth="200"
+                  onAction="#handleSearch"/>
+
+        <Button text="搜索"
+                onAction="#handleSearch"
+                prefWidth="60"
+                styleClass="secondary-button"/>
+
+        <Button text="清除"
+                onAction="#handleClearSearch"
+                prefWidth="60"
+                styleClass="secondary-button"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <!-- 统计信息 -->
+        <Label fx:id="countLabel" text="会员数量: 0" style="-fx-text-fill: #757575;"/>
+    </HBox>
+
+    <!-- 会员表格 -->
+    <TableView fx:id="memberTable"
+              VBox.vgrow="ALWAYS"
+              styleClass="member-table">
+        <columns>
+            <TableColumn fx:id="phoneColumn" text="手机号" prefWidth="120"/>
+            <TableColumn fx:id="nameColumn" text="姓名" prefWidth="100"/>
+            <TableColumn fx:id="levelColumn" text="等级" prefWidth="80"/>
+            <TableColumn fx:id="pointsColumn" text="积分" prefWidth="80"/>
+            <TableColumn fx:id="balanceColumn" text="余额(元)" prefWidth="100"/>
+            <TableColumn fx:id="discountColumn" text="折扣" prefWidth="80"/>
+            <TableColumn fx:id="birthdayColumn" text="生日" prefWidth="100"/>
+        </columns>
+        <placeholder>
+            <Label text="暂无会员数据" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
+        </placeholder>
+    </TableView>
+
+</VBox>

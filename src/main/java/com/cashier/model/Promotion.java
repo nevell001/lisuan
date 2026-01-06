@@ -1,3 +1,5 @@
+package com.cashier.model;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -100,5 +102,50 @@ public class Promotion {
             default:
                 return name;
         }
+    }
+
+    // Getter方法
+    public String getId() {
+        return id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getType() {
+        return type;
+    }
+
+    public double getThreshold() {
+        return threshold;
+    }
+
+    public double getDiscount() {
+        return discount;
+    }
+
+    public String getDescription() {
+        return description;
+    }
+
+    public boolean isEnabled() {
+        return enabled;
+    }
+
+    public Date getStartDate() {
+        return startDate;
+    }
+
+    public Date getEndDate() {
+        return endDate;
+    }
+
+    public int getUsageCount() {
+        return usageCount;
+    }
+
+    public int getMaxUsage() {
+        return maxUsage;
     }
 }

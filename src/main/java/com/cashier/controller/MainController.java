@@ -1,18 +1,31 @@
-﻿package com.cashier.controller;
+package com.cashier.controller;
 
 import com.cashier.CashierSystemFXApplication;
+import com.cashier.model.DataManager;
 import com.cashier.model.User;
 import com.cashier.util.FXUtils;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.scene.control.*;
+import javafx.scene.input.KeyCode;
+import javafx.scene.input.KeyCodeCombination;
+import javafx.scene.input.KeyCombination;
+import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
+import javafx.scene.layout.VBox;
 import javafx.util.Duration;
-
+import java.io.File;
+import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Arrays;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * 主控制器
@@ -33,6 +46,9 @@ public class MainController {
     private Label userRoleLabel;
 
     @FXML
+    private Label avatarLabel;
+
+    @FXML
     private Label statusLabel;
 
     @FXML
@@ -42,7 +58,7 @@ public class MainController {
     private Label dateLabel;
 
     @FXML
-    private StackPane contentPane;
+    private TabPane tabPane;
 
     @FXML
     private Button inventoryBtn;
@@ -69,12 +85,17 @@ public class MainController {
     private Button shiftBtn;
 
     @FXML
+    private Button userManagementBtn;
+
+    @FXML
     private Button settingsBtn;
 
     private CashierSystemFXApplication application;
     private User currentUser;
     private Timeline timeTimeline;
     private Button activeButton;
+    private Map<String, Tab> openTabs = new HashMap<>(); // 管理打开的标签页
+    private StackPane loadingOverlay;
 
     /**
      * 初始化方法
@@ -90,6 +111,140 @@ public class MainController {
         // 更新状态
         updateStatus("就绪");
         updateDate();
+
+        // 创建加载覆盖层
+        createLoadingOverlay();
+
+        // 设置快捷键
+        setupShortcuts();
+    }
+
+    /**
+     * 设置快捷键
+     */
+    private void setupShortcuts() {
+        // 获取场景
+        if (tabPane.getScene() == null) {
+            // 如果场景还未设置，延迟设置快捷键
+            tabPane.sceneProperty().addListener((obs, oldScene, newScene) -> {
+                if (newScene != null) {
+                    setupSceneShortcuts(newScene);
+                }
+            });
+        } else {
+            setupSceneShortcuts(tabPane.getScene());
+        }
+    }
+
+    /**
+     * 为场景设置快捷键
+     * @param scene 场景
+     */
+    private void setupSceneShortcuts(javafx.scene.Scene scene) {
+        // 功能键
+        scene.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (event.getCode() == KeyCode.F1) {
+                handleInventory();
+                event.consume();
+            } else if (event.getCode() == KeyCode.F2) {
+                showPlaceholder("补货", "📦", "补货功能正在开发中...");
+                event.consume();
+            } else if (event.getCode() == KeyCode.F3) {
+                showPlaceholder("删除商品", "🗑️", "删除商品功能正在开发中...");
+                event.consume();
+            } else if (event.getCode() == KeyCode.F4) {
+                showPlaceholder("搜索", "🔍", "搜索功能正在开发中...");
+                event.consume();
+            } else if (event.getCode() == KeyCode.F5) {
+                // 刷新当前标签页
+                updateStatus("已刷新");
+                event.consume();
+            } else if (event.getCode() == KeyCode.F6) {
+                showPlaceholder("分类管理", "📁", "分类管理功能正在开发中...");
+                event.consume();
+            } else if (event.getCode() == KeyCode.F7) {
+                handleMembers();
+                event.consume();
+            } else if (event.getCode() == KeyCode.F8) {
+                handleCheckout();
+                event.consume();
+            } else if (event.getCode() == KeyCode.F9) {
+                handlePromotions();
+                event.consume();
+            } else if (event.getCode() == KeyCode.F10) {
+                showPlaceholder("库存预警", "⚠️", "库存预警功能正在开发中...");
+                event.consume();
+            } else if (event.getCode() == KeyCode.F11) {
+                handleDataBackup();
+                event.consume();
+            } else if (event.getCode() == KeyCode.F12) {
+                handleDataRestore();
+                event.consume();
+            } else if (event.getCode() == KeyCode.ESCAPE) {
+                // 清空搜索或关闭当前标签页
+                Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
+                if (selectedTab != null && !selectedTab.getText().equals("欢迎")) {
+                    tabPane.getTabs().remove(selectedTab);
+                    openTabs.remove(selectedTab.getText());
+                    event.consume();
+                }
+            } else if (event.getCode() == KeyCode.DELETE) {
+                showPlaceholder("删除", "🗑️", "删除功能正在开发中...");
+                event.consume();
+            }
+        });
+
+        // Ctrl 组合键
+        scene.addEventHandler(KeyEvent.KEY_PRESSED, event -> {
+            if (event.isControlDown()) {
+                if (event.getCode() == KeyCode.N) {
+                    handleInventory();
+                    event.consume();
+                } else if (event.getCode() == KeyCode.S) {
+                    updateStatus("数据已保存");
+                    event.consume();
+                } else if (event.getCode() == KeyCode.F) {
+                    showPlaceholder("搜索", "🔍", "搜索功能正在开发中...");
+                    event.consume();
+                } else if (event.getCode() == KeyCode.D) {
+                    handleExportData();
+                    event.consume();
+                } else if (event.getCode() == KeyCode.R) {
+                    updateStatus("已刷新");
+                    event.consume();
+                } else if (event.getCode() == KeyCode.Q) {
+                    handleExit();
+                    event.consume();
+                } else if (event.getCode() == KeyCode.A) {
+                    // 全选
+                    event.consume();
+                } else if (event.getCode() == KeyCode.E) {
+                    showPlaceholder("编辑", "✏️", "编辑功能正在开发中...");
+                    event.consume();
+                } else if (event.getCode() == KeyCode.B) {
+                    showPlaceholder("批量操作", "📋", "批量操作功能正在开发中...");
+                    event.consume();
+                } else if (event.getCode() == KeyCode.M) {
+                    handleMembers();
+                    event.consume();
+                } else if (event.getCode() == KeyCode.T) {
+                    handleStatistics();
+                    event.consume();
+                } else if (event.getCode() == KeyCode.DIGIT1) {
+                    handleInventory();
+                    event.consume();
+                } else if (event.getCode() == KeyCode.DIGIT2) {
+                    handleCart();
+                    event.consume();
+                } else if (event.getCode() == KeyCode.DIGIT3) {
+                    handleTransactions();
+                    event.consume();
+                } else if (event.getCode() == KeyCode.DIGIT4) {
+                    handleSettings();
+                    event.consume();
+                }
+            }
+        });
     }
 
     /**
@@ -101,18 +256,32 @@ public class MainController {
     }
 
     /**
-     * 设置当前用户
-     * @param user 当前用户
-     */
-    public void setCurrentUser(User user) {
-        this.currentUser = user;
-        
-        // 更新用户信息显示
-        currentUserLabel.setText(user.name + " (" + user.getRoleDisplayName() + ")");
-        userNameLabel.setText(user.name);
-        userRoleLabel.setText(user.getRoleDisplayName());
-    }
-
+         * 设置当前用户
+         * @param user 当前用户
+         */
+        public void setCurrentUser(User user) {
+            this.currentUser = user;
+            
+            // 更新用户信息显示
+            currentUserLabel.setText(user.name + " (" + user.getRoleDisplayName() + ")");
+            userNameLabel.setText(user.name);
+            userRoleLabel.setText(user.getRoleDisplayName());
+            
+            // 设置头像（显示用户名的首字母）
+            if (user.name != null && !user.name.isEmpty()) {
+                avatarLabel.setText(user.name.substring(0, 1).toUpperCase());
+            }
+            
+            // 根据角色设置头像颜色
+            String role = user.role;
+            if ("admin".equals(role)) {
+                avatarLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #FFFFFF;");
+            } else if ("cashier".equals(role)) {
+                avatarLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #FFFFFF;");
+            } else if ("finance".equals(role)) {
+                avatarLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #FFFFFF;");
+            }
+        }
     /**
      * 启动时间更新
      */
@@ -183,23 +352,96 @@ public class MainController {
     @FXML
     private void handleUserManagement() {
         updateStatus("用户管理");
-        setActiveButton(null);
-        FXUtils.showInfoAlert("开发中", "用户管理功能正在开发中...");
+        setActiveButton(userManagementBtn);
+        
+        try {
+            // 加载用户管理界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/UserView.fxml"));
+            VBox root = loader.load();
+            
+            // 获取控制器
+            UserController controller = loader.getController();
+            
+            // 创建内容标签页
+            createContentTab("用户管理", root);
+            
+        } catch (IOException e) {
+            showError("加载用户管理界面失败: " + e.getMessage());
+        }
     }
 
     @FXML
     private void handleDataBackup() {
         updateStatus("数据备份");
-        FXUtils.showInfoAlert("开发中", "数据备份功能正在开发中...");
+        
+        try {
+            // 创建备份目录
+            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
+            String backupPath = "backup_" + timestamp;
+            
+            // 执行备份
+            DataManager.backupData(backupPath);
+            
+            FXUtils.showInfoAlert("备份成功", "数据备份成功！\n备份位置: " + backupPath);
+        } catch (Exception e) {
+            FXUtils.showErrorAlert("备份失败", "数据备份失败: " + e.getMessage());
+        }
     }
-
+    
     @FXML
     private void handleDataRestore() {
         updateStatus("数据恢复");
-        FXUtils.showInfoAlert("开发中", "数据恢复功能正在开发中...");
-    }
-
-    @FXML
+        
+        // 列出可用的备份目录
+        File projectDir = new File(System.getProperty("user.dir"));
+        File[] backupDirs = projectDir.listFiles((dir, name) -> 
+            name.startsWith("backup_") && dir.isDirectory()
+        );
+        
+        if (backupDirs == null || backupDirs.length == 0) {
+            FXUtils.showErrorAlert("无备份", "未找到任何备份目录！\n请先进行数据备份。");
+            return;
+        }
+        
+        // 按修改时间排序，最新的在前
+        Arrays.sort(backupDirs, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+        
+        // 创建选择对话框
+        ChoiceDialog<String> dialog = new ChoiceDialog<>();
+        dialog.setTitle("选择备份");
+        dialog.setHeaderText("请选择要恢复的备份：");
+        dialog.setContentText("可用备份：");
+        
+        // 添加备份选项
+        ObservableList<String> options = FXCollections.observableArrayList();
+        for (File dir : backupDirs) {
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            String timeStr = sdf.format(new Date(dir.lastModified()));
+            options.add(dir.getName() + " (" + timeStr + ")");
+        }
+        dialog.getItems().addAll(options);
+        
+        dialog.showAndWait().ifPresent(selected -> {
+            // 提取备份目录名
+            String backupDirName = selected.split(" \\(")[0];
+            
+            try {
+                // 确认恢复
+                Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+                confirmAlert.setTitle("确认恢复");
+                confirmAlert.setHeaderText(null);
+                confirmAlert.setContentText("确定要从以下备份恢复数据吗？\n备份: " + backupDirName + "\n\n恢复数据将覆盖当前数据，确定要继续吗？");
+                
+                if (confirmAlert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+                    DataManager.restoreData(backupDirName);
+                    FXUtils.showInfoAlert("恢复成功", "数据恢复成功！\n请重新登录以加载最新数据。");
+                }
+            } catch (Exception e) {
+                FXUtils.showErrorAlert("恢复失败", "数据恢复失败: " + e.getMessage());
+            }
+        });
+    }    @FXML
     private void handleExportData() {
         updateStatus("导出数据");
         FXUtils.showInfoAlert("开发中", "导出数据功能正在开发中...");
@@ -232,7 +474,7 @@ public class MainController {
     @FXML
     private void handleShortcuts() {
         updateStatus("快捷键");
-        String shortcuts = 
+        String shortcuts =
             "快捷键列表:\n\n" +
             "功能键:\n" +
             "F1 - 添加商品\n" +
@@ -265,7 +507,7 @@ public class MainController {
             "Ctrl+2 - 切换到购物车\n" +
             "Ctrl+3 - 切换到交易记录\n" +
             "Ctrl+4 - 切换到设置";
-        
+
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("快捷键");
         alert.setHeaderText(null);
@@ -277,7 +519,7 @@ public class MainController {
     @FXML
     private void handleAbout() {
         updateStatus("关于");
-        String about = 
+        String about =
             "收银系统 Cashier System\n\n" +
             "版本: 2.0.0 (JavaFX)\n" +
             "开发: nevell\n\n" +
@@ -286,7 +528,7 @@ public class MainController {
             "- Maven 3.8+\n" +
             "- JDK 17/21\n\n" +
             "许可证: 木兰宽松许可证 v2 (MulanPSL2)";
-        
+
         FXUtils.showInfoAlert("关于", about);
     }
 
@@ -296,88 +538,634 @@ public class MainController {
     private void handleInventory() {
         updateStatus("库存管理");
         setActiveButton(inventoryBtn);
-        showPlaceholder("库存管理", "📦", "商品库存管理功能正在开发中...");
+        
+        try {
+            // 加载库存管理界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/InventoryView.fxml"));
+            VBox root = loader.load();
+            
+            // 获取控制器
+            InventoryController controller = loader.getController();
+            
+            // 创建内容标签页
+            createContentTab("库存管理", root);
+            
+        } catch (IOException e) {
+            showError("加载库存管理界面失败: " + e.getMessage());
+        }
     }
 
     @FXML
     private void handleCart() {
-        updateStatus("购物车");
+        updateStatus("POS");
         setActiveButton(cartBtn);
-        showPlaceholder("购物车", "🛒", "购物车功能正在开发中...");
+
+        try {
+            System.out.println("MainController: 开始加载购物车界面...");
+            // 加载购物车界面（购物车和结账已合并）
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/CartView.fxml"));
+            System.out.println("MainController: FXML文件路径: " + getClass().getResource("/com/cashier/view/CartView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            CartController controller = loader.getController();
+            System.out.println("MainController: 获取控制器成功");
+
+            // 创建内容标签页
+            createContentTab("POS", root);
+            System.out.println("MainController: 购物车界面加载成功");
+
+        } catch (IOException e) {
+            System.err.println("MainController: 加载购物车界面失败");
+            e.printStackTrace();
+            showError("加载POS界面失败: " + e.getMessage());
+        } catch (Exception e) {
+            System.err.println("MainController: 加载购物车界面时发生异常");
+            e.printStackTrace();
+            showError("加载POS界面失败: " + e.getMessage());
+        }
     }
 
     @FXML
     private void handleCheckout() {
-        updateStatus("结账");
+        updateStatus("POS");
         setActiveButton(checkoutBtn);
-        showPlaceholder("结账", "💳", "结账功能正在开发中...");
+        
+        try {
+            // 加载购物车界面（购物车和结账已合并）
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/CartView.fxml"));
+            VBox root = loader.load();
+            
+            // 获取控制器
+            CartController controller = loader.getController();
+            
+            // 创建内容标签页
+            createContentTab("POS", root);
+            
+        } catch (IOException e) {
+            showError("加载POS界面失败: " + e.getMessage());
+        }
     }
 
     @FXML
     private void handleTransactions() {
         updateStatus("交易记录");
         setActiveButton(transactionsBtn);
-        showPlaceholder("交易记录", "📊", "交易记录功能正在开发中...");
+
+        try {
+            // 加载交易记录界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/TransactionView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            TransactionController controller = loader.getController();
+
+            // 创建内容标签页
+            createContentTab("交易记录", root);
+
+        } catch (IOException e) {
+            showError("加载交易记录界面失败: " + e.getMessage());
+        }
     }
 
     @FXML
     private void handleMembers() {
         updateStatus("会员管理");
         setActiveButton(membersBtn);
-        showPlaceholder("会员管理", "👥", "会员管理功能正在开发中...");
+        
+        try {
+            // 加载会员管理界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/MemberView.fxml"));
+            VBox root = loader.load();
+            
+            // 获取控制器
+            MemberController controller = loader.getController();
+            
+            // 创建内容标签页
+            createContentTab("会员管理", root);
+            
+        } catch (IOException e) {
+            showError("加载会员管理界面失败: " + e.getMessage());
+        }
     }
 
     @FXML
     private void handleStatistics() {
         updateStatus("数据统计");
         setActiveButton(statisticsBtn);
-        showPlaceholder("数据统计", "📈", "数据统计功能正在开发中...");
+
+        try {
+            // 加载数据统计界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/StatisticsView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            StatisticsController controller = loader.getController();
+
+            // 创建内容标签页
+            createContentTab("数据统计", root);
+
+        } catch (IOException e) {
+            showError("加载数据统计界面失败: " + e.getMessage());
+        }
     }
 
     @FXML
     private void handlePromotions() {
         updateStatus("促销管理");
         setActiveButton(promotionsBtn);
-        showPlaceholder("促销管理", "🎉", "促销管理功能正在开发中...");
+
+        try {
+            // 加载促销管理界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/PromotionView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            PromotionController controller = loader.getController();
+
+            // 创建内容标签页
+            createContentTab("促销管理", root);
+
+        } catch (IOException e) {
+            showError("加载促销管理界面失败: " + e.getMessage());
+        }
     }
 
     @FXML
     private void handleShift() {
         updateStatus("交接班");
         setActiveButton(shiftBtn);
-        showPlaceholder("交接班", "🔄", "交接班功能正在开发中...");
+
+        try {
+            // 加载交接班界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/ShiftView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            ShiftController controller = loader.getController();
+
+            // 创建内容标签页
+            createContentTab("交接班", root);
+
+        } catch (IOException e) {
+            showError("加载交接班界面失败: " + e.getMessage());
+        }
     }
 
     @FXML
     private void handleSettings() {
         updateStatus("设置");
         setActiveButton(settingsBtn);
-        showPlaceholder("设置", "⚙️", "设置功能正在开发中...");
+        
+        try {
+            // 加载设置界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/SettingsView.fxml"));
+            VBox root = loader.load();
+            
+            // 获取控制器
+            SettingsController controller = loader.getController();
+            
+            // 创建内容标签页
+            createContentTab("设置", root);
+            
+        } catch (IOException e) {
+            showError("加载设置界面失败: " + e.getMessage());
+        }
     }
 
     /**
-     * 显示占位符内容
-     * @param title 标题
-     * @param icon 图标
-     * @param message 消息
-     */
-    private void showPlaceholder(String title, String icon, String message) {
-        VBox placeholder = new VBox(20);
-        placeholder.setAlignment(javafx.geometry.Pos.CENTER);
-        placeholder.setStyle("-fx-background-color: #F5F5F5; -fx-padding: 40;");
+         * 显示占位符内容
+         * @param title 标题
+         * @param icon 图标
+         * @param message 消息
+         */
+        private void showPlaceholder(String title, String icon, String message) {
+            // 检查是否已经打开该标签页
+            if (openTabs.containsKey(title)) {
+                // 如果已打开，切换到该标签页
+                tabPane.getSelectionModel().select(openTabs.get(title));
+                return;
+            }
+    
+            // 创建新的标签页
+            Tab tab = new Tab(title);
+            tab.setClosable(true);
+    
+            // 创建占位符内容
+            VBox placeholder = new VBox(20);
+            placeholder.setAlignment(javafx.geometry.Pos.CENTER);
+            placeholder.setStyle("-fx-background-color: #F5F5F5; -fx-padding: 40;");
+            
+            Label iconLabel = new Label(icon);
+            iconLabel.setStyle("-fx-font-size: 64px;");
+            
+            Label titleLabel = new Label(title);
+            titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;");
+            
+            Label messageLabel = new Label(message);
+            messageLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #757575;");
+            
+            placeholder.getChildren().addAll(iconLabel, titleLabel, messageLabel);
+            
+            tab.setContent(placeholder);
+    
+            // 添加标签页关闭事件
+            tab.setOnClosed(event -> {
+                openTabs.remove(title);
+            });
+    
+            // 添加到标签页管理器
+            openTabs.put(title, tab);
+    
+            // 添加到TabPane
+            tabPane.getTabs().add(tab);
+    
+            // 切换到新标签页
+            tabPane.getSelectionModel().select(tab);
+        }
+    
+        /**
+         * 创建内容标签页
+         * @param title 标题
+         * @param content 内容节点
+         */
+        private void createContentTab(String title, javafx.scene.Node content) {
+            // 检查是否已经打开该标签页
+            if (openTabs.containsKey(title)) {
+                // 如果已打开，切换到该标签页
+                tabPane.getSelectionModel().select(openTabs.get(title));
+                return;
+            }
+    
+            // 创建新的标签页
+            Tab tab = new Tab(title);
+            tab.setClosable(true);
+            tab.setContent(content);
+    
+            // 添加标签页关闭事件
+            tab.setOnClosed(event -> {
+                openTabs.remove(title);
+            });
+    
+            // 添加到标签页管理器
+            openTabs.put(title, tab);
+    
+            // 添加到TabPane
+            tabPane.getTabs().add(tab);
+    
+            // 切换到新标签页
+            tabPane.getSelectionModel().select(tab);
+        }
+    
+        /**
+    
+             * 关闭所有标签页（除了欢迎页）
+    
+             */
+    
+            private void closeAllTabs() {
+    
+                // 保留第一个标签页（欢迎页）
+    
+                while (tabPane.getTabs().size() > 1) {
+    
+                    Tab tab = tabPane.getTabs().get(tabPane.getTabs().size() - 1);
+    
+                    openTabs.remove(tab.getText());
+    
+                    tabPane.getTabs().remove(tab);
+    
+                }
+    
+            }
+    
         
-        Label iconLabel = new Label(icon);
-        iconLabel.setStyle("-fx-font-size: 64px;");
+    
+            /**
+    
         
-        Label titleLabel = new Label(title);
-        titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;");
+    
+                 * 创建加载覆盖层
+    
         
-        Label messageLabel = new Label(message);
-        messageLabel.setStyle("-fx-font-size: 14px; -fx-text-fill: #757575;");
+    
+                 */
+    
         
-        placeholder.getChildren().addAll(iconLabel, titleLabel, messageLabel);
+    
+                private void createLoadingOverlay() {
+    
         
-        contentPane.getChildren().clear();
-        contentPane.getChildren().add(placeholder);
-    }
-}
+    
+                    loadingOverlay = new StackPane();
+    
+        
+    
+                    loadingOverlay.setStyle("-fx-background-color: rgba(0, 0, 0, 0.5);");
+    
+        
+    
+            
+    
+        
+    
+                    ProgressIndicator progressIndicator = new ProgressIndicator();
+    
+        
+    
+                    progressIndicator.setStyle("-fx-progress-color: #3F51B5;");
+    
+        
+    
+            
+    
+        
+    
+                    Label loadingLabel = new Label("加载中...");
+    
+        
+    
+                    loadingLabel.setStyle("-fx-text-fill: #FFFFFF; -fx-font-size: 14px; -fx-font-weight: bold;");
+    
+        
+    
+            
+    
+        
+    
+                    VBox vbox = new VBox(10, progressIndicator, loadingLabel);
+    
+        
+    
+                    vbox.setAlignment(javafx.geometry.Pos.CENTER);
+    
+        
+    
+                    vbox.setStyle("-fx-background-color: rgba(255, 255, 255, 0.9); -fx-background-radius: 10; -fx-padding: 20;");
+    
+        
+    
+            
+    
+        
+    
+                    loadingOverlay.getChildren().add(vbox);
+    
+        
+    
+                    loadingOverlay.setVisible(false);
+    
+        
+    
+                    loadingOverlay.setMouseTransparent(true);
+    
+        
+    
+                }
+    
+        
+    
+            
+    
+        
+    
+                /**
+    
+        
+    
+                 * 显示加载动画
+    
+        
+    
+                 */
+    
+        
+    
+                private void showLoading() {
+    
+        
+    
+                    loadingOverlay.setVisible(true);
+    
+        
+    
+                    loadingOverlay.setMouseTransparent(false);
+    
+        
+    
+                }
+    
+        
+    
+            
+    
+        
+    
+                /**
+    
+        
+    
+            
+    
+        
+    
+                     * 隐藏加载动画
+    
+        
+    
+            
+    
+        
+    
+                     */
+    
+        
+    
+            
+    
+        
+    
+                    private void hideLoading() {
+    
+        
+    
+            
+    
+        
+    
+                        loadingOverlay.setVisible(false);
+    
+        
+    
+            
+    
+        
+    
+                        loadingOverlay.setMouseTransparent(true);
+    
+        
+    
+            
+    
+        
+    
+                    }
+    
+        
+    
+            
+    
+        
+    
+                
+    
+        
+    
+            
+    
+        
+    
+                    /**
+    
+        
+    
+            
+    
+        
+    
+                     * 显示错误信息
+    
+        
+    
+            
+    
+        
+    
+                     * @param message 错误消息
+    
+        
+    
+            
+    
+        
+    
+                     */
+    
+        
+    
+            
+    
+        
+    
+                    private void showError(String message) {
+    
+        
+    
+            
+    
+        
+    
+                        Alert alert = new Alert(Alert.AlertType.ERROR);
+    
+        
+    
+            
+    
+        
+    
+                        alert.setTitle("错误");
+    
+        
+    
+            
+    
+        
+    
+                        alert.setHeaderText(null);
+    
+        
+    
+            
+    
+        
+    
+                        alert.setContentText(message);
+    
+        
+    
+            
+    
+        
+    
+                        alert.showAndWait();
+    
+        
+    
+            
+    
+        
+    
+                    }
+    
+        
+    
+            /**
+    
+             * 异步加载内容
+    
+             * @param title 标题
+    
+             * @param icon 图标
+    
+             * @param message 消息
+    
+             */
+    
+            private void showPlaceholderAsync(String title, String icon, String message) {
+    
+                showLoading();
+    
+                
+    
+                new Thread(() -> {
+    
+                    try {
+    
+                        // 模拟加载延迟
+    
+                        Thread.sleep(300);
+    
+                        
+    
+                        javafx.application.Platform.runLater(() -> {
+    
+                            showPlaceholder(title, icon, message);
+    
+                            hideLoading();
+    
+                        });
+    
+                    } catch (InterruptedException e) {
+    
+                        javafx.application.Platform.runLater(() -> {
+    
+                            showPlaceholder(title, icon, message);
+    
+                            hideLoading();
+    
+                        });
+    
+                    }
+    
+                }).start();
+    
+            }}

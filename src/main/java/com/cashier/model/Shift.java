@@ -1,3 +1,5 @@
+package com.cashier.model;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
@@ -95,5 +97,70 @@ public class Shift {
         long hours = minutes / 60;
         long mins = minutes % 60;
         return String.format("%d小时%d分钟", hours, mins);
+    }
+
+    // Getter方法
+    public String getShiftId() {
+        return shiftId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getOperatorName() {
+        return operatorName;
+    }
+
+    public Date getStartTime() {
+        return startTime;
+    }
+
+    public Date getEndTime() {
+        return endTime;
+    }
+
+    public double getOpeningRevenue() {
+        return openingRevenue;
+    }
+
+    public double getClosingRevenue() {
+        return closingRevenue;
+    }
+
+    public int getOpeningTransactionCount() {
+        return openingTransactionCount;
+    }
+
+    public int getClosingTransactionCount() {
+        return closingTransactionCount;
+    }
+
+    public double getShiftRevenue() {
+        return shiftRevenue;
+    }
+
+    public int getShiftTransactionCount() {
+        return shiftTransactionCount;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public double getCashRevenue() {
+        return cashRevenue;
+    }
+
+    public double getWechatRevenue() {
+        return wechatRevenue;
+    }
+
+    public double getAlipayRevenue() {
+        return alipayRevenue;
+    }
+
+    public double getCardRevenue() {
+        return cardRevenue;
     }
 }

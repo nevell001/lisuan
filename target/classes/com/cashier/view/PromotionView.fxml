@@ -1,0 +1,101 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.PromotionController"
+      spacing="0"
+      styleClass="promotion-view">
+
+    <!-- 顶部工具栏 -->
+    <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+
+        <!-- 操作按钮 -->
+        <Button fx:id="addButton"
+                text="添加促销"
+                onAction="#handleAddPromotion"
+                prefWidth="100"
+                styleClass="primary-button"/>
+
+        <Button fx:id="editButton"
+                text="编辑"
+                onAction="#handleEditPromotion"
+                prefWidth="80"
+                styleClass="secondary-button"/>
+
+        <Button fx:id="deleteButton"
+                text="删除"
+                onAction="#handleDeletePromotion"
+                prefWidth="80"
+                styleClass="danger-button"/>
+
+        <Button fx:id="enableButton"
+                text="启用"
+                onAction="#handleEnablePromotion"
+                prefWidth="80"
+                styleClass="success-button"/>
+
+        <Button fx:id="disableButton"
+                text="禁用"
+                onAction="#handleDisablePromotion"
+                prefWidth="80"
+                styleClass="warning-button"/>
+
+        <Separator orientation="VERTICAL"/>
+
+        <!-- 筛选条件 -->
+        <Label text="类型:"/>
+        <ComboBox fx:id="typeFilterComboBox" prefWidth="100"/>
+
+        <Label text="状态:"/>
+        <ComboBox fx:id="statusFilterComboBox" prefWidth="100"/>
+
+        <Separator orientation="VERTICAL"/>
+
+        <!-- 搜索 -->
+        <Label text="搜索:"/>
+        <TextField fx:id="searchField"
+                  promptText="促销名称或描述"
+                  prefWidth="200"
+                  onAction="#handleSearch"/>
+
+        <Button text="搜索"
+                onAction="#handleSearch"
+                prefWidth="60"
+                styleClass="secondary-button"/>
+
+        <Button text="清除"
+                onAction="#handleClearSearch"
+                prefWidth="60"
+                styleClass="secondary-button"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <!-- 统计信息 -->
+        <Label fx:id="countLabel" text="促销数量: 0" style="-fx-text-fill: #757575;"/>
+    </HBox>
+
+    <!-- 促销列表表格 -->
+    <TableView fx:id="promotionTable"
+              VBox.vgrow="ALWAYS"
+              styleClass="promotion-table">
+        <columns>
+            <TableColumn fx:id="nameColumn" text="促销名称" prefWidth="150"/>
+            <TableColumn fx:id="typeColumn" text="类型" prefWidth="80"/>
+            <TableColumn fx:id="descriptionColumn" text="描述" prefWidth="250"/>
+            <TableColumn fx:id="periodColumn" text="有效期" prefWidth="180"/>
+            <TableColumn fx:id="usageColumn" text="使用次数" prefWidth="100"/>
+            <TableColumn fx:id="statusColumn" text="状态" prefWidth="120"/>
+        </columns>
+        <placeholder>
+            <Label text="暂无促销记录" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
+        </placeholder>
+    </TableView>
+
+</VBox>

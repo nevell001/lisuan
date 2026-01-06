@@ -2,6 +2,8 @@
  * 间距常量类
  * 定义统一的间距系统，确保整个应用的视觉一致性
  */
+package com.cashier.constant;
+
 public class SpacingConstants {
 
     // 基础间距单位（8px 基准）

@@ -1,0 +1,181 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.CartController"
+      spacing="0"
+      styleClass="cart-view">
+
+    <!-- 顶部工具栏 -->
+    <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+
+        <!-- 操作按钮 -->
+        <Button fx:id="addButton"
+                text="添加商品"
+                onAction="#handleAddProduct"
+                prefWidth="100"
+                styleClass="primary-button"/>
+
+        <Button fx:id="removeButton"
+                text="移除"
+                onAction="#handleRemoveProduct"
+                prefWidth="80"
+                styleClass="danger-button"/>
+
+        <Button fx:id="clearButton"
+                text="清空"
+                onAction="#handleClearCart"
+                prefWidth="80"
+                styleClass="warning-button"/>
+
+        <Separator orientation="VERTICAL"/>
+
+        <!-- 搜索商品 -->
+        <Label text="搜索商品:" style="-fx-font-size: 14px; -fx-text-fill: #424242;"/>
+        <TextField fx:id="searchField"
+                  promptText="输入商品名称或条形码"
+                  prefWidth="200"
+                  onAction="#handleSearch"/>
+
+        <Button text="搜索"
+                onAction="#handleSearch"
+                prefWidth="60"
+                styleClass="secondary-button"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <!-- 统计信息 -->
+        <Label fx:id="countLabel" text="商品数量: 0" style="-fx-font-size: 14px; -fx-text-fill: #616161;"/>
+    </HBox>
+
+    <!-- 分割面板 -->
+    <SplitPane VBox.vgrow="ALWAYS" styleClass="cart-split-pane">
+        <!-- 左侧：购物车商品列表 -->
+        <TableView fx:id="cartTable"
+                  styleClass="cart-table">
+            <columns>
+                <TableColumn fx:id="nameColumn" text="商品名称" prefWidth="200"/>
+                <TableColumn fx:id="priceColumn" text="单价(元)" prefWidth="100"/>
+                <TableColumn fx:id="quantityColumn" text="数量" prefWidth="100"/>
+                <TableColumn fx:id="subtotalColumn" text="小计(元)" prefWidth="100"/>
+            </columns>
+            <placeholder>
+                <Label text="购物车为空" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
+            </placeholder>
+        </TableView>
+
+        <!-- 右侧：商品列表和结算信息 -->
+        <VBox spacing="10">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <!-- 商品列表 -->
+            <Label text="可用商品" style="-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+            <TableView fx:id="productTable"
+                      VBox.vgrow="ALWAYS"
+                      styleClass="product-table">
+                <columns>
+                    <TableColumn fx:id="productNameColumn" text="商品名称" prefWidth="150"/>
+                    <TableColumn fx:id="productPriceColumn" text="单价(元)" prefWidth="80"/>
+                    <TableColumn fx:id="productStockColumn" text="库存" prefWidth="60"/>
+                </columns>
+            </TableView>
+
+            <!-- 结算信息 -->
+            <VBox spacing="10" styleClass="checkout-info">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+
+                <!-- 会员信息 -->
+                <VBox spacing="5" styleClass="member-info-box">
+                    <padding>
+                        <Insets top="5" right="5" bottom="5" left="5"/>
+                    </padding>
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Label text="会员手机号:" style="-fx-font-size: 13px; -fx-text-fill: #424242;"/>
+                        <TextField fx:id="memberPhoneField" prefWidth="120" promptText="输入手机号" style="-fx-font-size: 13px;"/>
+                        <Button text="查询" onAction="#handleSearchMember" prefWidth="50" styleClass="secondary-button" style="-fx-font-size: 13px;"/>
+                    </HBox>
+                    <Label fx:id="memberInfoLabel" text="" style="-fx-font-size: 12px; -fx-text-fill: #4CAF50;"/>
+                </VBox>
+
+                <Separator/>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="商品总数:" style="-fx-font-size: 14px; -fx-text-fill: #424242;"/>
+                    <Label fx:id="totalQuantityLabel" text="0" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+                </HBox>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="商品金额:" style="-fx-font-size: 14px; -fx-text-fill: #424242;"/>
+                    <Label fx:id="totalAmountLabel" text="¥0.00" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+                </HBox>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="会员折扣:" style="-fx-font-size: 14px; -fx-text-fill: #424242;"/>
+                    <Label fx:id="memberDiscountLabel" text="0%" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
+                </HBox>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="折扣金额:" style="-fx-font-size: 14px; -fx-text-fill: #424242;"/>
+                    <Label fx:id="discountLabel" text="-¥0.00" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
+                </HBox>
+
+                <Separator/>
+
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="应付金额:" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #212121;"/>
+                    <Label fx:id="finalAmountLabel" text="¥0.00" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #F44336;"/>
+                </HBox>
+
+                <!-- 支付方式 -->
+                <VBox spacing="5">
+                    <padding>
+                        <Insets top="10" right="0" bottom="5" left="0"/>
+                    </padding>
+                    <Label text="支付方式:" style="-fx-font-size: 13px; -fx-font-weight: bold;"/>
+                    <GridPane hgap="5" vgap="5">
+                        <Button fx:id="cashButton"
+                                text="现金"
+                                onAction="#handleCashPayment"
+                                prefWidth="100"
+                                prefHeight="35"
+                                styleClass="payment-button"
+                                GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Button fx:id="wechatButton"
+                                text="微信"
+                                onAction="#handleWechatPayment"
+                                prefWidth="100"
+                                prefHeight="35"
+                                styleClass="payment-button"
+                                GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                        <Button fx:id="alipayButton"
+                                text="支付宝"
+                                onAction="#handleAlipayPayment"
+                                prefWidth="100"
+                                prefHeight="35"
+                                styleClass="payment-button"
+                                GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <Button fx:id="cardButton"
+                                text="银行卡"
+                                onAction="#handleCardPayment"
+                                prefWidth="100"
+                                prefHeight="35"
+                                styleClass="payment-button"
+                                GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                    </GridPane>
+                </VBox>
+            </VBox>
+        </VBox>
+    </SplitPane>
+
+</VBox>

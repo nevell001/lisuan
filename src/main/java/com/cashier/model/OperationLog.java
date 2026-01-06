@@ -1,3 +1,5 @@
+package com.cashier.model;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -25,5 +27,30 @@ public class OperationLog {
         this.details = details;
         this.timestamp = new Date();
         this.ipAddress = "";
+    }
+
+    // Getter方法
+    public String getLogId() {
+        return logId;
+    }
+
+    public String getUsername() {
+        return username;
+    }
+
+    public String getOperation() {
+        return operation;
+    }
+
+    public String getDetails() {
+        return details;
+    }
+
+    public Date getTimestamp() {
+        return timestamp;
+    }
+
+    public String getIpAddress() {
+        return ipAddress;
     }
 }

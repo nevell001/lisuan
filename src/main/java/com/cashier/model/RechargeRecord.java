@@ -1,3 +1,5 @@
+package com.cashier.model;
+
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -28,5 +30,34 @@ public class RechargeRecord {
         this.paymentMethod = paymentMethod;
         this.timestamp = new Date();
         this.operator = operator;
+    }
+
+    // Getter方法
+    public String getRecordId() {
+        return recordId;
+    }
+
+    public String getMemberPhone() {
+        return memberPhone;
+    }
+
+    public String getMemberName() {
+        return memberName;
+    }
+
+    public double getAmount() {
+        return amount;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public Date getTimestamp() {
+        return timestamp;
+    }
+
+    public String getOperator() {
+        return operator;
     }
 }

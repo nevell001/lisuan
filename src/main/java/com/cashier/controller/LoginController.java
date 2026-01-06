@@ -1,4 +1,4 @@
-﻿package com.cashier.controller;
+package com.cashier.controller;
 
 import com.cashier.CashierSystemFXApplication;
 import com.cashier.model.DataManager;
@@ -7,8 +7,11 @@ import com.cashier.util.FXUtils;
 import javafx.animation.FadeTransition;
 import javafx.animation.ScaleTransition;
 import javafx.fxml.FXML;
+import javafx.fxml.FXMLLoader;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.*;
@@ -39,8 +42,13 @@ public class LoginController {
     @FXML
     private VBox loginCard;
 
+    @FXML
+    private ProgressIndicator loadingIndicator;
+
     private CashierSystemFXApplication application;
     private static final String CONFIG_FILE = "config/login_config.properties";
+    private static final int MAX_LOGIN_ATTEMPTS = 5;
+    private int loginAttempts = 0;
 
     /**
      * 初始化方法
@@ -78,13 +86,21 @@ public class LoginController {
     @FXML
     private void handleLogin() {
         String username = usernameField.getText().trim();
-        String password = new String(passwordField.getPassword());
+        String password = passwordField.getText();
 
         // 验证输入
         if (username.isEmpty() || password.isEmpty()) {
             showError("用户名和密码不能为空！");
             shakeTextField(usernameField);
             shakeTextField(passwordField);
+            return;
+        }
+
+        // 检查登录尝试次数
+        if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+            showError("登录尝试次数过多，请稍后再试！");
+            usernameField.setDisable(true);
+            passwordField.setDisable(true);
             return;
         }
 
@@ -100,14 +116,16 @@ public class LoginController {
                 // 验证用户
                 User user = users.get(username);
                 if (user == null) {
-                    showError("用户名不存在！");
+                    loginAttempts++;
+                    showError("用户名不存在！剩余尝试次数：" + (MAX_LOGIN_ATTEMPTS - loginAttempts));
                     shakeTextField(usernameField);
                     setLoginState(false);
                     return;
                 }
 
                 if (!user.password.equals(password)) {
-                    showError("密码错误！");
+                    loginAttempts++;
+                    showError("密码错误！剩余尝试次数：" + (MAX_LOGIN_ATTEMPTS - loginAttempts));
                     shakeTextField(passwordField);
                     setLoginState(false);
                     return;
@@ -129,6 +147,9 @@ public class LoginController {
                 } else {
                     clearSavedCredentials();
                 }
+
+                // 重置登录尝试次数
+                loginAttempts = 0;
 
                 // 登录成功，切换到主界面
                 javafx.application.Platform.runLater(() -> {
@@ -156,6 +177,71 @@ public class LoginController {
     }
 
     /**
+     * 处理忘记密码
+     */
+    @FXML
+    private void handleForgotPassword() {
+        try {
+            // 加载密码重置对话框
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/PasswordResetView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            PasswordResetController controller = loader.getController();
+
+            // 创建对话框
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("重置密码");
+            dialogStage.initModality(javafx.stage.Modality.WINDOW_MODAL);
+            dialogStage.initOwner(usernameField.getScene().getWindow());
+            dialogStage.setResizable(false);
+
+            // 设置场景
+            Scene scene = new Scene(root);
+            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
+
+            dialogStage.setScene(scene);
+
+            // 设置控制器引用
+            controller.setDialogStage(dialogStage);
+
+            // 显示对话框
+            dialogStage.showAndWait();
+
+        } catch (IOException e) {
+            showError("加载密码重置对话框失败：" + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 处理关于
+     */
+    @FXML
+    private void handleAbout() {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("关于");
+        alert.setHeaderText("收银系统 v2.0.0");
+        alert.setContentText("现代化收银系统 - JavaFX 版本\n\n" +
+                "技术栈：\n" +
+                "- JavaFX 17.0.8\n" +
+                "- Maven 3.8+\n" +
+                "- JDK 17\n\n" +
+                "功能特性：\n" +
+                "- 库存管理\n" +
+                "- 购物车\n" +
+                "- 结账系统\n" +
+                "- 会员管理\n" +
+                "- 交易记录\n" +
+                "- 数据统计\n\n" +
+                "© 2026 收银系统团队");
+        alert.initOwner(usernameField.getScene().getWindow());
+        alert.showAndWait();
+    }
+
+    /**
      * 显示错误信息
      * @param message 错误消息
      */
@@ -170,13 +256,15 @@ public class LoginController {
         fadeIn.play();
 
         // 3秒后自动隐藏
-        javafx.application.Platform.runLater(() -> {
+        javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(Duration.seconds(3));
+        pause.setOnFinished(event -> {
             FadeTransition fadeOut = new FadeTransition(Duration.millis(300), errorLabel);
             fadeOut.setFromValue(1.0);
             fadeOut.setToValue(0.0);
-            fadeOut.setOnFinished(event -> errorLabel.setVisible(false));
+            fadeOut.setOnFinished(e -> errorLabel.setVisible(false));
             fadeOut.play();
-        }, 3000);
+        });
+        pause.play();
     }
 
     /**
@@ -187,6 +275,10 @@ public class LoginController {
         usernameField.setDisable(loading);
         passwordField.setDisable(loading);
         rememberMeCheckBox.setDisable(loading);
+
+        // 显示/隐藏加载指示器
+        loadingIndicator.setVisible(loading);
+        loadingIndicator.setManaged(loading);
     }
 
     /**
@@ -206,17 +298,57 @@ public class LoginController {
      * 添加入场动画
      */
     private void addEntranceAnimation() {
-        FadeTransition fadeIn = new FadeTransition(Duration.millis(500), loginCard);
+        // 淡入动画
+        FadeTransition fadeIn = new FadeTransition(Duration.millis(800), loginCard);
         fadeIn.setFromValue(0.0);
         fadeIn.setToValue(1.0);
-        fadeIn.play();
+        fadeIn.setInterpolator(javafx.animation.Interpolator.EASE_OUT);
 
-        ScaleTransition scaleUp = new ScaleTransition(Duration.millis(500), loginCard);
-        scaleUp.setFromX(0.95);
-        scaleUp.setFromY(0.95);
+        // 缩放动画
+        ScaleTransition scaleUp = new ScaleTransition(Duration.millis(800), loginCard);
+        scaleUp.setFromX(0.85);
+        scaleUp.setFromY(0.85);
         scaleUp.setToX(1.0);
         scaleUp.setToY(1.0);
-        scaleUp.play();
+        scaleUp.setInterpolator(javafx.animation.Interpolator.EASE_OUT);
+
+        // 同时播放
+        javafx.animation.ParallelTransition parallelTransition = new javafx.animation.ParallelTransition(fadeIn, scaleUp);
+        parallelTransition.play();
+
+        // 添加输入框焦点动画
+        addInputFieldAnimations();
+    }
+
+    /**
+     * 添加输入框焦点动画
+     */
+    private void addInputFieldAnimations() {
+        // 用户名输入框焦点动画
+        usernameField.focusedProperty().addListener((obs, oldValue, newValue) -> {
+            if (newValue) {
+                // 获得焦点时的动画
+                javafx.animation.ScaleTransition scaleUp = new javafx.animation.ScaleTransition(Duration.millis(200), usernameField);
+                scaleUp.setFromX(1.0);
+                scaleUp.setFromY(1.0);
+                scaleUp.setToX(1.02);
+                scaleUp.setToY(1.05);
+                scaleUp.play();
+            }
+        });
+
+        // 密码输入框焦点动画
+        passwordField.focusedProperty().addListener((obs, oldValue, newValue) -> {
+            if (newValue) {
+                // 获得焦点时的动画
+                javafx.animation.ScaleTransition scaleUp = new javafx.animation.ScaleTransition(Duration.millis(200), passwordField);
+                scaleUp.setFromX(1.0);
+                scaleUp.setFromY(1.0);
+                scaleUp.setToX(1.02);
+                scaleUp.setToY(1.05);
+                scaleUp.play();
+            }
+        });
     }
 
     /**

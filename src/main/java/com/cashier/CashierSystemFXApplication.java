@@ -1,4 +1,4 @@
-﻿package com.cashier;
+package com.cashier;
 
 import com.cashier.controller.LoginController;
 import com.cashier.controller.MainController;
@@ -177,7 +177,7 @@ public class CashierSystemFXApplication extends Application {
         // TODO: 检查是否有进行中的班次
 
         // 保存数据
-        DataManager.saveAll();
+        // DataManager.saveAll();
 
         // 退出应用
         System.exit(0);
