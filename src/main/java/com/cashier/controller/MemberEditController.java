@@ -68,7 +68,7 @@ public class MemberEditController {
         levelComboBox.getSelectionModel().select(0);
 
         // 设置默认折扣
-        discountField.setText("1.0");
+        discountField.setText("10.0");
     }
 
     /**
@@ -189,8 +189,8 @@ public class MemberEditController {
         // 验证折扣
         try {
             double discount = Double.parseDouble(discountField.getText().trim());
-            if (discount <= 0 || discount > 1) {
-                errorMessage += "折扣必须在0到1之间！\n";
+            if (discount < 0 || discount > 10) {
+                errorMessage += "折扣必须在0到10之间（0表示免费，10表示不打折）！\n";
             }
         } catch (NumberFormatException e) {
             errorMessage += "折扣格式不正确！\n";

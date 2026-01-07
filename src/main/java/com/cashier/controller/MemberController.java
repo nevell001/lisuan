@@ -99,9 +99,8 @@ public class MemberController {
             new SimpleStringProperty(String.valueOf((int)cellData.getValue().points)));
         balanceColumn.setCellValueFactory(cellData -> 
             new SimpleStringProperty(String.format("%.2f", cellData.getValue().balance)));
-        discountColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(String.format("%.0f%%", cellData.getValue().discount * 100)));
-        birthdayColumn.setCellValueFactory(new PropertyValueFactory<>("birthday"));
+        discountColumn.setCellValueFactory(cellData ->
+                    new SimpleStringProperty(String.format("%.1f折", cellData.getValue().discount)));        birthdayColumn.setCellValueFactory(new PropertyValueFactory<>("birthday"));
     }
 
     /**

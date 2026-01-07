@@ -53,20 +53,23 @@
 
         <!-- 折扣 -->
         <Label text="折扣:" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
-        <TextField fx:id="discountField" 
-                   GridPane.columnIndex="1" GridPane.rowIndex="4" 
-                   prefWidth="250" promptText="1.0"/>
+        <TextField fx:id="discountField"
+                   GridPane.columnIndex="1" GridPane.rowIndex="4"
+                   prefWidth="250" promptText="10.0"/>
+        <Label text="说明: 0=免费, 10=不打折, 9.8=9.8折"
+               GridPane.columnIndex="1" GridPane.rowIndex="5"
+               style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
 
         <!-- 余额 -->
-        <Label text="余额(元):" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
-        <TextField fx:id="balanceField" 
-                   GridPane.columnIndex="1" GridPane.rowIndex="5" 
+        <Label text="余额(元):" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
+        <TextField fx:id="balanceField"
+                   GridPane.columnIndex="1" GridPane.rowIndex="6"
                    prefWidth="250" promptText="0.00"/>
 
         <!-- 生日 -->
-        <Label text="生日:" GridPane.columnIndex="0" GridPane.rowIndex="6"/>
-        <TextField fx:id="birthdayField" 
-                   GridPane.columnIndex="1" GridPane.rowIndex="6" 
+        <Label text="生日:" GridPane.columnIndex="0" GridPane.rowIndex="7"/>
+        <TextField fx:id="birthdayField"
+                   GridPane.columnIndex="1" GridPane.rowIndex="7"
                    prefWidth="250" promptText="MM-dd (可选)"/>
     </GridPane>
 

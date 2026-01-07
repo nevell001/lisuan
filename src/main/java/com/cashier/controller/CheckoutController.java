@@ -191,17 +191,17 @@ public class CheckoutController {
         }
 
         // 计算折扣
-        double discountRate = 0.0;
+        double discountRate = 1.0;  // 默认不打折
         if (currentMember != null) {
-            discountRate = currentMember.discountRate;
+            discountRate = currentMember.discountRate / 10.0;  // 将0-10的折扣值转换为0-1的折扣率
         }
 
-        double discountAmount = totalAmount * discountRate;
-        double finalAmount = totalAmount - discountAmount;
+        double finalAmount = totalAmount * discountRate;  // 应付金额 = 原价 * 折扣率
+        double discountAmount = totalAmount - finalAmount;  // 优惠金额 = 原价 - 应付金额
 
         totalQuantityLabel.setText(String.valueOf(totalQuantity));
         totalAmountLabel.setText(String.format("¥%.2f", totalAmount));
-        memberDiscountLabel.setText(String.format("%.0f%%", discountRate * 100));
+        memberDiscountLabel.setText(String.format("%.1f折", currentMember != null ? currentMember.discountRate : 10));
         discountLabel.setText(String.format("-¥%.2f", discountAmount));
         finalAmountLabel.setText(String.format("¥%.2f", finalAmount));
     }
@@ -381,8 +381,8 @@ public class CheckoutController {
      */
     private double getFinalAmount() {
         double totalAmount = getTotalAmount();
-        double discountRate = currentMember != null ? currentMember.discountRate : 0.0;
-        return totalAmount * (1 - discountRate);
+        double discountRate = currentMember != null ? currentMember.discountRate / 10.0 : 1.0;
+        return totalAmount * discountRate;
     }
 
     /**

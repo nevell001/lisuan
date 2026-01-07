@@ -5,7 +5,7 @@ public class Member {
     public String name;           // 会员姓名
     public double points;         // 积分
     public String level;          // 等级（普通、银卡、金卡、钻石）
-    public double discount;       // 折扣率（1.0表示不打折，0.9表示9折）
+    public double discount;       // 折扣值（10表示不打折，9.8表示9.8折，9表示9折，0表示免费）
     public double discountRate;   // 折扣率（与discount相同，用于兼容）
     public double balance;        // 会员余额
     public String birthday;       // 生日（格式：MM-dd）
@@ -15,8 +15,8 @@ public class Member {
         this.name = name;
         this.points = 0;
         this.level = "普通";
-        this.discount = 1.0;
-        this.discountRate = 1.0;
+        this.discount = 10.0;
+        this.discountRate = 10.0;
         this.balance = 0;
         this.birthday = "";
     }
@@ -47,20 +47,20 @@ public class Member {
     public void updateLevel() {
         if (points >= 10000) {
             level = "钻石";
-            discount = 0.85;  // 8.5折
-            discountRate = 0.85;
+            discount = 8.5;  // 8.5折
+            discountRate = 8.5;
         } else if (points >= 5000) {
             level = "金卡";
-            discount = 0.90;  // 9折
-            discountRate = 0.90;
+            discount = 9.0;  // 9折
+            discountRate = 9.0;
         } else if (points >= 2000) {
             level = "银卡";
-            discount = 0.95;  // 9.5折
-            discountRate = 0.95;
+            discount = 9.5;  // 9.5折
+            discountRate = 9.5;
         } else {
             level = "普通";
-            discount = 1.0;   // 不打折
-            discountRate = 1.0;
+            discount = 10.0;   // 不打折
+            discountRate = 10.0;
         }
     }
 
