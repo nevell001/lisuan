@@ -14,19 +14,9 @@
         <VBox>
             <!-- 菜单栏 -->
             <MenuBar>
-                <Menu text="系统">
-                    <MenuItem text="退出登录" onAction="#handleLogout"/>
-                    <SeparatorMenuItem/>
-                    <MenuItem text="退出程序" onAction="#handleExit"/>
-                </Menu>
-                <Menu text="管理">
-                    <MenuItem text="用户管理" onAction="#handleUserManagement"/>
-                    <MenuItem text="交接班" onAction="#handleShift"/>
-                </Menu>
                 <Menu text="数据">
                     <MenuItem text="数据备份" onAction="#handleDataBackup"/>
                     <MenuItem text="数据恢复" onAction="#handleDataRestore"/>
-                    <MenuItem text="导出数据" onAction="#handleExportData"/>
                 </Menu>
                 <Menu text="主题">
                     <MenuItem text="浅色主题" onAction="#handleLightTheme"/>
@@ -36,6 +26,11 @@
                 <Menu text="帮助">
                     <MenuItem text="快捷键" onAction="#handleShortcuts"/>
                     <MenuItem text="关于" onAction="#handleAbout"/>
+                </Menu>
+                <Menu text="系统">
+                    <MenuItem text="退出登录" onAction="#handleLogout"/>
+                    <SeparatorMenuItem/>
+                    <MenuItem text="退出程序" onAction="#handleExit"/>
                 </Menu>
             </MenuBar>
 
@@ -86,8 +81,8 @@
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
 
-                    <Button fx:id="cartBtn" 
-                            text="POS" 
+                    <Button fx:id="cartBtn"
+                            text="pos/结账"
                             onAction="#handleCart"
                             styleClass="nav-button, nav-button-active">
                         <graphic>
@@ -140,8 +135,8 @@
                         </graphic>
                     </Button>
 
-                    <Button fx:id="shiftBtn" 
-                            text="交班管理" 
+                    <Button fx:id="shiftBtn"
+                            text="交班管理"
                             onAction="#handleShift"
                             styleClass="nav-button">
                         <graphic>
@@ -158,8 +153,8 @@
                         </graphic>
                     </Button>
 
-                    <Button fx:id="settingsBtn" 
-                            text="系统设置" 
+                    <Button fx:id="settingsBtn"
+                            text=" 系统设置"
                             onAction="#handleSettings"
                             styleClass="nav-button">
                         <graphic>
@@ -187,12 +182,12 @@
                            style="-fx-font-size: 16px; -fx-text-fill: #9E9E9E;"/>
                     
                     <HBox spacing="20" alignment="CENTER" style="-fx-padding-top: 30;">
-                        <Button text="开始使用" 
-                                onAction="#handleInventory"
+                        <Button text="开始使用"
+                                onAction="#handleCart"
                                 prefWidth="120"
                                 prefHeight="40"
                                 styleClass="primary-button"/>
-                        <Button text="查看帮助" 
+                        <Button text="查看帮助"
                                 onAction="#handleAbout"
                                 prefWidth="120"
                                 prefHeight="40"

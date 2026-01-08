@@ -220,6 +220,39 @@ public class CashierSystemFXApplication extends Application {
     }
 
     /**
+     * 返回登录界面（退出登录）
+     */
+    public void logoutToLoginView() {
+        this.currentUser = null;
+
+        try {
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/LoginView.fxml"));
+            Parent root = loader.load();
+
+            // 获取控制器并设置应用程序引用
+            LoginController controller = loader.getController();
+            controller.setApplication(this);
+
+            // 创建场景
+            Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+            // 应用默认主题
+            applyTheme(scene, FXConstants.DEFAULT_THEME);
+
+            // 设置场景
+            primaryStage.setScene(scene);
+
+            // 更新窗口标题
+            primaryStage.setTitle(APP_TITLE);
+
+        } catch (IOException e) {
+            System.err.println("加载登录界面失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
      * 获取当前登录用户
      * @return 当前用户
      */

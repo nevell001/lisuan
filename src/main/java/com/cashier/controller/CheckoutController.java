@@ -275,6 +275,9 @@ public class CheckoutController {
         // 显示成功消息
         showSuccess(paymentMethod, transaction);
 
+        // 清除会员信息
+        clear();
+
         // 启用打印按钮
         printButton.setDisable(false);
     }
@@ -406,6 +409,21 @@ public class CheckoutController {
             cartList.size()
         ));
         alert.showAndWait();
+    }
+
+    /**
+     * 清空结算信息
+     */
+    public void clear() {
+        // 清除会员信息
+        currentMember = null;
+        memberPhoneField.clear();
+        memberInfoLabel.setText("");
+        
+        // 清空购物车
+        cartList.clear();
+        updateStatistics();
+        updateButtonStates();
     }
 
     /**

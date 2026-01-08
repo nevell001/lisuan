@@ -336,8 +336,10 @@ public class MainController {
     private void handleLogout() {
         if (FXUtils.showConfirmAlert("确认退出", "确定要退出登录吗？")) {
             // TODO: 保存数据
-            // TODO: 返回登录界面
-            System.exit(0);
+            // 返回登录界面
+            if (application != null) {
+                application.logoutToLoginView();
+            }
         }
     }
 
@@ -574,7 +576,7 @@ public class MainController {
             System.out.println("MainController: 获取控制器成功");
 
             // 创建内容标签页
-            createContentTab("POS", root);
+            createContentTab("pos/结账", root);
             System.out.println("MainController: 购物车界面加载成功");
 
         } catch (IOException e) {
@@ -603,7 +605,7 @@ public class MainController {
             CartController controller = loader.getController();
             
             // 创建内容标签页
-            createContentTab("POS", root);
+            createContentTab("pos/结账", root);
             
         } catch (IOException e) {
             showError("加载POS界面失败: " + e.getMessage());
@@ -713,7 +715,7 @@ public class MainController {
             ShiftController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab("交接班", root);
+            createContentTab("交班管理", root);
 
         } catch (IOException e) {
             showError("加载交接班界面失败: " + e.getMessage());
@@ -722,20 +724,20 @@ public class MainController {
 
     @FXML
     private void handleSettings() {
-        updateStatus("设置");
+        updateStatus("系统设置");
         setActiveButton(settingsBtn);
-        
+
         try {
             // 加载设置界面
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(getClass().getResource("/com/cashier/view/SettingsView.fxml"));
             VBox root = loader.load();
-            
+
             // 获取控制器
             SettingsController controller = loader.getController();
-            
+
             // 创建内容标签页
-            createContentTab("设置", root);
+            createContentTab("系统设置", root);
             
         } catch (IOException e) {
             showError("加载设置界面失败: " + e.getMessage());

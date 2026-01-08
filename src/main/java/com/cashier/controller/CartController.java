@@ -163,8 +163,107 @@ public class CartController {
             return row;
         });
 
+        // 搜索框 Enter 键监听
+        searchField.setOnAction(event -> handleSearch());
+
+        // 会员手机号框 Enter 键监听
+        memberPhoneField.setOnAction(event -> handleSearchMember());
+
+        // 设置全局快捷键
+        setupShortcuts();
+
         // 更新统计信息
         updateStatistics();
+    }
+
+    /**
+     * 设置快捷键
+     */
+    private void setupShortcuts() {
+        // 等待场景加载完成后设置快捷键
+        javafx.application.Platform.runLater(() -> {
+            if (cartTable.getScene() != null) {
+                setupSceneShortcuts(cartTable.getScene());
+            } else {
+                // 如果场景还未加载，监听场景属性
+                cartTable.sceneProperty().addListener((obs, oldScene, newScene) -> {
+                    if (newScene != null) {
+                        setupSceneShortcuts(newScene);
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * 为场景设置快捷键
+     * @param scene 场景
+     */
+    private void setupSceneShortcuts(javafx.scene.Scene scene) {
+        scene.addEventHandler(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
+            // F1 - 添加商品
+            if (event.getCode() == javafx.scene.input.KeyCode.F1) {
+                handleAddProduct();
+                event.consume();
+            }
+            // Delete - 移除商品
+            else if (event.getCode() == javafx.scene.input.KeyCode.DELETE) {
+                handleRemoveProduct();
+                event.consume();
+            }
+            // Ctrl+L - 清空购物车
+            else if (event.isControlDown() && event.getCode() == javafx.scene.input.KeyCode.L) {
+                handleClearCart();
+                event.consume();
+            }
+            // Ctrl+F - 搜索商品
+            else if (event.isControlDown() && event.getCode() == javafx.scene.input.KeyCode.F) {
+                searchField.requestFocus();
+                event.consume();
+            }
+            // Ctrl+M - 查询会员
+            else if (event.isControlDown() && event.getCode() == javafx.scene.input.KeyCode.M) {
+                memberPhoneField.requestFocus();
+                event.consume();
+            }
+            // F8 - 现金支付
+            else if (event.getCode() == javafx.scene.input.KeyCode.F8) {
+                handleCashPayment();
+                event.consume();
+            }
+            // Ctrl+1 - 微信支付
+            else if (event.isControlDown() && event.getCode() == javafx.scene.input.KeyCode.DIGIT1) {
+                handleWechatPayment();
+                event.consume();
+            }
+            // Ctrl+2 - 支付宝支付
+            else if (event.isControlDown() && event.getCode() == javafx.scene.input.KeyCode.DIGIT2) {
+                handleAlipayPayment();
+                event.consume();
+            }
+            // Ctrl+3 - 银行卡支付
+            else if (event.isControlDown() && event.getCode() == javafx.scene.input.KeyCode.DIGIT3) {
+                handleCardPayment();
+                event.consume();
+            }
+            // Escape - 清空搜索框或会员手机号框
+            else if (event.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+                if (searchField.isFocused()) {
+                    searchField.clear();
+                    handleSearch();
+                    event.consume();
+                } else if (memberPhoneField.isFocused()) {
+                    memberPhoneField.clear();
+                    handleSearchMember();
+                    event.consume();
+                }
+            }
+            // Ctrl+/ - 显示快捷键帮助
+            else if (event.isControlDown() && event.getCode() == javafx.scene.input.KeyCode.SLASH) {
+                showShortcutHelp();
+                event.consume();
+            }
+        });
     }
 
     /**
@@ -647,6 +746,40 @@ public class CartController {
     }
 
     /**
+     * 显示快捷键帮助
+     */
+    @FXML
+    private void showShortcutHelp() {
+        String shortcuts =
+            "POS/结账页面快捷键:\n\n" +
+            "商品操作:\n" +
+            "F1 - 添加商品\n" +
+            "Delete - 移除选中商品\n" +
+            "Ctrl+L - 清空购物车\n" +
+            "双击商品 - 快速添加到购物车\n\n" +
+            "搜索和查询:\n" +
+            "Ctrl+F - 聚焦到搜索框\n" +
+            "Enter - 执行搜索（在搜索框中）\n" +
+            "Escape - 清空搜索（在搜索框中）\n\n" +
+            "会员操作:\n" +
+            "Ctrl+M - 聚焦到会员手机号框\n" +
+            "Enter - 查询会员（在会员手机号框中）\n" +
+            "Escape - 清空会员信息（在会员手机号框中）\n\n" +
+            "支付方式:\n" +
+            "F8 - 现金支付\n" +
+            "Ctrl+1 - 微信支付\n" +
+            "Ctrl+2 - 支付宝支付\n" +
+            "Ctrl+3 - 银行卡支付";
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("快捷键帮助");
+        alert.setHeaderText(null);
+        alert.setContentText(shortcuts);
+        alert.getDialogPane().setPrefWidth(500);
+        alert.showAndWait();
+    }
+
+    /**
      * 显示错误信息
      * @param message 错误消息
      */
@@ -751,6 +884,12 @@ public class CartController {
     public void clear() {
         cartMap.clear();
         cartList.clear();
+        
+        // 清除会员信息
+        currentMember = null;
+        memberPhoneField.clear();
+        memberInfoLabel.setText("");
+        
         updateStatistics();
         updateButtonStates();
     }
