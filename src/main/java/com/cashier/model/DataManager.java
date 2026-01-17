@@ -775,6 +775,29 @@ public class DataManager {
     }
 
     /**
+     * 获取当前活跃的班次
+     * @return 活跃的班次，如果没有则返回null
+     */
+    public static Shift getActiveShift() {
+        List<Shift> shifts = loadShifts();
+        for (Shift shift : shifts) {
+            // 如果endTime等于startTime，说明班次未结束，是活跃班次
+            if (shift.endTime.getTime() == shift.startTime.getTime()) {
+                return shift;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 检查是否有活跃的班次
+     * @return 如果有活跃班次返回true，否则返回false
+     */
+    public static boolean hasActiveShift() {
+        return getActiveShift() != null;
+    }
+
+    /**
      * 保存主题偏好设置
      * @param themeName 主题名称
      */

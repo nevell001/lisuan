@@ -200,7 +200,7 @@ public class CartController {
      * @param scene 场景
      */
     private void setupSceneShortcuts(javafx.scene.Scene scene) {
-        scene.addEventHandler(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
+        scene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
             // F1 - 添加商品
             if (event.getCode() == javafx.scene.input.KeyCode.F1) {
                 handleAddProduct();
@@ -476,6 +476,12 @@ public class CartController {
             return;
         }
 
+        // 检查是否有活跃班次
+        if (!com.cashier.model.DataManager.hasActiveShift()) {
+            showError("当前没有开班，请先开班后再进行结算操作！");
+            return;
+        }
+
         double finalAmount = getFinalAmount();
         
         // 创建现金支付对话框
@@ -509,20 +515,26 @@ public class CartController {
             receivedField.setText("100");
             receivedField.requestFocus();
         });
-        
+
         Button btn50 = new Button("¥50");
         btn50.setOnAction(e -> {
             receivedField.setText("50");
             receivedField.requestFocus();
         });
-        
+
         Button btn20 = new Button("¥20");
         btn20.setOnAction(e -> {
             receivedField.setText("20");
             receivedField.requestFocus();
         });
-        
-        HBox quickButtons = new HBox(5, btn100, btn50, btn20);
+
+        Button btn10 = new Button("¥10");
+        btn10.setOnAction(e -> {
+            receivedField.setText("10");
+            receivedField.requestFocus();
+        });
+
+        HBox quickButtons = new HBox(5, btn100, btn50, btn20, btn10);
         grid.add(quickButtons, 0, 3, 2, 1);
         
         dialog.getDialogPane().setContent(grid);
@@ -643,11 +655,17 @@ public class CartController {
             return;
         }
 
+        // 检查是否有活跃班次
+        if (!com.cashier.model.DataManager.hasActiveShift()) {
+            showError("当前没有开班，请先开班后再进行结算操作！");
+            return;
+        }
+
         // 确认支付
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("确认支付");
         alert.setHeaderText(null);
-        alert.setContentText(String.format("确定要使用%s支付 ¥%.2f 吗？", 
+        alert.setContentText(String.format("确定要使用%s支付 ¥%.2f 吗？",
             paymentMethod, getFinalAmount()));
 
         if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {

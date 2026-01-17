@@ -186,7 +186,12 @@ public class SettingsController {
         autoLogoutCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("autoLogout", "true")));
         passwordComplexityCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("passwordComplexity", "true")));
         
-        System.out.println("SettingsController: 设置加载完成");
+        // 加载主题偏好
+        String savedThemeCode = DataManager.loadThemePreference();
+        String savedThemeName = convertThemeCodeToName(savedThemeCode);
+        themeComboBox.getSelectionModel().select(savedThemeName);
+        
+        System.out.println("SettingsController: 设置加载完成，当前主题: " + savedThemeCode);
     }
 
     /**
@@ -196,7 +201,72 @@ public class SettingsController {
     private void handleSaveBasicSettings() {
         if (validateBasicSettings()) {
             saveSettings();
+            
+            // 应用主题设置
+            String selectedTheme = themeComboBox.getSelectionModel().getSelectedItem();
+            if (selectedTheme != null) {
+                String themeCode = convertThemeNameToCode(selectedTheme);
+                applyThemeToCurrentScene(themeCode);
+            }
+            
             showSuccess("基本设置保存成功！");
+        }
+    }
+
+    /**
+     * 将中文主题名称转换为英文主题代码
+     * @param themeName 中文主题名称
+     * @return 英文主题代码
+     */
+    private String convertThemeNameToCode(String themeName) {
+        if (themeName == null) {
+            return "light";
+        }
+        switch (themeName) {
+            case "浅色主题":
+                return "light";
+            case "深色主题":
+                return "dark";
+            case "IntelliJ主题":
+                return "intellij";
+            default:
+                return "light";
+        }
+    }
+
+    /**
+     * 将英文主题代码转换为中文主题名称
+     * @param themeCode 英文主题代码
+     * @return 中文主题名称
+     */
+    private String convertThemeCodeToName(String themeCode) {
+        if (themeCode == null) {
+            return "浅色主题";
+        }
+        switch (themeCode) {
+            case "light":
+                return "浅色主题";
+            case "dark":
+                return "深色主题";
+            case "intellij":
+                return "IntelliJ主题";
+            default:
+                return "浅色主题";
+        }
+    }
+
+    /**
+     * 应用主题到当前场景
+     * @param themeCode 主题代码
+     */
+    private void applyThemeToCurrentScene(String themeCode) {
+        if (themeComboBox.getScene() != null) {
+            javafx.application.Platform.runLater(() -> {
+                com.cashier.CashierSystemFXApplication app = com.cashier.CashierSystemFXApplication.getInstance();
+                if (app != null) {
+                    app.applyTheme(themeComboBox.getScene(), themeCode);
+                }
+            });
         }
     }
 
@@ -447,7 +517,12 @@ public class SettingsController {
             0
         );
         
-        System.out.println("SettingsController: 设置保存成功");
+        // 保存主题偏好
+        String themeName = settings.getOrDefault("theme", "浅色主题");
+        String themeCode = convertThemeNameToCode(themeName);
+        DataManager.saveThemePreference(themeCode);
+        
+        System.out.println("SettingsController: 设置保存成功，主题: " + themeCode);
     }
 
     /**

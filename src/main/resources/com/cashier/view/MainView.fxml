@@ -24,7 +24,6 @@
                     <MenuItem text="IntelliJ 主题" onAction="#handleIntelliJTheme"/>
                 </Menu>
                 <Menu text="帮助">
-                    <MenuItem text="快捷键" onAction="#handleShortcuts"/>
                     <MenuItem text="关于" onAction="#handleAbout"/>
                 </Menu>
                 <Menu text="系统">
@@ -193,15 +192,6 @@
                                 prefHeight="40"
                                 styleClass="secondary-button"/>
                     </HBox>
-                    
-                    <VBox spacing="10" alignment="CENTER" style="-fx-padding-top: 40;">
-                        <Label text="快捷键提示" 
-                               style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #424242;"/>
-                        <Label text="F1 - 添加商品 | F2 - 补货 | F3 - 删除商品 | F4 - 搜索" 
-                               style="-fx-font-size: 12px; -fx-text-fill: #757575;"/>
-                        <Label text="F5 - 刷新 | F6 - 分类 | F7 - 会员 | F8 - 结账" 
-                               style="-fx-font-size: 12px; -fx-text-fill: #757575;"/>
-                    </VBox>
                 </VBox>
             </Tab>
         </TabPane>

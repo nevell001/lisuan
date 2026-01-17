@@ -28,12 +28,15 @@ public class CashierSystemFXApplication extends Application {
     private static final double WINDOW_WIDTH = 1300;
     private static final double WINDOW_HEIGHT = 800;
 
+    private static CashierSystemFXApplication instance;
+
     private Stage primaryStage;
     private User currentUser;
 
     @Override
     public void start(Stage primaryStage) throws Exception {
         this.primaryStage = primaryStage;
+        instance = this;
 
         // 初始化数据管理器
         DataManager.initialize();
@@ -49,6 +52,14 @@ public class CashierSystemFXApplication extends Application {
 
         // 显示窗口
         primaryStage.show();
+    }
+
+    /**
+     * 获取应用程序实例
+     * @return 应用程序实例
+     */
+    public static CashierSystemFXApplication getInstance() {
+        return instance;
     }
 
     /**

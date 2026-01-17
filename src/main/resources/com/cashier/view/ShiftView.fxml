@@ -16,6 +16,21 @@
             <Insets top="10" right="10" bottom="10" left="10"/>
         </padding>
 
+        <!-- 开班和交班按钮 -->
+        <Button fx:id="startShiftButton"
+                text="开班"
+                onAction="#handleStartShift"
+                prefWidth="80"
+                styleClass="primary-button"/>
+
+        <Button fx:id="endShiftButton"
+                text="交班"
+                onAction="#handleEndShift"
+                prefWidth="80"
+                styleClass="warning-button"/>
+
+        <Separator orientation="VERTICAL"/>
+
         <!-- 筛选条件 -->
         <Label text="开始日期:"/>
         <DatePicker fx:id="startDatePicker" prefWidth="150"/>

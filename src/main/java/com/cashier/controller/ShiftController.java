@@ -70,8 +70,15 @@ public class ShiftController {
     @FXML
     private Button refreshButton;
 
+    @FXML
+    private Button startShiftButton;
+
+    @FXML
+    private Button endShiftButton;
+
     private ObservableList<Shift> shiftList;
     private List<Shift> allShifts;
+    private com.cashier.model.User currentUser;
 
     /**
      * 初始化方法
@@ -110,6 +117,9 @@ public class ShiftController {
             });
             return row;
         });
+
+        // 更新开班/交班按钮状态
+        updateShiftButtonStates();
     }
 
     /**
@@ -161,8 +171,13 @@ public class ShiftController {
         int totalTransaction = 0;
 
         for (Shift s : shiftList) {
-            totalRevenue += s.shiftRevenue;
-            totalTransaction += s.shiftTransactionCount;
+            // 只统计有效的正数数据，忽略负数或无效数据
+            if (s.shiftRevenue > 0) {
+                totalRevenue += s.shiftRevenue;
+            }
+            if (s.shiftTransactionCount > 0) {
+                totalTransaction += s.shiftTransactionCount;
+            }
         }
 
         totalRevenueLabel.setText(String.format("总营业额: ¥%.2f", totalRevenue));
@@ -320,5 +335,248 @@ public class ShiftController {
      */
     public void refreshShifts() {
         loadShifts();
+    }
+
+    /**
+     * 更新开班/交班按钮状态
+     */
+    private void updateShiftButtonStates() {
+        boolean hasActiveShift = com.cashier.model.DataManager.hasActiveShift();
+        startShiftButton.setDisable(hasActiveShift);
+        endShiftButton.setDisable(!hasActiveShift);
+    }
+
+    /**
+     * 处理开班
+     */
+    @FXML
+    private void handleStartShift() {
+        // 检查是否已有活跃班次
+        if (com.cashier.model.DataManager.hasActiveShift()) {
+            showError("当前已有活跃班次，请先交班后再开新班！");
+            return;
+        }
+
+        // 确认开班
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("确认开班");
+        alert.setHeaderText(null);
+        alert.setContentText("确定要开始新的班次吗？");
+
+        if (alert.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+            return;
+        }
+
+        try {
+            // 获取当前用户
+            if (currentUser == null) {
+                showError("无法获取当前用户信息！");
+                return;
+            }
+
+            // 加载现有交易记录，获取当前总营业额和交易数
+            List<com.cashier.model.Transaction> transactions = com.cashier.model.DataManager.loadTransactions();
+            double totalRevenue = 0.0;
+            int totalTransactions = transactions.size();
+
+            for (com.cashier.model.Transaction t : transactions) {
+                totalRevenue += t.finalAmount;
+            }
+
+            // 生成班次ID
+            String shiftId = "SHIFT" + new java.text.SimpleDateFormat("yyyyMMddHHmmss").format(new java.util.Date());
+
+            // 创建新班次
+            com.cashier.model.Shift shift = new com.cashier.model.Shift(
+                shiftId,
+                currentUser.username,
+                currentUser.name,
+                new java.util.Date(),
+                totalRevenue,
+                totalTransactions
+            );
+
+            // 保存班次
+            List<com.cashier.model.Shift> shifts = com.cashier.model.DataManager.loadShifts();
+            shifts.add(shift);
+            com.cashier.model.DataManager.saveShifts(shifts);
+
+            // 刷新列表
+            loadShifts();
+            updateShiftButtonStates();
+
+            showSuccess("开班成功！班次ID: " + shiftId);
+
+        } catch (Exception e) {
+            showError("开班失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 处理交班
+     */
+    @FXML
+    private void handleEndShift() {
+        // 检查是否有活跃班次
+        com.cashier.model.Shift activeShift = com.cashier.model.DataManager.getActiveShift();
+        if (activeShift == null) {
+            showError("当前没有活跃班次！");
+            return;
+        }
+
+        // 确认交班
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("确认交班");
+        alert.setHeaderText(null);
+        alert.setContentText("确定要结束当前班次吗？");
+
+        if (alert.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+            return;
+        }
+
+        try {
+            // 加载所有交易记录
+            List<com.cashier.model.Transaction> allTransactions = com.cashier.model.DataManager.loadTransactions();
+
+            // 筛选本班次的交易记录（在班次开始时间之后的交易）
+            java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+            List<com.cashier.model.Transaction> shiftTransactions = new java.util.ArrayList<>();
+            double cashRevenue = 0.0;
+            double wechatRevenue = 0.0;
+            double alipayRevenue = 0.0;
+            double cardRevenue = 0.0;
+            double totalRevenue = 0.0;
+
+            for (com.cashier.model.Transaction t : allTransactions) {
+                try {
+                    java.util.Date transactionTime = sdf.parse(t.timestamp);
+                    if (transactionTime.after(activeShift.startTime) || transactionTime.equals(activeShift.startTime)) {
+                        shiftTransactions.add(t);
+                        totalRevenue += t.finalAmount;
+
+                        // 按支付方式分类统计
+                        if ("现金".equals(t.paymentMethod)) {
+                            cashRevenue += t.finalAmount;
+                        } else if ("微信".equals(t.paymentMethod)) {
+                            wechatRevenue += t.finalAmount;
+                        } else if ("支付宝".equals(t.paymentMethod)) {
+                            alipayRevenue += t.finalAmount;
+                        } else if ("银行卡".equals(t.paymentMethod)) {
+                            cardRevenue += t.finalAmount;
+                        }
+                    }
+                } catch (Exception e) {
+                    System.err.println("解析交易时间失败: " + t.timestamp);
+                }
+            }
+
+            // 结束班次
+            // 计算班次结束时的累计总营业额和总交易数
+            double closingRevenue = activeShift.openingRevenue + totalRevenue;
+            int closingTransactionCount = activeShift.openingTransactionCount + shiftTransactions.size();
+            activeShift.endShift(closingRevenue, closingTransactionCount, cashRevenue, wechatRevenue, alipayRevenue, cardRevenue);
+
+            // 保存班次
+            List<com.cashier.model.Shift> shifts = com.cashier.model.DataManager.loadShifts();
+            for (int i = 0; i < shifts.size(); i++) {
+                if (shifts.get(i).shiftId.equals(activeShift.shiftId)) {
+                    shifts.set(i, activeShift);
+                    break;
+                }
+            }
+            com.cashier.model.DataManager.saveShifts(shifts);
+
+            // 刷新列表
+            loadShifts();
+            updateShiftButtonStates();
+
+            // 显示交班详情
+            String detail = String.format(
+                "交班成功！\n\n" +
+                "班次ID: %s\n" +
+                "操作员: %s\n" +
+                "班次时长: %s\n" +
+                "本班次交易数: %d\n" +
+                "本班次营业额: ¥%.2f\n\n" +
+                "支付方式明细:\n" +
+                "现金: ¥%.2f\n" +
+                "微信: ¥%.2f\n" +
+                "支付宝: ¥%.2f\n" +
+                "银行卡: ¥%.2f",
+                activeShift.shiftId,
+                activeShift.operatorName,
+                activeShift.getDurationText(),
+                activeShift.shiftTransactionCount,
+                activeShift.shiftRevenue,
+                cashRevenue,
+                wechatRevenue,
+                alipayRevenue,
+                cardRevenue
+            );
+
+            Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+            successAlert.setTitle("交班成功");
+            successAlert.setHeaderText(null);
+            successAlert.setContentText(detail);
+            successAlert.getDialogPane().setPrefWidth(500);
+            successAlert.showAndWait();
+
+            // 退出登录
+            handleLogout();
+
+        } catch (Exception e) {
+            showError("交班失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 设置当前用户
+     * @param user 用户
+     */
+    public void setCurrentUser(com.cashier.model.User user) {
+        this.currentUser = user;
+    }
+
+    /**
+     * 处理退出登录
+     */
+    private void handleLogout() {
+        try {
+            // 返回登录界面
+            javafx.application.Platform.runLater(() -> {
+                com.cashier.CashierSystemFXApplication application = com.cashier.CashierSystemFXApplication.getInstance();
+                if (application != null) {
+                    application.logoutToLoginView();
+                }
+            });
+        } catch (Exception e) {
+            showError("退出登录失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 显示错误信息
+     * @param message 错误消息
+     */
+    private void showError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("错误");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    /**
+     * 显示成功信息
+     * @param message 成功消息
+     */
+    private void showSuccess(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("成功");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 }

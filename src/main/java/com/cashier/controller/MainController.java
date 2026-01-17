@@ -146,21 +146,9 @@ public class MainController {
             if (event.getCode() == KeyCode.F1) {
                 handleInventory();
                 event.consume();
-            } else if (event.getCode() == KeyCode.F2) {
-                showPlaceholder("补货", "📦", "补货功能正在开发中...");
-                event.consume();
-            } else if (event.getCode() == KeyCode.F3) {
-                showPlaceholder("删除商品", "🗑️", "删除商品功能正在开发中...");
-                event.consume();
-            } else if (event.getCode() == KeyCode.F4) {
-                showPlaceholder("搜索", "🔍", "搜索功能正在开发中...");
-                event.consume();
             } else if (event.getCode() == KeyCode.F5) {
                 // 刷新当前标签页
-                updateStatus("已刷新");
-                event.consume();
-            } else if (event.getCode() == KeyCode.F6) {
-                showPlaceholder("分类管理", "📁", "分类管理功能正在开发中...");
+                refreshCurrentTab();
                 event.consume();
             } else if (event.getCode() == KeyCode.F7) {
                 handleMembers();
@@ -188,9 +176,6 @@ public class MainController {
                     openTabs.remove(selectedTab.getText());
                     event.consume();
                 }
-            } else if (event.getCode() == KeyCode.DELETE) {
-                showPlaceholder("删除", "🗑️", "删除功能正在开发中...");
-                event.consume();
             }
         });
 
@@ -334,20 +319,71 @@ public class MainController {
 
     @FXML
     private void handleLogout() {
-        if (FXUtils.showConfirmAlert("确认退出", "确定要退出登录吗？")) {
-            // TODO: 保存数据
-            // 返回登录界面
-            if (application != null) {
-                application.logoutToLoginView();
+        // 检查是否有活跃班次
+        if (com.cashier.model.DataManager.hasActiveShift()) {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("确认退出");
+            alert.setHeaderText(null);
+            alert.setContentText("当前有活跃班次未交班！\n\n确定要退出登录吗？\n\n提示：建议先交班后再退出。");
+            
+            ButtonType yesButton = new ButtonType("先交班", ButtonBar.ButtonData.YES);
+            ButtonType noButton = new ButtonType("直接退出", ButtonBar.ButtonData.NO);
+            ButtonType cancelButton = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
+            
+            alert.getButtonTypes().setAll(yesButton, noButton, cancelButton);
+            
+            alert.showAndWait().ifPresent(buttonType -> {
+                if (buttonType == yesButton) {
+                    // 用户选择先交班，跳转到交班管理页面
+                    handleShift();
+                } else if (buttonType == noButton) {
+                    // 用户选择直接退出
+                    if (application != null) {
+                        application.logoutToLoginView();
+                    }
+                }
+                // 如果选择取消，不做任何操作
+            });
+        } else {
+            // 没有活跃班次，直接退出
+            if (FXUtils.showConfirmAlert("确认退出", "确定要退出登录吗？")) {
+                if (application != null) {
+                    application.logoutToLoginView();
+                }
             }
         }
     }
 
     @FXML
     private void handleExit() {
-        if (FXUtils.showConfirmAlert("确认退出", "确定要退出系统吗？")) {
-            // TODO: 保存数据
-            System.exit(0);
+        // 检查是否有活跃班次
+        if (com.cashier.model.DataManager.hasActiveShift()) {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("确认退出");
+            alert.setHeaderText(null);
+            alert.setContentText("当前有活跃班次未交班！\n\n确定要退出系统吗？\n\n提示：建议先交班后再退出。");
+            
+            ButtonType yesButton = new ButtonType("先交班", ButtonBar.ButtonData.YES);
+            ButtonType noButton = new ButtonType("直接退出", ButtonBar.ButtonData.NO);
+            ButtonType cancelButton = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
+            
+            alert.getButtonTypes().setAll(yesButton, noButton, cancelButton);
+            
+            alert.showAndWait().ifPresent(buttonType -> {
+                if (buttonType == yesButton) {
+                    // 用户选择先交班，跳转到交班管理页面
+                    handleShift();
+                } else if (buttonType == noButton) {
+                    // 用户选择直接退出
+                    System.exit(0);
+                }
+                // 如果选择取消，不做任何操作
+            });
+        } else {
+            // 没有活跃班次，直接退出
+            if (FXUtils.showConfirmAlert("确认退出", "确定要退出系统吗？")) {
+                System.exit(0);
+            }
         }
     }
 
@@ -471,51 +507,6 @@ public class MainController {
             application.applyTheme(application.getPrimaryStage().getScene(), "intellij");
             updateStatus("已切换到 IntelliJ 主题");
         }
-    }
-
-    @FXML
-    private void handleShortcuts() {
-        updateStatus("快捷键");
-        String shortcuts =
-            "快捷键列表:\n\n" +
-            "功能键:\n" +
-            "F1 - 添加商品\n" +
-            "F2 - 补货\n" +
-            "F3 - 删除商品\n" +
-            "F4 - 搜索\n" +
-            "F5 - 刷新当前面板\n" +
-            "F6 - 分类管理\n" +
-            "F7 - 会员管理\n" +
-            "F8 - 结账\n" +
-            "F9 - 促销管理\n" +
-            "F10 - 库存预警\n" +
-            "F11 - 数据备份\n" +
-            "F12 - 数据恢复\n" +
-            "ESC - 清空搜索\n" +
-            "Delete - 删除选中项\n\n" +
-            "Ctrl 组合键:\n" +
-            "Ctrl+N - 添加商品\n" +
-            "Ctrl+S - 保存数据\n" +
-            "Ctrl+F - 搜索\n" +
-            "Ctrl+D - 导出数据\n" +
-            "Ctrl+R - 刷新当前面板\n" +
-            "Ctrl+Q - 退出程序\n" +
-            "Ctrl+A - 全选\n" +
-            "Ctrl+E - 编辑选中项\n" +
-            "Ctrl+B - 批量操作\n" +
-            "Ctrl+M - 会员管理\n" +
-            "Ctrl+T - 交易统计\n" +
-            "Ctrl+1 - 切换到库存管理\n" +
-            "Ctrl+2 - 切换到购物车\n" +
-            "Ctrl+3 - 切换到交易记录\n" +
-            "Ctrl+4 - 切换到设置";
-
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("快捷键");
-        alert.setHeaderText(null);
-        alert.setContentText(shortcuts);
-        alert.getDialogPane().setPrefWidth(600);
-        alert.showAndWait();
     }
 
     @FXML
@@ -713,6 +704,7 @@ public class MainController {
 
             // 获取控制器
             ShiftController controller = loader.getController();
+            controller.setCurrentUser(currentUser);
 
             // 创建内容标签页
             createContentTab("交班管理", root);
@@ -807,26 +799,81 @@ public class MainController {
                 tabPane.getSelectionModel().select(openTabs.get(title));
                 return;
             }
-    
+
             // 创建新的标签页
             Tab tab = new Tab(title);
             tab.setClosable(true);
             tab.setContent(content);
-    
+
             // 添加标签页关闭事件
             tab.setOnClosed(event -> {
                 openTabs.remove(title);
             });
-    
+
             // 添加到标签页管理器
             openTabs.put(title, tab);
-    
+
             // 添加到TabPane
             tabPane.getTabs().add(tab);
-    
+
             // 切换到新标签页
             tabPane.getSelectionModel().select(tab);
         }
+
+    /**
+     * 刷新当前标签页
+     */
+    private void refreshCurrentTab() {
+        Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
+        if (selectedTab == null || selectedTab.getText().equals("欢迎")) {
+            updateStatus("无需刷新");
+            return;
+        }
+
+        String title = selectedTab.getText();
+
+        // 关闭当前标签页
+        if (openTabs.containsKey(title)) {
+            tabPane.getTabs().remove(openTabs.get(title));
+            openTabs.remove(title);
+        }
+
+        // 根据标题重新打开对应的界面
+        switch (title) {
+            case "库存管理":
+                handleInventory();
+                break;
+            case "pos/结账":
+                handleCheckout();
+                break;
+            case "交易记录":
+                handleTransactions();
+                break;
+            case "会员管理":
+                handleMembers();
+                break;
+            case "数据统计":
+                handleStatistics();
+                break;
+            case "促销管理":
+                handlePromotions();
+                break;
+            case "交班管理":
+                handleShift();
+                break;
+            case "系统设置":
+                handleSettings();
+                break;
+            case "用户管理":
+                handleUserManagement();
+                break;
+            default:
+                updateStatus("无法刷新: " + title);
+                return;
+        }
+
+        updateStatus("已刷新: " + title);
+    }
     
         /**
     

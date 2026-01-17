@@ -106,6 +106,81 @@ public class CheckoutController {
 
         // 初始化按钮状态
         updateButtonStates();
+
+        // 会员手机号框 Enter 键监听
+        memberPhoneField.setOnAction(event -> handleSearchMember());
+
+        // 设置全局快捷键
+        setupShortcuts();
+    }
+
+    /**
+     * 设置快捷键
+     */
+    private void setupShortcuts() {
+        // 等待场景加载完成后设置快捷键
+        javafx.application.Platform.runLater(() -> {
+            if (cartTable.getScene() != null) {
+                setupSceneShortcuts(cartTable.getScene());
+            } else {
+                // 如果场景还未加载，监听场景属性
+                cartTable.sceneProperty().addListener((obs, oldScene, newScene) -> {
+                    if (newScene != null) {
+                        setupSceneShortcuts(newScene);
+                    }
+                });
+            }
+        });
+    }
+
+    /**
+     * 为场景设置快捷键
+     * @param scene 场景
+     */
+    private void setupSceneShortcuts(javafx.scene.Scene scene) {
+        scene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
+            // F8 - 现金支付
+            if (event.getCode() == javafx.scene.input.KeyCode.F8) {
+                handleCashPayment();
+                event.consume();
+            }
+            // Ctrl+1 - 微信支付
+            else if (event.isControlDown() && event.getCode() == javafx.scene.input.KeyCode.DIGIT1) {
+                handleWechatPayment();
+                event.consume();
+            }
+            // Ctrl+2 - 支付宝支付
+            else if (event.isControlDown() && event.getCode() == javafx.scene.input.KeyCode.DIGIT2) {
+                handleAlipayPayment();
+                event.consume();
+            }
+            // Ctrl+3 - 银行卡支付
+            else if (event.isControlDown() && event.getCode() == javafx.scene.input.KeyCode.DIGIT3) {
+                handleCardPayment();
+                event.consume();
+            }
+            // Ctrl+M - 查询会员
+            else if (event.isControlDown() && event.getCode() == javafx.scene.input.KeyCode.M) {
+                memberPhoneField.requestFocus();
+                event.consume();
+            }
+            // Escape - 清空会员信息或取消结账
+            else if (event.getCode() == javafx.scene.input.KeyCode.ESCAPE) {
+                if (memberPhoneField.isFocused()) {
+                    memberPhoneField.clear();
+                    handleSearchMember();
+                    event.consume();
+                } else {
+                    handleCancel();
+                    event.consume();
+                }
+            }
+            // Ctrl+/ - 显示快捷键帮助
+            else if (event.isControlDown() && event.getCode() == javafx.scene.input.KeyCode.SLASH) {
+                showShortcutHelp();
+                event.consume();
+            }
+        });
     }
 
     /**
@@ -245,6 +320,12 @@ public class CheckoutController {
     private void handlePayment(String paymentMethod) {
         if (cartList.isEmpty()) {
             showError("购物车为空，无法支付！");
+            return;
+        }
+
+        // 检查是否有活跃班次
+        if (!com.cashier.model.DataManager.hasActiveShift()) {
+            showError("当前没有开班，请先开班后再进行结算操作！");
             return;
         }
 
@@ -435,6 +516,33 @@ public class CheckoutController {
         alert.setTitle("错误");
         alert.setHeaderText(null);
         alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    /**
+     * 显示快捷键帮助
+     */
+    private void showShortcutHelp() {
+        String shortcuts =
+            "结账页面快捷键:\n\n" +
+            "支付方式:\n" +
+            "F8 - 现金支付\n" +
+            "Ctrl+1 - 微信支付\n" +
+            "Ctrl+2 - 支付宝支付\n" +
+            "Ctrl+3 - 银行卡支付\n\n" +
+            "会员操作:\n" +
+            "Ctrl+M - 聚焦到会员手机号框\n" +
+            "Enter - 查询会员（在会员手机号框中）\n" +
+            "Escape - 清空会员信息（在会员手机号框中）\n\n" +
+            "其他操作:\n" +
+            "Escape - 取消结账（非会员手机号框焦点时）\n" +
+            "Ctrl+/ - 显示快捷键帮助";
+
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("快捷键帮助");
+        alert.setHeaderText(null);
+        alert.setContentText(shortcuts);
+        alert.getDialogPane().setPrefWidth(500);
         alert.showAndWait();
     }
 }

@@ -20,19 +20,19 @@
         <Button fx:id="addButton"
                 text="添加商品 (F1)"
                 onAction="#handleAddProduct"
-                prefWidth="120"
+                prefWidth="130"
                 styleClass="primary-button"/>
 
         <Button fx:id="removeButton"
                 text="移除 (Del)"
                 onAction="#handleRemoveProduct"
-                prefWidth="100"
+                prefWidth="110"
                 styleClass="danger-button"/>
 
         <Button fx:id="clearButton"
                 text="清空 (Ctrl+L)"
                 onAction="#handleClearCart"
-                prefWidth="110"
+                prefWidth="130"
                 styleClass="warning-button"/>
 
         <Separator orientation="VERTICAL"/>
@@ -59,7 +59,7 @@
         <!-- 快捷键帮助按钮 -->
         <Button text="快捷键 (Ctrl+/)"
                 onAction="#showShortcutHelp"
-                prefWidth="110"
+                prefWidth="130"
                 styleClass="secondary-button"/>
     </HBox>
 
@@ -155,28 +155,28 @@
                         <Button fx:id="cashButton"
                                 text="现金 (F8)"
                                 onAction="#handleCashPayment"
-                                prefWidth="110"
+                                prefWidth="130"
                                 prefHeight="35"
                                 styleClass="payment-button"
                                 GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                         <Button fx:id="wechatButton"
                                 text="微信 (Ctrl+1)"
                                 onAction="#handleWechatPayment"
-                                prefWidth="110"
+                                prefWidth="130"
                                 prefHeight="35"
                                 styleClass="payment-button"
                                 GridPane.columnIndex="1" GridPane.rowIndex="0"/>
                         <Button fx:id="alipayButton"
                                 text="支付宝 (Ctrl+2)"
                                 onAction="#handleAlipayPayment"
-                                prefWidth="110"
+                                prefWidth="130"
                                 prefHeight="35"
                                 styleClass="payment-button"
                                 GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                         <Button fx:id="cardButton"
                                 text="银行卡 (Ctrl+3)"
                                 onAction="#handleCardPayment"
-                                prefWidth="110"
+                                prefWidth="130"
                                 prefHeight="35"
                                 styleClass="payment-button"
                                 GridPane.columnIndex="1" GridPane.rowIndex="1"/>
