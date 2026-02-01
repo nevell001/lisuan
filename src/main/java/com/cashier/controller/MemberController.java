@@ -2,6 +2,7 @@ package com.cashier.controller;
 
 import com.cashier.model.DataManager;
 import com.cashier.model.Member;
+import com.cashier.util.StatusBarManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -339,8 +340,7 @@ public class MemberController {
      * @param status 状态文本
      */
     private void updateStatus(String status) {
-        // TODO: 更新主界面的状态栏
-        System.out.println("状态: " + status);
+        StatusBarManager.updateStatus(status);
     }
 
     /**

@@ -4,6 +4,7 @@ import com.cashier.CashierSystemFXApplication;
 import com.cashier.model.DataManager;
 import com.cashier.model.User;
 import com.cashier.util.FXUtils;
+import com.cashier.util.StatusBarManager;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -108,8 +109,11 @@ public class MainController {
         // 设置初始激活按钮
         activeButton = inventoryBtn;
 
+        // 绑定状态栏到 StatusBarManager
+        statusLabel.textProperty().bind(StatusBarManager.statusProperty());
+
         // 更新状态
-        updateStatus("就绪");
+        StatusBarManager.updateStatus("就绪");
         updateDate();
 
         // 创建加载覆盖层
@@ -300,7 +304,7 @@ public class MainController {
      * @param status 状态文本
      */
     private void updateStatus(String status) {
-        statusLabel.setText(status);
+        StatusBarManager.updateStatus(status);
     }
 
     /**

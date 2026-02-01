@@ -3,6 +3,7 @@ package com.cashier.controller;
 import com.cashier.model.DataManager;
 import com.cashier.model.User;
 import com.cashier.util.PasswordUtil;
+import com.cashier.util.StatusBarManager;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -425,8 +426,7 @@ public class UserController {
      * @param status 状态文本
      */
     private void updateStatus(String status) {
-        // TODO: 更新主界面的状态栏
-        System.out.println("状态: " + status);
+        StatusBarManager.updateStatus(status);
     }
 
     /**
