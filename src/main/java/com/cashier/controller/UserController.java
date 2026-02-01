@@ -2,6 +2,7 @@ package com.cashier.controller;
 
 import com.cashier.model.DataManager;
 import com.cashier.model.User;
+import com.cashier.util.PasswordUtil;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -204,7 +205,7 @@ public class UserController {
         if (user != null) {
             usernameField.setText(user.username);
             usernameField.setDisable(true); // 用户名不可修改
-            passwordField.setText(user.password);
+            passwordField.setPromptText("留空则不修改密码");
             nameField.setText(user.name);
             roleComboBox.getSelectionModel().select(user.getRoleDisplayName());
         }
@@ -226,11 +227,17 @@ public class UserController {
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == okButtonType) {
                 User newUser = user != null ? user : new User();
-                
+
                 if (user == null) {
                     newUser.username = usernameField.getText().trim();
                 }
-                newUser.password = passwordField.getText().trim();
+
+                // 只有在新用户或输入了新密码时才哈希密码
+                String passwordInput = passwordField.getText().trim();
+                if (user == null || !passwordInput.isEmpty()) {
+                    newUser.password = PasswordUtil.hashPassword(passwordInput);
+                }
+
                 newUser.name = nameField.getText().trim();
                 
                 String roleDisplayName = roleComboBox.getSelectionModel().getSelectedItem();
@@ -306,7 +313,7 @@ public class UserController {
                     return;
                 }
 
-                selected.password = newPassword.trim();
+                selected.password = PasswordUtil.hashPassword(newPassword.trim());
                 DataManager.saveUsers(users);
                 loadUsers();
                 updateStatus("密码重置成功");

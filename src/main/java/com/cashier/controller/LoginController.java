@@ -4,6 +4,7 @@ import com.cashier.CashierSystemFXApplication;
 import com.cashier.model.DataManager;
 import com.cashier.model.User;
 import com.cashier.util.FXUtils;
+import com.cashier.util.PasswordUtil;
 import javafx.animation.FadeTransition;
 import javafx.animation.ScaleTransition;
 import javafx.fxml.FXML;
@@ -123,7 +124,7 @@ public class LoginController {
                     return;
                 }
 
-                if (!user.password.equals(password)) {
+                if (!PasswordUtil.verifyPassword(password, user.password)) {
                     loginAttempts++;
                     showError("密码错误！剩余尝试次数：" + (MAX_LOGIN_ATTEMPTS - loginAttempts));
                     shakeTextField(passwordField);

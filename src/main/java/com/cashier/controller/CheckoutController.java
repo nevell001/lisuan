@@ -414,15 +414,13 @@ public class CheckoutController {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("确认取消");
         alert.setHeaderText(null);
-        alert.setContentText("确定要取消结账吗？");
+        alert.setContentText("确定要取消结账吗？购物车将被清空。");
 
         if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-            // TODO: 关闭结账界面
-            Alert infoAlert = new Alert(Alert.AlertType.INFORMATION);
-            infoAlert.setTitle("提示");
-            infoAlert.setHeaderText(null);
-            infoAlert.setContentText("结账已取消，购物车已清空。");
-            infoAlert.showAndWait();
+            // 关闭结账界面窗口
+            if (cartTable.getScene() != null && cartTable.getScene().getWindow() != null) {
+                cartTable.getScene().getWindow().hide();
+            }
         }
     }
 
