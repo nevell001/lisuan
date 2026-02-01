@@ -42,5 +42,11 @@ backup_*/
 *.jar
 !flatlaf-3.5.jar
 
+# Maven Shade 插件生成的文件
+dependency-reduced-pom.xml
+pom.xml.tag
+pom.xml.releaseBackup
+pom.xml.versionsBackup
+
 # 字体文件
 fonts/
