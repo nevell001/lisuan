@@ -12,6 +12,9 @@ import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
+import javafx.scene.control.ButtonBar;
+import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.stage.Stage;
 
@@ -184,14 +187,36 @@ public class CashierSystemFXApplication extends Application {
      * 处理退出
      */
     private void handleExit() {
-        // TODO: 检查是否有未保存的数据
-        // TODO: 检查是否有进行中的班次
+        // 检查是否有进行中的班次
+        if (DataManager.hasActiveShift()) {
+            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+            alert.setTitle("确认退出");
+            alert.setHeaderText(null);
+            alert.setContentText("当前有活跃班次未交班！\n\n确定要退出系统吗？\n\n提示：建议先交班后再退出。");
 
-        // 保存数据
-        // DataManager.saveAll();
+            ButtonType yesButton = new ButtonType("先交班", ButtonBar.ButtonData.YES);
+            ButtonType noButton = new ButtonType("直接退出", ButtonBar.ButtonData.NO);
+            ButtonType cancelButton = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
 
-        // 退出应用
-        System.exit(0);
+            alert.getButtonTypes().setAll(yesButton, noButton, cancelButton);
+
+            alert.showAndWait().ifPresent(buttonType -> {
+                if (buttonType == yesButton) {
+                    // 用户选择先交班，这里不执行任何操作
+                    // 因为无法直接切换到交班页面，用户需要手动操作
+                    System.out.println("用户选择先交班");
+                } else if (buttonType == noButton) {
+                    // 用户选择直接退出
+                    System.exit(0);
+                }
+                // 如果选择取消，不做任何操作
+            });
+        } else {
+            // 没有活跃班次，直接退出
+            if (FXUtils.showConfirmAlert("确认退出", "确定要退出系统吗？")) {
+                System.exit(0);
+            }
+        }
     }
 
     /**

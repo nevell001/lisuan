@@ -12,6 +12,9 @@ import javafx.scene.layout.GridPane;
 
 import java.text.SimpleDateFormat;
 import java.util.List;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
 
 /**
  * 促销管理控制器
@@ -115,12 +118,14 @@ public class PromotionController {
         typeColumn.setCellValueFactory(new PropertyValueFactory<>("type"));
         descriptionColumn.setCellValueFactory(new PropertyValueFactory<>("description"));
 
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        DateTimeFormatter formatter = DateTimeFormatter.ofPattern("yyyy-MM-dd");
         periodColumn.setCellValueFactory(cellData -> {
             Promotion p = cellData.getValue();
+            LocalDate startDate = p.startDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            LocalDate endDate = p.endDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
             return new SimpleStringProperty(String.format("%s 至 %s",
-                sdf.format(p.startDate),
-                sdf.format(p.endDate)));
+                startDate.format(formatter),
+                endDate.format(formatter)));
         });
 
         usageColumn.setCellValueFactory(cellData -> {
@@ -218,14 +223,8 @@ public class PromotionController {
             thresholdField.setText(String.valueOf(promotion.threshold));
             discountField.setText(String.valueOf(promotion.discount));
             descriptionArea.setText(promotion.description);
-            startDatePicker.setValue(java.time.LocalDate.of(
-                promotion.startDate.getYear() + 1900,
-                promotion.startDate.getMonth() + 1,
-                promotion.startDate.getDate()));
-            endDatePicker.setValue(java.time.LocalDate.of(
-                promotion.endDate.getYear() + 1900,
-                promotion.endDate.getMonth() + 1,
-                promotion.endDate.getDate()));
+            startDatePicker.setValue(promotion.startDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
+            endDatePicker.setValue(promotion.endDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
             maxUsageField.setText(promotion.maxUsage == -1 ? "" : String.valueOf(promotion.maxUsage));
         }
 

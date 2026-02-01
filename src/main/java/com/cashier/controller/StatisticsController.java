@@ -325,7 +325,10 @@ public class StatisticsController {
             try {
                 SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
                 Date date = sdf.parse(t.timestamp);
-                int hour = date.getHours();
+                // 使用 Calendar API 替代已过时的 Date.getHours()
+                Calendar cal = Calendar.getInstance();
+                cal.setTime(date);
+                int hour = cal.get(Calendar.HOUR_OF_DAY);
                 hourCountMap.put(hour, hourCountMap.getOrDefault(hour, 0) + 1);
                 hourAmountMap.put(hour, hourAmountMap.getOrDefault(hour, 0.0) + t.finalAmount);
             } catch (Exception e) {

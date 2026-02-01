@@ -379,7 +379,10 @@ public class CheckoutController {
         }
         
         transaction.totalAmount = getTotalAmount();
-        transaction.tax = 0.0; // TODO: 实现税费计算
+        // 实现税费计算：从系统设置中读取税率
+        Map<String, String> settings = DataManager.loadSettings();
+        double taxRate = Double.parseDouble(settings.getOrDefault("taxRate", "0.0"));
+        transaction.tax = transaction.totalAmount * taxRate / 100.0;
         transaction.paymentMethod = paymentMethod;
         
         if (currentMember != null) {
