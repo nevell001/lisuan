@@ -6,6 +6,8 @@ import com.cashier.model.Member;
 import com.cashier.model.Product;
 import com.cashier.model.Transaction;
 import com.cashier.model.User;
+import com.cashier.util.FXUtils;
+import com.cashier.util.ReceiptPrinter;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -87,6 +89,7 @@ public class CheckoutController {
     private Member currentMember;
     private User currentUser;
     private String orderNumber;
+    private Transaction lastTransaction; // 保存最后完成的交易信息
 
     /**
      * 初始化方法
@@ -353,6 +356,9 @@ public class CheckoutController {
         Transaction transaction = createTransaction(paymentMethod);
         saveTransaction(transaction);
 
+        // 保存交易信息用于打印
+        lastTransaction = transaction;
+
         // 显示成功消息
         showSuccess(paymentMethod, transaction);
 
@@ -429,12 +435,46 @@ public class CheckoutController {
      */
     @FXML
     private void handlePrint() {
-        // TODO: 实现打印功能
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("打印");
-        alert.setHeaderText(null);
-        alert.setContentText("打印功能正在开发中...");
-        alert.showAndWait();
+        if (lastTransaction == null) {
+            FXUtils.showError("没有可打印的交易记录");
+            return;
+        }
+
+        try {
+            // 生成并打印小票
+            String receiptPath = ReceiptPrinter.printReceipt(
+                lastTransaction,
+                new ArrayList<>(cartList),
+                currentMember
+            );
+
+            if (receiptPath != null) {
+                FXUtils.showInfoAlert("打印成功", "小票已打印成功！");
+            } else {
+                // 如果自动打印失败，生成小票文件并提示用户
+                receiptPath = ReceiptPrinter.generateReceiptOnly(
+                    lastTransaction,
+                    new ArrayList<>(cartList),
+                    currentMember
+                );
+
+                if (receiptPath != null) {
+                    Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+                    alert.setTitle("小票已生成");
+                    alert.setHeaderText(null);
+                    alert.setContentText("小票文件已生成：\n" + receiptPath + "\n\n是否打开文件？");
+
+                    if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
+                        ReceiptPrinter.openReceiptFile(receiptPath);
+                    }
+                } else {
+                    FXUtils.showError("生成小票失败");
+                }
+            }
+        } catch (Exception e) {
+            FXUtils.showError("打印小票失败: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**

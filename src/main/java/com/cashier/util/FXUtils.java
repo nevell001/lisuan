@@ -77,6 +77,22 @@ public class FXUtils {
     }
 
     /**
+     * 显示错误对话框（仅消息）
+     * @param message 消息
+     */
+    public static void showError(String message) {
+        showErrorAlert("错误", message);
+    }
+
+    /**
+     * 显示信息对话框（仅消息）
+     * @param message 消息
+     */
+    public static void showInfo(String message) {
+        showInfoAlert("信息", message);
+    }
+
+    /**
      * 淡入动画
      * @param node 目标节点
      * @param duration 动画时长（毫秒）
