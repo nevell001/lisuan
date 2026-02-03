@@ -1,8 +1,11 @@
 package com.cashier.controller;
 
+import com.cashier.dao.TransactionDAO;
 import com.cashier.model.DataManager;
 import com.cashier.model.Transaction;
 import com.cashier.util.StatusBarManager;
+
+import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -150,7 +153,15 @@ public class TransactionController {
      */
     private void loadTransactions() {
         System.out.println("TransactionController: 开始加载交易数据...");
-        allTransactions = DataManager.loadTransactions();
+        try {
+            // 尝试从数据库加载
+            allTransactions = TransactionDAO.findAll();
+        } catch (SQLException e) {
+            System.err.println("从数据库加载交易失败: " + e.getMessage());
+            e.printStackTrace();
+            // 降级到文件存储
+            allTransactions = DataManager.loadTransactions();
+        }
         transactionList = FXCollections.observableArrayList(allTransactions);
         transactionTable.setItems(transactionList);
         updateStatistics();

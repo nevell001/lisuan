@@ -1,8 +1,11 @@
 package com.cashier.controller;
 
+import com.cashier.dao.ProductDAO;
 import com.cashier.model.DataManager;
 import com.cashier.model.Product;
 import com.cashier.util.StatusBarManager;
+
+import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -127,7 +130,19 @@ public class InventoryController {
      * 加载库存数据
      */
     private void loadInventory() {
-        inventory = DataManager.loadInventory();
+        try {
+            // 尝试从数据库加载
+            var products = ProductDAO.findAll();
+            inventory = new java.util.HashMap<>();
+            for (Product product : products) {
+                inventory.put(product.name, product);
+            }
+        } catch (SQLException e) {
+            System.err.println("从数据库加载商品失败: " + e.getMessage());
+            e.printStackTrace();
+            // 降级到文件存储
+            inventory = DataManager.loadInventory();
+        }
         inventoryList = FXCollections.observableArrayList(inventory.values());
         inventoryTable.setItems(inventoryList);
         updateCountLabel();
@@ -188,10 +203,18 @@ public class InventoryController {
             // 如果用户点击了保存
             if (controller.isOkClicked()) {
                 Product newProduct = controller.getProduct();
-                inventory.put(newProduct.name, newProduct);
-                DataManager.saveInventory(inventory);
-                loadInventory();
-                updateStatus("商品添加成功: " + newProduct.name);
+                try {
+                    ProductDAO.insert(newProduct);
+                    loadInventory();
+                    updateStatus("商品添加成功: " + newProduct.name);
+                } catch (SQLException e) {
+                    System.err.println("数据库保存失败，降级到文件存储: " + e.getMessage());
+                    // 降级到文件存储
+                    inventory.put(newProduct.name, newProduct);
+                    DataManager.saveInventory(inventory);
+                    loadInventory();
+                    updateStatus("商品添加成功: " + newProduct.name);
+                }
             }
 
         } catch (IOException e) {
@@ -239,10 +262,18 @@ public class InventoryController {
                 // 如果用户点击了保存
                 if (controller.isOkClicked()) {
                     Product updatedProduct = controller.getProduct();
-                    inventory.put(updatedProduct.name, updatedProduct);
-                    DataManager.saveInventory(inventory);
-                    loadInventory();
-                    updateStatus("商品更新成功: " + updatedProduct.name);
+                    try {
+                        ProductDAO.update(updatedProduct);
+                        loadInventory();
+                        updateStatus("商品更新成功: " + updatedProduct.name);
+                    } catch (SQLException e) {
+                        System.err.println("数据库更新失败，降级到文件存储: " + e.getMessage());
+                        // 降级到文件存储
+                        inventory.put(updatedProduct.name, updatedProduct);
+                        DataManager.saveInventory(inventory);
+                        loadInventory();
+                        updateStatus("商品更新成功: " + updatedProduct.name);
+                    }
                 }
 
             } catch (IOException e) {
@@ -264,9 +295,16 @@ public class InventoryController {
             alert.setContentText("确定要删除商品 \"" + selected.name + "\" 吗？");
 
             if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-                inventory.remove(selected.name);
-                DataManager.saveInventory(inventory);
-                loadInventory();
+                try {
+                    ProductDAO.delete(selected.name);
+                    loadInventory();
+                } catch (SQLException e) {
+                    System.err.println("数据库删除失败，降级到文件存储: " + e.getMessage());
+                    // 降级到文件存储
+                    inventory.remove(selected.name);
+                    DataManager.saveInventory(inventory);
+                    loadInventory();
+                }
             }
         }
     }

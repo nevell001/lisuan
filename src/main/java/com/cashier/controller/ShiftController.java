@@ -1,9 +1,13 @@
 package com.cashier.controller;
 
+import com.cashier.dao.ShiftDAO;
+import com.cashier.dao.TransactionDAO;
 import com.cashier.model.DataManager;
 import com.cashier.model.Shift;
 import com.cashier.model.Transaction;
 import com.cashier.util.StatusBarManager;
+
+import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -155,7 +159,15 @@ public class ShiftController {
      */
     private void loadShifts() {
         System.out.println("ShiftController: 开始加载交接班数据...");
-        allShifts = DataManager.loadShifts();
+        try {
+            // 尝试从数据库加载
+            allShifts = ShiftDAO.findAll();
+        } catch (SQLException e) {
+            System.err.println("从数据库加载交接班数据失败: " + e.getMessage());
+            e.printStackTrace();
+            // 降级到文件存储
+            allShifts = DataManager.loadShifts();
+        }
         shiftList = FXCollections.observableArrayList(allShifts);
         shiftTable.setItems(shiftList);
         updateStatistics();
@@ -341,7 +353,14 @@ public class ShiftController {
      * 更新开班/交班按钮状态
      */
     private void updateShiftButtonStates() {
-        boolean hasActiveShift = com.cashier.model.DataManager.hasActiveShift();
+        boolean hasActiveShift = false;
+        try {
+            hasActiveShift = ShiftDAO.hasActiveShift();
+        } catch (SQLException e) {
+            System.err.println("检查活跃班次失败: " + e.getMessage());
+            // 降级到文件存储
+            hasActiveShift = DataManager.hasActiveShift();
+        }
         startShiftButton.setDisable(hasActiveShift);
         endShiftButton.setDisable(!hasActiveShift);
     }
@@ -352,9 +371,18 @@ public class ShiftController {
     @FXML
     private void handleStartShift() {
         // 检查是否已有活跃班次
-        if (com.cashier.model.DataManager.hasActiveShift()) {
-            showError("当前已有活跃班次，请先交班后再开新班！");
-            return;
+        try {
+            if (ShiftDAO.hasActiveShift()) {
+                showError("当前已有活跃班次，请先交班后再开新班！");
+                return;
+            }
+        } catch (SQLException e) {
+            System.err.println("检查活跃班次失败: " + e.getMessage());
+            // 降级到文件存储
+            if (DataManager.hasActiveShift()) {
+                showError("当前已有活跃班次，请先交班后再开新班！");
+                return;
+            }
         }
 
         // 确认开班
@@ -375,11 +403,18 @@ public class ShiftController {
             }
 
             // 加载现有交易记录，获取当前总营业额和交易数
-            List<com.cashier.model.Transaction> transactions = com.cashier.model.DataManager.loadTransactions();
+            List<Transaction> transactions;
+            try {
+                transactions = TransactionDAO.findAll();
+            } catch (SQLException e) {
+                System.err.println("从数据库加载交易失败: " + e.getMessage());
+                transactions = DataManager.loadTransactions();
+            }
+
             double totalRevenue = 0.0;
             int totalTransactions = transactions.size();
 
-            for (com.cashier.model.Transaction t : transactions) {
+            for (Transaction t : transactions) {
                 totalRevenue += t.finalAmount;
             }
 
@@ -387,7 +422,7 @@ public class ShiftController {
             String shiftId = "SHIFT" + new java.text.SimpleDateFormat("yyyyMMddHHmmss").format(new java.util.Date());
 
             // 创建新班次
-            com.cashier.model.Shift shift = new com.cashier.model.Shift(
+            Shift shift = new Shift(
                 shiftId,
                 currentUser.username,
                 currentUser.name,
@@ -396,10 +431,16 @@ public class ShiftController {
                 totalTransactions
             );
 
-            // 保存班次
-            List<com.cashier.model.Shift> shifts = com.cashier.model.DataManager.loadShifts();
-            shifts.add(shift);
-            com.cashier.model.DataManager.saveShifts(shifts);
+            // 保存班次到数据库
+            try {
+                ShiftDAO.insert(shift);
+            } catch (SQLException e) {
+                System.err.println("数据库保存失败，降级到文件存储: " + e.getMessage());
+                // 降级到文件存储
+                List<Shift> shifts = DataManager.loadShifts();
+                shifts.add(shift);
+                DataManager.saveShifts(shifts);
+            }
 
             // 刷新列表
             loadShifts();
@@ -419,7 +460,15 @@ public class ShiftController {
     @FXML
     private void handleEndShift() {
         // 检查是否有活跃班次
-        com.cashier.model.Shift activeShift = com.cashier.model.DataManager.getActiveShift();
+        Shift activeShift = null;
+        try {
+            activeShift = ShiftDAO.findActiveShift();
+        } catch (SQLException e) {
+            System.err.println("从数据库查询活跃班次失败: " + e.getMessage());
+            // 降级到文件存储
+            activeShift = DataManager.getActiveShift();
+        }
+
         if (activeShift == null) {
             showError("当前没有活跃班次！");
             return;
@@ -437,18 +486,24 @@ public class ShiftController {
 
         try {
             // 加载所有交易记录
-            List<com.cashier.model.Transaction> allTransactions = com.cashier.model.DataManager.loadTransactions();
+            List<Transaction> allTransactions;
+            try {
+                allTransactions = TransactionDAO.findAll();
+            } catch (SQLException e) {
+                System.err.println("从数据库加载交易失败: " + e.getMessage());
+                allTransactions = DataManager.loadTransactions();
+            }
 
             // 筛选本班次的交易记录（在班次开始时间之后的交易）
             java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            List<com.cashier.model.Transaction> shiftTransactions = new java.util.ArrayList<>();
+            List<Transaction> shiftTransactions = new java.util.ArrayList<>();
             double cashRevenue = 0.0;
             double wechatRevenue = 0.0;
             double alipayRevenue = 0.0;
             double cardRevenue = 0.0;
             double totalRevenue = 0.0;
 
-            for (com.cashier.model.Transaction t : allTransactions) {
+            for (Transaction t : allTransactions) {
                 try {
                     java.util.Date transactionTime = sdf.parse(t.timestamp);
                     if (transactionTime.after(activeShift.startTime) || transactionTime.equals(activeShift.startTime)) {
@@ -477,15 +532,21 @@ public class ShiftController {
             int closingTransactionCount = activeShift.openingTransactionCount + shiftTransactions.size();
             activeShift.endShift(closingRevenue, closingTransactionCount, cashRevenue, wechatRevenue, alipayRevenue, cardRevenue);
 
-            // 保存班次
-            List<com.cashier.model.Shift> shifts = com.cashier.model.DataManager.loadShifts();
-            for (int i = 0; i < shifts.size(); i++) {
-                if (shifts.get(i).shiftId.equals(activeShift.shiftId)) {
-                    shifts.set(i, activeShift);
-                    break;
+            // 保存班次到数据库
+            try {
+                ShiftDAO.update(activeShift);
+            } catch (SQLException e) {
+                System.err.println("数据库保存失败，降级到文件存储: " + e.getMessage());
+                // 降级到文件存储
+                List<Shift> shifts = DataManager.loadShifts();
+                for (int i = 0; i < shifts.size(); i++) {
+                    if (shifts.get(i).shiftId.equals(activeShift.shiftId)) {
+                        shifts.set(i, activeShift);
+                        break;
+                    }
                 }
+                DataManager.saveShifts(shifts);
             }
-            com.cashier.model.DataManager.saveShifts(shifts);
 
             // 刷新列表
             loadShifts();

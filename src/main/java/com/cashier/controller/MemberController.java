@@ -1,8 +1,11 @@
 package com.cashier.controller;
 
+import com.cashier.dao.MemberDAO;
 import com.cashier.model.DataManager;
 import com.cashier.model.Member;
 import com.cashier.util.StatusBarManager;
+
+import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -108,7 +111,19 @@ public class MemberController {
      * 加载会员数据
      */
     private void loadMembers() {
-        members = DataManager.loadMembers();
+        try {
+            // 尝试从数据库加载
+            var memberData = MemberDAO.findAll();
+            members = new java.util.HashMap<>();
+            for (Member member : memberData) {
+                members.put(member.phone, member);
+            }
+        } catch (SQLException e) {
+            System.err.println("从数据库加载会员失败: " + e.getMessage());
+            e.printStackTrace();
+            // 降级到文件存储
+            members = DataManager.loadMembers();
+        }
         memberList = FXCollections.observableArrayList(members.values());
         memberTable.setItems(memberList);
         updateCountLabel();
@@ -169,10 +184,18 @@ public class MemberController {
             // 如果用户点击了保存
             if (controller.isOkClicked()) {
                 Member newMember = controller.getMember();
-                members.put(newMember.phone, newMember);
-                DataManager.saveMembers(members);
-                loadMembers();
-                updateStatus("会员添加成功: " + newMember.name);
+                try {
+                    MemberDAO.insert(newMember);
+                    loadMembers();
+                    updateStatus("会员添加成功: " + newMember.name);
+                } catch (SQLException e) {
+                    System.err.println("数据库保存失败，降级到文件存储: " + e.getMessage());
+                    // 降级到文件存储
+                    members.put(newMember.phone, newMember);
+                    DataManager.saveMembers(members);
+                    loadMembers();
+                    updateStatus("会员添加成功: " + newMember.name);
+                }
             }
 
         } catch (IOException e) {
@@ -220,10 +243,18 @@ public class MemberController {
                 // 如果用户点击了保存
                 if (controller.isOkClicked()) {
                     Member updatedMember = controller.getMember();
-                    members.put(updatedMember.phone, updatedMember);
-                    DataManager.saveMembers(members);
-                    loadMembers();
-                    updateStatus("会员更新成功: " + updatedMember.name);
+                    try {
+                        MemberDAO.update(updatedMember);
+                        loadMembers();
+                        updateStatus("会员更新成功: " + updatedMember.name);
+                    } catch (SQLException e) {
+                        System.err.println("数据库更新失败，降级到文件存储: " + e.getMessage());
+                        // 降级到文件存储
+                        members.put(updatedMember.phone, updatedMember);
+                        DataManager.saveMembers(members);
+                        loadMembers();
+                        updateStatus("会员更新成功: " + updatedMember.name);
+                    }
                 }
 
             } catch (IOException e) {
@@ -245,10 +276,18 @@ public class MemberController {
             alert.setContentText("确定要删除会员 \"" + selected.name + "\" 吗？");
 
             if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-                members.remove(selected.phone);
-                DataManager.saveMembers(members);
-                loadMembers();
-                updateStatus("会员删除成功: " + selected.name);
+                try {
+                    MemberDAO.delete(selected.phone);
+                    loadMembers();
+                    updateStatus("会员删除成功: " + selected.name);
+                } catch (SQLException e) {
+                    System.err.println("数据库删除失败，降级到文件存储: " + e.getMessage());
+                    // 降级到文件存储
+                    members.remove(selected.phone);
+                    DataManager.saveMembers(members);
+                    loadMembers();
+                    updateStatus("会员删除成功: " + selected.name);
+                }
             }
         }
     }

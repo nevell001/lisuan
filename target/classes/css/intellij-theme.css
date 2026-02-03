@@ -1,0 +1,354 @@
+/*
+ * 收银系统 - IntelliJ 主题
+ * 类似 IntelliJ IDEA 的专业风格
+ */
+
+/* ========== 全局样式 ========== */
+.root {
+    -fx-base: #FFFFFF;
+    -fx-background: #FFFFFF;
+    -fx-control-inner-background: #FFFFFF;
+    -fx-control-inner-background-alt: #F7F8FA;
+    -fx-accent: #365880;
+    -fx-focus-color: #365880;
+    -fx-faint-focus-color: rgba(54, 88, 128, 0.1);
+    -fx-text-fill: #2B2B2B;
+    -fx-text-fill-disabled: #A0A0A0;
+}
+
+/* ========== 场景背景 ========== */
+.scene {
+    -fx-background-color: #FFFFFF;
+}
+
+/* ========== 面板样式 ========== */
+.pane {
+    -fx-background-color: #FFFFFF;
+}
+
+/* ========== 卡片样式 ========== */
+.card {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E1E4E8;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 6, 0, 0, 2);
+}
+
+/* ========== 按钮样式 ========== */
+.button {
+    -fx-background-color: #365880;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 3px;
+    -fx-border-radius: 3px;
+}
+
+.button:hover {
+    -fx-background-color: #4A6D9A;
+}
+
+.button:pressed {
+    -fx-background-color: #2B4566;
+}
+
+/* ========== 文本框样式 ========== */
+.text-field {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E1E4E8;
+    -fx-border-radius: 3px;
+    -fx-text-fill: #212121;
+}
+
+.text-field:focused {
+    -fx-border-color: #365880;
+    -fx-border-width: 1.5px;
+}
+
+.text-field:disabled {
+    -fx-background-color: #F7F8FA;
+    -fx-text-fill: #9E9E9E;
+}
+
+/* ========== 密码框样式 ========== */
+.password-field {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E1E4E8;
+    -fx-border-radius: 3px;
+    -fx-text-fill: #212121;
+}
+
+.password-field:focused {
+    -fx-border-color: #365880;
+    -fx-border-width: 1.5px;
+}
+
+/* ========== 组合框样式 ========== */
+.combo-box {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E1E4E8;
+    -fx-border-radius: 3px;
+    -fx-text-fill: #212121;
+}
+
+.combo-box:focused {
+    -fx-border-color: #365880;
+    -fx-border-width: 1.5px;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E1E4E8;
+    -fx-border-radius: 3px;
+}
+
+/* ========== 表格样式 ========== */
+.table-view {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E1E4E8;
+    -fx-border-radius: 3px;
+}
+
+.table-view .column-header {
+    -fx-background-color: #F7F8FA;
+    -fx-text-fill: #2B4566;
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-border-color: #E1E4E8;
+}
+
+.table-view .table-cell {
+    -fx-text-fill: #212121;
+    -fx-border-color: #F0F0F0;
+}
+
+.table-view .table-row-cell {
+    -fx-background-color: #FFFFFF;
+}
+
+.table-view .table-row-cell:odd {
+    -fx-background-color: #FAFBFC;
+}
+
+.table-view .table-row-cell:selected {
+    -fx-background-color: rgba(54, 88, 128, 0.12);
+    -fx-text-fill: #365880;
+}
+
+.table-view .table-row-cell:hover {
+    -fx-background-color: rgba(54, 88, 128, 0.06);
+}
+
+/* ========== 菜单和工具栏 ========== */
+.menu-bar {
+    -fx-background-color: #F7F8FA;
+    -fx-border-color: #E1E4E8;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.menu .label {
+    -fx-text-fill: #2B2B2B;
+}
+
+.tool-bar {
+    -fx-background-color: #F7F8FA;
+    -fx-border-color: #E1E4E8;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.context-menu {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E1E4E8;
+    -fx-border-radius: 3px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 4, 0, 0, 1);
+}
+
+.menu-item {
+    -fx-text-fill: #2B2B2B;
+}
+
+.menu-item:focused {
+    -fx-background-color: #E8EBF0;
+}
+
+/* ========== 选项卡 ========== */
+.tab-pane {
+    -fx-background-color: #F7F8FA;
+}
+
+.tab-pane .tab-header-area {
+    -fx-background-color: #F7F8FA;
+    -fx-border-color: #E1E4E8;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.tab-pane .tab {
+    -fx-background-color: #F7F8FA;
+    -fx-background-radius: 3px 3px 0 0;
+    -fx-border-color: #E1E4E8;
+    -fx-border-radius: 3px 3px 0 0;
+    -fx-text-fill: #2B2B2B;
+}
+
+.tab-pane .tab:selected {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #365880;
+}
+
+.tab-pane .tab-content-area {
+    -fx-background-color: #FFFFFF;
+}
+
+/* ========== 滚动条 ========== */
+.scroll-bar .thumb {
+    -fx-background-color: #C0C0C0;
+    -fx-background-radius: 2px;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #A8A8A8;
+}
+
+/* ========== 复选框和单选按钮 ========== */
+.check-box {
+    -fx-text-fill: #2B2B2B;
+}
+
+.check-box .box {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E1E4E8;
+    -fx-border-radius: 2px;
+}
+
+.radio-button {
+    -fx-text-fill: #2B2B2B;
+}
+
+.radio-button .radio {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E1E4E8;
+    -fx-border-radius: 10px;
+}
+
+/* ========== 工具提示 ========== */
+.tooltip {
+    -fx-background-color: #365880;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 3px;
+}
+
+/* ========== 对话框 ========== */
+.dialog-pane {
+    -fx-background-color: #FFFFFF;
+}
+
+.dialog-pane .header-panel {
+    -fx-background-color: #F7F8FA;
+    -fx-text-fill: #365880;
+}
+
+.dialog-pane .content {
+    -fx-text-fill: #2B2B2B;
+}
+
+/* ========== 进度条 ========== */
+.progress-bar {
+    -fx-background-color: #E1E4E8;
+}
+
+.progress-bar .bar {
+    -fx-background-color: #365880;
+}
+
+/* ========== 滚动面板 ========== */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: #E1E4E8;
+    -fx-border-radius: 3px;
+}
+
+.scroll-pane .viewport {
+    -fx-background-color: #FFFFFF;
+}
+
+/* ========== 标签样式 ========== */
+.label {
+    -fx-text-fill: #212121;
+}
+
+.label.title {
+    -fx-text-fill: #365880;
+}
+
+.label.heading {
+    -fx-text-fill: #212121;
+}
+
+.label.subtitle {
+    -fx-text-fill: #424242;
+}
+
+.label.secondary {
+    -fx-text-fill: #616161;
+}
+
+.label.disabled {
+    -fx-text-fill: #9E9E9E;
+}
+
+/* ========== 文本颜色 ========== */
+.text-primary {
+    -fx-text-fill: #365880;
+}
+
+.text-success {
+    -fx-text-fill: #4CAF50;
+}
+
+.text-warning {
+    -fx-text-fill: #FF9800;
+}
+
+.text-danger {
+    -fx-text-fill: #F44336;
+}
+
+.text-info {
+    -fx-text-fill: #2196F3;
+}
+
+/* ========== 背景颜色 ========== */
+.bg-primary {
+    -fx-background-color: #365880;
+}
+
+.bg-success {
+    -fx-background-color: #4CAF50;
+}
+
+.bg-warning {
+    -fx-background-color: #FF9800;
+}
+
+.bg-danger {
+    -fx-background-color: #F44336;
+}
+
+.bg-info {
+    -fx-background-color: #2196F3;
+}
+
+.bg-light {
+    -fx-background-color: #F7F8FA;
+}
+
+.bg-dark {
+    -fx-background-color: #2B2B2B;
+}
+
+/* ========== 分割面板 ========== */
+.split-pane {
+    -fx-background-color: #E1E4E8;
+}
+
+.split-pane-divider {
+    -fx-background-color: #E1E4E8;
+    -fx-padding: 0 1px;
+}

@@ -1,0 +1,108 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.RechargeController"
+      spacing="15"
+      styleClass="recharge-view"
+      prefWidth="500"
+      prefHeight="550">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <!-- 标题 -->
+    <Label text="会员充值" 
+           style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
+    <!-- 会员信息 -->
+    <VBox spacing="5" styleClass="member-info-box">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+        <HBox spacing="10">
+            <Label text="会员姓名:" style="-fx-font-weight: bold;"/>
+            <Label fx:id="memberNameLabel" text=""/>
+        </HBox>
+        <HBox spacing="10">
+            <Label text="手机号码:" style="-fx-font-weight: bold;"/>
+            <Label fx:id="memberPhoneLabel" text=""/>
+        </HBox>
+        <HBox spacing="10">
+            <Label text="当前余额:" style="-fx-font-weight: bold;"/>
+            <Label fx:id="currentBalanceLabel" text="" style="-fx-text-fill: #4CAF50; -fx-font-weight: bold;"/>
+        </HBox>
+        <HBox spacing="10">
+            <Label text="当前积分:" style="-fx-font-weight: bold;"/>
+            <Label fx:id="currentPointsLabel" text="" style="-fx-text-fill: #FF9800; -fx-font-weight: bold;"/>
+        </HBox>
+    </VBox>
+
+    <!-- 充值表单 -->
+    <GridPane hgap="10" vgap="10">
+        <padding>
+            <Insets top="10" right="0" bottom="10" left="0"/>
+        </padding>
+
+        <!-- 充值金额 -->
+        <Label text="充值金额:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <TextField fx:id="amountField" 
+                   GridPane.columnIndex="1" GridPane.rowIndex="0" 
+                   prefWidth="200" promptText="输入充值金额"/>
+
+        <!-- 支付方式 -->
+        <Label text="支付方式:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <ComboBox fx:id="paymentMethodComboBox" 
+                  GridPane.columnIndex="1" GridPane.rowIndex="1" 
+                  prefWidth="200"/>
+    </GridPane>
+
+    <!-- 预览信息 -->
+    <VBox spacing="5" styleClass="preview-box">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+        <HBox spacing="10">
+            <Label text="充值后余额:" style="-fx-font-weight: bold;"/>
+            <Label fx:id="newBalanceLabel" text="" style="-fx-text-fill: #4CAF50; -fx-font-weight: bold; -fx-font-size: 14px;"/>
+        </HBox>
+        <HBox spacing="10">
+            <Label text="赠送积分:" style="-fx-font-weight: bold;"/>
+            <Label fx:id="bonusPointsLabel" text="" style="-fx-text-fill: #FF9800; -fx-font-weight: bold; -fx-font-size: 14px;"/>
+            <Label text="(1元=10积分)" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
+        </HBox>
+    </VBox>
+
+    <!-- 充值历史记录 -->
+    <VBox spacing="5">
+        <Label text="最近充值记录" style="-fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+        <TableView fx:id="historyTable" prefHeight="150">
+            <columns>
+                <TableColumn fx:id="dateColumn" text="充值时间" prefWidth="140"/>
+                <TableColumn fx:id="amountColumn" text="金额" prefWidth="80"/>
+                <TableColumn fx:id="paymentColumn" text="支付方式" prefWidth="80"/>
+                <TableColumn fx:id="operatorColumn" text="操作员" prefWidth="80"/>
+            </columns>
+        </TableView>
+    </VBox>
+
+    <!-- 按钮区域 -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button fx:id="cancelButton"
+                text="取消"
+                onAction="#handleCancel"
+                prefWidth="80"
+                styleClass="secondary-button"/>
+        <Button fx:id="okButton"
+                text="确认充值"
+                onAction="#handleOk"
+                prefWidth="100"
+                styleClass="primary-button"/>
+    </HBox>
+
+</VBox>

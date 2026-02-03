@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Rectangle?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.LoginController"
+      alignment="CENTER"
+      spacing="20"
+      styleClass="login-scene">
+
+    <padding>
+        <Insets top="40" right="40" bottom="40" left="40"/>
+    </padding>
+
+    <!-- 标题区域 -->
+    <VBox alignment="CENTER" spacing="10">
+        <Label text="收银系统"
+               styleClass="login-title"/>
+        <Label text="Cashier Management System"
+               styleClass="login-subtitle"/>
+    </VBox>
+
+    <!-- 登录表单 -->
+    <VBox fx:id="loginCard" spacing="20" styleClass="login-card">
+        <padding>
+            <Insets top="40" right="40" bottom="40" left="40"/>
+        </padding>
+
+        <!-- 用户名 -->
+        <VBox spacing="8">
+            <Label text="用户名" styleClass="form-label"/>
+            <TextField fx:id="usernameField"
+                       promptText="请输入用户名"
+                       prefWidth="300"
+                       styleClass="login-input"/>
+        </VBox>
+
+        <!-- 密码 -->
+        <VBox spacing="8">
+            <Label text="密码" styleClass="form-label"/>
+            <PasswordField fx:id="passwordField"
+                          promptText="请输入密码"
+                          prefWidth="300"
+                          styleClass="login-input"
+                          onAction="#handleLogin"/>
+        </VBox>
+
+        <!-- 记住密码和忘记密码 -->
+        <HBox spacing="20" alignment="CENTER_LEFT" style="-fx-padding-top: 5;">
+            <CheckBox fx:id="rememberMeCheckBox" text="记住密码" styleClass="remember-checkbox"/>
+            <HBox HBox.hgrow="ALWAYS"/>
+            <Hyperlink text="忘记密码？" onAction="#handleForgotPassword" styleClass="forgot-password-link"/>
+        </HBox>
+
+        <!-- 错误提示 -->
+        <Label fx:id="errorLabel"
+               styleClass="error-label"
+               visible="false"/>
+
+        <!-- 加载指示器 -->
+        <ProgressIndicator fx:id="loadingIndicator"
+                          styleClass="loading-indicator"
+                          visible="false"
+                          managed="false"/>
+
+        <!-- 按钮 -->
+        <VBox spacing="12" style="-fx-padding-top: 10;">
+            <Button text="登录"
+                    onAction="#handleLogin"
+                    prefWidth="300"
+                    prefHeight="45"
+                    styleClass="login-button"/>
+            <HBox spacing="10" alignment="CENTER">
+                <Button text="退出"
+                        onAction="#handleExit"
+                        prefWidth="145"
+                        prefHeight="38"
+                        styleClass="secondary-button"/>
+                <Button text="关于"
+                        onAction="#handleAbout"
+                        prefWidth="145"
+                        prefHeight="38"
+                        styleClass="secondary-button"/>
+            </HBox>
+        </VBox>
+    </VBox>
+
+    <!-- 提示信息 -->
+    <VBox spacing="8" alignment="CENTER">
+        <Label text="默认账户: admin / admin123"
+               styleClass="hint-label"/>
+        <Label fx:id="versionLabel"
+               styleClass="version-label"/>
+    </VBox>
+
+</VBox>

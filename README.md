@@ -2,7 +2,7 @@
 
 一个功能完整的收银系统，使用 JavaFX 17 开发，提供现代化的图形化界面。
 
-**当前版本**: v2.1.0 | **最新更新**: 2026-01-08
+**当前版本**: v2.2.0 | **最新更新**: 2026-02-03
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.8-blue)
@@ -41,6 +41,19 @@
 
 ## 🎯 最近更新
 
+### v2.2.0 (2026-02-03)
+
+**数据库迁移完成**
+- ✨ 完整迁移到 MySQL 8.0 数据库
+  - 所有核心功能使用 MySQL 数据持久化
+  - 实现优雅降级：数据库失败时自动切换到文件存储
+  - 使用 HikariCP 连接池，高性能数据库访问
+  - DAO 层封装：UserDAO, ProductDAO, MemberDAO, TransactionDAO, ShiftDAO
+- 📊 支持通过 Docker Compose 一键启动 MySQL
+- 🔄 自动数据迁移工具：从文件存储无缝迁移到 MySQL
+- 📦 完整的数据备份和恢复方案
+- 🛡️ 事务支持：确保数据一致性
+
 ### v2.1.0 (2026-01-08)
 
 **POS 页面快捷键系统优化**
@@ -64,11 +77,14 @@
 
 ### 环境要求
 
+**必需组件**:
 - **JDK**: Java 17 或更高版本
 - **Maven**: 3.8 或更高版本
+- **MySQL**: 8.0 或更高版本（通过 Docker 或本地安装）
+- **Docker**: Docker & Docker Compose（推荐，用于快速启动 MySQL）
 - **操作系统**: Windows、macOS、Linux
-- **内存**: 最小 512MB，推荐 1GB+
-- **磁盘**: 最小 100MB 可用空间
+- **内存**: 最小 2GB，推荐 4GB+
+- **磁盘**: 最小 500MB 可用空间（含数据库）
 
 ### 安装
 
@@ -78,17 +94,63 @@ git clone https://gitee.com/nevell/hello.git
 cd hello
 ```
 
-2. 编译项目
+2. 启动 MySQL 数据库（三种方式）
+
+**方式一：使用 Docker Compose（推荐）**
+```bash
+# 启动 MySQL 8.0 和 phpMyAdmin
+docker-compose up -d
+
+# 查看日志
+docker-compose logs -f mysql
+
+# 访问 phpMyAdmin 管理界面
+# http://localhost:8080
+# 用户名: root, 密码: RootPassword123!
+```
+
+**方式二：使用本地 MySQL**
+```bash
+# 创建数据库和用户
+mysql -u root -p
+
+CREATE DATABASE cashier_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'cashier'@'%' IDENTIFIED BY 'YourPassword123!';
+GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'%';
+FLUSH PRIVILEGES;
+```
+
+**方式三：使用 Colima (macOS ARM)**
+```bash
+# 启动 Colima 并启用端口转发
+colima start --network-address --network-host-addresses
+
+# 然后运行 docker-compose up -d
+```
+
+3. 配置数据库连接
+
+创建 `config/database.properties`：
+```properties
+db.url=jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai
+db.username=root
+db.password=RootPassword123!
+db.pool.size=10
+```
+
+4. 编译项目
 ```bash
 mvn clean compile
 ```
 
-3. 运行程序
+5. 运行程序
 ```bash
 mvn javafx:run
 ```
 
-或者打包后运行：
+首次运行时，系统会自动检测并迁移数据到 MySQL。
+
+**打包后运行**：
 ```bash
 mvn clean package
 java -jar target/cashier-system-fx-2.0.0.jar
@@ -239,6 +301,12 @@ hello/
 │       │   ├── constant/
 │       │   │   ├── FXConstants.java             # JavaFX 常量
 │       │   │   └── SpacingConstants.java        # 间距常量
+│       │   ├── dao/                            # 数据访问层
+│       │   │   ├── UserDAO.java                # 用户 DAO
+│       │   │   ├── ProductDAO.java             # 商品 DAO
+│       │   │   ├── MemberDAO.java              # 会员 DAO
+│       │   │   ├── TransactionDAO.java         # 交易 DAO
+│       │   │   └── ShiftDAO.java               # 交接班 DAO
 │       │   ├── controller/
 │       │   │   ├── CartController.java          # 购物车控制器
 │       │   │   ├── CheckoutController.java      # 结账控制器
@@ -268,10 +336,14 @@ hello/
 │       │   │   ├── OperationLog.java            # 操作日志类
 │       │   │   ├── Shift.java                   # 交接班记录类
 │       │   │   ├── CartItem.java                # 购物车项类
-│       │   │   └── DataManager.java             # 数据管理类
+│       │   │   └── DataManager.java             # 文件存储（备用）
 │       │   └── util/
+│       │       ├── DatabaseManager.java          # 数据库管理器
+│       │       ├── DataMigrationTool.java        # 数据迁移工具
+│       │       ├── PasswordUtil.java             # 密码工具
 │       │       ├── FXUtils.java                 # JavaFX 工具类
-│       │       └── FXMLUtils.java               # FXML 工具类
+│       │       ├── FXMLUtils.java               # FXML 工具类
+│       │       └── StatusBarManager.java         # 状态栏管理器
 │       └── resources/
 │           ├── com/cashier/view/
 │           │   ├── MainView.fxml                # 主界面
@@ -296,7 +368,13 @@ hello/
 │               ├── light-theme.css               # 浅色主题
 │               ├── dark-theme.css                # 深色主题
 │               └── intellij-theme.css            # IntelliJ主题
-├── data/                            # 数据目录（自动创建）
+├── config/                          # 配置目录
+│   ├── database.properties            # 数据库配置
+│   └── database.properties.example  # 数据库配置示例
+├── docker/                          # Docker 配置
+│   └── mysql-init/                   # MySQL 初始化脚本
+├── docker-compose.yml               # Docker Compose 配置
+├── data/                            # 数据目录（备用，自动创建）
 │   ├── inventory.txt                # 库存数据
 │   ├── transactions.txt             # 交易记录
 │   ├── members.txt                  # 会员数据
@@ -343,8 +421,25 @@ java -jar target/cashier-system-fx-2.0.0.jar
 
 项目主要依赖：
 - JavaFX 17.0.8 - 图形界面框架
+- MySQL Connector J 8.0.33 - MySQL JDBC 驱动
+- HikariCP 5.1.0 - 高性能 JDBC 连接池
+- ControlsFX 11.2.1 - 增强的 UI 控件
+- FontAwesomeFX 4.7.0-9.1.2 - 图标库
 - JUnit 5 - 单元测试框架
 - TestFX - JavaFX UI 测试框架
+
+### 开发工具配置
+
+**IntelliJ IDEA 配置**：
+1. 确保安装了 JavaFX 插件
+2. 配置 JDK 17
+3. 启用注解处理
+4. 配置数据库连接（可选）
+
+**VS Code 配置**：
+1. 安装 "Extension Pack for Java" 插件
+2. 配置 settings.json 中的 Java 路径
+3. 安装 "Scene Builder" 插件用于 FXML 可视化编辑
 
 ## 🎨 主题切换
 
@@ -377,6 +472,62 @@ java -jar target/cashier-system-fx-2.0.0.jar
   - 交易记录
   - 数据导出
   - 报表查看
+
+## 💾 数据库架构
+
+### 数据存储策略
+
+系统采用**双存储架构**，确保数据安全和高可用性：
+
+1. **主存储：MySQL 8.0 数据库**
+   - 使用 HikariCP 连接池，高性能数据库访问
+   - 完整的 DAO 层封装，提供类型安全的数据库操作
+   - 事务支持，确保数据一致性
+   - 自动创建表结构和索引
+
+2. **备用存储：文件系统**
+   - 当数据库不可用时自动降级
+   - 数据存储在 `data/` 目录的 `.txt` 文件中
+   - 确保系统在数据库故障时仍可运行
+
+### 数据库表结构
+
+**核心表**：
+- `users` - 用户账户（管理员、收银员、财务）
+- `products` - 商品库存信息
+- `members` - 会员账户和积分
+- `transactions` - 交易记录主表
+- `transaction_items` - 交易明细（商品列表）
+- `shifts` - 交接班记录
+
+### 数据迁移
+
+系统首次启动时会自动执行数据迁移：
+1. 检测 MySQL 数据库是否为空
+2. 自动备份原有 `.txt` 数据文件到 `data/backup_<timestamp>/`
+3. 将数据迁移到 MySQL 数据库
+4. 显示迁移统计信息
+
+### 数据备份
+
+**自动备份**（推荐）：
+```bash
+# 使用 cron 定期备份
+0 2 * * * mysqldump -u root -p cashier_system > /backup/cashier_$(date +\%Y\%m\%d).sql
+```
+
+**手动备份**：
+```bash
+# 使用 mysqldump
+mysqldump -u root -p cashier_system > backup.sql
+
+# 或使用应用内的"数据备份"功能
+```
+
+**数据恢复**：
+```bash
+mysql -u root -p cashier_system < backup.sql
+```
 
 ## 💡 特色功能
 
@@ -467,6 +618,14 @@ JavaFX 官网: https://openjfx.io/
 - [JavaFX](https://openjfx.io/) - 现代化的 Java GUI 框架
 - [IntelliJ IDEA](https://www.jetbrains.com/idea/) - 强大的 Java IDE
 - [Maven](https://maven.apache.org/) - 项目管理和构建工具
+- [MySQL](https://www.mysql.com/) - 世界最流行的开源数据库
+- [HikariCP](https://github.com/brettwooldridge/HikariCP) - 快速的 JDBC 连接池
+
+## 📚 相关文档
+
+- [MySQL 数据库部署指南](docs/MYSQL_SETUP.md) - 详细的 MySQL 安装和配置说明
+- [Docker MySQL 快速部署](docker-mysql-setup.md) - 使用 Docker 快速启动 MySQL
+- [CLAUDE.md](CLAUDE.md) - 给 AI 助手的代码库指南
 
 ## 📊 技术栈
 
@@ -474,22 +633,27 @@ JavaFX 官网: https://openjfx.io/
 - **构建工具**: Maven 3.8+
 - **编程语言**: Java 17
 - **UI设计**: FXML + CSS
-- **数据存储**: 文本文件
+- **数据库**: MySQL 8.0
+- **连接池**: HikariCP 5.1.0
+- **ORM**: 自定义 DAO 层
+- **数据迁移**: 自动迁移工具（文件 → MySQL）
+- **容灾机制**: 优雅降级（MySQL → 文件存储）
 - **测试框架**: JUnit 5 + TestFX
 
 ## 🔮 未来计划
 
-- [ ] 数据库支持（MySQL/PostgreSQL）
 - [ ] 云端数据同步
 - [ ] 移动端应用
 - [ ] 二维码扫描支持
-- [ ] 小票打印功能
+- [x] 小票打印功能（已实现）
 - [ ] 更多统计图表
 - [ ] 多语言支持
 - [ ] 短信通知功能
 - [x] 完整的快捷键系统（v2.1.0 已实现）
 - [x] UI 优化和菜单结构调整（v2.1.0 已实现）
 - [x] 退出登录功能修复（v2.1.0 已实现）
+- [x] 数据库支持 MySQL（v2.2.0 已实现）
+- [x] 交接班管理数据库集成（v2.2.0 已实现）
 
 ---
 

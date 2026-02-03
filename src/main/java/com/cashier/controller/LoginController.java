@@ -1,7 +1,7 @@
 package com.cashier.controller;
 
 import com.cashier.CashierSystemFXApplication;
-import com.cashier.model.DataManager;
+import com.cashier.dao.UserDAO;
 import com.cashier.model.User;
 import com.cashier.util.FXUtils;
 import com.cashier.util.PasswordUtil;
@@ -111,11 +111,8 @@ public class LoginController {
         // 异步验证登录（避免阻塞 UI）
         new Thread(() -> {
             try {
-                // 加载用户数据
-                Map<String, User> users = DataManager.loadUsers();
-
-                // 验证用户
-                User user = users.get(username);
+                // 使用数据库验证用户
+                User user = UserDAO.findByUsername(username);
                 if (user == null) {
                     loginAttempts++;
                     showError("用户名不存在！剩余尝试次数：" + (MAX_LOGIN_ATTEMPTS - loginAttempts));
@@ -138,9 +135,8 @@ public class LoginController {
                     return;
                 }
 
-                // 更新最后登录时间
-                user.lastLoginTime = new java.util.Date();
-                DataManager.saveUsers(users);
+                // 更新最后登录时间到数据库
+                UserDAO.updateLastLoginTime(username);
 
                 // 保存记住的密码
                 if (rememberMeCheckBox.isSelected()) {

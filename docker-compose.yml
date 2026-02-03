@@ -1,0 +1,56 @@
+version: '3.8'
+
+services:
+  mysql:
+    image: mysql:8.0
+    container_name: cashier-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: RootPassword123!
+      MYSQL_DATABASE: cashier_system
+      TZ: Asia/Shanghai
+    ports:
+      - target: 3306
+        published: 3306
+        host_ip: 0.0.0.0
+        protocol: tcp
+    volumes:
+      - cashier-mysql-data:/var/lib/mysql
+      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+      - ./docker/mysql-backup:/backup
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - cashier-network
+
+  # 可选：phpMyAdmin 管理界面
+  phpmyadmin:
+    image: phpmyadmin/phpmyadmin:latest
+    container_name: cashier-phpmyadmin
+    restart: unless-stopped
+    platform: linux/amd64
+    environment:
+      PMA_HOST: mysql
+      PMA_PORT: 3306
+      PMA_USER: root
+      PMA_PASSWORD: RootPassword123!
+      UPLOAD_LIMIT: 100M
+    ports:
+      - "8080:80"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - cashier-network
+
+volumes:
+  cashier-mysql-data:
+    driver: local
+
+networks:
+  cashier-network:
+    driver: bridge

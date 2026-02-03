@@ -1,0 +1,37 @@
+# 收银系统数据库配置示例
+# 复制此文件为 database.properties 并修改相应配置
+
+# MySQL 数据库连接 URL
+# 格式: jdbc:mysql://主机名:端口/数据库名?参数
+# 示例:
+#   - 本机 MySQL: jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai
+#   - 远程 MySQL: jdbc:mysql://192.168.1.100:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai
+db.url=jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true
+
+# MySQL 用户名
+# 常见值: root, mysql, 或您创建的专用用户
+db.username=root
+
+# MySQL 密码
+# 请修改为您的 MySQL 密码
+db.password=root
+
+# 数据库连接池大小
+# 根据同时使用的收银机数量调整:
+#   - 2-3台收银机: 5-10
+#   - 4-6台收银机: 10-15
+#   - 7+台收银机: 15-20
+db.pool.size=10
+
+# ========================================
+# 高级配置（通常不需要修改）
+# ========================================
+
+# 连接超时时间（毫秒）
+db.connection.timeout=30000
+
+# 空闲连接超时（毫秒）
+db.idle.timeout=600000
+
+# 连接最大生命周期（毫秒）
+db.max.lifetime=1800000

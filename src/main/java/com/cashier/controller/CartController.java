@@ -1,5 +1,8 @@
 package com.cashier.controller;
 
+import com.cashier.dao.MemberDAO;
+import com.cashier.dao.ProductDAO;
+import com.cashier.dao.TransactionDAO;
 import com.cashier.model.CartItem;
 import com.cashier.model.DataManager;
 import com.cashier.model.Member;
@@ -304,7 +307,17 @@ public class CartController {
      */
     private void loadInventory() {
         System.out.println("CartController: 开始加载库存数据...");
-        inventory = DataManager.loadInventory();
+        try {
+            List<Product> products = ProductDAO.findAll();
+            inventory = new HashMap<>();
+            for (Product product : products) {
+                inventory.put(product.name, product);
+            }
+        } catch (Exception e) {
+            System.err.println("从数据库加载商品失败: " + e.getMessage());
+            e.printStackTrace();
+            inventory = DataManager.loadInventory();
+        }
         System.out.println("CartController: 加载了 " + inventory.size() + " 个商品");
         productList.setAll(inventory.values());
         updateCountLabel();
@@ -451,8 +464,14 @@ public class CartController {
             return;
         }
 
-        Map<String, Member> members = DataManager.loadMembers();
-        Member member = members.get(phone);
+        Member member = null;
+        try {
+            member = MemberDAO.findByPhone(phone);
+        } catch (Exception e) {
+            System.err.println("从数据库查找会员失败: " + e.getMessage());
+            Map<String, Member> members = DataManager.loadMembers();
+            member = members.get(phone);
+        }
 
         if (member != null) {
             currentMember = member;
@@ -614,24 +633,43 @@ public class CartController {
      * @param changeAmount 找零金额（现金支付时使用）
      */
     private void executePayment(String paymentMethod, double receivedAmount, double changeAmount) {
-        // 扣减库存
-        Map<String, Product> inventory = DataManager.loadInventory();
-        for (CartItem item : cartList) {
-            Product product = inventory.get(item.product.name);
-            if (product != null) {
-                product.quantity -= item.quantity;
+        // 扣减库存并保存到数据库
+        try {
+            for (CartItem item : cartList) {
+                Product product = inventory.get(item.product.name);
+                if (product != null) {
+                    product.quantity -= item.quantity;
+                    ProductDAO.update(product);
+                }
             }
+        } catch (Exception e) {
+            System.err.println("更新数据库库存失败: " + e.getMessage());
+            // 降级到文件存储
+            for (CartItem item : cartList) {
+                Product product = inventory.get(item.product.name);
+                if (product != null) {
+                    product.quantity -= item.quantity;
+                }
+            }
+            DataManager.saveInventory(inventory);
         }
-        DataManager.saveInventory(inventory);
 
-        // 更新会员余额和积分
+        // 更新会员余额和积分到数据库
         if (currentMember != null) {
-            Map<String, Member> members = DataManager.loadMembers();
             double finalAmount = getFinalAmount();
             currentMember.balance -= finalAmount;
             currentMember.points += (int)(finalAmount * 10); // 1元=10积分
-            members.put(currentMember.phone, currentMember);
-            DataManager.saveMembers(members);
+            try {
+                MemberDAO.update(currentMember);
+                MemberDAO.updateBalance(currentMember.phone, -finalAmount);
+                MemberDAO.updatePoints(currentMember.phone, (int)(finalAmount * 10));
+            } catch (Exception e) {
+                System.err.println("更新数据库会员信息失败: " + e.getMessage());
+                // 降级到文件存储
+                Map<String, Member> members = DataManager.loadMembers();
+                members.put(currentMember.phone, currentMember);
+                DataManager.saveMembers(members);
+            }
         }
 
         // 创建交易记录
@@ -714,11 +752,19 @@ public class CartController {
      */
     private void saveTransaction(Transaction transaction) {
         try {
-            List<Transaction> transactions = DataManager.loadTransactions();
-            transactions.add(transaction);
-            DataManager.saveTransactions(transactions);
+            // 先尝试保存到数据库
+            TransactionDAO.insert(transaction);
         } catch (Exception e) {
-            showError("保存交易记录失败: " + e.getMessage());
+            System.err.println("保存交易到数据库失败: " + e.getMessage());
+            e.printStackTrace();
+            // 降级到文件存储
+            try {
+                List<Transaction> transactions = DataManager.loadTransactions();
+                transactions.add(transaction);
+                DataManager.saveTransactions(transactions);
+            } catch (Exception ex) {
+                showError("保存交易记录失败: " + ex.getMessage());
+            }
         }
     }
 
