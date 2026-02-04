@@ -67,7 +67,7 @@ public class LoginController {
         passwordField.setOnAction(event -> handleLogin());
 
         // 设置版本信息
-        versionLabel.setText("版本 2.0.0 (JavaFX)");
+        versionLabel.setText("版本 2.2.1 (JavaFX)");
 
         // 添加入场动画
         addEntranceAnimation();
@@ -136,7 +136,7 @@ public class LoginController {
                 }
 
                 // 更新最后登录时间到数据库
-                UserDAO.updateLastLoginTime(username);
+                UserDAO.updateLastLoginTimeByUsername(username);
 
                 // 保存记住的密码
                 if (rememberMeCheckBox.isSelected()) {
@@ -220,7 +220,7 @@ public class LoginController {
     private void handleAbout() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("关于");
-        alert.setHeaderText("收银系统 v2.0.0");
+        alert.setHeaderText("收银系统 v2.2.1");
         alert.setContentText("现代化收银系统 - JavaFX 版本\n\n" +
                 "技术栈：\n" +
                 "- JavaFX 17.0.8\n" +

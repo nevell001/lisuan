@@ -1,6 +1,7 @@
 package com.cashier.model;
 
 public class Product {
+    public int id;               // 商品ID（数据库自增主键）
     public String name;
     public double price;
     public int quantity;
@@ -14,7 +15,12 @@ public class Product {
     public int minStock;         // 最低库存预警
     public double cost;          // 成本价
 
+    public Product() {
+        this.id = 0;  // 默认ID为0，表示未保存到数据库
+    }
+
     public Product(String name, double price, int quantity) {
+        this();
         this.name = name;
         this.price = price;
         this.quantity = quantity;
@@ -46,7 +52,27 @@ public class Product {
         this.cost = price * 0.7;
     }
 
+    public Product(int id, String name, double price, int quantity, String category, String barcode, String unit, String description, String brand, String supplier, String spec, int minStock, double cost) {
+        this.id = id;
+        this.name = name;
+        this.price = price;
+        this.quantity = quantity;
+        this.category = category;
+        this.barcode = barcode;
+        this.unit = unit;
+        this.description = description;
+        this.brand = brand;
+        this.supplier = supplier;
+        this.spec = spec;
+        this.minStock = minStock;
+        this.cost = cost;
+    }
+
     // Getter方法
+    public int getId() {
+        return id;
+    }
+
     public String getName() {
         return name;
     }

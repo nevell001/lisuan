@@ -49,6 +49,13 @@ public class DataMigrationTool {
             success &= migrateProducts();
             success &= migrateMembers();
             success &= migrateTransactions();
+            success &= migrateShifts();
+            success &= migratePromotions();
+            success &= migrateRechargeRecords();
+            success &= migrateCategories();
+            success &= migrateOperationLogs();
+            success &= migrateSystemSettings();
+            success &= migrateThemePreference();
 
             if (success) {
                 System.out.println("========== 数据迁移完成 ==========");
@@ -199,6 +206,167 @@ public class DataMigrationTool {
     }
 
     /**
+     * 迁移交接班数据
+     */
+    private static boolean migrateShifts() {
+        System.out.println("迁移交接班数据...");
+        try {
+            List<Shift> shifts = DataManager.loadShifts();
+            if (shifts.isEmpty()) {
+                System.out.println("  没有交接班数据需要迁移");
+                return true;
+            }
+
+            ShiftDAO.batchInsert(shifts);
+            System.out.println("  成功迁移 " + shifts.size() + " 个交接班记录");
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("  交接班数据迁移失败: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 迁移促销数据
+     */
+    private static boolean migratePromotions() {
+        System.out.println("迁移促销数据...");
+        try {
+            List<Promotion> promotions = DataManager.loadPromotions();
+            if (promotions.isEmpty()) {
+                System.out.println("  没有促销数据需要迁移");
+                return true;
+            }
+
+            PromotionDAO.batchInsert(promotions);
+            System.out.println("  成功迁移 " + promotions.size() + " 个促销");
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("  促销数据迁移失败: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 迁移充值记录
+     */
+    private static boolean migrateRechargeRecords() {
+        System.out.println("迁移充值记录...");
+        try {
+            List<RechargeRecord> records = DataManager.loadRechargeRecords();
+            if (records.isEmpty()) {
+                System.out.println("  没有充值记录需要迁移");
+                return true;
+            }
+
+            RechargeRecordDAO.batchInsert(records);
+            System.out.println("  成功迁移 " + records.size() + " 条充值记录");
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("  充值记录迁移失败: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 迁移分类数据
+     */
+    private static boolean migrateCategories() {
+        System.out.println("迁移分类数据...");
+        try {
+            List<Category> categories = DataManager.loadCategories();
+            if (categories.isEmpty()) {
+                System.out.println("  没有分类数据需要迁移");
+                return true;
+            }
+
+            CategoryDAO.batchInsert(categories);
+            System.out.println("  成功迁移 " + categories.size() + " 个分类");
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("  分类数据迁移失败: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 迁移操作日志
+     */
+    private static boolean migrateOperationLogs() {
+        System.out.println("迁移操作日志...");
+        try {
+            List<OperationLog> logs = DataManager.loadOperationLogs();
+            if (logs.isEmpty()) {
+                System.out.println("  没有操作日志需要迁移");
+                return true;
+            }
+
+            OperationLogDAO.batchInsert(logs);
+            System.out.println("  成功迁移 " + logs.size() + " 条操作日志");
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("  操作日志迁移失败: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 迁移系统设置
+     */
+    private static boolean migrateSystemSettings() {
+        System.out.println("迁移系统设置...");
+        try {
+            Map<String, String> settings = DataManager.loadSettings();
+            if (settings.isEmpty()) {
+                System.out.println("  没有系统设置需要迁移");
+                return true;
+            }
+
+            // 迁移税率
+            if (settings.containsKey("taxRate")) {
+                double taxRate = Double.parseDouble(settings.get("taxRate"));
+                SystemSettingsDAO.setTaxRate(taxRate);
+                System.out.println("  迁移税率: " + taxRate);
+            }
+
+            // 迁移交易计数
+            if (settings.containsKey("transactionCount")) {
+                int count = Integer.parseInt(settings.get("transactionCount"));
+                SystemSettingsDAO.setTransactionCount(count);
+                System.out.println("  迁移交易计数: " + count);
+            }
+
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("  系统设置迁移失败: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
+     * 迁移主题偏好
+     */
+    private static boolean migrateThemePreference() {
+        System.out.println("迁移主题偏好...");
+        try {
+            String theme = DataManager.loadThemePreference();
+            ThemePreferenceDAO.setThemePreference(theme);
+            System.out.println("  迁移主题偏好: " + theme);
+            return true;
+
+        } catch (Exception e) {
+            System.err.println("  主题偏好迁移失败: " + e.getMessage());
+            return false;
+        }
+    }
+
+    /**
      * 获取迁移进度统计
      */
     public static Map<String, Integer> getMigrationStats() {
@@ -209,6 +377,11 @@ public class DataMigrationTool {
             stats.put("商品", ProductDAO.findAll().size());
             stats.put("会员", MemberDAO.findAll().size());
             stats.put("交易", TransactionDAO.findAll().size());
+            stats.put("交接班", ShiftDAO.findAll().size());
+            stats.put("促销", PromotionDAO.findAll().size());
+            stats.put("充值记录", RechargeRecordDAO.findAll().size());
+            stats.put("分类", CategoryDAO.findAll().size());
+            stats.put("操作日志", OperationLogDAO.findAll().size());
         } catch (Exception e) {
             System.err.println("获取迁移统计失败: " + e.getMessage());
         }

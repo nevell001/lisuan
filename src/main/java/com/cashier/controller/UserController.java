@@ -1,9 +1,13 @@
 package com.cashier.controller;
 
-import com.cashier.model.DataManager;
+import com.cashier.dao.UserDAO;
 import com.cashier.model.User;
 import com.cashier.util.PasswordUtil;
 import com.cashier.util.StatusBarManager;
+
+import java.sql.SQLException;
+import java.util.List;
+import java.util.Map;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -135,7 +139,18 @@ public class UserController {
      */
     private void loadUsers() {
         System.out.println("UserController: 开始加载用户数据...");
-        users = DataManager.loadUsers();
+        try {
+            List<User> userListData = UserDAO.findAll();
+            users = new java.util.HashMap<>();
+            for (User user : userListData) {
+                users.put(user.username, user);
+            }
+        } catch (SQLException e) {
+            System.err.println("加载用户数据失败: " + e.getMessage());
+            e.printStackTrace();
+            showError("加载用户数据失败: " + e.getMessage());
+            users = new java.util.HashMap<>();
+        }
         userList = FXCollections.observableArrayList(users.values());
         userTable.setItems(userList);
         updateCountLabel();
@@ -260,12 +275,31 @@ public class UserController {
         });
 
         dialog.showAndWait().ifPresent(result -> {
-            if (user == null) {
-                users.put(result.username, result);
+            try {
+                if (user == null) {
+                    // 添加新用户
+                    if (UserDAO.insert(result)) {
+                        users.put(result.username, result);
+                        loadUsers();
+                        updateStatus("用户添加成功");
+                    } else {
+                        showError("用户添加失败");
+                    }
+                } else {
+                    // 更新现有用户
+                    if (UserDAO.update(result)) {
+                        users.put(result.username, result);
+                        loadUsers();
+                        updateStatus("用户更新成功");
+                    } else {
+                        showError("用户更新失败");
+                    }
+                }
+            } catch (SQLException e) {
+                System.err.println("保存用户失败: " + e.getMessage());
+                e.printStackTrace();
+                showError("保存用户失败: " + e.getMessage());
             }
-            DataManager.saveUsers(users);
-            loadUsers();
-            updateStatus(user == null ? "用户添加成功" : "用户更新成功");
         });
     }
 
@@ -288,10 +322,19 @@ public class UserController {
             alert.setContentText("确定要删除用户 \"" + selected.name + "\" 吗？");
 
             if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-                users.remove(selected.username);
-                DataManager.saveUsers(users);
-                loadUsers();
-                updateStatus("用户删除成功");
+                try {
+                    if (UserDAO.deleteByUsername(selected.username)) {
+                        users.remove(selected.username);
+                        loadUsers();
+                        updateStatus("用户删除成功");
+                    } else {
+                        showError("用户删除失败");
+                    }
+                } catch (SQLException e) {
+                    System.err.println("删除用户失败: " + e.getMessage());
+                    e.printStackTrace();
+                    showError("删除用户失败: " + e.getMessage());
+                }
             }
         }
     }
@@ -315,9 +358,18 @@ public class UserController {
                 }
 
                 selected.password = PasswordUtil.hashPassword(newPassword.trim());
-                DataManager.saveUsers(users);
-                loadUsers();
-                updateStatus("密码重置成功");
+                try {
+                    if (UserDAO.update(selected)) {
+                        loadUsers();
+                        updateStatus("密码重置成功");
+                    } else {
+                        showError("密码重置失败");
+                    }
+                } catch (SQLException e) {
+                    System.err.println("重置密码失败: " + e.getMessage());
+                    e.printStackTrace();
+                    showError("重置密码失败: " + e.getMessage());
+                }
             });
         }
     }
@@ -330,9 +382,18 @@ public class UserController {
         User selected = userTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             selected.active = true;
-            DataManager.saveUsers(users);
-            loadUsers();
-            updateStatus("用户已激活");
+            try {
+                if (UserDAO.update(selected)) {
+                    loadUsers();
+                    updateStatus("用户已激活");
+                } else {
+                    showError("激活用户失败");
+                }
+            } catch (SQLException e) {
+                System.err.println("激活用户失败: " + e.getMessage());
+                e.printStackTrace();
+                showError("激活用户失败: " + e.getMessage());
+            }
         }
     }
 
@@ -356,9 +417,18 @@ public class UserController {
 
             if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
                 selected.active = false;
-                DataManager.saveUsers(users);
-                loadUsers();
-                updateStatus("用户已禁用");
+                try {
+                    if (UserDAO.update(selected)) {
+                        loadUsers();
+                        updateStatus("用户已禁用");
+                    } else {
+                        showError("禁用用户失败");
+                    }
+                } catch (SQLException e) {
+                    System.err.println("禁用用户失败: " + e.getMessage());
+                    e.printStackTrace();
+                    showError("禁用用户失败: " + e.getMessage());
+                }
             }
         }
     }

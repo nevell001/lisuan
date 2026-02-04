@@ -1,6 +1,6 @@
 package com.cashier.controller;
 
-import com.cashier.model.DataManager;
+import com.cashier.service.DataService;
 import com.cashier.model.Member;
 import com.cashier.model.RechargeRecord;
 import javafx.fxml.FXML;
@@ -127,7 +127,7 @@ public class RechargeController {
      */
     private void loadRechargeHistory() {
         try {
-            List<RechargeRecord> allRecords = DataManager.loadRechargeRecords();
+            List<RechargeRecord> allRecords = DataService.loadRechargeRecords();
             List<RechargeRecord> memberRecords = new ArrayList<>();
 
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
@@ -201,9 +201,9 @@ public class RechargeController {
             member.points += (int)(rechargeAmount * 10);
 
             // 保存会员信息
-            Map<String, Member> members = DataManager.loadMembers();
+            Map<String, Member> members = DataService.loadMembers();
             members.put(member.phone, member);
-            DataManager.saveMembers(members);
+            DataService.saveMembers(members);
 
             // 创建充值记录
             String recordId = "REC" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
@@ -217,9 +217,9 @@ public class RechargeController {
             );
 
             // 保存充值记录
-            List<RechargeRecord> records = DataManager.loadRechargeRecords();
+            List<RechargeRecord> records = DataService.loadRechargeRecords();
             records.add(record);
-            DataManager.saveRechargeRecords(records);
+            DataService.saveRechargeRecords(records);
 
             okClicked = true;
             dialogStage.close();

@@ -30,13 +30,15 @@
 .card {
     -fx-background-color: #2C2C2C;
     -fx-border-color: #424242;
-    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 8, 0, 0, 3);
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.5), 8, 0, 0, 3);
 }
 
 /* ========== 按钮样式 ========== */
 .button {
     -fx-background-color: #5C6BC0;
     -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 4px;
+    -fx-border-radius: 4px;
 }
 
 .button:hover {
@@ -47,33 +49,192 @@
     -fx-background-color: #3949AB;
 }
 
+.button:disabled {
+    -fx-background-color: #424242;
+    -fx-text-fill: #757575;
+}
+
+/* 主要按钮 */
+.button.primary-button {
+    -fx-background-color: #5C6BC0;
+}
+
+.button.primary-button:hover {
+    -fx-background-color: #7986CB;
+}
+
+.button.primary-button:pressed {
+    -fx-background-color: #3949AB;
+}
+
+/* 成功按钮 */
+.button.success-button {
+    -fx-background-color: #66BB6A;
+}
+
+.button.success-button:hover {
+    -fx-background-color: #81C784;
+}
+
+.button.success-button:pressed {
+    -fx-background-color: #4CAF50;
+}
+
+/* 警告按钮 */
+.button.warning-button {
+    -fx-background-color: #FFB74D;
+    -fx-text-fill: #212121;
+}
+
+.button.warning-button:hover {
+    -fx-background-color: #FFCC80;
+}
+
+.button.warning-button:pressed {
+    -fx-background-color: #FFA726;
+}
+
+/* 危险按钮 */
+.button.danger-button {
+    -fx-background-color: #EF5350;
+}
+
+.button.danger-button:hover {
+    -fx-background-color: #F44336;
+}
+
+.button.danger-button:pressed {
+    -fx-background-color: #E53935;
+}
+
+/* 信息按钮 */
+.button.info-button {
+    -fx-background-color: #42A5F5;
+}
+
+.button.info-button:hover {
+    -fx-background-color: #64B5F6;
+}
+
+.button.info-button:pressed {
+    -fx-background-color: #2196F3;
+}
+
+/* 次要按钮 */
+.button.secondary-button {
+    -fx-background-color: #757575;
+}
+
+.button.secondary-button:hover {
+    -fx-background-color: #9E9E9E;
+}
+
+.button.secondary-button:pressed {
+    -fx-background-color: #616161;
+}
+
+/* 支付按钮 */
+.button.payment-button {
+    -fx-background-color: #5C6BC0;
+}
+
+.button.payment-button:hover {
+    -fx-background-color: #7986CB;
+}
+
+.button.payment-button:pressed {
+    -fx-background-color: #3949AB;
+}
+
+/* 现金按钮 */
+.button.cash-button {
+    -fx-background-color: #66BB6A;
+}
+
+.button.cash-button:hover {
+    -fx-background-color: #81C784;
+}
+
+.button.cash-button:pressed {
+    -fx-background-color: #4CAF50;
+}
+
+/* 微信支付按钮 */
+.button.wechat-button {
+    -fx-background-color: #0CCF0A;
+}
+
+.button.wechat-button:hover {
+    -fx-background-color: #0FE00C;
+}
+
+.button.wechat-button:pressed {
+    -fx-background-color: #09BB07;
+}
+
+/* 支付宝按钮 */
+.button.alipay-button {
+    -fx-background-color: #4095FF;
+}
+
+.button.alipay-button:hover {
+    -fx-background-color: #60A8FF;
+}
+
+.button.alipay-button:pressed {
+    -fx-background-color: #1677FF;
+}
+
+/* 银行卡按钮 */
+.button.card-button {
+    -fx-background-color: #FF8C00;
+}
+
+.button.card-button:hover {
+    -fx-background-color: #FFA33D;
+}
+
+.button.card-button:pressed {
+    -fx-background-color: #FF6B00;
+}
+
 /* ========== 文本框样式 ========== */
 .text-field {
-    -fx-background-color: #2C2C2C;
-    -fx-border-color: #424242;
-    -fx-text-fill: #F5F5F5;
+    -fx-background-color: #383838;
+    -fx-border-color: #616161;
+    -fx-text-fill: #FFFFFF;
 }
 
 .text-field:focused {
-    -fx-border-color: #5C6BC0;
-    -fx-border-width: 1.5px;
+    -fx-border-color: #7986CB;
+    -fx-border-width: 2px;
+    -fx-background-color: #424242;
 }
 
 .text-field:disabled {
-    -fx-background-color: #383838;
+    -fx-background-color: #2C2C2C;
     -fx-text-fill: #757575;
+}
+
+.text-field .prompt-text {
+    -fx-text-fill: #9E9E9E;
 }
 
 /* 密码框样式 ========== */
 .password-field {
-    -fx-background-color: #2C2C2C;
-    -fx-border-color: #424242;
-    -fx-text-fill: #F5F5F5;
+    -fx-background-color: #383838;
+    -fx-border-color: #616161;
+    -fx-text-fill: #FFFFFF;
 }
 
 .password-field:focused {
-    -fx-border-color: #5C6BC0;
-    -fx-border-width: 1.5px;
+    -fx-border-color: #7986CB;
+    -fx-border-width: 2px;
+    -fx-background-color: #424242;
+}
+
+.password-field .prompt-text {
+    -fx-text-fill: #9E9E9E;
 }
 
 /* ========== 组合框样式 ========== */
@@ -97,6 +258,31 @@
     -fx-text-fill: #F5F5F5;
 }
 
+/* ========== 组合框样式 ========== */
+.combo-box {
+    -fx-background-color: #383838;
+    -fx-border-color: #616161;
+    -fx-text-fill: #FFFFFF;
+}
+
+.combo-box:focused {
+    -fx-border-color: #7986CB;
+    -fx-border-width: 2px;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #383838;
+    -fx-border-color: #616161;
+}
+
+.combo-box-popup .list-cell {
+    -fx-text-fill: #FFFFFF;
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: #424242;
+}
+
 /* ========== 表格样式 ========== */
 .table-view {
     -fx-background-color: #2C2C2C;
@@ -109,7 +295,7 @@
 }
 
 .table-view .table-cell {
-    -fx-text-fill: #F5F5F5;
+    -fx-text-fill: #E0E0E0;
 }
 
 .table-view .table-row-cell {
@@ -127,6 +313,119 @@
 
 .table-view .table-row-cell:hover {
     -fx-background-color: rgba(92, 107, 192, 0.15);
+}
+
+/* ========== 菜单和工具栏 ========== */
+.menu-bar {
+    -fx-background-color: #383838;
+    -fx-border-color: #424242;
+}
+
+.menu .label {
+    -fx-text-fill: #E0E0E0;
+}
+
+.tool-bar {
+    -fx-background-color: #383838;
+    -fx-border-color: #424242;
+}
+
+.context-menu {
+    -fx-background-color: #2C2C2C;
+    -fx-border-color: #424242;
+}
+
+.menu-item {
+    -fx-text-fill: #E0E0E0;
+}
+
+.menu-item:focused {
+    -fx-background-color: #424242;
+}
+
+/* ========== 选项卡 ========== */
+.tab-pane {
+    -fx-background-color: #383838;
+}
+
+.tab-pane .tab {
+    -fx-background-color: #424242;
+    -fx-text-fill: #E0E0E0;
+}
+
+.tab-pane .tab:selected {
+    -fx-background-color: #2C2C2C;
+}
+
+.tab-pane .tab-content-area {
+    -fx-background-color: #2C2C2C;
+}
+
+/* ========== 滚动条 ========== */
+.scroll-bar .thumb {
+    -fx-background-color: #616161;
+}
+
+.scroll-bar .thumb:hover {
+    -fx-background-color: #757575;
+}
+
+/* ========== 复选框和单选按钮 ========== */
+.check-box {
+    -fx-text-fill: #E0E0E0;
+}
+
+.check-box .box {
+    -fx-background-color: #383838;
+    -fx-border-color: #616161;
+}
+
+.radio-button {
+    -fx-text-fill: #E0E0E0;
+}
+
+.radio-button .radio {
+    -fx-background-color: #383838;
+    -fx-border-color: #616161;
+}
+
+/* ========== 工具提示 ========== */
+.tooltip {
+    -fx-background-color: #424242;
+    -fx-text-fill: #E0E0E0;
+}
+
+/* ========== 对话框 ========== */
+.dialog-pane {
+    -fx-background-color: #2C2C2C;
+}
+
+.dialog-pane .header-panel {
+    -fx-background-color: #5C6BC0;
+    -fx-text-fill: #FFFFFF;
+}
+
+.dialog-pane .content {
+    -fx-text-fill: #E0E0E0;
+}
+
+/* ========== 进度条 ========== */
+.progress-bar {
+    -fx-background-color: #424242;
+}
+
+.progress-bar .bar {
+    -fx-background-color: #5C6BC0;
+}
+
+/* ========== 滚动面板 ========== */
+.scroll-pane {
+    -fx-background-color: transparent;
+    -fx-border-color: #424242;
+}
+
+.scroll-pane .viewport {
+    -fx-background-color: #2C2C2C;
 }
 
 /* ========== 菜单和工具栏 ========== */
@@ -244,7 +543,7 @@
 
 /* ========== 标签样式 ========== */
 .label {
-    -fx-text-fill: #F5F5F5;
+    -fx-text-fill: #E0E0E0;
 }
 
 .label.title {
@@ -269,11 +568,11 @@
 
 /* ========== 文本颜色 ========== */
 .text-primary {
-    -fx-text-fill: #7986CB;
+    -fx-text-fill: #9FA8DA;
 }
 
 .text-success {
-    -fx-text-fill: #66BB6A;
+    -fx-text-fill: #81C784;
 }
 
 .text-warning {
@@ -285,5 +584,75 @@
 }
 
 .text-info {
-    -fx-text-fill: #42A5F5;
+    -fx-text-fill: #64B5F6;
+}
+
+/* ========== 工具栏样式 ========== */
+.toolbar {
+    -fx-background-color: #383838;
+    -fx-border-color: #424242;
+}
+
+/* ========== 购物车样式 ========== */
+.cart-view {
+    -fx-background-color: #121212;
+}
+
+.cart-split-pane {
+    -fx-background-color: #212121;
+}
+
+.cart-table .table-row-cell {
+    -fx-alignment: CENTER;
+}
+
+.product-table .table-row-cell {
+    -fx-alignment: CENTER;
+}
+
+.checkout-info {
+    -fx-background-color: #2C2C2C;
+    -fx-background-radius: 8;
+    -fx-border-color: #424242;
+    -fx-border-width: 1;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 2, 0, 0, 1);
+}
+
+.member-info-box {
+    -fx-background-color: #1A237E;
+    -fx-background-radius: 8;
+    -fx-border-color: #3949AB;
+    -fx-border-width: 1;
+}
+
+.payment-methods {
+    -fx-background-color: #2C2C2C;
+    -fx-background-radius: 8;
+    -fx-border-color: #424242;
+    -fx-border-width: 1;
+}
+
+.checkout-actions {
+    -fx-background-color: #2C2C2C;
+    -fx-background-radius: 8;
+    -fx-border-color: #424242;
+    -fx-border-width: 1;
+}
+
+/* ========== 结账视图样式 ========== */
+.checkout-view {
+    -fx-background-color: #121212;
+}
+
+.checkout-split-pane {
+    -fx-background-color: #212121;
+}
+
+/* ========== 会员视图样式 ========== */
+.member-view {
+    -fx-background-color: #121212;
+}
+
+.member-table .table-row-cell {
+    -fx-alignment: CENTER;
 }

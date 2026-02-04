@@ -4,7 +4,7 @@ import com.cashier.dao.MemberDAO;
 import com.cashier.dao.ProductDAO;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.CartItem;
-import com.cashier.model.DataManager;
+import com.cashier.service.DataService;
 import com.cashier.model.Member;
 import com.cashier.model.Product;
 import com.cashier.model.Transaction;
@@ -117,6 +117,7 @@ public class CartController {
     private Map<String, CartItem> cartMap = new HashMap<>();
     private Member currentMember;
     private String orderNumber;
+    private double alreadyPaidAmount = 0.0; // 已支付金额
 
     /**
      * 初始化方法
@@ -177,6 +178,9 @@ public class CartController {
 
         // 更新统计信息
         updateStatistics();
+
+        // 检查并提示开班状态
+        javafx.application.Platform.runLater(this::checkShiftStatus);
     }
 
     /**
@@ -266,7 +270,83 @@ public class CartController {
                 showShortcutHelp();
                 event.consume();
             }
+            // 数字键 1-9 - 快速添加对应数量的商品（选中商品时）
+            else if (event.getCode().isDigitKey() && !event.isControlDown() && !event.isAltDown()) {
+                CartItem selected = cartTable.getSelectionModel().getSelectedItem();
+                if (selected != null && !searchField.isFocused() && !memberPhoneField.isFocused()) {
+                    int quantity = event.getText().charAt(0) - '0';
+                    if (quantity >= 1 && quantity <= 9) {
+                        updateCartItemQuantity(selected, quantity);
+                        event.consume();
+                    }
+                }
+            }
+            // 数字键 0 - 设置数量为0（移除商品）
+            else if (event.getCode() == javafx.scene.input.KeyCode.DIGIT0 && !event.isControlDown() && !event.isAltDown()) {
+                CartItem selected = cartTable.getSelectionModel().getSelectedItem();
+                if (selected != null && !searchField.isFocused() && !memberPhoneField.isFocused()) {
+                    updateCartItemQuantity(selected, 0);
+                    event.consume();
+                }
+            }
+            // + 键 - 增加选中商品数量
+            else if ((event.getCode() == javafx.scene.input.KeyCode.EQUALS || 
+                      event.getCode() == javafx.scene.input.KeyCode.PLUS) && 
+                      !event.isControlDown() && !event.isAltDown()) {
+                CartItem selected = cartTable.getSelectionModel().getSelectedItem();
+                if (selected != null && !searchField.isFocused() && !memberPhoneField.isFocused()) {
+                    updateCartItemQuantity(selected, selected.quantity + 1);
+                    event.consume();
+                }
+            }
+            // - 键 - 减少选中商品数量
+            else if ((event.getCode() == javafx.scene.input.KeyCode.MINUS || 
+                      event.getCode() == javafx.scene.input.KeyCode.SUBTRACT) && 
+                      !event.isControlDown() && !event.isAltDown()) {
+                CartItem selected = cartTable.getSelectionModel().getSelectedItem();
+                if (selected != null && !searchField.isFocused() && !memberPhoneField.isFocused() && selected.quantity > 1) {
+                    updateCartItemQuantity(selected, selected.quantity - 1);
+                    event.consume();
+                }
+            }
+            // PageUp - 增加数量（一次增加5）
+            else if (event.getCode() == javafx.scene.input.KeyCode.PAGE_UP && !event.isControlDown()) {
+                CartItem selected = cartTable.getSelectionModel().getSelectedItem();
+                if (selected != null && !searchField.isFocused() && !memberPhoneField.isFocused()) {
+                    updateCartItemQuantity(selected, Math.min(selected.quantity + 5, selected.product.quantity));
+                    event.consume();
+                }
+            }
+            // PageDown - 减少数量（一次减少5）
+            else if (event.getCode() == javafx.scene.input.KeyCode.PAGE_DOWN && !event.isControlDown()) {
+                CartItem selected = cartTable.getSelectionModel().getSelectedItem();
+                if (selected != null && !searchField.isFocused() && !memberPhoneField.isFocused() && selected.quantity > 5) {
+                    updateCartItemQuantity(selected, selected.quantity - 5);
+                    event.consume();
+                }
+            }
         });
+    }
+    
+    /**
+     * 更新购物车商品数量
+     * @param item 购物车商品
+     * @param newQuantity 新数量
+     */
+    private void updateCartItemQuantity(CartItem item, int newQuantity) {
+        if (newQuantity <= 0) {
+            // 数量为0，移除商品
+            cartList.remove(item);
+            cartMap.remove(item.product.name);
+        } else if (newQuantity <= item.product.quantity) {
+            // 检查库存
+            item.quantity = newQuantity;
+            item.subtotal = item.product.price * item.quantity;
+            cartList.set(cartList.indexOf(item), item); // 触发更新
+        } else {
+            showInfo("库存不足！当前库存: " + item.product.quantity);
+        }
+        updateStatistics();
     }
 
     /**
@@ -316,7 +396,7 @@ public class CartController {
         } catch (Exception e) {
             System.err.println("从数据库加载商品失败: " + e.getMessage());
             e.printStackTrace();
-            inventory = DataManager.loadInventory();
+            inventory = DataService.loadInventory();
         }
         System.out.println("CartController: 加载了 " + inventory.size() + " 个商品");
         productList.setAll(inventory.values());
@@ -361,6 +441,12 @@ public class CartController {
      * @param quantity 数量
      */
     private void addToCart(Product product, int quantity) {
+        // 检查是否有活跃班次
+        if (!com.cashier.service.DataService.hasActiveShift()) {
+            showError("当前没有开班，请先开班后再进行交易操作！");
+            return;
+        }
+
         if (quantity <= 0) {
             showError("添加数量必须大于0！");
             return;
@@ -469,7 +555,7 @@ public class CartController {
             member = MemberDAO.findByPhone(phone);
         } catch (Exception e) {
             System.err.println("从数据库查找会员失败: " + e.getMessage());
-            Map<String, Member> members = DataManager.loadMembers();
+            Map<String, Member> members = DataService.loadMembers();
             member = members.get(phone);
         }
 
@@ -496,7 +582,7 @@ public class CartController {
         }
 
         // 检查是否有活跃班次
-        if (!com.cashier.model.DataManager.hasActiveShift()) {
+        if (!com.cashier.service.DataService.hasActiveShift()) {
             showError("当前没有开班，请先开班后再进行结算操作！");
             return;
         }
@@ -509,73 +595,120 @@ public class CartController {
         dialog.setHeaderText(null);
         
         GridPane grid = new GridPane();
-        grid.setHgap(10);
-        grid.setVgap(10);
-        grid.setPadding(new javafx.geometry.Insets(20, 150, 10, 10));
+        grid.setHgap(15);
+        grid.setVgap(15);
+        grid.setPadding(new javafx.geometry.Insets(25, 150, 15, 15));
         
         Label amountLabel = new Label(String.format("应付金额: ¥%.2f", finalAmount));
-        amountLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #F44336;");
+        amountLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #F44336;");
         
-        Label receivedLabel = new Label("实收金额:");
+        Label paidLabel = new Label(String.format("已支付: ¥%.2f", alreadyPaidAmount));
+        paidLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #4CAF50;");
+        
+        Label remainingLabel = new Label(String.format("还需支付: ¥%.2f", finalAmount - alreadyPaidAmount));
+        remainingLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #F44336;");
+        
         TextField receivedField = new TextField();
-        receivedField.setPromptText("请输入实收金额");
+        receivedField.setPromptText("请输入本次支付金额");
+        receivedField.setPrefHeight(45);
+        receivedField.setStyle("-fx-font-size: 18px;");
+        
+        Label receivedLabel = new Label("本次支付: ");
+        receivedLabel.setStyle("-fx-font-size: 18px;");
         
         Label changeLabel = new Label("找零: ¥0.00");
-        changeLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;");
+        changeLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;");
         
         grid.add(amountLabel, 0, 0, 2, 1);
-        grid.add(receivedLabel, 0, 1);
-        grid.add(receivedField, 1, 1);
-        grid.add(changeLabel, 0, 2, 2, 1);
+        grid.add(paidLabel, 0, 1, 2, 1);
+        grid.add(remainingLabel, 0, 2, 2, 1);
+        grid.add(receivedLabel, 0, 3);
+        grid.add(receivedField, 1, 3);
+        grid.add(changeLabel, 0, 4, 2, 1);
         
         // 快捷金额按钮
         Button btn100 = new Button("¥100");
+        btn100.setPrefSize(100, 60);
+        btn100.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
         btn100.setOnAction(e -> {
             receivedField.setText("100");
             receivedField.requestFocus();
         });
 
         Button btn50 = new Button("¥50");
+        btn50.setPrefSize(100, 60);
+        btn50.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
         btn50.setOnAction(e -> {
             receivedField.setText("50");
             receivedField.requestFocus();
         });
 
         Button btn20 = new Button("¥20");
+        btn20.setPrefSize(100, 60);
+        btn20.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
         btn20.setOnAction(e -> {
             receivedField.setText("20");
             receivedField.requestFocus();
         });
 
         Button btn10 = new Button("¥10");
+        btn10.setPrefSize(100, 60);
+        btn10.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
         btn10.setOnAction(e -> {
             receivedField.setText("10");
             receivedField.requestFocus();
         });
 
-        HBox quickButtons = new HBox(5, btn100, btn50, btn20, btn10);
-        grid.add(quickButtons, 0, 3, 2, 1);
+        Button btn5 = new Button("¥5");
+        btn5.setPrefSize(100, 60);
+        btn5.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
+        btn5.setOnAction(e -> {
+            receivedField.setText("5");
+            receivedField.requestFocus();
+        });
+
+        HBox quickButtons = new HBox(10, btn100, btn50, btn20, btn10, btn5);
+        grid.add(quickButtons, 0, 5, 2, 1);
         
         dialog.getDialogPane().setContent(grid);
         
         ButtonType okButtonType = new ButtonType("确认", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(okButtonType, ButtonType.CANCEL);
         
+        // 设置确认按钮大小
+        dialog.setOnShown(event -> {
+            Button okButton = (Button) dialog.getDialogPane().lookupButton(okButtonType);
+            if (okButton != null) {
+                okButton.setPrefSize(120, 50);
+                okButton.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+            }
+            Button cancelButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
+            if (cancelButton != null) {
+                cancelButton.setPrefSize(120, 50);
+                cancelButton.setStyle("-fx-font-size: 16px;");
+            }
+        });
+        
         // 实时计算找零
         receivedField.textProperty().addListener((obs, oldVal, newVal) -> {
             try {
                 double received = Double.parseDouble(newVal.trim());
-                double change = received - finalAmount;
-                if (change >= 0) {
-                    changeLabel.setText(String.format("找零: ¥%.2f", change));
-                    changeLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;");
+                double totalPaid = alreadyPaidAmount + received;
+                double remaining = finalAmount - totalPaid;
+                if (remaining <= 0) {
+                    changeLabel.setText(String.format("找零: ¥%.2f", Math.abs(remaining)));
+                    changeLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;");
                 } else {
-                    changeLabel.setText(String.format("还需: ¥%.2f", Math.abs(change)));
-                    changeLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #F44336;");
+                    changeLabel.setText(String.format("还需: ¥%.2f", remaining));
+                    changeLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #F44336;");
                 }
             } catch (NumberFormatException e) {
-                changeLabel.setText("找零: ¥0.00");
-                changeLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;");
+                double remaining = finalAmount - alreadyPaidAmount;
+                if (remaining <= 0) {
+                    changeLabel.setText("找零: ¥0.00");
+                } else {
+                    changeLabel.setText(String.format("还需: ¥%.2f", remaining));
+                }
             }
         });
         
@@ -583,8 +716,8 @@ public class CartController {
             if (dialogButton == okButtonType) {
                 try {
                     double received = Double.parseDouble(receivedField.getText().trim());
-                    if (received < finalAmount) {
-                        showError("实收金额不足！");
+                    if (received <= 0) {
+                        showError("请输入有效的金额！");
                         return null;
                     }
                     return received;
@@ -596,9 +729,37 @@ public class CartController {
             return null;
         });
         
+        // 自动聚焦到输入框并设置按钮大小
+        dialog.setOnShown(event -> {
+            javafx.application.Platform.runLater(receivedField::requestFocus);
+            
+            Button okButton = (Button) dialog.getDialogPane().lookupButton(okButtonType);
+            if (okButton != null) {
+                okButton.setPrefSize(120, 50);
+                okButton.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
+            }
+            Button cancelButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
+            if (cancelButton != null) {
+                cancelButton.setPrefSize(120, 50);
+                cancelButton.setStyle("-fx-font-size: 16px;");
+            }
+        });
+        
         dialog.showAndWait().ifPresent(receivedAmount -> {
-            // 执行支付
-            executePayment("现金", receivedAmount, receivedAmount - finalAmount);
+            double totalPaid = alreadyPaidAmount + receivedAmount;
+            double remaining = finalAmount - totalPaid;
+            
+            if (remaining <= 0) {
+                // 支付完成
+                executePayment("现金", totalPaid, Math.abs(remaining));
+                alreadyPaidAmount = 0.0; // 重置已支付金额
+            } else {
+                // 部分支付，继续
+                alreadyPaidAmount = totalPaid;
+                showInfo(String.format("已支付 ¥%.2f，还需支付 ¥%.2f", totalPaid, remaining));
+                // 重新打开现金支付对话框
+                handleCashPayment();
+            }
         });
     }
 
@@ -651,7 +812,7 @@ public class CartController {
                     product.quantity -= item.quantity;
                 }
             }
-            DataManager.saveInventory(inventory);
+            DataService.saveInventory(inventory);
         }
 
         // 更新会员余额和积分到数据库
@@ -661,14 +822,14 @@ public class CartController {
             currentMember.points += (int)(finalAmount * 10); // 1元=10积分
             try {
                 MemberDAO.update(currentMember);
-                MemberDAO.updateBalance(currentMember.phone, -finalAmount);
-                MemberDAO.updatePoints(currentMember.phone, (int)(finalAmount * 10));
+                MemberDAO.updateBalanceByPhone(currentMember.phone, -finalAmount);
+                MemberDAO.updatePointsByPhone(currentMember.phone, (int)(finalAmount * 10));
             } catch (Exception e) {
                 System.err.println("更新数据库会员信息失败: " + e.getMessage());
                 // 降级到文件存储
-                Map<String, Member> members = DataManager.loadMembers();
+                Map<String, Member> members = DataService.loadMembers();
                 members.put(currentMember.phone, currentMember);
-                DataManager.saveMembers(members);
+                DataService.saveMembers(members);
             }
         }
 
@@ -694,7 +855,7 @@ public class CartController {
         }
 
         // 检查是否有活跃班次
-        if (!com.cashier.model.DataManager.hasActiveShift()) {
+        if (!com.cashier.service.DataService.hasActiveShift()) {
             showError("当前没有开班，请先开班后再进行结算操作！");
             return;
         }
@@ -733,7 +894,7 @@ public class CartController {
         
         transaction.totalAmount = getTotalAmount();
         // 实现税费计算：从系统设置中读取税率
-        Map<String, String> settings = DataManager.loadSettings();
+        Map<String, String> settings = DataService.loadSettings();
         double taxRate = Double.parseDouble(settings.getOrDefault("taxRate", "0.0"));
         transaction.tax = transaction.totalAmount * taxRate / 100.0;
         transaction.finalAmount = getFinalAmount();
@@ -742,6 +903,11 @@ public class CartController {
         if (currentMember != null) {
             transaction.memberPhone = currentMember.phone;
         }
+        
+        // 设置操作员信息为 NULL（CartController 无法获取当前用户）
+        // TransactionDAO 会处理 NULL 值
+        transaction.operatorUsername = null;
+        transaction.operatorName = null;
         
         return transaction;
     }
@@ -759,9 +925,9 @@ public class CartController {
             e.printStackTrace();
             // 降级到文件存储
             try {
-                List<Transaction> transactions = DataManager.loadTransactions();
+                List<Transaction> transactions = DataService.loadTransactions();
                 transactions.add(transaction);
-                DataManager.saveTransactions(transactions);
+                DataService.saveTransactions(transactions);
             } catch (Exception ex) {
                 showError("保存交易记录失败: " + ex.getMessage());
             }
@@ -773,7 +939,7 @@ public class CartController {
      * @return 订单号
      */
     private String generateOrderNumber() {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS");
         return "ORD" + sdf.format(new Date());
     }
 
@@ -824,6 +990,13 @@ public class CartController {
             "Delete - 移除选中商品\n" +
             "Ctrl+L - 清空购物车\n" +
             "双击商品 - 快速添加到购物车\n\n" +
+            "数量快捷键（选中商品时）:\n" +
+            "数字键 1-9 - 快速设置数量\n" +
+            "数字键 0 - 移除商品\n" +
+            "+ / = - 增加数量（+1）\n" +
+            "- / _ - 减少数量（-1）\n" +
+            "PageUp - 增加数量（+5）\n" +
+            "PageDown - 减少数量（-5）\n\n" +
             "搜索和查询:\n" +
             "Ctrl+F - 聚焦到搜索框\n" +
             "Enter - 执行搜索（在搜索框中）\n" +
@@ -853,6 +1026,18 @@ public class CartController {
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("错误");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    /**
+     * 显示提示信息
+     * @param message 提示消息
+     */
+    private void showInfo(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("提示");
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
@@ -952,6 +1137,9 @@ public class CartController {
         cartMap.clear();
         cartList.clear();
         
+        // 重置已支付金额
+        alreadyPaidAmount = 0.0;
+        
         // 清除会员信息
         currentMember = null;
         memberPhoneField.clear();
@@ -959,5 +1147,18 @@ public class CartController {
         
         updateStatistics();
         updateButtonStates();
+    }
+
+    /**
+     * 检查班次状态并提示
+     */
+    private void checkShiftStatus() {
+        if (!com.cashier.service.DataService.hasActiveShift()) {
+            Alert alert = new Alert(Alert.AlertType.WARNING);
+            alert.setTitle("提示");
+            alert.setHeaderText(null);
+            alert.setContentText("当前没有开班，请先切换到交班页面进行开班操作！");
+            alert.showAndWait();
+        }
     }
 }

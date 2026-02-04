@@ -143,10 +143,7 @@ public class DatabaseManager {
      * 初始化数据库表结构
      */
     private static void initializeDatabase() {
-        if (initialized) {
-            return;
-        }
-
+        // 每次启动都检查表结构，确保升级脚本被执行
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
 
@@ -198,7 +195,8 @@ public class DatabaseManager {
             // 创建会员表
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS members (
-                    phone VARCHAR(20) PRIMARY KEY,
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    phone VARCHAR(20) UNIQUE NOT NULL,
                     name VARCHAR(100) NOT NULL,
                     balance DECIMAL(10,2) DEFAULT 0,
                     points DECIMAL(10,2) DEFAULT 0,
@@ -297,7 +295,17 @@ public class DatabaseManager {
             // 创建分类表
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS categories (
-                    name VARCHAR(50) PRIMARY KEY,
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(50) UNIQUE NOT NULL,
+                    description TEXT
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                """);
+
+            // 创建单位表
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS units (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    name VARCHAR(50) UNIQUE NOT NULL,
                     description TEXT
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);
@@ -310,7 +318,7 @@ public class DatabaseManager {
                     member_name VARCHAR(100) NOT NULL,
                     amount DECIMAL(10,2) NOT NULL,
                     payment_method VARCHAR(20) NOT NULL,
-                    operator_username VARCHAR(50) NOT NULL,
+                    operator_username VARCHAR(50),
                     operator_name VARCHAR(100) NOT NULL,
                     timestamp BIGINT,
                     INDEX idx_member_phone (member_phone),
@@ -324,7 +332,7 @@ public class DatabaseManager {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS operation_logs (
                     id INT AUTO_INCREMENT PRIMARY KEY,
-                    username VARCHAR(50) NOT NULL,
+                    username VARCHAR(50),
                     operation VARCHAR(100) NOT NULL,
                     details TEXT,
                     ip_address VARCHAR(50),
@@ -345,6 +353,20 @@ public class DatabaseManager {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);
 
+            // 创建主题偏好表
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS theme_preferences (
+                    username VARCHAR(50) PRIMARY KEY,
+                    theme_name VARCHAR(20) DEFAULT 'light',
+                    updated_at BIGINT,
+                    INDEX idx_username (username),
+                    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+                """);
+
+            // 升级表结构（添加 id 字段）
+            upgradeTableStructure(stmt);
+
             initialized = true;
             System.out.println("MySQL 数据库初始化成功");
 
@@ -352,6 +374,79 @@ public class DatabaseManager {
             System.err.println("数据库表创建失败: " + e.getMessage());
             e.printStackTrace();
         }
+    }
+
+    /**
+     * 升级表结构（为旧表添加 id 字段）
+     */
+    private static void upgradeTableStructure(Statement stmt) throws SQLException {
+        System.out.println("检查表结构...");
+        
+        // 为 members 表添加 id 字段（如果不存在）
+        ResultSet rs = stmt.executeQuery("""
+            SELECT COUNT(*) as count 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'members' 
+            AND COLUMN_NAME = 'id'
+        """);
+        if (rs.next() && rs.getInt("count") == 0) {
+            System.out.println("正在为 members 表添加 id 字段...");
+            stmt.execute("ALTER TABLE members ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST");
+        }
+        rs.close();
+        
+        // 为 categories 表添加 id 字段（如果不存在）
+        rs = stmt.executeQuery("""
+            SELECT COUNT(*) as count 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'categories' 
+            AND COLUMN_NAME = 'id'
+        """);
+        if (rs.next() && rs.getInt("count") == 0) {
+            System.out.println("正在为 categories 表添加 id 字段...");
+            stmt.execute("ALTER TABLE categories ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST");
+            stmt.execute("ALTER TABLE categories MODIFY COLUMN name VARCHAR(50) UNIQUE NOT NULL");
+        }
+        rs.close();
+        
+        // 为 units 表添加 id 字段（如果不存在）
+        rs = stmt.executeQuery("""
+            SELECT COUNT(*) as count 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'units' 
+            AND COLUMN_NAME = 'id'
+        """);
+        if (rs.next() && rs.getInt("count") == 0) {
+            System.out.println("正在为 units 表添加 id 字段...");
+            stmt.execute("ALTER TABLE units ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST");
+            stmt.execute("ALTER TABLE units MODIFY COLUMN name VARCHAR(50) UNIQUE NOT NULL");
+        }
+        rs.close();
+        
+        // 创建主题偏好表（如果不存在）
+        rs = stmt.executeQuery("""
+            SELECT COUNT(*) as count 
+            FROM INFORMATION_SCHEMA.TABLES 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'theme_preferences'
+        """);
+        if (rs.next() && rs.getInt("count") == 0) {
+            System.out.println("正在创建 theme_preferences 表...");
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS theme_preferences (
+                    username VARCHAR(50) PRIMARY KEY,
+                    theme_name VARCHAR(20) DEFAULT 'light',
+                    updated_at BIGINT,
+                    INDEX idx_username (username)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """);
+        }
+        rs.close();
+        
+        System.out.println("表结构检查完成");
     }
 
     /**
@@ -397,34 +492,245 @@ public class DatabaseManager {
                 backupDir.mkdirs();
             }
 
-            // 构建 mysqldump 命令
-            String[] command = {
-                "mysqldump",
-                "--host=" + getHostFromUrl(dbUrl),
-                "--port=" + getPortFromUrl(dbUrl),
-                "--user=" + dbUsername,
-                "--password=" + dbPassword,
-                "--result-file=" + backupFile.getAbsolutePath(),
-                "--single-transaction",
-                "--routines",
-                "--triggers",
-                "cashier_system"
-            };
-
-            // 执行备份命令
-            Process process = Runtime.getRuntime().exec(command);
-            int exitCode = process.waitFor();
-
-            if (exitCode == 0) {
-                System.out.println("数据库备份成功: " + backupFile.getAbsolutePath());
-                return true;
+            // 检查是否可以使用 Docker 容器
+            if (isDockerContainerRunning("cashier-mysql")) {
+                return backupViaDocker(backupFile);
             } else {
-                System.err.println("mysqldump 执行失败，退出码: " + exitCode);
-                return false;
+                return backupViaLocalCommand(backupFile);
             }
 
         } catch (Exception e) {
             System.err.println("数据库备份失败: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * 使用 Docker 容器执行备份
+     */
+    private static boolean backupViaDocker(File backupFile) throws Exception {
+        String containerPath = "/tmp/" + backupFile.getName();
+        
+        // 构建 docker exec 命令
+        String[] command = {
+            "docker", "exec", "cashier-mysql",
+            "mysqldump",
+            "-u" + dbUsername,
+            "-p" + dbPassword,
+            "--single-transaction",
+            "--routines",
+            "--triggers",
+            "cashier_system",
+            "-r", containerPath
+        };
+
+        System.out.println("执行 Docker 备份命令...");
+        Process process = Runtime.getRuntime().exec(command);
+        int exitCode = process.waitFor();
+
+        if (exitCode != 0) {
+            // 读取错误输出
+            try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    System.err.println("Docker 错误: " + line);
+                }
+            }
+            System.err.println("Docker 备份失败，退出码: " + exitCode);
+            return false;
+        }
+
+        // 从容器复制文件到本地
+        String[] copyCommand = {
+            "docker", "cp", "cashier-mysql:" + containerPath,
+            backupFile.getAbsolutePath()
+        };
+
+        Process copyProcess = Runtime.getRuntime().exec(copyCommand);
+        int copyExitCode = copyProcess.waitFor();
+
+        if (copyExitCode == 0) {
+            // 清理容器中的临时文件
+            Runtime.getRuntime().exec(new String[]{"docker", "exec", "cashier-mysql", "rm", "-f", containerPath});
+            
+            System.out.println("数据库备份成功: " + backupFile.getAbsolutePath());
+            return true;
+        } else {
+            System.err.println("从容器复制备份文件失败，退出码: " + copyExitCode);
+            return false;
+        }
+    }
+
+    /**
+     * 使用本地命令执行备份
+     */
+    private static boolean backupViaLocalCommand(File backupFile) throws Exception {
+        // 构建 mysqldump 命令
+        String[] command = {
+            "mysqldump",
+            "--host=" + getHostFromUrl(dbUrl),
+            "--port=" + getPortFromUrl(dbUrl),
+            "--user=" + dbUsername,
+            "--password=" + dbPassword,
+            "--result-file=" + backupFile.getAbsolutePath(),
+            "--single-transaction",
+            "--routines",
+            "--triggers",
+            "cashier_system"
+        };
+
+        System.out.println("执行本地备份命令...");
+        Process process = Runtime.getRuntime().exec(command);
+        int exitCode = process.waitFor();
+
+        if (exitCode == 0) {
+            System.out.println("数据库备份成功: " + backupFile.getAbsolutePath());
+            return true;
+        } else {
+            System.err.println("mysqldump 执行失败，退出码: " + exitCode);
+            return false;
+        }
+    }
+
+    /**
+     * 执行数据库恢复（使用 mysql 命令）
+     * @param backupFile 备份文件路径
+     * @return 如果恢复成功返回 true，否则返回 false
+     */
+    public static boolean restore(File backupFile) {
+        if (!backupFile.exists()) {
+            System.err.println("备份文件不存在: " + backupFile.getAbsolutePath());
+            return false;
+        }
+
+        try {
+            // 检查是否可以使用 Docker 容器
+            if (isDockerContainerRunning("cashier-mysql")) {
+                return restoreViaDocker(backupFile);
+            } else {
+                return restoreViaLocalCommand(backupFile);
+            }
+
+        } catch (Exception e) {
+            System.err.println("数据库恢复失败: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    /**
+     * 使用 Docker 容器执行恢复
+     */
+    private static boolean restoreViaDocker(File backupFile) throws Exception {
+        String containerPath = "/tmp/" + backupFile.getName();
+        
+        // 复制文件到容器
+        String[] copyCommand = {
+            "docker", "cp", backupFile.getAbsolutePath(),
+            "cashier-mysql:" + containerPath
+        };
+
+        Process copyProcess = Runtime.getRuntime().exec(copyCommand);
+        int copyExitCode = copyProcess.waitFor();
+
+        if (copyExitCode != 0) {
+            System.err.println("复制文件到容器失败，退出码: " + copyExitCode);
+            return false;
+        }
+
+        // 构建 docker exec 命令 - 使用 bash 在容器内执行重定向
+        String[] command = {
+            "docker", "exec", "cashier-mysql",
+            "bash", "-c",
+            "mysql -u" + dbUsername + " -p" + dbPassword + " cashier_system < " + containerPath
+        };
+
+        System.out.println("执行 Docker 恢复命令...");
+        
+        Process process = Runtime.getRuntime().exec(command);
+        
+        // 读取输出
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        }
+        
+        // 读取错误
+        try (BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
+            String line;
+            while ((line = errorReader.readLine()) != null) {
+                System.err.println(line);
+            }
+        }
+
+        int exitCode = process.waitFor();
+
+        // 清理容器中的临时文件
+        Runtime.getRuntime().exec(new String[]{"docker", "exec", "cashier-mysql", "rm", "-f", containerPath});
+
+        if (exitCode == 0) {
+            System.out.println("数据库恢复成功: " + backupFile.getAbsolutePath());
+            return true;
+        } else {
+            System.err.println("Docker 恢复失败，退出码: " + exitCode);
+            return false;
+        }
+    }
+
+    /**
+     * 使用本地命令执行恢复
+     */
+    private static boolean restoreViaLocalCommand(File backupFile) throws Exception {
+        // 构建 mysql 命令
+        String[] command = {
+            "mysql",
+            "--host=" + getHostFromUrl(dbUrl),
+            "--port=" + getPortFromUrl(dbUrl),
+            "--user=" + dbUsername,
+            "--password=" + dbPassword,
+            "cashier_system"
+        };
+
+        System.out.println("执行本地恢复命令...");
+        
+        // 使用 ProcessBuilder 重定向输入
+        ProcessBuilder pb = new ProcessBuilder(command);
+        pb.redirectInput(ProcessBuilder.Redirect.from(backupFile));
+        pb.redirectErrorStream(true);
+        
+        Process process = pb.start();
+        
+        // 读取输出
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                System.out.println(line);
+            }
+        }
+
+        int exitCode = process.waitFor();
+
+        if (exitCode == 0) {
+            System.out.println("数据库恢复成功: " + backupFile.getAbsolutePath());
+            return true;
+        } else {
+            System.err.println("mysql 恢复失败，退出码: " + exitCode);
+            return false;
+        }
+    }
+
+    /**
+     * 检查 Docker 容器是否运行
+     */
+    private static boolean isDockerContainerRunning(String containerName) {
+        try {
+            Process process = Runtime.getRuntime().exec(new String[]{"docker", "ps", "--filter", "name=" + containerName});
+            int exitCode = process.waitFor();
+            return exitCode == 0;
+        } catch (Exception e) {
             return false;
         }
     }

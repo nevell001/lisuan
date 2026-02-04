@@ -1,6 +1,6 @@
 package com.cashier.controller;
 
-import com.cashier.model.DataManager;
+import com.cashier.service.DataService;
 import com.cashier.model.Promotion;
 import com.cashier.util.StatusBarManager;
 import javafx.beans.property.SimpleStringProperty;
@@ -148,7 +148,7 @@ public class PromotionController {
      */
     private void loadPromotions() {
         System.out.println("PromotionController: 开始加载促销数据...");
-        allPromotions = DataManager.loadPromotions();
+        allPromotions = DataService.loadPromotions();
         promotionList = FXCollections.observableArrayList(allPromotions);
         promotionTable.setItems(promotionList);
         updateCountLabel();
@@ -254,7 +254,6 @@ public class PromotionController {
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == okButtonType) {
                 Promotion newPromotion = promotion != null ? promotion : new Promotion();
-                newPromotion.id = promotion != null ? promotion.id : "PROM" + System.currentTimeMillis();
                 newPromotion.name = nameField.getText().trim();
                 newPromotion.type = typeComboBox.getSelectionModel().getSelectedItem();
                 newPromotion.threshold = Double.parseDouble(thresholdField.getText().trim());
@@ -280,7 +279,7 @@ public class PromotionController {
             if (promotion == null) {
                 allPromotions.add(result);
             }
-            DataManager.savePromotions(allPromotions);
+            DataService.savePromotions(allPromotions);
             loadPromotions();
             updateStatus(promotion == null ? "促销添加成功" : "促销更新成功");
         });
@@ -303,7 +302,7 @@ public class PromotionController {
 
         if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
             allPromotions.removeAll(selected);
-            DataManager.savePromotions(allPromotions);
+            DataService.savePromotions(allPromotions);
             loadPromotions();
             updateStatus("促销删除成功");
         }
@@ -318,7 +317,7 @@ public class PromotionController {
         for (Promotion p : selected) {
             p.enabled = true;
         }
-        DataManager.savePromotions(allPromotions);
+        DataService.savePromotions(allPromotions);
         loadPromotions();
         updateStatus("促销已启用");
     }
@@ -332,7 +331,7 @@ public class PromotionController {
         for (Promotion p : selected) {
             p.enabled = false;
         }
-        DataManager.savePromotions(allPromotions);
+        DataService.savePromotions(allPromotions);
         loadPromotions();
         updateStatus("促销已禁用");
     }

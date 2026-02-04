@@ -1,6 +1,6 @@
 package com.cashier.controller;
 
-import com.cashier.model.DataManager;
+import com.cashier.service.DataService;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -164,7 +164,7 @@ public class SettingsController {
     private void loadSettings() {
         System.out.println("SettingsController: 开始加载设置...");
         
-        Map<String, String> settings = DataManager.loadSettings();
+        Map<String, String> settings = DataService.loadSettings();
         
         // 加载基本设置
         storeNameField.setText(settings.getOrDefault("storeName", ""));
@@ -187,7 +187,7 @@ public class SettingsController {
         passwordComplexityCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("passwordComplexity", "true")));
         
         // 加载主题偏好
-        String savedThemeCode = DataManager.loadThemePreference();
+        String savedThemeCode = DataService.loadThemePreference();
         String savedThemeName = convertThemeCodeToName(savedThemeCode);
         themeComboBox.getSelectionModel().select(savedThemeName);
         
@@ -338,13 +338,17 @@ public class SettingsController {
                 backupDir.mkdirs();
             }
             
-            // 创建带时间戳的备份目录
-            String timestamp = new SimpleDateFormat("yyyyMMdd_HHmmss").format(new Date());
-            String backupDirName = "backup_" + timestamp;
-            String fullBackupPath = backupBasePath + File.separator + backupDirName;
+            // 备份数据库（会在备份目录中创建带时间戳的 .sql 文件）
+            DataService.backupData(backupBasePath);
             
-            DataManager.backupData(fullBackupPath);
-            showSuccess("数据备份成功！\n备份位置: " + fullBackupPath);
+            // 获取最新的备份文件名
+            File[] sqlFiles = backupDir.listFiles((dir, name) -> name.startsWith("cashier_system_") && name.endsWith(".sql"));
+            if (sqlFiles != null && sqlFiles.length > 0) {
+                java.util.Arrays.sort(sqlFiles, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+                showSuccess("数据备份成功！\n备份文件: " + sqlFiles[0].getName());
+            } else {
+                showSuccess("数据备份成功！");
+            }
         } catch (Exception e) {
             showError("数据备份失败: " + e.getMessage());
         }
@@ -364,24 +368,22 @@ public class SettingsController {
             backupBasePath = path;
         }
         
-        // 列出可用的备份目录
+        // 列出可用的备份文件
         File backupDir = new File(backupBasePath);
         if (!backupDir.exists()) {
             showError("备份路径不存在！\n路径: " + backupBasePath);
             return;
         }
         
-        File[] backupDirs = backupDir.listFiles((dir, name) ->
-            name.startsWith("backup_") && dir.isDirectory()
-        );
+        File[] sqlFiles = backupDir.listFiles((dir, name) -> name.startsWith("cashier_system_") && name.endsWith(".sql"));
         
-        if (backupDirs == null || backupDirs.length == 0) {
-            showError("未找到任何备份目录！\n路径: " + backupBasePath + "\n请先进行数据备份。");
+        if (sqlFiles == null || sqlFiles.length == 0) {
+            showError("未找到任何备份文件！\n路径: " + backupBasePath + "\n请先进行数据备份。");
             return;
         }
         
         // 按修改时间排序，最新的在前
-        java.util.Arrays.sort(backupDirs, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+        java.util.Arrays.sort(sqlFiles, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
         
         // 创建选择对话框
         ChoiceDialog<String> dialog = new ChoiceDialog<>();
@@ -391,27 +393,27 @@ public class SettingsController {
         
         // 添加备份选项
         ObservableList<String> options = FXCollections.observableArrayList();
-        for (File dir : backupDirs) {
+        for (File file : sqlFiles) {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
-            String timeStr = sdf.format(new Date(dir.lastModified()));
-            options.add(dir.getName() + " (" + timeStr + ")");
+            String timeStr = sdf.format(new Date(file.lastModified()));
+            options.add(file.getName() + " (" + timeStr + ")");
         }
         dialog.getItems().addAll(options);
         
         dialog.showAndWait().ifPresent(selected -> {
-            // 提取备份目录名
-            String backupDirName = selected.split(" \\(")[0];
-            String fullBackupPath = backupBasePath + File.separator + backupDirName;
+            // 提取备份文件名
+            String backupFileName = selected.split(" \\(")[0];
+            File backupFile = new File(backupBasePath, backupFileName);
             
             try {
                 // 确认恢复
                 Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
                 confirmAlert.setTitle("确认恢复");
                 confirmAlert.setHeaderText(null);
-                confirmAlert.setContentText("确定要从以下备份恢复数据吗？\n备份: " + fullBackupPath + "\n\n恢复数据将覆盖当前数据，确定要继续吗？");
+                confirmAlert.setContentText("确定要从以下备份恢复数据吗？\n备份文件: " + backupFileName + "\n\n恢复数据将覆盖当前数据，确定要继续吗？");
                 
                 if (confirmAlert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-                    DataManager.restoreData(fullBackupPath);
+                    DataService.restoreData(backupFile.getAbsolutePath());
                     showSuccess("数据恢复成功！\n请重新登录以加载最新数据。");
                     
                     // 重新加载数据
@@ -512,7 +514,7 @@ public class SettingsController {
         settings.put("passwordMaxAttempts", String.valueOf(passwordMaxAttemptsSpinner.getValue()));
         
         // 保存到文件
-        DataManager.saveSettings(
+        DataService.saveSettings(
             Double.parseDouble(settings.getOrDefault("taxRate", "0.0")),
             0
         );
@@ -520,7 +522,7 @@ public class SettingsController {
         // 保存主题偏好
         String themeName = settings.getOrDefault("theme", "浅色主题");
         String themeCode = convertThemeNameToCode(themeName);
-        DataManager.saveThemePreference(themeCode);
+        DataService.saveThemePreference(themeCode);
         
         System.out.println("SettingsController: 设置保存成功，主题: " + themeCode);
     }

@@ -26,7 +26,9 @@
         <!-- 快捷键帮助按钮 -->
         <Button text="快捷键 (Ctrl+/)"
                 onAction="#showShortcutHelp"
-                prefWidth="130"
+                prefWidth="140"
+                prefHeight="35"
+                style="-fx-font-size: 13px; -fx-font-weight: bold;"
                 styleClass="secondary-button"/>
     </HBox>
 
@@ -55,7 +57,7 @@
                 <HBox spacing="10" alignment="CENTER_LEFT">
                     <Label text="会员手机号 (Ctrl+M):" style="-fx-font-size: 13px; -fx-text-fill: #424242;"/>
                     <TextField fx:id="memberPhoneField" prefWidth="150" promptText="输入手机号"/>
-                    <Button text="查询" onAction="#handleSearchMember" prefWidth="60" styleClass="secondary-button"/>
+                    <Button text="查询" onAction="#handleSearchMember" prefWidth="70" prefHeight="35" style="-fx-font-size: 13px; -fx-font-weight: bold;" styleClass="secondary-button"/>
                 </HBox>
                 <Label fx:id="memberInfoLabel" text="" style="-fx-font-size: 12px; -fx-text-fill: #4CAF50;"/>
             </VBox>
@@ -114,28 +116,32 @@
                             text="现金支付 (F8)"
                             onAction="#handleCashPayment"
                             prefWidth="160"
-                            prefHeight="45"
+                            prefHeight="50"
+                            style="-fx-font-size: 14px; -fx-font-weight: bold;"
                             styleClass="payment-button, cash-button"/>
 
                     <Button fx:id="wechatButton"
                             text="微信支付 (Ctrl+1)"
                             onAction="#handleWechatPayment"
                             prefWidth="160"
-                            prefHeight="45"
+                            prefHeight="50"
+                            style="-fx-font-size: 14px; -fx-font-weight: bold;"
                             styleClass="payment-button, wechat-button"/>
 
                     <Button fx:id="alipayButton"
                             text="支付宝 (Ctrl+2)"
                             onAction="#handleAlipayPayment"
                             prefWidth="160"
-                            prefHeight="45"
+                            prefHeight="50"
+                            style="-fx-font-size: 14px; -fx-font-weight: bold;"
                             styleClass="payment-button, alipay-button"/>
 
                     <Button fx:id="cardButton"
                             text="银行卡 (Ctrl+3)"
                             onAction="#handleCardPayment"
                             prefWidth="160"
-                            prefHeight="45"
+                            prefHeight="50"
+                            style="-fx-font-size: 14px; -fx-font-weight: bold;"
                             styleClass="payment-button, card-button"/>
                 </VBox>
             </VBox>
@@ -150,14 +156,16 @@
                         text="取消 (Esc)"
                         onAction="#handleCancel"
                         prefWidth="170"
-                        prefHeight="40"
+                        prefHeight="45"
+                        style="-fx-font-size: 14px; -fx-font-weight: bold;"
                         styleClass="secondary-button"/>
 
                 <Button fx:id="printButton"
                         text="打印小票"
                         onAction="#handlePrint"
-                        prefWidth="150"
-                        prefHeight="40"
+                        prefWidth="170"
+                        prefHeight="45"
+                        style="-fx-font-size: 14px; -fx-font-weight: bold;"
                         styleClass="info-button"
                         disable="true"/>
             </VBox>

@@ -1,7 +1,7 @@
 package com.cashier.controller;
 
 import com.cashier.CashierSystemFXApplication;
-import com.cashier.model.DataManager;
+import com.cashier.service.DataService;
 import com.cashier.model.User;
 import com.cashier.util.FXUtils;
 import com.cashier.util.StatusBarManager;
@@ -324,7 +324,7 @@ public class MainController {
     @FXML
     private void handleLogout() {
         // 检查是否有活跃班次
-        if (com.cashier.model.DataManager.hasActiveShift()) {
+        if (com.cashier.service.DataService.hasActiveShift()) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
             alert.setTitle("确认退出");
             alert.setHeaderText(null);
@@ -361,7 +361,7 @@ public class MainController {
     @FXML
     private void handleExit() {
         // 检查是否有活跃班次
-        if (com.cashier.model.DataManager.hasActiveShift()) {
+        if (com.cashier.service.DataService.hasActiveShift()) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
             alert.setTitle("确认退出");
             alert.setHeaderText(null);
@@ -423,7 +423,7 @@ public class MainController {
             String backupPath = "backup_" + timestamp;
             
             // 执行备份
-            DataManager.backupData(backupPath);
+            DataService.backupData(backupPath);
             
             FXUtils.showInfoAlert("备份成功", "数据备份成功！\n备份位置: " + backupPath);
         } catch (Exception e) {
@@ -476,7 +476,7 @@ public class MainController {
                 confirmAlert.setContentText("确定要从以下备份恢复数据吗？\n备份: " + backupDirName + "\n\n恢复数据将覆盖当前数据，确定要继续吗？");
                 
                 if (confirmAlert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-                    DataManager.restoreData(backupDirName);
+                    DataService.restoreData(backupDirName);
                     FXUtils.showInfoAlert("恢复成功", "数据恢复成功！\n请重新登录以加载最新数据。");
                 }
             } catch (Exception e) {
@@ -518,7 +518,7 @@ public class MainController {
         updateStatus("关于");
         String about =
             "收银系统 Cashier System\n\n" +
-            "版本: 2.0.0 (JavaFX)\n" +
+            "版本: 2.2.1 (JavaFX)\n" +
             "开发: nevell\n\n" +
             "技术栈:\n" +
             "- JavaFX 17.0.8\n" +

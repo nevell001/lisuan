@@ -4,6 +4,7 @@ import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class User {
+    public int id;              // 用户ID（数据库自增主键）
     public String username;      // 用户名
     public String password;      // 密码（实际应用中应该加密存储）
     public String name;          // 真实姓名
@@ -14,6 +15,7 @@ public class User {
     public boolean active;       // 是否激活
 
     public User() {
+        this.id = 0;  // 默认ID为0，表示未保存到数据库
         this.username = "";
         this.password = "";
         this.name = "";
@@ -24,13 +26,23 @@ public class User {
     }
 
     public User(String username, String password, String name, String role) {
+        this();
         this.username = username;
         this.password = password;
         this.name = name;
         this.role = role;
-        this.createTime = new Date();
-        this.lastLoginTime = new Date();
-        this.active = true;
+    }
+
+    public User(int id, String username, String password, String name, String email, String role, Date createTime, Date lastLoginTime, boolean active) {
+        this.id = id;
+        this.username = username;
+        this.password = password;
+        this.name = name;
+        this.email = email;
+        this.role = role;
+        this.createTime = createTime;
+        this.lastLoginTime = lastLoginTime;
+        this.active = active;
     }
 
     // 检查是否有指定权限
@@ -69,6 +81,10 @@ public class User {
     }
 
     // Getter方法
+    public int getId() {
+        return id;
+    }
+
     public String getUsername() {
         return username;
     }

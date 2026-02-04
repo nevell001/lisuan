@@ -13,10 +13,29 @@ import java.util.*;
 public class MemberDAO {
 
     /**
+     * 根据ID查找会员
+     */
+    public static Member findById(int id) throws SQLException {
+        String sql = "SELECT id, phone, name, points, level, discount, balance, birthday FROM members WHERE id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, id);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return mapRowToMember(rs);
+            }
+        }
+        return null;
+    }
+
+    /**
      * 根据手机号查找会员
      */
     public static Member findByPhone(String phone) throws SQLException {
-        String sql = "SELECT phone, name, points, level, discount, balance, birthday FROM members WHERE phone = ?";
+        String sql = "SELECT id, phone, name, points, level, discount, balance, birthday FROM members WHERE phone = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -36,7 +55,7 @@ public class MemberDAO {
      */
     public static List<Member> findAll() throws SQLException {
         List<Member> members = new ArrayList<>();
-        String sql = "SELECT phone, name, points, level, discount, balance, birthday FROM members ORDER BY name";
+        String sql = "SELECT id, phone, name, points, level, discount, balance, birthday FROM members ORDER BY name";
 
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
@@ -57,7 +76,7 @@ public class MemberDAO {
                      "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             pstmt.setString(1, member.phone);
             pstmt.setString(2, member.name);
@@ -67,7 +86,15 @@ public class MemberDAO {
             pstmt.setDouble(6, member.balance);
             pstmt.setString(7, member.birthday);
 
-            return pstmt.executeUpdate() > 0;
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows > 0) {
+                try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        member.id = generatedKeys.getInt(1);
+                    }
+                }
+            }
+            return affectedRows > 0;
         }
     }
 
@@ -75,19 +102,20 @@ public class MemberDAO {
      * 更新会员
      */
     public static boolean update(Member member) throws SQLException {
-        String sql = "UPDATE members SET name = ?, points = ?, level = ?, discount = ?, balance = ?, birthday = ? " +
-                     "WHERE phone = ?";
+        String sql = "UPDATE members SET phone = ?, name = ?, points = ?, level = ?, discount = ?, balance = ?, birthday = ? " +
+                     "WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setString(1, member.name);
-            pstmt.setDouble(2, member.points);
-            pstmt.setString(3, member.level);
-            pstmt.setDouble(4, member.discount);
-            pstmt.setDouble(5, member.balance);
-            pstmt.setString(6, member.birthday);
-            pstmt.setString(7, member.phone);
+            pstmt.setString(1, member.phone);
+            pstmt.setString(2, member.name);
+            pstmt.setDouble(3, member.points);
+            pstmt.setString(4, member.level);
+            pstmt.setDouble(5, member.discount);
+            pstmt.setDouble(6, member.balance);
+            pstmt.setString(7, member.birthday);
+            pstmt.setInt(8, member.id);
 
             return pstmt.executeUpdate() > 0;
         }
@@ -96,7 +124,21 @@ public class MemberDAO {
     /**
      * 删除会员
      */
-    public static boolean delete(String phone) throws SQLException {
+    public static boolean delete(int id) throws SQLException {
+        String sql = "DELETE FROM members WHERE id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, id);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * 根据手机号删除会员（兼容旧代码）
+     */
+    public static boolean deleteByPhone(String phone) throws SQLException {
         String sql = "DELETE FROM members WHERE phone = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -110,7 +152,22 @@ public class MemberDAO {
     /**
      * 更新会员积分
      */
-    public static boolean updatePoints(String phone, double delta) throws SQLException {
+    public static boolean updatePoints(int id, double delta) throws SQLException {
+        String sql = "UPDATE members SET points = points + ? WHERE id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setDouble(1, delta);
+            pstmt.setInt(2, id);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * 根据手机号更新会员积分（兼容旧代码）
+     */
+    public static boolean updatePointsByPhone(String phone, double delta) throws SQLException {
         String sql = "UPDATE members SET points = points + ? WHERE phone = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -125,7 +182,22 @@ public class MemberDAO {
     /**
      * 更新会员余额
      */
-    public static boolean updateBalance(String phone, double delta) throws SQLException {
+    public static boolean updateBalance(int id, double delta) throws SQLException {
+        String sql = "UPDATE members SET balance = balance + ? WHERE id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setDouble(1, delta);
+            pstmt.setInt(2, id);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * 根据手机号更新会员余额（兼容旧代码）
+     */
+    public static boolean updateBalanceByPhone(String phone, double delta) throws SQLException {
         String sql = "UPDATE members SET balance = balance + ? WHERE phone = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -142,7 +214,7 @@ public class MemberDAO {
      */
     public static List<Member> search(String keyword) throws SQLException {
         List<Member> members = new ArrayList<>();
-        String sql = "SELECT phone, name, points, level, discount, balance, birthday FROM members " +
+        String sql = "SELECT id, phone, name, points, level, discount, balance, birthday FROM members " +
                      "WHERE name LIKE ? OR phone LIKE ? ORDER BY name";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -165,7 +237,7 @@ public class MemberDAO {
      */
     public static List<Member> findByLevel(String level) throws SQLException {
         List<Member> members = new ArrayList<>();
-        String sql = "SELECT phone, name, points, level, discount, balance, birthday FROM members " +
+        String sql = "SELECT id, phone, name, points, level, discount, balance, birthday FROM members " +
                      "WHERE level = ? ORDER BY points DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -211,6 +283,7 @@ public class MemberDAO {
      */
     private static Member mapRowToMember(ResultSet rs) throws SQLException {
         Member member = new Member(
+            rs.getInt("id"),
             rs.getString("phone"),
             rs.getString("name"),
             rs.getDouble("points"),

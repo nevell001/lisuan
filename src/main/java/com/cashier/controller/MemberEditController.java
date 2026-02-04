@@ -1,9 +1,11 @@
 package com.cashier.controller;
 
-import com.cashier.model.DataManager;
+import com.cashier.dao.MemberDAO;
 import com.cashier.model.Member;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+
+import java.sql.SQLException;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
 
@@ -59,7 +61,17 @@ public class MemberEditController {
     @FXML
     private void initialize() {
         // 加载会员数据
-        members = DataManager.loadMembers();
+        try {
+            var memberList = MemberDAO.findAll();
+            members = new java.util.HashMap<>();
+            for (Member m : memberList) {
+                members.put(m.phone, m);
+            }
+        } catch (SQLException e) {
+            System.err.println("加载会员数据失败: " + e.getMessage());
+            e.printStackTrace();
+            members = new java.util.HashMap<>();
+        }
 
         // 初始化等级下拉框
         levelComboBox.setItems(FXCollections.observableArrayList(

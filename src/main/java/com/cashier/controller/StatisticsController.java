@@ -1,8 +1,10 @@
 package com.cashier.controller;
 
-import com.cashier.model.DataManager;
+import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Transaction;
 import javafx.fxml.FXML;
+
+import java.sql.SQLException;
 import javafx.scene.control.*;
 
 import java.text.SimpleDateFormat;
@@ -155,7 +157,14 @@ public class StatisticsController {
      */
     private void loadTransactions() {
         System.out.println("StatisticsController: 开始加载交易数据...");
-        allTransactions = DataManager.loadTransactions();
+        try {
+            allTransactions = TransactionDAO.findAll();
+        } catch (SQLException e) {
+            System.err.println("加载交易数据失败: " + e.getMessage());
+            e.printStackTrace();
+            showError("加载交易数据失败: " + e.getMessage());
+            allTransactions = new java.util.ArrayList<>();
+        }
         System.out.println("StatisticsController: 加载了 " + allTransactions.size() + " 条交易记录");
     }
 

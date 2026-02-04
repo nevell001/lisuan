@@ -2,7 +2,7 @@
 
 一个功能完整的收银系统，使用 JavaFX 17 开发，提供现代化的图形化界面。
 
-**当前版本**: v2.2.0 | **最新更新**: 2026-02-03
+**当前版本**: v2.2.1 | **最新更新**: 2026-02-04
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.8-blue)
@@ -40,6 +40,39 @@
 - 密码复杂度检查
 
 ## 🎯 最近更新
+
+### v2.2.1 (2026-02-04)
+
+**UI 优化和数据库初始化完善**
+- 🎨 现金支付页面 UI 优化
+  - 放大面额按钮（100x60px）
+  - 放大输入框（高度45px）
+  - 放大支付按钮和提示文本
+  - 提升可读性和易用性
+- 🆔 模型统一管理
+  - 为 Category 模型添加 ID 字段
+  - 为 Unit 模型添加 ID 字段
+  - 为 User 模型添加 ID 字段
+  - 统一使用 AUTO_INCREMENT PRIMARY KEY
+- 🗄️ 数据库初始化脚本完善
+  - 添加 `02-alter-tables.sql` 表结构升级脚本
+  - 添加 `03-sample-data.sql` 示例数据脚本
+  - 包含 10 条商品数据
+  - 包含 3 条会员数据
+  - 包含 3 条促销数据
+  - 包含 5 条交易记录
+- 🔤 字符编码修复
+  - 数据库连接字符集从 utf8 改为 utf8mb4
+  - 修复中文字符乱码问题
+  - 确保 emoji 和特殊字符正确显示
+- 📦 新增 DAO 类
+  - CategoryDAO - 分类数据访问对象
+  - UnitDAO - 单位数据访问对象
+  - PromotionDAO - 促销数据访问对象
+  - OperationLogDAO - 操作日志数据访问对象
+  - RechargeRecordDAO - 充值记录数据访问对象
+  - SystemSettingsDAO - 系统设置数据访问对象
+  - ThemePreferenceDAO - 主题偏好数据访问对象
 
 ### v2.2.0 (2026-02-03)
 
@@ -132,7 +165,7 @@ colima start --network-address --network-host-addresses
 
 创建 `config/database.properties`：
 ```properties
-db.url=jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai
+db.url=jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf8mb4
 db.username=root
 db.password=RootPassword123!
 db.pool.size=10
@@ -153,7 +186,7 @@ mvn javafx:run
 **打包后运行**：
 ```bash
 mvn clean package
-java -jar target/cashier-system-fx-2.0.0.jar
+java -jar target/cashier-system-fx-2.2.1.jar
 ```
 
 ### 默认账户
@@ -306,7 +339,14 @@ hello/
 │       │   │   ├── ProductDAO.java             # 商品 DAO
 │       │   │   ├── MemberDAO.java              # 会员 DAO
 │       │   │   ├── TransactionDAO.java         # 交易 DAO
-│       │   │   └── ShiftDAO.java               # 交接班 DAO
+│       │   │   ├── ShiftDAO.java               # 交接班 DAO
+│       │   │   ├── CategoryDAO.java            # 分类 DAO
+│       │   │   ├── UnitDAO.java                # 单位 DAO
+│       │   │   ├── PromotionDAO.java           # 促销 DAO
+│       │   │   ├── OperationLogDAO.java        # 操作日志 DAO
+│       │   │   ├── RechargeRecordDAO.java      # 充值记录 DAO
+│       │   │   ├── SystemSettingsDAO.java      # 系统设置 DAO
+│       │   │   └── ThemePreferenceDAO.java     # 主题偏好 DAO
 │       │   ├── controller/
 │       │   │   ├── CartController.java          # 购物车控制器
 │       │   │   ├── CheckoutController.java      # 结账控制器
@@ -331,6 +371,7 @@ hello/
 │       │   │   ├── User.java                    # 用户实体类
 │       │   │   ├── Transaction.java             # 交易实体类
 │       │   │   ├── Category.java                # 分类实体类
+│       │   │   ├── Unit.java                    # 单位实体类
 │       │   │   ├── Promotion.java               # 促销实体类
 │       │   │   ├── RechargeRecord.java          # 充值记录类
 │       │   │   ├── OperationLog.java            # 操作日志类
@@ -373,6 +414,9 @@ hello/
 │   └── database.properties.example  # 数据库配置示例
 ├── docker/                          # Docker 配置
 │   └── mysql-init/                   # MySQL 初始化脚本
+│       ├── 01-create-user.sql       # 创建数据库用户
+│       ├── 02-alter-tables.sql      # 表结构升级脚本
+│       └── 03-sample-data.sql       # 示例数据脚本
 ├── docker-compose.yml               # Docker Compose 配置
 ├── data/                            # 数据目录（备用，自动创建）
 │   ├── inventory.txt                # 库存数据
@@ -414,7 +458,7 @@ mvn javafx:run
 mvn clean package
 
 # 运行打包后的 JAR
-java -jar target/cashier-system-fx-2.0.0.jar
+java -jar target/cashier-system-fx-2.2.1.jar
 ```
 
 ### Maven 依赖
@@ -499,6 +543,15 @@ java -jar target/cashier-system-fx-2.0.0.jar
 - `transactions` - 交易记录主表
 - `transaction_items` - 交易明细（商品列表）
 - `shifts` - 交接班记录
+
+**辅助表**：
+- `categories` - 商品分类
+- `units` - 计量单位
+- `promotions` - 促销活动
+- `operation_logs` - 操作日志
+- `recharge_records` - 充值记录
+- `system_settings` - 系统设置
+- `theme_preferences` - 主题偏好
 
 ### 数据迁移
 
@@ -654,6 +707,10 @@ JavaFX 官网: https://openjfx.io/
 - [x] 退出登录功能修复（v2.1.0 已实现）
 - [x] 数据库支持 MySQL（v2.2.0 已实现）
 - [x] 交接班管理数据库集成（v2.2.0 已实现）
+- [x] 现金支付页面 UI 优化（v2.2.1 已实现）
+- [x] 模型 ID 字段统一管理（v2.2.1 已实现）
+- [x] 数据库初始化脚本完善（v2.2.1 已实现）
+- [x] 字符编码修复（v2.2.1 已实现）
 
 ---
 

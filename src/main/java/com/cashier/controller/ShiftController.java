@@ -2,7 +2,6 @@ package com.cashier.controller;
 
 import com.cashier.dao.ShiftDAO;
 import com.cashier.dao.TransactionDAO;
-import com.cashier.model.DataManager;
 import com.cashier.model.Shift;
 import com.cashier.model.Transaction;
 import com.cashier.util.StatusBarManager;
@@ -160,13 +159,12 @@ public class ShiftController {
     private void loadShifts() {
         System.out.println("ShiftController: 开始加载交接班数据...");
         try {
-            // 尝试从数据库加载
             allShifts = ShiftDAO.findAll();
         } catch (SQLException e) {
-            System.err.println("从数据库加载交接班数据失败: " + e.getMessage());
+            System.err.println("加载交接班数据失败: " + e.getMessage());
             e.printStackTrace();
-            // 降级到文件存储
-            allShifts = DataManager.loadShifts();
+            showError("加载交接班数据失败: " + e.getMessage());
+            allShifts = new java.util.ArrayList<>();
         }
         shiftList = FXCollections.observableArrayList(allShifts);
         shiftTable.setItems(shiftList);
@@ -358,8 +356,7 @@ public class ShiftController {
             hasActiveShift = ShiftDAO.hasActiveShift();
         } catch (SQLException e) {
             System.err.println("检查活跃班次失败: " + e.getMessage());
-            // 降级到文件存储
-            hasActiveShift = DataManager.hasActiveShift();
+            hasActiveShift = false;
         }
         startShiftButton.setDisable(hasActiveShift);
         endShiftButton.setDisable(!hasActiveShift);
@@ -378,11 +375,8 @@ public class ShiftController {
             }
         } catch (SQLException e) {
             System.err.println("检查活跃班次失败: " + e.getMessage());
-            // 降级到文件存储
-            if (DataManager.hasActiveShift()) {
-                showError("当前已有活跃班次，请先交班后再开新班！");
-                return;
-            }
+            showError("检查活跃班次失败，请稍后重试");
+            return;
         }
 
         // 确认开班
@@ -407,8 +401,10 @@ public class ShiftController {
             try {
                 transactions = TransactionDAO.findAll();
             } catch (SQLException e) {
-                System.err.println("从数据库加载交易失败: " + e.getMessage());
-                transactions = DataManager.loadTransactions();
+                System.err.println("加载交易记录失败: " + e.getMessage());
+                e.printStackTrace();
+                showError("加载交易记录失败: " + e.getMessage());
+                return;
             }
 
             double totalRevenue = 0.0;
@@ -435,11 +431,10 @@ public class ShiftController {
             try {
                 ShiftDAO.insert(shift);
             } catch (SQLException e) {
-                System.err.println("数据库保存失败，降级到文件存储: " + e.getMessage());
-                // 降级到文件存储
-                List<Shift> shifts = DataManager.loadShifts();
-                shifts.add(shift);
-                DataManager.saveShifts(shifts);
+                System.err.println("保存班次失败: " + e.getMessage());
+                e.printStackTrace();
+                showError("保存班次失败: " + e.getMessage());
+                return;
             }
 
             // 刷新列表
@@ -461,12 +456,13 @@ public class ShiftController {
     private void handleEndShift() {
         // 检查是否有活跃班次
         Shift activeShift = null;
-        try {
+try {
             activeShift = ShiftDAO.findActiveShift();
         } catch (SQLException e) {
-            System.err.println("从数据库查询活跃班次失败: " + e.getMessage());
-            // 降级到文件存储
-            activeShift = DataManager.getActiveShift();
+            System.err.println("获取活跃班次失败: " + e.getMessage());
+            e.printStackTrace();
+            showError("获取活跃班次失败: " + e.getMessage());
+            return;
         }
 
         if (activeShift == null) {
@@ -490,8 +486,10 @@ public class ShiftController {
             try {
                 allTransactions = TransactionDAO.findAll();
             } catch (SQLException e) {
-                System.err.println("从数据库加载交易失败: " + e.getMessage());
-                allTransactions = DataManager.loadTransactions();
+                System.err.println("加载交易记录失败: " + e.getMessage());
+                e.printStackTrace();
+                showError("加载交易记录失败: " + e.getMessage());
+                return;
             }
 
             // 筛选本班次的交易记录（在班次开始时间之后的交易）
@@ -536,16 +534,10 @@ public class ShiftController {
             try {
                 ShiftDAO.update(activeShift);
             } catch (SQLException e) {
-                System.err.println("数据库保存失败，降级到文件存储: " + e.getMessage());
-                // 降级到文件存储
-                List<Shift> shifts = DataManager.loadShifts();
-                for (int i = 0; i < shifts.size(); i++) {
-                    if (shifts.get(i).shiftId.equals(activeShift.shiftId)) {
-                        shifts.set(i, activeShift);
-                        break;
-                    }
-                }
-                DataManager.saveShifts(shifts);
+                System.err.println("更新班次失败: " + e.getMessage());
+                e.printStackTrace();
+                showError("更新班次失败: " + e.getMessage());
+                return;
             }
 
             // 刷新列表

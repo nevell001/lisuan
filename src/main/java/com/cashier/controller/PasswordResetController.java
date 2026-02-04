@@ -1,9 +1,11 @@
 package com.cashier.controller;
 
-import com.cashier.model.DataManager;
+import com.cashier.dao.UserDAO;
 import com.cashier.model.User;
 import javafx.animation.FadeTransition;
 import javafx.fxml.FXML;
+
+import java.sql.SQLException;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
 import javafx.util.Duration;
@@ -80,11 +82,15 @@ public class PasswordResetController {
         // 异步处理（避免阻塞 UI）
         new Thread(() -> {
             try {
-                // 加载用户数据
-                Map<String, User> users = DataManager.loadUsers();
-
                 // 查找用户
-                User user = users.get(username);
+                User user;
+                try {
+                    user = UserDAO.findByUsername(username);
+                } catch (SQLException e) {
+                    showError("查询用户失败：" + e.getMessage());
+                    setSubmitState(false);
+                    return;
+                }
 
                 // 验证用户和邮箱
                 if (user == null) {

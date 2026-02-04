@@ -14,6 +14,11 @@
         <VBox>
             <!-- 菜单栏 -->
             <MenuBar>
+                <Menu text="系统">
+                    <MenuItem text="退出登录" onAction="#handleLogout"/>
+                    <SeparatorMenuItem/>
+                    <MenuItem text="退出程序" onAction="#handleExit"/>
+                </Menu>
                 <Menu text="数据">
                     <MenuItem text="数据备份" onAction="#handleDataBackup"/>
                     <MenuItem text="数据恢复" onAction="#handleDataRestore"/>
@@ -25,11 +30,6 @@
                 </Menu>
                 <Menu text="帮助">
                     <MenuItem text="关于" onAction="#handleAbout"/>
-                </Menu>
-                <Menu text="系统">
-                    <MenuItem text="退出登录" onAction="#handleLogout"/>
-                    <SeparatorMenuItem/>
-                    <MenuItem text="退出程序" onAction="#handleExit"/>
                 </Menu>
             </MenuBar>
 

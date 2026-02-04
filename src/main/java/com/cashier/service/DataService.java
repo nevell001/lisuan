@@ -2,7 +2,10 @@ package com.cashier.service;
 
 import com.cashier.dao.*;
 import com.cashier.model.*;
+import com.cashier.util.DatabaseManager;
 
+import java.io.File;
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.*;
 
@@ -39,7 +42,7 @@ public class DataService {
             // 批量删除所有商品
             List<Product> existing = ProductDAO.findAll();
             for (Product p : existing) {
-                ProductDAO.delete(p.name);
+                ProductDAO.delete(p.id);
             }
 
             // 批量插入新商品
@@ -139,24 +142,194 @@ public class DataService {
     }
 
     /**
-     * 加载设置数据（从文件，暂未迁移到数据库）
+     * 加载促销数据
+     */
+    public static List<Promotion> loadPromotions() {
+        try {
+            return PromotionDAO.findAll();
+        } catch (SQLException e) {
+            System.err.println("加载促销数据失败: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 保存促销数据
+     */
+    public static void savePromotions(List<Promotion> promotions) {
+        try {
+            // 批量删除所有促销
+            List<Promotion> existing = PromotionDAO.findAll();
+            for (Promotion p : existing) {
+                PromotionDAO.delete(p.id);
+            }
+
+            // 批量插入新促销
+            PromotionDAO.batchInsert(promotions);
+        } catch (SQLException e) {
+            System.err.println("保存促销数据失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 加载充值记录
+     */
+    public static List<RechargeRecord> loadRechargeRecords() {
+        try {
+            return RechargeRecordDAO.findAll();
+        } catch (SQLException e) {
+            System.err.println("加载充值记录失败: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 保存充值记录
+     */
+    public static void saveRechargeRecords(List<RechargeRecord> records) {
+        try {
+            RechargeRecordDAO.batchInsert(records);
+        } catch (SQLException e) {
+            System.err.println("保存充值记录失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 加载分类数据
+     */
+    public static List<Category> loadCategories() {
+        try {
+            return CategoryDAO.findAll();
+        } catch (SQLException e) {
+            System.err.println("加载分类数据失败: " + e.getMessage());
+            e.printStackTrace();
+            List<Category> categories = new ArrayList<>();
+            // 返回默认分类
+            categories.add(new Category("默认分类", "默认商品分类"));
+            categories.add(new Category("食品", "食品类商品"));
+            categories.add(new Category("饮料", "饮品类商品"));
+            categories.add(new Category("日用品", "日用品类商品"));
+            return categories;
+        }
+    }
+
+    /**
+     * 保存分类数据
+     */
+    public static void saveCategories(List<Category> categories) {
+        try {
+            // 批量删除所有分类
+            List<Category> existing = CategoryDAO.findAll();
+            for (Category c : existing) {
+                CategoryDAO.delete(c.id);
+            }
+
+            // 批量插入新分类
+            CategoryDAO.batchInsert(categories);
+        } catch (SQLException e) {
+            System.err.println("保存分类数据失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 加载操作日志
+     */
+    public static List<OperationLog> loadOperationLogs() {
+        try {
+            return OperationLogDAO.findAll();
+        } catch (SQLException e) {
+            System.err.println("加载操作日志失败: " + e.getMessage());
+            e.printStackTrace();
+            return new ArrayList<>();
+        }
+    }
+
+    /**
+     * 保存操作日志
+     */
+    public static void saveOperationLogs(List<OperationLog> logs) {
+        try {
+            OperationLogDAO.batchInsert(logs);
+        } catch (SQLException e) {
+            System.err.println("保存操作日志失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 加载设置数据
      */
     public static Map<String, String> loadSettings() {
-        return com.cashier.model.DataManager.loadSettings();
+        Map<String, String> settings = new HashMap<>();
+        try {
+            double taxRate = SystemSettingsDAO.getTaxRate();
+            int transactionCount = SystemSettingsDAO.getTransactionCount();
+            settings.put("taxRate", String.valueOf(taxRate));
+            settings.put("transactionCount", String.valueOf(transactionCount));
+        } catch (SQLException e) {
+            System.err.println("加载设置数据失败: " + e.getMessage());
+            e.printStackTrace();
+            // 返回默认值
+            settings.put("taxRate", "0.0");
+            settings.put("transactionCount", "0");
+        }
+        return settings;
     }
 
     /**
-     * 保存设置数据（到文件，暂未迁移到数据库）
+     * 保存设置数据
      */
     public static void saveSettings(double taxRate, int transactionCount) {
-        com.cashier.model.DataManager.saveSettings(taxRate, transactionCount);
+        try {
+            SystemSettingsDAO.setTaxRate(taxRate);
+            SystemSettingsDAO.setTransactionCount(transactionCount);
+        } catch (SQLException e) {
+            System.err.println("保存设置数据失败: " + e.getMessage());
+            e.printStackTrace();
+        }
     }
 
     /**
-     * 检查是否有活跃班次（从文件，暂未迁移）
+     * 加载主题偏好
+     */
+    public static String loadThemePreference() {
+        try {
+            return ThemePreferenceDAO.getThemePreference();
+        } catch (SQLException e) {
+            System.err.println("加载主题偏好失败: " + e.getMessage());
+            e.printStackTrace();
+            return "light"; // 默认主题
+        }
+    }
+
+    /**
+     * 保存主题偏好
+     */
+    public static void saveThemePreference(String themeName) {
+        try {
+            ThemePreferenceDAO.setThemePreference(themeName);
+        } catch (SQLException e) {
+            System.err.println("保存主题偏好失败: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 检查是否有活跃班次
      */
     public static boolean hasActiveShift() {
-        return com.cashier.model.DataManager.hasActiveShift();
+        try {
+            return ShiftDAO.hasActiveShift();
+        } catch (SQLException e) {
+            System.err.println("检查活跃班次失败: " + e.getMessage());
+            e.printStackTrace();
+            return false;
+        }
     }
 
     /**
@@ -165,4 +338,52 @@ public class DataService {
     public static void initialize() {
         // 数据库已通过 DatabaseManager 初始化
     }
-}
+
+    /**
+         * 备份数据库
+         * @param backupPath 备份目录路径
+         */
+        public static void backupData(String backupPath) throws IOException {
+            File backupDir = new File(backupPath);
+            if (!backupDir.exists()) {
+                backupDir.mkdirs();
+            }
+    
+            // 使用时间戳创建备份文件名
+            String timestamp = new java.text.SimpleDateFormat("yyyyMMdd_HHmmss").format(new java.util.Date());
+            File backupFile = new File(backupDir, "cashier_system_" + timestamp + ".sql");
+    
+            boolean success = DatabaseManager.backup(backupFile);
+            if (!success) {
+                throw new IOException("数据库备份失败");
+            }
+        }
+    
+        /**
+         * 恢复数据库
+         * @param backupPath 备份文件路径或备份目录路径
+         */
+        public static void restoreData(String backupPath) throws IOException {
+            File backupFile = new File(backupPath);
+    
+            // 如果是目录，查找最新的 .sql 文件
+            if (backupFile.isDirectory()) {
+                File[] sqlFiles = backupFile.listFiles((dir, name) -> name.endsWith(".sql"));
+                if (sqlFiles == null || sqlFiles.length == 0) {
+                    throw new IOException("备份目录中未找到 SQL 备份文件: " + backupPath);
+                }
+    
+                // 按修改时间排序，取最新的
+                java.util.Arrays.sort(sqlFiles, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+                backupFile = sqlFiles[0];
+            }
+    
+            if (!backupFile.exists()) {
+                throw new IOException("备份文件不存在: " + backupFile.getAbsolutePath());
+            }
+    
+            boolean success = DatabaseManager.restore(backupFile);
+            if (!success) {
+                throw new IOException("数据库恢复失败");
+            }
+        }}

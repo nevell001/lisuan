@@ -13,10 +13,29 @@ import java.util.*;
 public class UserDAO {
 
     /**
+     * 根据ID查找用户
+     */
+    public static User findById(int id) throws SQLException {
+        String sql = "SELECT id, username, password, name, role, create_time, last_login_time, active FROM users WHERE id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, id);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return mapRowToUser(rs);
+            }
+        }
+        return null;
+    }
+
+    /**
      * 根据用户名查找用户
      */
     public static User findByUsername(String username) throws SQLException {
-        String sql = "SELECT username, password, name, role, create_time, last_login_time, active FROM users WHERE username = ?";
+        String sql = "SELECT id, username, password, name, role, create_time, last_login_time, active FROM users WHERE username = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -35,7 +54,7 @@ public class UserDAO {
      * 验证用户登录
      */
     public static User authenticate(String username, String password) throws SQLException {
-        String sql = "SELECT username, password, name, role, create_time, last_login_time, active FROM users " +
+        String sql = "SELECT id, username, password, name, role, create_time, last_login_time, active FROM users " +
                      "WHERE username = ? AND password = ? AND active = 1";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -57,7 +76,7 @@ public class UserDAO {
      */
     public static List<User> findAll() throws SQLException {
         List<User> users = new ArrayList<>();
-        String sql = "SELECT username, password, name, role, create_time, last_login_time, active FROM users ORDER BY username";
+        String sql = "SELECT id, username, password, name, role, create_time, last_login_time, active FROM users ORDER BY username";
 
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
@@ -78,7 +97,7 @@ public class UserDAO {
                      "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             pstmt.setString(1, user.username);
             pstmt.setString(2, user.password);
@@ -88,7 +107,15 @@ public class UserDAO {
             pstmt.setTimestamp(6, new Timestamp(user.lastLoginTime.getTime()));
             pstmt.setBoolean(7, user.active);
 
-            return pstmt.executeUpdate() > 0;
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows > 0) {
+                try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
+                    if (generatedKeys.next()) {
+                        user.id = generatedKeys.getInt(1);
+                    }
+                }
+            }
+            return affectedRows > 0;
         }
     }
 
@@ -96,7 +123,7 @@ public class UserDAO {
      * 更新用户
      */
     public static boolean update(User user) throws SQLException {
-        String sql = "UPDATE users SET password = ?, name = ?, role = ?, active = ? WHERE username = ?";
+        String sql = "UPDATE users SET password = ?, name = ?, role = ?, active = ? WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -105,7 +132,7 @@ public class UserDAO {
             pstmt.setString(2, user.name);
             pstmt.setString(3, user.role);
             pstmt.setBoolean(4, user.active);
-            pstmt.setString(5, user.username);
+            pstmt.setInt(5, user.id);
 
             return pstmt.executeUpdate() > 0;
         }
@@ -114,7 +141,23 @@ public class UserDAO {
     /**
      * 更新最后登录时间
      */
-    public static boolean updateLastLoginTime(String username) throws SQLException {
+    public static boolean updateLastLoginTime(int id) throws SQLException {
+        String sql = "UPDATE users SET last_login_time = ? WHERE id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setTimestamp(1, new Timestamp(System.currentTimeMillis()));
+            pstmt.setInt(2, id);
+
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * 根据用户名更新最后登录时间（兼容旧代码）
+     */
+    public static boolean updateLastLoginTimeByUsername(String username) throws SQLException {
         String sql = "UPDATE users SET last_login_time = ? WHERE username = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -130,7 +173,21 @@ public class UserDAO {
     /**
      * 删除用户
      */
-    public static boolean delete(String username) throws SQLException {
+    public static boolean delete(int id) throws SQLException {
+        String sql = "DELETE FROM users WHERE id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, id);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * 根据用户名删除用户（兼容旧代码）
+     */
+    public static boolean deleteByUsername(String username) throws SQLException {
         String sql = "DELETE FROM users WHERE username = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -190,6 +247,7 @@ public class UserDAO {
      */
     private static User mapRowToUser(ResultSet rs) throws SQLException {
         User user = new User();
+        user.id = rs.getInt("id");
         user.username = rs.getString("username");
         user.password = rs.getString("password");
         user.name = rs.getString("name");

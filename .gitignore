@@ -26,6 +26,11 @@ data/
 
 # 项目文档
 IFLOW.md
+CLAUDE.md
+
+# Claude/iFlow 配置
+.iflow/
+.claude/
 
 # 日志文件
 *.log
@@ -37,6 +42,7 @@ IFLOW.md
 
 # 备份文件
 backup_*/
+data_backup_*/
 
 # JAR 文件（如果使用包管理器则忽略）
 *.jar

@@ -451,8 +451,8 @@ public class DataManager {
     public static void savePromotions(List<Promotion> promotions) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(PROMOTIONS_FILE))) {
             for (Promotion promotion : promotions) {
-                writer.printf("%s|%s|%s|%.2f|%.2f|%s|%b|%d|%d|%d\n",
-                    escape(promotion.id),
+                writer.printf("%d|%s|%s|%.2f|%.2f|%s|%b|%d|%d|%d\n",
+                    promotion.id,
                     escape(promotion.name),
                     escape(promotion.type),
                     promotion.threshold,
@@ -486,7 +486,7 @@ public class DataManager {
                 String[] parts = line.split("\\|");
                 if (parts.length >= 10) {
                     Promotion promotion = new Promotion();
-                    promotion.id = unescape(parts[0]);
+                    promotion.id = Integer.parseInt(parts[0]);
                     promotion.name = unescape(parts[1]);
                     promotion.type = unescape(parts[2]);
                     promotion.threshold = Double.parseDouble(parts[3]);

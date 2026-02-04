@@ -41,6 +41,18 @@
                 prefWidth="80"
                 styleClass="info-button"/>
 
+        <Button fx:id="categoryButton"
+                text="分类管理"
+                onAction="#handleCategoryManagement"
+                prefWidth="100"
+                styleClass="secondary-button"/>
+
+        <Button fx:id="unitButton"
+                text="单位管理"
+                onAction="#handleUnitManagement"
+                prefWidth="100"
+                styleClass="secondary-button"/>
+
         <Separator orientation="VERTICAL"/>
 
         <!-- 搜索和排序 -->

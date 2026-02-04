@@ -1,7 +1,6 @@
 package com.cashier.controller;
 
 import com.cashier.dao.MemberDAO;
-import com.cashier.model.DataManager;
 import com.cashier.model.Member;
 import com.cashier.util.StatusBarManager;
 
@@ -112,17 +111,16 @@ public class MemberController {
      */
     private void loadMembers() {
         try {
-            // 尝试从数据库加载
             var memberData = MemberDAO.findAll();
             members = new java.util.HashMap<>();
             for (Member member : memberData) {
                 members.put(member.phone, member);
             }
         } catch (SQLException e) {
-            System.err.println("从数据库加载会员失败: " + e.getMessage());
+            System.err.println("加载会员数据失败: " + e.getMessage());
             e.printStackTrace();
-            // 降级到文件存储
-            members = DataManager.loadMembers();
+            showError("加载会员数据失败: " + e.getMessage());
+            members = new java.util.HashMap<>();
         }
         memberList = FXCollections.observableArrayList(members.values());
         memberTable.setItems(memberList);
@@ -189,12 +187,9 @@ public class MemberController {
                     loadMembers();
                     updateStatus("会员添加成功: " + newMember.name);
                 } catch (SQLException e) {
-                    System.err.println("数据库保存失败，降级到文件存储: " + e.getMessage());
-                    // 降级到文件存储
-                    members.put(newMember.phone, newMember);
-                    DataManager.saveMembers(members);
-                    loadMembers();
-                    updateStatus("会员添加成功: " + newMember.name);
+                    System.err.println("添加会员失败: " + e.getMessage());
+                    e.printStackTrace();
+                    showError("添加会员失败: " + e.getMessage());
                 }
             }
 
@@ -248,12 +243,9 @@ public class MemberController {
                         loadMembers();
                         updateStatus("会员更新成功: " + updatedMember.name);
                     } catch (SQLException e) {
-                        System.err.println("数据库更新失败，降级到文件存储: " + e.getMessage());
-                        // 降级到文件存储
-                        members.put(updatedMember.phone, updatedMember);
-                        DataManager.saveMembers(members);
-                        loadMembers();
-                        updateStatus("会员更新成功: " + updatedMember.name);
+                        System.err.println("更新会员失败: " + e.getMessage());
+                        e.printStackTrace();
+                        showError("更新会员失败: " + e.getMessage());
                     }
                 }
 
@@ -277,16 +269,13 @@ public class MemberController {
 
             if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
                 try {
-                    MemberDAO.delete(selected.phone);
+                    MemberDAO.delete(selected.id);
                     loadMembers();
                     updateStatus("会员删除成功: " + selected.name);
                 } catch (SQLException e) {
-                    System.err.println("数据库删除失败，降级到文件存储: " + e.getMessage());
-                    // 降级到文件存储
-                    members.remove(selected.phone);
-                    DataManager.saveMembers(members);
-                    loadMembers();
-                    updateStatus("会员删除成功: " + selected.name);
+                    System.err.println("删除会员失败: " + e.getMessage());
+                    e.printStackTrace();
+                    showError("删除会员失败: " + e.getMessage());
                 }
             }
         }

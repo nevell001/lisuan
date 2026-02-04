@@ -1,7 +1,6 @@
 package com.cashier.controller;
 
 import com.cashier.dao.TransactionDAO;
-import com.cashier.model.DataManager;
 import com.cashier.model.Transaction;
 import com.cashier.util.StatusBarManager;
 
@@ -154,13 +153,12 @@ public class TransactionController {
     private void loadTransactions() {
         System.out.println("TransactionController: 开始加载交易数据...");
         try {
-            // 尝试从数据库加载
             allTransactions = TransactionDAO.findAll();
         } catch (SQLException e) {
-            System.err.println("从数据库加载交易失败: " + e.getMessage());
+            System.err.println("加载交易数据失败: " + e.getMessage());
             e.printStackTrace();
-            // 降级到文件存储
-            allTransactions = DataManager.loadTransactions();
+            showError("加载交易数据失败: " + e.getMessage());
+            allTransactions = new java.util.ArrayList<>();
         }
         transactionList = FXCollections.observableArrayList(allTransactions);
         transactionTable.setItems(transactionList);
@@ -337,6 +335,18 @@ public class TransactionController {
      */
     private void updateStatus(String status) {
         StatusBarManager.updateStatus(status);
+    }
+
+    /**
+     * 显示错误信息
+     * @param message 错误消息
+     */
+    private void showError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("错误");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     /**

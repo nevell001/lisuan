@@ -1,8 +1,11 @@
 package com.cashier.controller;
 
+import com.cashier.dao.CategoryDAO;
 import com.cashier.dao.ProductDAO;
-import com.cashier.model.DataManager;
+import com.cashier.dao.UnitDAO;
+import com.cashier.model.Category;
 import com.cashier.model.Product;
+import com.cashier.model.Unit;
 import com.cashier.util.StatusBarManager;
 
 import java.sql.SQLException;
@@ -11,9 +14,12 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
+import javafx.geometry.Insets;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
@@ -68,6 +74,12 @@ public class InventoryController {
 
     @FXML
     private Button restockButton;
+
+    @FXML
+    private Button categoryButton;
+
+    @FXML
+    private Button unitButton;
 
     private ObservableList<Product> inventoryList;
     private Map<String, Product> inventory;
@@ -131,17 +143,16 @@ public class InventoryController {
      */
     private void loadInventory() {
         try {
-            // 尝试从数据库加载
             var products = ProductDAO.findAll();
             inventory = new java.util.HashMap<>();
             for (Product product : products) {
                 inventory.put(product.name, product);
             }
         } catch (SQLException e) {
-            System.err.println("从数据库加载商品失败: " + e.getMessage());
+            System.err.println("加载商品数据失败: " + e.getMessage());
             e.printStackTrace();
-            // 降级到文件存储
-            inventory = DataManager.loadInventory();
+            showError("加载商品数据失败: " + e.getMessage());
+            inventory = new java.util.HashMap<>();
         }
         inventoryList = FXCollections.observableArrayList(inventory.values());
         inventoryTable.setItems(inventoryList);
@@ -208,12 +219,9 @@ public class InventoryController {
                     loadInventory();
                     updateStatus("商品添加成功: " + newProduct.name);
                 } catch (SQLException e) {
-                    System.err.println("数据库保存失败，降级到文件存储: " + e.getMessage());
-                    // 降级到文件存储
-                    inventory.put(newProduct.name, newProduct);
-                    DataManager.saveInventory(inventory);
-                    loadInventory();
-                    updateStatus("商品添加成功: " + newProduct.name);
+                    System.err.println("添加商品失败: " + e.getMessage());
+                    e.printStackTrace();
+                    showError("添加商品失败: " + e.getMessage());
                 }
             }
 
@@ -267,12 +275,9 @@ public class InventoryController {
                         loadInventory();
                         updateStatus("商品更新成功: " + updatedProduct.name);
                     } catch (SQLException e) {
-                        System.err.println("数据库更新失败，降级到文件存储: " + e.getMessage());
-                        // 降级到文件存储
-                        inventory.put(updatedProduct.name, updatedProduct);
-                        DataManager.saveInventory(inventory);
-                        loadInventory();
-                        updateStatus("商品更新成功: " + updatedProduct.name);
+                        System.err.println("更新商品失败: " + e.getMessage());
+                        e.printStackTrace();
+                        showError("更新商品失败: " + e.getMessage());
                     }
                 }
 
@@ -296,14 +301,13 @@ public class InventoryController {
 
             if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
                 try {
-                    ProductDAO.delete(selected.name);
+                    ProductDAO.delete(selected.id);
                     loadInventory();
+                    updateStatus("商品删除成功: " + selected.name);
                 } catch (SQLException e) {
-                    System.err.println("数据库删除失败，降级到文件存储: " + e.getMessage());
-                    // 降级到文件存储
-                    inventory.remove(selected.name);
-                    DataManager.saveInventory(inventory);
-                    loadInventory();
+                    System.err.println("删除商品失败: " + e.getMessage());
+                    e.printStackTrace();
+                    showError("删除商品失败: " + e.getMessage());
                 }
             }
         }
@@ -425,6 +429,460 @@ public class InventoryController {
      */
     private void updateStatus(String status) {
         StatusBarManager.updateStatus(status);
+    }
+
+    /**
+     * 显示信息
+     * @param message 信息消息
+     */
+    private void showInfo(String message) {
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("提示");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
+    }
+
+    /**
+     * 处理分类管理
+     */
+    @FXML
+    private void handleCategoryManagement() {
+        showCategoryManagementDialog();
+    }
+
+    /**
+     * 显示分类管理对话框
+     */
+    private void showCategoryManagementDialog() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("分类管理");
+        dialog.setHeaderText("管理商品分类");
+
+        // 创建表格
+        TableView<Category> categoryTable = new TableView<>();
+        TableColumn<Category, String> nameColumn = new TableColumn<>("分类名称");
+        nameColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().name));
+        nameColumn.setPrefWidth(150);
+
+        TableColumn<Category, String> descColumn = new TableColumn<>("描述");
+        descColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().description));
+        descColumn.setPrefWidth(250);
+
+        categoryTable.getColumns().addAll(nameColumn, descColumn);
+        categoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        // 加载分类数据
+        ObservableList<Category> categoryList = FXCollections.observableArrayList();
+        try {
+            categoryList.addAll(CategoryDAO.findAll());
+        } catch (SQLException e) {
+            System.err.println("加载分类失败: " + e.getMessage());
+        }
+        categoryTable.setItems(categoryList);
+
+        // 创建按钮面板
+        HBox buttonPanel = new HBox(10);
+        Button addButton = new Button("添加");
+        Button editButton = new Button("编辑");
+        Button deleteButton = new Button("删除");
+
+        // 按钮样式
+        addButton.getStyleClass().add("primary-button");
+        editButton.getStyleClass().add("info-button");
+        deleteButton.getStyleClass().add("danger-button");
+
+        buttonPanel.getChildren().addAll(addButton, editButton, deleteButton);
+
+        // 添加按钮事件
+        addButton.setOnAction(event -> {
+            showAddCategoryDialog(categoryList);
+        });
+
+        editButton.setOnAction(event -> {
+            Category selected = categoryTable.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                showEditCategoryDialog(selected, categoryList);
+            } else {
+                showInfo("请先选择要编辑的分类");
+            }
+        });
+
+        deleteButton.setOnAction(event -> {
+            Category selected = categoryTable.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                showDeleteCategoryDialog(selected, categoryList);
+            } else {
+                showInfo("请先选择要删除的分类");
+            }
+        });
+
+        // 创建对话框内容
+        VBox content = new VBox(10);
+        content.setPadding(new Insets(10));
+        content.getChildren().addAll(categoryTable, buttonPanel);
+
+        // 设置对话框内容
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.CLOSE);
+
+        // 显示对话框
+        dialog.showAndWait();
+
+        // 刷新库存表格
+        loadInventory();
+    }
+
+    /**
+     * 显示添加分类对话框
+     */
+    private void showAddCategoryDialog(ObservableList<Category> categoryList) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("添加分类");
+        dialog.setHeaderText("添加新的商品分类");
+
+        // 创建表单
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField nameField = new TextField();
+        TextField descField = new TextField();
+
+        grid.add(new Label("分类名称:"), 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(new Label("描述:"), 0, 1);
+        grid.add(descField, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        // 自动聚焦到名称字段
+        javafx.application.Platform.runLater(nameField::requestFocus);
+
+        dialog.showAndWait().ifPresent(buttonType -> {
+            if (buttonType == ButtonType.OK) {
+                String name = nameField.getText().trim();
+                String description = descField.getText().trim();
+
+                if (name.isEmpty()) {
+                    showInfo("分类名称不能为空");
+                    return;
+                }
+
+                try {
+                    if (CategoryDAO.exists(name)) {
+                        showInfo("分类已存在: " + name);
+                        return;
+                    }
+
+                    Category category = new Category(name, description);
+                    if (CategoryDAO.insert(category)) {
+                        categoryList.add(category);
+                        showInfo("分类添加成功");
+                    } else {
+                        showInfo("分类添加失败");
+                    }
+                } catch (SQLException e) {
+                    System.err.println("添加分类失败: " + e.getMessage());
+                    showInfo("添加分类失败: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    /**
+     * 显示编辑分类对话框
+     */
+    private void showEditCategoryDialog(Category category, ObservableList<Category> categoryList) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("编辑分类");
+        dialog.setHeaderText("编辑商品分类");
+
+        // 创建表单
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField nameField = new TextField(category.name);
+        nameField.setEditable(false); // 分类名称不可修改
+        TextField descField = new TextField(category.description);
+
+        grid.add(new Label("分类名称:"), 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(new Label("描述:"), 0, 1);
+        grid.add(descField, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        dialog.showAndWait().ifPresent(buttonType -> {
+            if (buttonType == ButtonType.OK) {
+                String description = descField.getText().trim();
+
+                try {
+                    category.description = description;
+                    if (CategoryDAO.update(category)) {
+                        categoryList.set(categoryList.indexOf(category), category);
+                        showInfo("分类更新成功");
+                    } else {
+                        showInfo("分类更新失败");
+                    }
+                } catch (SQLException e) {
+                    System.err.println("更新分类失败: " + e.getMessage());
+                    showInfo("更新分类失败: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    /**
+     * 显示删除分类确认对话框
+     */
+    private void showDeleteCategoryDialog(Category category, ObservableList<Category> categoryList) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("删除分类");
+        alert.setHeaderText("确认删除");
+        alert.setContentText("确定要删除分类 \"" + category.name + "\" 吗？");
+
+        alert.showAndWait().ifPresent(buttonType -> {
+            if (buttonType == ButtonType.OK) {
+                try {
+                    if (CategoryDAO.deleteByName(category.name)) {
+                        categoryList.remove(category);
+                        showInfo("分类删除成功");
+                    } else {
+                        showInfo("分类删除失败");
+                    }
+                } catch (SQLException e) {
+                    System.err.println("删除分类失败: " + e.getMessage());
+                    showInfo("删除分类失败: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    /**
+     * 处理单位管理
+     */
+    @FXML
+    private void handleUnitManagement() {
+        showUnitManagementDialog();
+    }
+
+    /**
+     * 显示单位管理对话框
+     */
+    private void showUnitManagementDialog() {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("单位管理");
+        dialog.setHeaderText("管理商品单位");
+
+        // 创建表格
+        TableView<Unit> unitTable = new TableView<>();
+        TableColumn<Unit, String> nameColumn = new TableColumn<>("单位名称");
+        nameColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().name));
+        nameColumn.setPrefWidth(150);
+
+        TableColumn<Unit, String> descColumn = new TableColumn<>("描述");
+        descColumn.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().description));
+        descColumn.setPrefWidth(250);
+
+        unitTable.getColumns().addAll(nameColumn, descColumn);
+        unitTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+
+        // 加载单位数据
+        ObservableList<Unit> unitList = FXCollections.observableArrayList();
+        try {
+            unitList.addAll(UnitDAO.findAll());
+        } catch (SQLException e) {
+            System.err.println("加载单位失败: " + e.getMessage());
+        }
+        unitTable.setItems(unitList);
+
+        // 创建按钮面板
+        HBox buttonPanel = new HBox(10);
+        Button addButton = new Button("添加");
+        Button editButton = new Button("编辑");
+        Button deleteButton = new Button("删除");
+
+        // 按钮样式
+        addButton.getStyleClass().add("primary-button");
+        editButton.getStyleClass().add("info-button");
+        deleteButton.getStyleClass().add("danger-button");
+
+        buttonPanel.getChildren().addAll(addButton, editButton, deleteButton);
+
+        // 添加按钮事件
+        addButton.setOnAction(event -> {
+            showAddUnitDialog(unitList);
+        });
+
+        editButton.setOnAction(event -> {
+            Unit selected = unitTable.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                showEditUnitDialog(selected, unitList);
+            } else {
+                showInfo("请先选择要编辑的单位");
+            }
+        });
+
+        deleteButton.setOnAction(event -> {
+            Unit selected = unitTable.getSelectionModel().getSelectedItem();
+            if (selected != null) {
+                showDeleteUnitDialog(selected, unitList);
+            } else {
+                showInfo("请先选择要删除的单位");
+            }
+        });
+
+        // 创建对话框内容
+        VBox content = new VBox(10);
+        content.setPadding(new Insets(10));
+        content.getChildren().addAll(unitTable, buttonPanel);
+
+        // 设置对话框内容
+        dialog.getDialogPane().setContent(content);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.CLOSE);
+
+        // 显示对话框
+        dialog.showAndWait();
+
+        // 刷新库存表格
+        loadInventory();
+    }
+
+    /**
+     * 显示添加单位对话框
+     */
+    private void showAddUnitDialog(ObservableList<Unit> unitList) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("添加单位");
+        dialog.setHeaderText("添加新的商品单位");
+
+        // 创建表单
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField nameField = new TextField();
+        TextField descField = new TextField();
+
+        grid.add(new Label("单位名称:"), 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(new Label("描述:"), 0, 1);
+        grid.add(descField, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        // 自动聚焦到名称字段
+        javafx.application.Platform.runLater(nameField::requestFocus);
+
+        dialog.showAndWait().ifPresent(buttonType -> {
+            if (buttonType == ButtonType.OK) {
+                String name = nameField.getText().trim();
+                String description = descField.getText().trim();
+
+                if (name.isEmpty()) {
+                    showInfo("单位名称不能为空");
+                    return;
+                }
+
+                try {
+                    if (UnitDAO.exists(name)) {
+                        showInfo("单位已存在: " + name);
+                        return;
+                    }
+
+                    Unit unit = new Unit(name, description);
+                    if (UnitDAO.insert(unit)) {
+                        unitList.add(unit);
+                        showInfo("单位添加成功");
+                    } else {
+                        showInfo("单位添加失败");
+                    }
+                } catch (SQLException e) {
+                    System.err.println("添加单位失败: " + e.getMessage());
+                    showInfo("添加单位失败: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    /**
+     * 显示编辑单位对话框
+     */
+    private void showEditUnitDialog(Unit unit, ObservableList<Unit> unitList) {
+        Dialog<ButtonType> dialog = new Dialog<>();
+        dialog.setTitle("编辑单位");
+        dialog.setHeaderText("编辑商品单位");
+
+        // 创建表单
+        GridPane grid = new GridPane();
+        grid.setHgap(10);
+        grid.setVgap(10);
+        grid.setPadding(new Insets(20, 150, 10, 10));
+
+        TextField nameField = new TextField(unit.name);
+        nameField.setEditable(false); // 单位名称不可修改
+        TextField descField = new TextField(unit.description);
+
+        grid.add(new Label("单位名称:"), 0, 0);
+        grid.add(nameField, 1, 0);
+        grid.add(new Label("描述:"), 0, 1);
+        grid.add(descField, 1, 1);
+
+        dialog.getDialogPane().setContent(grid);
+        dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
+
+        dialog.showAndWait().ifPresent(buttonType -> {
+            if (buttonType == ButtonType.OK) {
+                String description = descField.getText().trim();
+
+                try {
+                    unit.description = description;
+                    if (UnitDAO.update(unit)) {
+                        unitList.set(unitList.indexOf(unit), unit);
+                        showInfo("单位更新成功");
+                    } else {
+                        showInfo("单位更新失败");
+                    }
+                } catch (SQLException e) {
+                    System.err.println("更新单位失败: " + e.getMessage());
+                    showInfo("更新单位失败: " + e.getMessage());
+                }
+            }
+        });
+    }
+
+    /**
+     * 显示删除单位确认对话框
+     */
+    private void showDeleteUnitDialog(Unit unit, ObservableList<Unit> unitList) {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("删除单位");
+        alert.setHeaderText("确认删除");
+        alert.setContentText("确定要删除单位 \"" + unit.name + "\" 吗？");
+
+        alert.showAndWait().ifPresent(buttonType -> {
+            if (buttonType == ButtonType.OK) {
+                try {
+                    if (UnitDAO.deleteByName(unit.name)) {
+                        unitList.remove(unit);
+                        showInfo("单位删除成功");
+                    } else {
+                        showInfo("单位删除失败");
+                    }
+                } catch (SQLException e) {
+                    System.err.println("删除单位失败: " + e.getMessage());
+                    showInfo("删除单位失败: " + e.getMessage());
+                }
+            }
+        });
     }
 
     /**

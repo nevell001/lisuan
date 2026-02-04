@@ -24,7 +24,7 @@ public class TransactionDAO {
 
             // 插入交易主记录
             String sql = "INSERT INTO transactions (transaction_id, timestamp, total_amount, tax, final_amount, " +
-                         "payment_method, member_phone) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                         "payment_method, member_phone, operator_username, operator_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setString(1, transaction.transactionId);
@@ -33,7 +33,10 @@ public class TransactionDAO {
                 pstmt.setDouble(4, transaction.tax);
                 pstmt.setDouble(5, transaction.finalAmount);
                 pstmt.setString(6, transaction.paymentMethod);
-                pstmt.setString(7, transaction.memberPhone);
+                // 处理 member 和 operator 字段：空字符串转为 NULL
+                pstmt.setString(7, transaction.memberPhone != null && transaction.memberPhone.isEmpty() ? null : transaction.memberPhone);
+                pstmt.setString(8, transaction.operatorUsername != null && transaction.operatorUsername.isEmpty() ? null : transaction.operatorUsername);
+                pstmt.setString(9, transaction.operatorName != null && transaction.operatorName.isEmpty() ? null : transaction.operatorName);
                 pstmt.executeUpdate();
             }
 
@@ -81,7 +84,7 @@ public class TransactionDAO {
      * 根据交易ID查找交易
      */
     public static Transaction findById(String transactionId) throws SQLException {
-        String sql = "SELECT transaction_id, timestamp, total_amount, tax, final_amount, payment_method, member_phone " +
+        String sql = "SELECT transaction_id, timestamp, total_amount, tax, final_amount, payment_method, member_phone, operator_username, operator_name " +
                      "FROM transactions WHERE transaction_id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -99,6 +102,8 @@ public class TransactionDAO {
                 transaction.finalAmount = rs.getDouble("final_amount");
                 transaction.paymentMethod = rs.getString("payment_method");
                 transaction.memberPhone = rs.getString("member_phone");
+                transaction.operatorUsername = rs.getString("operator_username");
+                transaction.operatorName = rs.getString("operator_name");
 
                 // 加载交易明细
                 transaction.items = loadItems(transactionId);
@@ -139,7 +144,7 @@ public class TransactionDAO {
      */
     public static List<Transaction> findAll() throws SQLException {
         List<Transaction> transactions = new ArrayList<>();
-        String sql = "SELECT transaction_id, timestamp, total_amount, tax, final_amount, payment_method, member_phone " +
+        String sql = "SELECT transaction_id, timestamp, total_amount, tax, final_amount, payment_method, member_phone, operator_username, operator_name " +
                      "FROM transactions ORDER BY timestamp DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -155,6 +160,8 @@ public class TransactionDAO {
                 transaction.finalAmount = rs.getDouble("final_amount");
                 transaction.paymentMethod = rs.getString("payment_method");
                 transaction.memberPhone = rs.getString("member_phone");
+                transaction.operatorUsername = rs.getString("operator_username");
+                transaction.operatorName = rs.getString("operator_name");
 
                 // 加载交易明细
                 transaction.items = loadItems(transaction.transactionId);
@@ -170,7 +177,7 @@ public class TransactionDAO {
      */
     public static List<Transaction> findByDateRange(String startDate, String endDate) throws SQLException {
         List<Transaction> transactions = new ArrayList<>();
-        String sql = "SELECT transaction_id, timestamp, total_amount, tax, final_amount, payment_method, member_phone " +
+        String sql = "SELECT transaction_id, timestamp, total_amount, tax, final_amount, payment_method, member_phone, operator_username, operator_name " +
                      "FROM transactions WHERE timestamp BETWEEN ? AND ? ORDER BY timestamp DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -189,6 +196,8 @@ public class TransactionDAO {
                 transaction.finalAmount = rs.getDouble("final_amount");
                 transaction.paymentMethod = rs.getString("payment_method");
                 transaction.memberPhone = rs.getString("member_phone");
+                transaction.operatorUsername = rs.getString("operator_username");
+                transaction.operatorName = rs.getString("operator_name");
 
                 transaction.items = loadItems(transaction.transactionId);
 
@@ -203,7 +212,7 @@ public class TransactionDAO {
      */
     public static List<Transaction> findByPaymentMethod(String paymentMethod) throws SQLException {
         List<Transaction> transactions = new ArrayList<>();
-        String sql = "SELECT transaction_id, timestamp, total_amount, tax, final_amount, payment_method, member_phone " +
+        String sql = "SELECT transaction_id, timestamp, total_amount, tax, final_amount, payment_method, member_phone, operator_username, operator_name " +
                      "FROM transactions WHERE payment_method = ? ORDER BY timestamp DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -221,6 +230,8 @@ public class TransactionDAO {
                 transaction.finalAmount = rs.getDouble("final_amount");
                 transaction.paymentMethod = rs.getString("payment_method");
                 transaction.memberPhone = rs.getString("member_phone");
+                transaction.operatorUsername = rs.getString("operator_username");
+                transaction.operatorName = rs.getString("operator_name");
 
                 transaction.items = loadItems(transaction.transactionId);
 
@@ -234,7 +245,7 @@ public class TransactionDAO {
      * 统计总收入
      */
     public static double getTotalRevenue(String startDate, String endDate) throws SQLException {
-        String sql = "SELECT SUM(final_amount) as total FROM transactions WHERE timestamp BETWEEN ? AND ?";
+        String sql = "SELECT COALESCE(SUM(final_amount), 0) as total FROM transactions WHERE timestamp BETWEEN ? AND ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -281,7 +292,7 @@ public class TransactionDAO {
 
             // 插入交易主记录
             String sql = "INSERT INTO transactions (transaction_id, timestamp, total_amount, tax, final_amount, " +
-                         "payment_method, member_phone) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                         "payment_method, member_phone, operator_username, operator_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
             try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 for (Transaction transaction : transactions) {
@@ -297,6 +308,8 @@ public class TransactionDAO {
                         memberPhone = null;
                     }
                     pstmt.setString(7, memberPhone);
+                    pstmt.setString(8, transaction.operatorUsername);
+                    pstmt.setString(9, transaction.operatorName);
                     pstmt.addBatch();
                 }
                 pstmt.executeBatch();

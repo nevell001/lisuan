@@ -4,7 +4,7 @@ import com.cashier.controller.LoginController;
 import com.cashier.controller.MainController;
 import com.cashier.constant.FXConstants;
 import com.cashier.constant.SpacingConstants;
-import com.cashier.model.DataManager;
+import com.cashier.service.DataService;
 import com.cashier.model.User;
 import com.cashier.util.FXMLUtils;
 import com.cashier.util.FXUtils;
@@ -42,7 +42,7 @@ public class CashierSystemFXApplication extends Application {
         instance = this;
 
         // 初始化数据管理器
-        DataManager.initialize();
+        DataService.initialize();
 
         // 设置应用图标
         setupApplicationIcon();
@@ -125,7 +125,7 @@ public class CashierSystemFXApplication extends Application {
             Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
 
             // 应用主题
-            String currentTheme = DataManager.loadThemePreference();
+            String currentTheme = DataService.loadThemePreference();
             applyTheme(scene, currentTheme);
 
             // 设置场景
@@ -180,7 +180,7 @@ public class CashierSystemFXApplication extends Application {
         }
 
         // 保存主题设置
-        DataManager.saveThemePreference(themeName);
+        DataService.saveThemePreference(themeName);
     }
 
     /**
@@ -188,7 +188,7 @@ public class CashierSystemFXApplication extends Application {
      */
     private void handleExit() {
         // 检查是否有进行中的班次
-        if (DataManager.hasActiveShift()) {
+        if (DataService.hasActiveShift()) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
             alert.setTitle("确认退出");
             alert.setHeaderText(null);
@@ -240,7 +240,7 @@ public class CashierSystemFXApplication extends Application {
             Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
 
             // 应用主题
-            String currentTheme = DataManager.loadThemePreference();
+            String currentTheme = DataService.loadThemePreference();
             applyTheme(scene, currentTheme);
 
             // 设置场景

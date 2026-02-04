@@ -1,8 +1,11 @@
 package com.cashier.controller;
 
-import com.cashier.model.DataManager;
+import com.cashier.dao.ProductDAO;
 import com.cashier.model.Product;
+import com.cashier.util.StatusBarManager;
 import javafx.fxml.FXML;
+
+import java.sql.SQLException;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
 
@@ -73,7 +76,17 @@ public class ProductEditController {
     @FXML
     private void initialize() {
         // 加载库存数据
-        inventory = DataManager.loadInventory();
+        try {
+            var products = ProductDAO.findAll();
+            inventory = new java.util.HashMap<>();
+            for (Product p : products) {
+                inventory.put(p.name, p);
+            }
+        } catch (SQLException e) {
+            System.err.println("加载商品数据失败: " + e.getMessage());
+            e.printStackTrace();
+            inventory = new java.util.HashMap<>();
+        }
 
         // 设置默认值
         minStockField.setText("10");

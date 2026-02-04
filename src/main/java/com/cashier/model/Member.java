@@ -1,6 +1,7 @@
 package com.cashier.model;
 
 public class Member {
+    public int id;               // 会员ID（数据库自增主键）
     public String phone;          // 会员手机号（唯一标识）
     public String name;           // 会员姓名
     public double points;         // 积分
@@ -10,7 +11,12 @@ public class Member {
     public double balance;        // 会员余额
     public String birthday;       // 生日（格式：MM-dd）
 
+    public Member() {
+        this.id = 0;  // 默认ID为0，表示未保存到数据库
+    }
+
     public Member(String phone, String name) {
+        this();
         this.phone = phone;
         this.name = name;
         this.points = 0;
@@ -22,17 +28,27 @@ public class Member {
     }
 
     public Member(String phone, String name, double points, String level, double discount) {
+        this(phone, name);
+        this.points = points;
+        this.level = level;
+        this.discount = discount;
+        this.discountRate = discount;
+    }
+
+    public Member(String phone, String name, double points, String level, double discount, double balance, String birthday) {
+        this();
         this.phone = phone;
         this.name = name;
         this.points = points;
         this.level = level;
         this.discount = discount;
         this.discountRate = discount;
-        this.balance = 0;
-        this.birthday = "";
+        this.balance = balance;
+        this.birthday = birthday;
     }
 
-    public Member(String phone, String name, double points, String level, double discount, double balance, String birthday) {
+    public Member(int id, String phone, String name, double points, String level, double discount, double balance, String birthday) {
+        this.id = id;
         this.phone = phone;
         this.name = name;
         this.points = points;
@@ -75,6 +91,10 @@ public class Member {
     }
 
     // Getter方法
+    public int getId() {
+        return id;
+    }
+
     public String getPhone() {
         return phone;
     }

@@ -1,7 +1,7 @@
 package com.cashier.controller;
 
 import com.cashier.model.CartItem;
-import com.cashier.model.DataManager;
+import com.cashier.service.DataService;
 import com.cashier.model.Member;
 import com.cashier.model.Product;
 import com.cashier.model.Transaction;
@@ -205,7 +205,7 @@ public class CheckoutController {
      * @return 订单号
      */
     private String generateOrderNumber() {
-        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmss");
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS");
         return "ORD" + sdf.format(new Date());
     }
 
@@ -241,7 +241,7 @@ public class CheckoutController {
             return;
         }
 
-        Map<String, Member> members = DataManager.loadMembers();
+        Map<String, Member> members = DataService.loadMembers();
         Member member = members.get(phone);
 
         if (member != null) {
@@ -327,29 +327,29 @@ public class CheckoutController {
         }
 
         // 检查是否有活跃班次
-        if (!com.cashier.model.DataManager.hasActiveShift()) {
+        if (!com.cashier.service.DataService.hasActiveShift()) {
             showError("当前没有开班，请先开班后再进行结算操作！");
             return;
         }
 
         // 扣减库存
-        Map<String, Product> inventory = DataManager.loadInventory();
+        Map<String, Product> inventory = DataService.loadInventory();
         for (CartItem item : cartList) {
             Product product = inventory.get(item.product.name);
             if (product != null) {
                 product.quantity -= item.quantity;
             }
         }
-        DataManager.saveInventory(inventory);
+        DataService.saveInventory(inventory);
 
         // 更新会员余额和积分
         if (currentMember != null) {
-            Map<String, Member> members = DataManager.loadMembers();
+            Map<String, Member> members = DataService.loadMembers();
             double finalAmount = getFinalAmount();
             currentMember.balance -= finalAmount;
             currentMember.points += (int)(finalAmount * 10); // 1元=10积分
             members.put(currentMember.phone, currentMember);
-            DataManager.saveMembers(members);
+            DataService.saveMembers(members);
         }
 
         // 创建交易记录
@@ -386,13 +386,19 @@ public class CheckoutController {
         
         transaction.totalAmount = getTotalAmount();
         // 实现税费计算：从系统设置中读取税率
-        Map<String, String> settings = DataManager.loadSettings();
+        Map<String, String> settings = DataService.loadSettings();
         double taxRate = Double.parseDouble(settings.getOrDefault("taxRate", "0.0"));
         transaction.tax = transaction.totalAmount * taxRate / 100.0;
         transaction.paymentMethod = paymentMethod;
         
         if (currentMember != null) {
             transaction.memberPhone = currentMember.phone;
+        }
+        
+        // 设置操作员信息
+        if (currentUser != null) {
+            transaction.operatorUsername = currentUser.username;
+            transaction.operatorName = currentUser.name;
         }
         
         return transaction;
@@ -404,11 +410,11 @@ public class CheckoutController {
      */
     private void saveTransaction(Transaction transaction) {
         try {
-            List<Transaction> transactions = DataManager.loadTransactions();
-            transactions.add(transaction);
-            DataManager.saveTransactions(transactions);
+            // 直接插入新交易，而不是批量插入所有交易
+            com.cashier.dao.TransactionDAO.insert(transaction);
         } catch (Exception e) {
             showError("保存交易记录失败: " + e.getMessage());
+            e.printStackTrace();
         }
     }
 

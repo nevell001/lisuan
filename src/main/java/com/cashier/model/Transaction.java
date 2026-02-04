@@ -11,6 +11,8 @@ public class Transaction {
     public double finalAmount;
     public String paymentMethod;  // 支付方式：现金、微信支付、支付宝、银行卡、组合支付
     public String memberPhone;    // 会员手机号
+    public String operatorUsername; // 操作员用户名
+    public String operatorName;    // 操作员姓名
 
     public Transaction() {
         this.transactionId = "";
@@ -21,6 +23,8 @@ public class Transaction {
         this.finalAmount = 0.0;
         this.paymentMethod = "";
         this.memberPhone = "";
+        this.operatorUsername = "";
+        this.operatorName = "";
     }
 
     public Transaction(String transactionId, String timestamp, List<Product> items, double totalAmount, double tax, double finalAmount) {
