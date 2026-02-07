@@ -5,6 +5,7 @@ import java.util.Date;
 
 public class Promotion {
     public int id;                    // 促销ID（数据库自增主键）
+    public String promotionCode;       // 促销编号（用户自定义编号）
     public String name;                  // 促销名称
     public String type;                  // 促销类型: "满减", "打折", "优惠券"
     public double threshold;             // 满减/打折的门槛金额
@@ -18,6 +19,7 @@ public class Promotion {
 
     public Promotion() {
         this.id = 0;  // 默认ID为0，表示未保存到数据库
+        this.promotionCode = "";  // 促销编号
         this.name = "";
         this.type = "满减";
         this.threshold = 0;
@@ -41,6 +43,21 @@ public class Promotion {
 
     public Promotion(int id, String name, String type, double threshold, double discount, String description, boolean enabled, Date startDate, Date endDate, int usageCount, int maxUsage) {
         this.id = id;
+        this.name = name;
+        this.type = type;
+        this.threshold = threshold;
+        this.discount = discount;
+        this.description = description;
+        this.enabled = enabled;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.usageCount = usageCount;
+        this.maxUsage = maxUsage;
+    }
+
+    public Promotion(int id, String promotionCode, String name, String type, double threshold, double discount, String description, boolean enabled, Date startDate, Date endDate, int usageCount, int maxUsage) {
+        this.id = id;
+        this.promotionCode = promotionCode;
         this.name = name;
         this.type = type;
         this.threshold = threshold;
@@ -116,6 +133,10 @@ public class Promotion {
     // Getter方法
     public int getId() {
         return id;
+    }
+
+    public String getPromotionCode() {
+        return promotionCode;
     }
 
     public String getName() {

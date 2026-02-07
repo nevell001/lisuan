@@ -22,6 +22,8 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -32,6 +34,7 @@ import java.util.*;
  * 处理购物车的增删改查和结算
  */
 public class CartController {
+    private static final Logger logger = LoggerFactory.getLogger(CartController.class);
 
     @FXML
     private TableView<CartItem> cartTable;
@@ -395,7 +398,7 @@ public class CartController {
             }
         } catch (Exception e) {
             System.err.println("从数据库加载商品失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("从数据库加载商品失败", e);
             inventory = DataService.loadInventory();
         }
         System.out.println("CartController: 加载了 " + inventory.size() + " 个商品");
@@ -805,6 +808,7 @@ public class CartController {
             }
         } catch (Exception e) {
             System.err.println("更新数据库库存失败: " + e.getMessage());
+            logger.error("更新数据库库存失败", e);
             // 降级到文件存储
             for (CartItem item : cartList) {
                 Product product = inventory.get(item.product.name);
@@ -922,7 +926,7 @@ public class CartController {
             TransactionDAO.insert(transaction);
         } catch (Exception e) {
             System.err.println("保存交易到数据库失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("保存交易到数据库失败", e);
             // 降级到文件存储
             try {
                 List<Transaction> transactions = DataService.loadTransactions();

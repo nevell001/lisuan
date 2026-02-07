@@ -1,14 +1,22 @@
 package com.cashier.controller;
 
+import com.cashier.dao.CategoryDAO;
 import com.cashier.dao.ProductDAO;
+import com.cashier.dao.UnitDAO;
+import com.cashier.model.Category;
 import com.cashier.model.Product;
+import com.cashier.model.Unit;
 import com.cashier.util.StatusBarManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import javafx.fxml.FXML;
 
 import java.sql.SQLException;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -16,6 +24,7 @@ import java.util.Map;
  * 处理商品添加和编辑对话框的逻辑
  */
 public class ProductEditController {
+    private static final Logger logger = LoggerFactory.getLogger(ProductEditController.class);
 
     @FXML
     private Label titleLabel;
@@ -33,13 +42,13 @@ public class ProductEditController {
     private TextField minStockField;
 
     @FXML
-    private TextField categoryField;
+    private ComboBox<String> categoryComboBox;
 
     @FXML
     private TextField barcodeField;
 
     @FXML
-    private TextField unitField;
+    private ComboBox<String> unitComboBox;
 
     @FXML
     private TextArea descriptionField;
@@ -55,6 +64,15 @@ public class ProductEditController {
 
     @FXML
     private TextField costField;
+
+    @FXML
+    private TextField productCodeField;
+
+    @FXML
+    private TextField idField;
+
+    @FXML
+    private CheckBox autoIdCheckBox;
 
     @FXML
     private Label errorLabel;
@@ -84,14 +102,121 @@ public class ProductEditController {
             }
         } catch (SQLException e) {
             System.err.println("加载商品数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载商品数据失败", e);
             inventory = new java.util.HashMap<>();
         }
 
+        // 加载分类数据
+        loadCategories();
+
+        // 加载单位数据
+        loadUnits();
+
         // 设置默认值
         minStockField.setText("10");
-        categoryField.setText("默认分类");
-        unitField.setText("个");
+        categoryComboBox.getSelectionModel().select("默认分类");
+        unitComboBox.getSelectionModel().select("个");
+
+        // 自动ID复选框默认选中
+        autoIdCheckBox.setSelected(true);
+        idField.setDisable(true);
+
+        // 监听自动ID复选框变化
+        autoIdCheckBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            idField.setDisable(newVal);
+            if (newVal) {
+                idField.clear();
+            }
+        });
+
+        // 强制设置 ComboBox 样式，去除所有内部边框
+        styleComboBox(categoryComboBox);
+        styleComboBox(unitComboBox);
+
+        // 强制设置 TextArea 样式，去除所有内部边框
+        styleTextArea(descriptionField);
+    }
+
+    /**
+     * 强制设置 ComboBox 样式，去除所有内部边框
+     */
+    private void styleComboBox(javafx.scene.control.ComboBox<String> comboBox) {
+        // 使用 CSS 强制覆盖所有内部组件样式
+        comboBox.setStyle(
+            "-fx-background-color: white; " +
+            "-fx-background-insets: 0; " +
+            "-fx-background-radius: 4px; " +
+            "-fx-border-color: #E0E0E0; " +
+            "-fx-border-insets: 0; " +
+            "-fx-border-radius: 4px; " +
+            "-fx-border-width: 1px; " +
+            "-fx-padding: 6px 8px; " +
+            "-fx-font-size: 14px;"
+        );
+
+        // 监听显示变化，确保样式持续应用
+        comboBox.showingProperty().addListener((obs, oldVal, newVal) -> {
+            if (!newVal) {
+                comboBox.setStyle(comboBox.getStyle());
+            }
+        });
+    }
+
+    /**
+     * 强制设置 TextArea 样式，去除所有内部边框
+     */
+    private void styleTextArea(javafx.scene.control.TextArea textArea) {
+        // 使用 CSS 强制覆盖所有内部组件样式
+        textArea.setStyle(
+            "-fx-background-color: white; " +
+            "-fx-background-insets: 0; " +
+            "-fx-background-radius: 4px; " +
+            "-fx-border-color: #E0E0E0; " +
+            "-fx-border-insets: 0; " +
+            "-fx-border-radius: 4px; " +
+            "-fx-border-width: 1px; " +
+            "-fx-padding: 8px 12px; " +
+            "-fx-font-size: 13px; " +
+            "-fx-text-fill: #424242;"
+        );
+    }
+
+    /**
+     * 加载分类数据
+     */
+    private void loadCategories() {
+        List<String> categories = new ArrayList<>();
+        categories.add("默认分类"); // 添加默认分类
+
+        try {
+            List<Category> categoryList = CategoryDAO.findAll();
+            for (Category category : categoryList) {
+                categories.add(category.name);
+            }
+        } catch (SQLException e) {
+            System.err.println("加载分类数据失败: " + e.getMessage());
+        }
+
+        categoryComboBox.setItems(javafx.collections.FXCollections.observableArrayList(categories));
+    }
+
+    /**
+     * 加载单位数据
+     */
+    private void loadUnits() {
+        List<String> units = new ArrayList<>();
+        units.add("个"); // 添加默认单位
+
+        try {
+            List<Unit> unitList = UnitDAO.findAll();
+            for (Unit unit : unitList) {
+                units.add(unit.name);
+            }
+        } catch (SQLException e) {
+            System.err.println("加载单位数据失败: " + e.getMessage());
+        }
+
+        unitComboBox.setItems(javafx.collections.FXCollections.observableArrayList(units));
     }
 
     /**
@@ -112,13 +237,17 @@ public class ProductEditController {
         if (product != null) {
             // 编辑模式
             titleLabel.setText("编辑商品");
+            idField.setText(String.valueOf(product.id));
+            autoIdCheckBox.setSelected(false);
+            idField.setDisable(false);
+            productCodeField.setText(product.productCode);
             nameField.setText(product.name);
             priceField.setText(String.format("%.2f", product.price));
             quantityField.setText(String.valueOf(product.quantity));
             minStockField.setText(String.valueOf(product.minStock));
-            categoryField.setText(product.category);
+            categoryComboBox.getSelectionModel().select(product.category);
             barcodeField.setText(product.barcode);
-            unitField.setText(product.unit);
+            unitComboBox.getSelectionModel().select(product.unit);
             descriptionField.setText(product.description);
             brandField.setText(product.brand);
             supplierField.setText(product.supplier);
@@ -127,6 +256,8 @@ public class ProductEditController {
         } else {
             // 添加模式
             titleLabel.setText("添加商品");
+            autoIdCheckBox.setSelected(true);
+            idField.setDisable(true);
         }
     }
 
@@ -159,6 +290,15 @@ public class ProductEditController {
                     Double.parseDouble(priceField.getText().trim()),
                     Integer.parseInt(quantityField.getText().trim())
                 );
+                // 设置ID（如果不是自动生成）
+                if (!autoIdCheckBox.isSelected()) {
+                    try {
+                        product.id = Integer.parseInt(idField.getText().trim());
+                    } catch (NumberFormatException e) {
+                        errorLabel.setText("ID必须是数字");
+                        return;
+                    }
+                }
             } else {
                 // 编辑现有商品
                 product.name = nameField.getText().trim();
@@ -167,10 +307,17 @@ public class ProductEditController {
             }
 
             // 更新商品信息
+            product.productCode = productCodeField.getText().trim();
             product.minStock = Integer.parseInt(minStockField.getText().trim());
-            product.category = categoryField.getText().trim().isEmpty() ? "默认分类" : categoryField.getText().trim();
+            product.category = categoryComboBox.getSelectionModel().getSelectedItem();
+            if (product.category == null || product.category.trim().isEmpty()) {
+                product.category = "默认分类";
+            }
             product.barcode = barcodeField.getText().trim();
-            product.unit = unitField.getText().trim().isEmpty() ? "个" : unitField.getText().trim();
+            product.unit = unitComboBox.getSelectionModel().getSelectedItem();
+            if (product.unit == null || product.unit.trim().isEmpty()) {
+                product.unit = "个";
+            }
             product.description = descriptionField.getText().trim();
             product.brand = brandField.getText().trim();
             product.supplier = supplierField.getText().trim();
@@ -196,6 +343,18 @@ public class ProductEditController {
      */
     private boolean isInputValid() {
         String errorMessage = "";
+
+        // 验证ID（如果不是自动生成）
+        if (!autoIdCheckBox.isSelected() && !idField.getText().trim().isEmpty()) {
+            try {
+                int id = Integer.parseInt(idField.getText().trim());
+                if (id <= 0) {
+                    errorMessage += "ID必须大于0！\n";
+                }
+            } catch (NumberFormatException e) {
+                errorMessage += "ID格式不正确！\n";
+            }
+        }
 
         // 验证商品名称
         if (nameField.getText().trim().isEmpty()) {

@@ -2,6 +2,7 @@ package com.cashier.model;
 
 public class Product {
     public int id;               // 商品ID（数据库自增主键）
+    public String productCode;   // 商品编号（用户自定义编号）
     public String name;
     public double price;
     public int quantity;
@@ -17,6 +18,7 @@ public class Product {
 
     public Product() {
         this.id = 0;  // 默认ID为0，表示未保存到数据库
+        this.productCode = "";  // 商品编号
     }
 
     public Product(String name, double price, int quantity) {
@@ -68,9 +70,30 @@ public class Product {
         this.cost = cost;
     }
 
+    public Product(int id, String productCode, String name, double price, int quantity, String category, String barcode, String unit, String description, String brand, String supplier, String spec, int minStock, double cost) {
+        this.id = id;
+        this.productCode = productCode;
+        this.name = name;
+        this.price = price;
+        this.quantity = quantity;
+        this.category = category;
+        this.barcode = barcode;
+        this.unit = unit;
+        this.description = description;
+        this.brand = brand;
+        this.supplier = supplier;
+        this.spec = spec;
+        this.minStock = minStock;
+        this.cost = cost;
+    }
+
     // Getter方法
     public int getId() {
         return id;
+    }
+
+    public String getProductCode() {
+        return productCode;
     }
 
     public String getName() {

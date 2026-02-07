@@ -51,24 +51,13 @@ public class UserDAO {
     }
 
     /**
-     * 验证用户登录
+     * 验证用户登录（已废弃，请在应用层使用 findByUsername + PasswordUtil.verifyPassword）
+     * @deprecated 请使用 findByUsername(String username) + PasswordUtil.verifyPassword() 进行验证
      */
+    @Deprecated
     public static User authenticate(String username, String password) throws SQLException {
-        String sql = "SELECT id, username, password, name, role, create_time, last_login_time, active FROM users " +
-                     "WHERE username = ? AND password = ? AND active = 1";
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, username);
-            pstmt.setString(2, password);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                return mapRowToUser(rs);
-            }
-        }
-        return null;
+        // 此方法已废弃，请使用 findByUsername + PasswordUtil.verifyPassword 进行验证
+        return findByUsername(username);
     }
 
     /**
@@ -91,24 +80,40 @@ public class UserDAO {
 
     /**
      * 插入新用户
+     * 如果用户ID大于0，则使用指定的ID；否则由数据库自动生成ID
      */
     public static boolean insert(User user) throws SQLException {
-        String sql = "INSERT INTO users (username, password, name, role, create_time, last_login_time, active) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql;
+        boolean useProvidedId = user.id > 0;
+
+        if (useProvidedId) {
+            // 使用用户提供的ID
+            sql = "INSERT INTO users (id, username, password, name, role, create_time, last_login_time, active) " +
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        } else {
+            // 由数据库自动生成ID
+            sql = "INSERT INTO users (username, password, name, role, create_time, last_login_time, active) " +
+                  "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        }
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            pstmt.setString(1, user.username);
-            pstmt.setString(2, user.password);
-            pstmt.setString(3, user.name);
-            pstmt.setString(4, user.role);
-            pstmt.setTimestamp(5, new Timestamp(user.createTime.getTime()));
-            pstmt.setTimestamp(6, new Timestamp(user.lastLoginTime.getTime()));
-            pstmt.setBoolean(7, user.active);
+            int paramIndex = 1;
+            if (useProvidedId) {
+                pstmt.setInt(paramIndex++, user.id);
+            }
+
+            pstmt.setString(paramIndex++, user.username);
+            pstmt.setString(paramIndex++, user.password);
+            pstmt.setString(paramIndex++, user.name);
+            pstmt.setString(paramIndex++, user.role);
+            pstmt.setTimestamp(paramIndex++, new Timestamp(user.createTime.getTime()));
+            pstmt.setTimestamp(paramIndex++, new Timestamp(user.lastLoginTime.getTime()));
+            pstmt.setBoolean(paramIndex++, user.active);
 
             int affectedRows = pstmt.executeUpdate();
-            if (affectedRows > 0) {
+            if (affectedRows > 0 && !useProvidedId) {
                 try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         user.id = generatedKeys.getInt(1);

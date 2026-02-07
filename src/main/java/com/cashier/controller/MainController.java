@@ -5,6 +5,8 @@ import com.cashier.service.DataService;
 import com.cashier.model.User;
 import com.cashier.util.FXUtils;
 import com.cashier.util.StatusBarManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -33,6 +35,7 @@ import java.util.Map;
  * 处理主界面的导航和功能
  */
 public class MainController {
+    private static final Logger logger = LoggerFactory.getLogger(MainController.class);
 
     @FXML
     private Label currentUserLabel;
@@ -77,7 +80,31 @@ public class MainController {
     private Button membersBtn;
 
     @FXML
+    private Button supplierBtn;
+
+    @FXML
+    private Button purchaseOrderBtn;
+
+    @FXML
+    private Button purchaseApprovalBtn;
+
+    @FXML
+    private Button purchaseInboundBtn;
+
+    @FXML
+    private Button inventoryCheckBtn;
+
+    @FXML
     private Button statisticsBtn;
+
+    @FXML
+    private Button purchaseReportBtn;
+
+    @FXML
+    private Button inventoryReportBtn;
+
+    @FXML
+    private Button profitReportBtn;
 
     @FXML
     private Button promotionsBtn;
@@ -576,11 +603,11 @@ public class MainController {
 
         } catch (IOException e) {
             System.err.println("MainController: 加载购物车界面失败");
-            e.printStackTrace();
+            logger.error("加载购物车界面失败", e);
             showError("加载POS界面失败: " + e.getMessage());
         } catch (Exception e) {
             System.err.println("MainController: 加载购物车界面时发生异常");
-            e.printStackTrace();
+            logger.error("加载购物车界面时发生异常", e);
             showError("加载POS界面失败: " + e.getMessage());
         }
     }
@@ -652,6 +679,116 @@ public class MainController {
     }
 
     @FXML
+    private void handleSupplier() {
+        updateStatus("供应商管理");
+        setActiveButton(supplierBtn);
+
+        try {
+            // 加载供应商管理界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/SupplierView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            SupplierController controller = loader.getController();
+
+            // 创建内容标签页
+            createContentTab("供应商管理", root);
+
+        } catch (IOException e) {
+            showError("加载供应商管理界面失败: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handlePurchaseOrder() {
+        updateStatus("采购订单");
+        setActiveButton(purchaseOrderBtn);
+
+        try {
+            // 加载采购订单界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/PurchaseOrderView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            PurchaseOrderController controller = loader.getController();
+
+            // 创建内容标签页
+            createContentTab("采购订单", root);
+
+        } catch (IOException e) {
+            showError("加载采购订单界面失败: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handlePurchaseApproval() {
+        updateStatus("采购审批");
+        setActiveButton(purchaseApprovalBtn);
+
+        try {
+            // 加载采购审批界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/PurchaseApprovalView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            PurchaseApprovalController controller = loader.getController();
+
+            // 创建内容标签页
+            createContentTab("采购审批", root);
+
+        } catch (IOException e) {
+            showError("加载采购审批界面失败: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handlePurchaseInbound() {
+        updateStatus("采购入库");
+        setActiveButton(purchaseInboundBtn);
+
+        try {
+            // 加载采购入库界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/PurchaseInboundView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            PurchaseInboundController controller = loader.getController();
+
+            // 创建内容标签页
+            createContentTab("采购入库", root);
+
+        } catch (IOException e) {
+            showError("加载采购入库界面失败: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleInventoryCheck() {
+        updateStatus("库存盘点");
+        setActiveButton(inventoryCheckBtn);
+
+        try {
+            // 加载库存盘点界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/InventoryCheckView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            InventoryCheckController controller = loader.getController();
+
+            // 创建内容标签页
+            createContentTab("库存盘点", root);
+
+        } catch (IOException e) {
+            showError("加载库存盘点界面失败: " + e.getMessage());
+        }
+    }
+
+    @FXML
     private void handleStatistics() {
         updateStatus("数据统计");
         setActiveButton(statisticsBtn);
@@ -670,6 +807,72 @@ public class MainController {
 
         } catch (IOException e) {
             showError("加载数据统计界面失败: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handlePurchaseReport() {
+        updateStatus("采购报表");
+        setActiveButton(purchaseReportBtn);
+
+        try {
+            // 加载采购报表界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/PurchaseReportView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            PurchaseReportController controller = loader.getController();
+
+            // 创建内容标签页
+            createContentTab("采购报表", root);
+
+        } catch (IOException e) {
+            showError("加载采购报表界面失败: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleInventoryReport() {
+        updateStatus("库存报表");
+        setActiveButton(inventoryReportBtn);
+
+        try {
+            // 加载库存报表界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/InventoryReportView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            InventoryReportController controller = loader.getController();
+
+            // 创建内容标签页
+            createContentTab("库存报表", root);
+
+        } catch (IOException e) {
+            showError("加载库存报表界面失败: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleProfitReport() {
+        updateStatus("利润分析");
+        setActiveButton(profitReportBtn);
+
+        try {
+            // 加载利润分析界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/ProfitReportView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            ProfitReportController controller = loader.getController();
+
+            // 创建内容标签页
+            createContentTab("利润分析", root);
+
+        } catch (IOException e) {
+            showError("加载利润分析界面失败: " + e.getMessage());
         }
     }
 
@@ -1172,53 +1375,20 @@ public class MainController {
         
     
             /**
-    
-             * 异步加载内容
-    
-             * @param title 标题
-    
-             * @param icon 图标
-    
-             * @param message 消息
-    
-             */
-    
-            private void showPlaceholderAsync(String title, String icon, String message) {
-    
-                showLoading();
-    
-                
-    
-                new Thread(() -> {
-    
-                    try {
-    
-                        // 模拟加载延迟
-    
-                        Thread.sleep(300);
-    
-                        
-    
-                        javafx.application.Platform.runLater(() -> {
-    
-                            showPlaceholder(title, icon, message);
-    
-                            hideLoading();
-    
-                        });
-    
-                    } catch (InterruptedException e) {
-    
-                        javafx.application.Platform.runLater(() -> {
-    
-                            showPlaceholder(title, icon, message);
-    
-                            hideLoading();
-    
-                        });
-    
-                    }
-    
-                }).start();
-    
-            }}
+     * 异步加载内容
+     * @param title 标题
+     * @param icon 图标
+     * @param message 消息
+     */
+    private void showPlaceholderAsync(String title, String icon, String message) {
+        showLoading();
+
+        // 使用 JavaFX PauseTransition 替代 Thread.sleep
+        javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(javafx.util.Duration.millis(300));
+        pause.setOnFinished(event -> {
+            showPlaceholder(title, icon, message);
+            hideLoading();
+        });
+        pause.play();
+    }
+}

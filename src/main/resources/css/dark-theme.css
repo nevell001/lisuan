@@ -239,48 +239,75 @@
 
 /* ========== 组合框样式 ========== */
 .combo-box {
-    -fx-background-color: #2C2C2C;
-    -fx-border-color: #424242;
-    -fx-text-fill: #F5F5F5;
+    -fx-background-color: #383838;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+    -fx-border-color: #616161;
+    -fx-border-insets: 0;
+    -fx-border-radius: 4px;
+    -fx-border-width: 1px;
+    -fx-text-fill: #FFFFFF;
+    -fx-effect: null;
 }
 
-.combo-box:focused {
-    -fx-border-color: #5C6BC0;
-    -fx-border-width: 1.5px;
+.combo-box .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
 }
 
-.combo-box-popup .list-view {
-    -fx-background-color: #2C2C2C;
-    -fx-border-color: #424242;
+.combo-box .cell {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+}
+
+.combo-box .arrow-button {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+    -fx-effect: null;
 }
 
 .combo-box-popup .list-cell {
-    -fx-text-fill: #F5F5F5;
+    -fx-background-color: #383838;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+    -fx-text-fill: #FFFFFF;
 }
 
-/* ========== 组合框样式 ========== */
-.combo-box {
+.combo-box-popup .list-view {
     -fx-background-color: #383838;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
     -fx-border-color: #616161;
-    -fx-text-fill: #FFFFFF;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.3), 6, 0, 0, 3);
+}
+
+.combo-box-popup .list-cell:hover {
+    -fx-background-color: #424242;
 }
 
 .combo-box:focused {
     -fx-border-color: #7986CB;
     -fx-border-width: 2px;
-}
-
-.combo-box-popup .list-view {
-    -fx-background-color: #383838;
-    -fx-border-color: #616161;
-}
-
-.combo-box-popup .list-cell {
-    -fx-text-fill: #FFFFFF;
-}
-
-.combo-box-popup .list-cell:hover {
-    -fx-background-color: #424242;
 }
 
 /* ========== 表格样式 ========== */

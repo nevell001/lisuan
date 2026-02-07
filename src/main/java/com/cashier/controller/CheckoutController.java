@@ -8,6 +8,8 @@ import com.cashier.model.Transaction;
 import com.cashier.model.User;
 import com.cashier.util.FXUtils;
 import com.cashier.util.ReceiptPrinter;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -23,6 +25,7 @@ import java.util.*;
  * 处理结账和支付逻辑
  */
 public class CheckoutController {
+    private static final Logger logger = LoggerFactory.getLogger(CheckoutController.class);
 
     @FXML
     private TableView<CartItem> cartTable;
@@ -414,7 +417,7 @@ public class CheckoutController {
             com.cashier.dao.TransactionDAO.insert(transaction);
         } catch (Exception e) {
             showError("保存交易记录失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("保存交易记录失败", e);
         }
     }
 
@@ -479,7 +482,7 @@ public class CheckoutController {
             }
         } catch (Exception e) {
             FXUtils.showError("打印小票失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("打印小票失败", e);
         }
     }
 

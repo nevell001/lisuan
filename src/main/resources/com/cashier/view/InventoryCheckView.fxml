@@ -1,0 +1,100 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.InventoryCheckController"
+      spacing="0"
+      styleClass="inventory-check-view">
+
+    <!-- 顶部工具栏 -->
+    <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+
+        <!-- 操作按钮 -->
+        <Button fx:id="addButton"
+                text="新建盘点"
+                onAction="#handleAddCheck"
+                prefWidth="100"
+                styleClass="primary-button"/>
+
+        <Button fx:id="editButton"
+                text="编辑"
+                onAction="#handleEditCheck"
+                prefWidth="80"
+                disable="true"
+                styleClass="secondary-button"/>
+
+        <Button fx:id="deleteButton"
+                text="删除"
+                onAction="#handleDeleteCheck"
+                prefWidth="80"
+                disable="true"
+                styleClass="danger-button"/>
+
+        <Button fx:id="viewDetailButton"
+                text="查看详情"
+                onAction="#handleViewDetail"
+                prefWidth="100"
+                disable="true"
+                styleClass="info-button"/>
+
+        <Button fx:id="completeButton"
+                text="完成盘点"
+                onAction="#handleComplete"
+                prefWidth="100"
+                disable="true"
+                styleClass="success-button"/>
+
+        <Separator orientation="VERTICAL"/>
+
+        <!-- 筛选 -->
+        <Label text="状态:"/>
+        <ComboBox fx:id="statusFilterCombo"
+                  prefWidth="100"
+                  onAction="#handleStatusFilter"/>
+
+        <Separator orientation="VERTICAL"/>
+
+        <!-- 搜索 -->
+        <Label text="搜索:"/>
+        <TextField fx:id="searchField"
+                  promptText="输入盘点单号或盘点人"
+                  prefWidth="200"
+                  onAction="#handleSearch"/>
+
+        <Button text="搜索"
+                onAction="#handleSearch"
+                prefWidth="60"
+                styleClass="secondary-button"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <!-- 统计信息 -->
+        <Label fx:id="countLabel" text="盘点记录: 0 条" style="-fx-text-fill: #757575;"/>
+    </HBox>
+
+    <!-- 库存盘点表格 -->
+    <TableView fx:id="checkTable"
+              VBox.vgrow="ALWAYS"
+              styleClass="inventory-check-table">
+        <columns>
+            <TableColumn fx:id="checkNoColumn" text="盘点单号" prefWidth="150"/>
+            <TableColumn fx:id="checkDateColumn" text="盘点日期" prefWidth="100"/>
+            <TableColumn fx:id="checkTypeColumn" text="盘点类型" prefWidth="100"/>
+            <TableColumn fx:id="totalItemsColumn" text="商品总数" prefWidth="80"/>
+            <TableColumn fx:id="diffItemsColumn" text="差异数" prefWidth="80"/>
+            <TableColumn fx:id="statusColumn" text="状态" prefWidth="80"/>
+            <TableColumn fx:id="operatorColumn" text="盘点人" prefWidth="100"/>
+        </columns>
+        <placeholder>
+            <Label text="暂无盘点记录" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
+        </placeholder>
+    </TableView>
+
+</VBox>

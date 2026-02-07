@@ -1,0 +1,216 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.ProfitReportController"
+      spacing="0"
+      styleClass="statistics-view">
+
+    <!-- 顶部工具栏 -->
+    <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+
+        <!-- 时间范围选择 -->
+        <Label text="时间范围:"/>
+        <ComboBox fx:id="timeRangeComboBox" prefWidth="120"/>
+
+        <Label text="开始日期:"/>
+        <DatePicker fx:id="startDatePicker" prefWidth="150"/>
+
+        <Label text="结束日期:"/>
+        <DatePicker fx:id="endDatePicker" prefWidth="150"/>
+
+        <Label text="分类:"/>
+        <ComboBox fx:id="categoryComboBox" prefWidth="150"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <!-- 操作按钮 -->
+        <Button fx:id="queryButton"
+                text="查询"
+                onAction="#handleQuery"
+                prefWidth="100"
+                prefHeight="35"
+                styleClass="primary-button"/>
+
+        <Button fx:id="exportButton"
+                text="导出"
+                onAction="#handleExport"
+                prefWidth="100"
+                prefHeight="35"
+                styleClass="secondary-button"/>
+    </HBox>
+
+    <!-- 统计卡片区域 -->
+    <ScrollPane fitToWidth="true" VBox.vgrow="NEVER">
+        <HBox spacing="15" styleClass="cards-container">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+
+            <!-- 总收入 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="总收入" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="totalRevenueLabel" text="¥0.00" style="-fx-text-fill: #4CAF50; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 总成本 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="总成本" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="totalCostLabel" text="¥0.00" style="-fx-text-fill: #F44336; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 毛利润 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="毛利润" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="grossProfitLabel" text="¥0.00" style="-fx-text-fill: #2196F3; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 毛利率 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="毛利率" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="grossMarginLabel" text="0.00%" style="-fx-text-fill: #FF9800; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 净利润 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="净利润" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="netProfitLabel" text="¥0.00" style="-fx-text-fill: #9C27B0; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 平均毛利率 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="平均毛利率" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="avgMarginLabel" text="0.00%" style="-fx-text-fill: #00BCD4; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+        </HBox>
+    </ScrollPane>
+
+    <!-- 最高/最低毛利率商品 -->
+    <ScrollPane fitToWidth="true" VBox.vgrow="NEVER">
+        <HBox spacing="15" styleClass="cards-container">
+            <padding>
+                <Insets top="10" right="15" bottom="10" left="15"/>
+            </padding>
+
+            <!-- 最高毛利率商品 -->
+            <VBox spacing="5" styleClass="info-box" prefWidth="300">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="最高毛利率商品" style="-fx-text-fill: #4CAF50; -fx-font-size: 14px; -fx-font-weight: bold;"/>
+                <HBox spacing="20" alignment="CENTER_LEFT">
+                    <VBox spacing="3">
+                        <Label text="商品名称" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
+                        <Label fx:id="bestMarginProductLabel" text="无" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                    </VBox>
+                    <VBox spacing="3">
+                        <Label text="毛利率" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
+                        <Label fx:id="bestMarginValueLabel" text="0.00%" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
+                    </VBox>
+                </HBox>
+            </VBox>
+
+            <!-- 最低毛利率商品 -->
+            <VBox spacing="5" styleClass="info-box" prefWidth="300">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="最低毛利率商品" style="-fx-text-fill: #F44336; -fx-font-size: 14px; -fx-font-weight: bold;"/>
+                <HBox spacing="20" alignment="CENTER_LEFT">
+                    <VBox spacing="3">
+                        <Label text="商品名称" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
+                        <Label fx:id="worstMarginProductLabel" text="无" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+                    </VBox>
+                    <VBox spacing="3">
+                        <Label text="毛利率" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
+                        <Label fx:id="worstMarginValueLabel" text="0.00%" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #F44336;"/>
+                    </VBox>
+                </HBox>
+            </VBox>
+        </HBox>
+    </ScrollPane>
+
+    <!-- 详细统计区域 -->
+    <TabPane VBox.vgrow="ALWAYS" styleClass="profit-tab-pane" tabClosingPolicy="UNAVAILABLE">
+        <!-- 商品利润分析 -->
+        <Tab text="商品利润分析">
+            <VBox spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <TableView fx:id="productProfitTable" VBox.vgrow="ALWAYS" styleClass="product-profit-table">
+                    <columns>
+                        <TableColumn fx:id="productNameColumn" text="商品名称" prefWidth="200"/>
+                        <TableColumn fx:id="categoryColumn" text="分类" prefWidth="120"/>
+                        <TableColumn fx:id="salesRevenueColumn" text="销售收入" prefWidth="120"/>
+                        <TableColumn fx:id="salesCostColumn" text="销售成本" prefWidth="120"/>
+                        <TableColumn fx:id="salesProfitColumn" text="毛利润" prefWidth="120"/>
+                        <TableColumn fx:id="salesMarginColumn" text="毛利率" prefWidth="100"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- 分类利润分析 -->
+        <Tab text="分类利润分析">
+            <VBox spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <TableView fx:id="categoryProfitTable" VBox.vgrow="ALWAYS" styleClass="category-profit-table">
+                    <columns>
+                        <TableColumn fx:id="categoryNameColumn" text="分类名称" prefWidth="200"/>
+                        <TableColumn fx:id="categoryRevenueColumn" text="销售收入" prefWidth="150"/>
+                        <TableColumn fx:id="categoryCostColumn" text="销售成本" prefWidth="150"/>
+                        <TableColumn fx:id="categoryProfitColumn" text="毛利润" prefWidth="150"/>
+                        <TableColumn fx:id="categoryMarginColumn" text="毛利率" prefWidth="120"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- 每日利润趋势 -->
+        <Tab text="每日利润趋势">
+            <VBox spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <TableView fx:id="dailyProfitTable" VBox.vgrow="ALWAYS" styleClass="daily-profit-table">
+                    <columns>
+                        <TableColumn fx:id="dateColumn" text="日期" prefWidth="150"/>
+                        <TableColumn fx:id="dailyRevenueColumn" text="销售收入" prefWidth="150"/>
+                        <TableColumn fx:id="dailyCostColumn" text="销售成本" prefWidth="150"/>
+                        <TableColumn fx:id="dailyProfitColumn" text="毛利润" prefWidth="150"/>
+                        <TableColumn fx:id="dailyMarginColumn" text="毛利率" prefWidth="120"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+    </TabPane>
+
+</VBox>

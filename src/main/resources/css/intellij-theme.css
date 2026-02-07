@@ -83,20 +83,70 @@
 /* ========== 组合框样式 ========== */
 .combo-box {
     -fx-background-color: #FFFFFF;
+    -fx-background-insets: 0;
+    -fx-background-radius: 3px;
     -fx-border-color: #E1E4E8;
+    -fx-border-insets: 0;
     -fx-border-radius: 3px;
+    -fx-border-width: 1px;
     -fx-text-fill: #212121;
+    -fx-effect: null;
+}
+
+.combo-box .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+}
+
+.combo-box .cell {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+}
+
+.combo-box .arrow-button {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+    -fx-effect: null;
+}
+
+.combo-box-popup .list-cell {
+    -fx-background-color: #FFFFFF;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+    -fx-text-fill: #212121;
+}
+
+.combo-box-popup .list-view {
+    -fx-background-color: #FFFFFF;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: #E1E4E8;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 6, 0, 0, 3);
 }
 
 .combo-box:focused {
     -fx-border-color: #365880;
     -fx-border-width: 1.5px;
-}
-
-.combo-box-popup .list-view {
-    -fx-background-color: #FFFFFF;
-    -fx-border-color: #E1E4E8;
-    -fx-border-radius: 3px;
 }
 
 /* ========== 表格样式 ========== */

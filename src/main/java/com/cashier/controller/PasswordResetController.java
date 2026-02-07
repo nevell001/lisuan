@@ -4,6 +4,8 @@ import com.cashier.dao.UserDAO;
 import com.cashier.model.User;
 import javafx.animation.FadeTransition;
 import javafx.fxml.FXML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import javafx.scene.control.*;
@@ -17,6 +19,7 @@ import java.util.Map;
  * 处理用户密码重置请求
  */
 public class PasswordResetController {
+    private static final Logger logger = LoggerFactory.getLogger(PasswordResetController.class);
 
     @FXML
     private TextField usernameField;
@@ -105,28 +108,28 @@ public class PasswordResetController {
                     return;
                 }
 
-                // 模拟发送重置邮件
-                Thread.sleep(1000); // 模拟网络延迟
+                // 使用 JavaFX PauseTransition 模拟发送重置邮件的延迟
+                setSubmitState(true); // 显示加载状态
 
-                // 显示成功消息
-                showSuccess("重置链接已发送到您的邮箱，请查收！");
+                javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(javafx.util.Duration.millis(1000));
+                pause.setOnFinished(event -> {
+                    setSubmitState(false); // 恢复提交状态
+                    // 显示成功消息
+                    showSuccess("重置链接已发送到您的邮箱，请查收！");
 
-                // 3秒后关闭对话框
-                javafx.application.Platform.runLater(() -> {
-                    try {
-                        Thread.sleep(3000);
-                        javafx.application.Platform.runLater(() -> dialogStage.close());
-                    } catch (InterruptedException e) {
-                        Thread.currentThread().interrupt();
-                    }
+                    // 3秒后关闭对话框
+                    javafx.animation.PauseTransition closePause = new javafx.animation.PauseTransition(javafx.util.Duration.millis(3000));
+                    closePause.setOnFinished(closeEvent -> dialogStage.close());
+                    closePause.play();
                 });
+                pause.play();
 
             } catch (Exception e) {
                 javafx.application.Platform.runLater(() -> {
                     showError("发送失败：" + e.getMessage());
                     setSubmitState(false);
                 });
-                e.printStackTrace();
+                logger.error("发送失败", e);
             }
         }).start();
     }

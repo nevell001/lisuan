@@ -70,24 +70,40 @@ public class MemberDAO {
 
     /**
      * 插入新会员
+     * 如果会员ID大于0，则使用指定的ID；否则由数据库自动生成ID
      */
     public static boolean insert(Member member) throws SQLException {
-        String sql = "INSERT INTO members (phone, name, points, level, discount, balance, birthday) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql;
+        boolean useProvidedId = member.id > 0;
+
+        if (useProvidedId) {
+            // 使用用户提供的ID
+            sql = "INSERT INTO members (id, phone, name, points, level, discount, balance, birthday) " +
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        } else {
+            // 由数据库自动生成ID
+            sql = "INSERT INTO members (phone, name, points, level, discount, balance, birthday) " +
+                  "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        }
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            pstmt.setString(1, member.phone);
-            pstmt.setString(2, member.name);
-            pstmt.setDouble(3, member.points);
-            pstmt.setString(4, member.level);
-            pstmt.setDouble(5, member.discount);
-            pstmt.setDouble(6, member.balance);
-            pstmt.setString(7, member.birthday);
+            int paramIndex = 1;
+            if (useProvidedId) {
+                pstmt.setInt(paramIndex++, member.id);
+            }
+
+            pstmt.setString(paramIndex++, member.phone);
+            pstmt.setString(paramIndex++, member.name);
+            pstmt.setDouble(paramIndex++, member.points);
+            pstmt.setString(paramIndex++, member.level);
+            pstmt.setDouble(paramIndex++, member.discount);
+            pstmt.setDouble(paramIndex++, member.balance);
+            pstmt.setString(paramIndex++, member.birthday);
 
             int affectedRows = pstmt.executeUpdate();
-            if (affectedRows > 0) {
+            if (affectedRows > 0 && !useProvidedId) {
                 try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         member.id = generatedKeys.getInt(1);

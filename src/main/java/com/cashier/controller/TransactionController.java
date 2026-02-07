@@ -3,6 +3,8 @@ package com.cashier.controller;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Transaction;
 import com.cashier.util.StatusBarManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
@@ -21,6 +23,7 @@ import java.util.Map;
  * 处理交易记录的查询和显示
  */
 public class TransactionController {
+    private static final Logger logger = LoggerFactory.getLogger(TransactionController.class);
 
     @FXML
     private TableView<Transaction> transactionTable;
@@ -156,7 +159,7 @@ public class TransactionController {
             allTransactions = TransactionDAO.findAll();
         } catch (SQLException e) {
             System.err.println("加载交易数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载交易数据失败", e);
             showError("加载交易数据失败: " + e.getMessage());
             allTransactions = new java.util.ArrayList<>();
         }

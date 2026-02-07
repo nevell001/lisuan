@@ -3,6 +3,8 @@ package com.cashier.dao;
 import com.cashier.model.Transaction;
 import com.cashier.model.Product;
 import com.cashier.util.DatabaseManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.*;
 import java.util.*;
@@ -12,6 +14,7 @@ import java.util.*;
  * 负责交易相关的数据库操作
  */
 public class TransactionDAO {
+    private static final Logger logger = LoggerFactory.getLogger(TransactionDAO.class);
 
     /**
      * 插入新交易（包含明细）
@@ -64,7 +67,7 @@ public class TransactionDAO {
                 try {
                     conn.rollback();
                 } catch (SQLException ex) {
-                    ex.printStackTrace();
+                    logger.error("事务回滚失败", ex);
                 }
             }
             throw e;
@@ -74,7 +77,7 @@ public class TransactionDAO {
                     conn.setAutoCommit(true);
                     conn.close();
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    logger.error("关闭数据库连接失败", e);
                 }
             }
         }
@@ -340,7 +343,7 @@ public class TransactionDAO {
                 try {
                     conn.rollback();
                 } catch (SQLException ex) {
-                    ex.printStackTrace();
+                    logger.error("事务回滚失败", ex);
                 }
             }
             throw e;
@@ -350,7 +353,7 @@ public class TransactionDAO {
                     conn.setAutoCommit(true);
                     conn.close();
                 } catch (SQLException e) {
-                    e.printStackTrace();
+                    logger.error("关闭数据库连接失败", e);
                 }
             }
         }

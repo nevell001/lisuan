@@ -1,11 +1,15 @@
 package com.cashier.model;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 import java.util.*;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
 public class DataManager {
+    private static final Logger logger = LoggerFactory.getLogger(DataManager.class);
     private static final String DATA_DIR = "data";
     private static final String INVENTORY_FILE = DATA_DIR + "/inventory.txt";
     private static final String TRANSACTIONS_FILE = DATA_DIR + "/transactions.txt";
@@ -44,7 +48,7 @@ public class DataManager {
                 );
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("保存库存数据失败", e);
         }
     }
 
@@ -127,7 +131,7 @@ public class DataManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("读取库存数据失败", e);
         }
 
         return inventory;
@@ -155,7 +159,7 @@ public class DataManager {
                 writer.println("END_TRANSACTION");
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("保存交易数据失败", e);
         }
     }
 
@@ -230,7 +234,7 @@ public class DataManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("读取交易数据失败", e);
         }
 
         return transactions;
@@ -241,7 +245,7 @@ public class DataManager {
             writer.printf("taxRate=%.2f\n", taxRate);
             writer.printf("transactionCount=%d\n", transactionCount);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("保存系统设置失败", e);
         }
     }
 
@@ -263,7 +267,7 @@ public class DataManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("读取系统设置失败", e);
         }
 
         return settings;
@@ -348,7 +352,7 @@ public class DataManager {
                 );
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("保存分类数据失败", e);
         }
     }
 
@@ -375,7 +379,7 @@ public class DataManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("读取分类数据失败", e);
         }
 
         return categories;
@@ -395,7 +399,7 @@ public class DataManager {
                 );
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("保存会员数据失败", e);
         }
     }
 
@@ -442,7 +446,7 @@ public class DataManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("读取会员数据失败", e);
         }
 
         return members;
@@ -465,7 +469,7 @@ public class DataManager {
                 );
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("保存促销数据失败", e);
         }
     }
 
@@ -502,13 +506,13 @@ public class DataManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("读取促销数据失败", e);
         }
 
         return promotions;
     }
 
-    // 保存充值记�?
+    // 保存充值记录
     public static void saveRechargeRecords(List<RechargeRecord> rechargeRecords) {
         try (PrintWriter writer = new PrintWriter(new FileWriter(RECHARGE_FILE))) {
             for (RechargeRecord record : rechargeRecords) {
@@ -523,7 +527,7 @@ public class DataManager {
                 );
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("保存充值记录失败", e);
         }
     }
 
@@ -554,7 +558,7 @@ public class DataManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("读取充值记录失败", e);
         }
 
         return rechargeRecords;
@@ -575,7 +579,7 @@ public class DataManager {
                 );
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("保存用户数据失败", e);
         }
     }
 
@@ -612,7 +616,7 @@ public class DataManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("读取用户数据失败", e);
         }
 
         return users;
@@ -632,7 +636,7 @@ public class DataManager {
                 );
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("保存操作日志失败", e);
         }
     }
 
@@ -663,7 +667,7 @@ public class DataManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("读取操作日志失败", e);
         }
 
         return logs;
@@ -693,7 +697,7 @@ public class DataManager {
                 );
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("保存交接班记录失败", e);
         }
     }
 
@@ -768,7 +772,7 @@ public class DataManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("读取交接班记录失败", e);
         }
 
         return shifts;
@@ -805,7 +809,7 @@ public class DataManager {
         try (PrintWriter writer = new PrintWriter(new FileWriter(SETTINGS_FILE, true))) {
             writer.println("theme=" + themeName);
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("保存主题偏好失败", e);
         }
     }
 
@@ -827,7 +831,7 @@ public class DataManager {
                 }
             }
         } catch (IOException e) {
-            e.printStackTrace();
+            logger.error("读取主题偏好失败", e);
         }
 
         return "light";

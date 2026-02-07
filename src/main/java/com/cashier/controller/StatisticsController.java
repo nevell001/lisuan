@@ -2,6 +2,8 @@ package com.cashier.controller;
 
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Transaction;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import javafx.fxml.FXML;
 
 import java.sql.SQLException;
@@ -17,6 +19,7 @@ import java.util.*;
  * 处理销售统计和报表
  */
 public class StatisticsController {
+    private static final Logger logger = LoggerFactory.getLogger(StatisticsController.class);
 
     @FXML
     private DatePicker startDatePicker;
@@ -161,7 +164,7 @@ public class StatisticsController {
             allTransactions = TransactionDAO.findAll();
         } catch (SQLException e) {
             System.err.println("加载交易数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载交易数据失败", e);
             showError("加载交易数据失败: " + e.getMessage());
             allTransactions = new java.util.ArrayList<>();
         }

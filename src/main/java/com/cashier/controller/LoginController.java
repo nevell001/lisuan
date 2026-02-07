@@ -5,6 +5,8 @@ import com.cashier.dao.UserDAO;
 import com.cashier.model.User;
 import com.cashier.util.FXUtils;
 import com.cashier.util.PasswordUtil;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import javafx.animation.FadeTransition;
 import javafx.animation.ScaleTransition;
 import javafx.fxml.FXML;
@@ -24,6 +26,7 @@ import java.util.Properties;
  * 处理用户登录逻辑
  */
 public class LoginController {
+    private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
 
     @FXML
     private TextField usernameField;
@@ -160,7 +163,7 @@ public class LoginController {
                     showError("登录失败：" + e.getMessage());
                     setLoginState(false);
                 });
-                e.printStackTrace();
+                logger.error("登录失败", e);
             }
         }).start();
     }
@@ -209,7 +212,7 @@ public class LoginController {
 
         } catch (IOException e) {
             showError("加载密码重置对话框失败：" + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载密码重置对话框失败", e);
         }
     }
 
@@ -349,7 +352,7 @@ public class LoginController {
     }
 
     /**
-     * 保存凭据
+     * 保存凭据（仅保存用户名，不保存密码）
      * @param username 用户名
      * @param password 密码
      */
@@ -360,7 +363,6 @@ public class LoginController {
 
             Properties props = new Properties();
             props.setProperty("username", username);
-            props.setProperty("password", password);
             props.setProperty("remember", "true");
 
             try (OutputStream output = new FileOutputStream(configFile)) {
@@ -372,7 +374,7 @@ public class LoginController {
     }
 
     /**
-     * 加载保存的凭据
+     * 加载保存的凭据（仅加载用户名，不加载密码）
      */
     private void loadSavedCredentials() {
         try {
@@ -389,7 +391,6 @@ public class LoginController {
             String remember = props.getProperty("remember", "false");
             if ("true".equals(remember)) {
                 usernameField.setText(props.getProperty("username", ""));
-                passwordField.setText(props.getProperty("password", ""));
                 rememberMeCheckBox.setSelected(true);
             }
         } catch (IOException e) {

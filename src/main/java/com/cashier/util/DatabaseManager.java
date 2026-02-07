@@ -2,6 +2,8 @@ package com.cashier.util;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.sql.Connection;
@@ -15,6 +17,8 @@ import java.util.Properties;
  * 负责 MySQL 数据库连接的创建、管理和初始化
  */
 public class DatabaseManager {
+
+    private static final Logger logger = LoggerFactory.getLogger(DatabaseManager.class);
 
     private static HikariDataSource dataSource;
     private static boolean initialized = false;
@@ -68,8 +72,7 @@ public class DatabaseManager {
             initializeDatabase();
 
         } catch (Exception e) {
-            System.err.println("数据库初始化失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("数据库初始化失败", e);
         }
     }
 
@@ -79,12 +82,6 @@ public class DatabaseManager {
     private static void loadConfig() {
         Properties props = new Properties();
 
-        // 默认配置
-        props.setProperty("db.url", "jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true");
-        props.setProperty("db.username", "root");
-        props.setProperty("db.password", "root");
-        props.setProperty("db.pool.size", "10");
-
         // 从文件加载配置
         File configFile = new File(CONFIG_FILE);
         if (configFile.exists()) {
@@ -92,17 +89,35 @@ public class DatabaseManager {
                 props.load(fis);
                 System.out.println("已加载数据库配置: " + CONFIG_FILE);
             } catch (IOException e) {
-                System.err.println("加载配置文件失败，使用默认配置: " + e.getMessage());
+                System.err.println("加载配置文件失败: " + e.getMessage());
+                throw new RuntimeException("无法加载数据库配置文件: " + CONFIG_FILE, e);
             }
         } else {
-            System.out.println("配置文件不存在，使用默认配置");
-            // 创建默认配置文件
-            saveDefaultConfig(props);
+            // 配置文件不存在，创建默认配置文件模板
+            System.out.println("配置文件不存在，创建默认配置文件模板");
+            saveDefaultConfigTemplate();
+            throw new RuntimeException("数据库配置文件不存在: " + CONFIG_FILE + "\n" +
+                "请先配置数据库连接信息：\n" +
+                "1. 编辑 config/database.properties 文件\n" +
+                "2. 设置正确的数据库 URL、用户名和密码\n" +
+                "3. 然后重新启动应用");
         }
 
+        // 验证必需的配置项
         dbUrl = props.getProperty("db.url");
         dbUsername = props.getProperty("db.username");
         dbPassword = props.getProperty("db.password");
+
+        if (dbUrl == null || dbUrl.isEmpty() ||
+            dbUsername == null || dbUsername.isEmpty() ||
+            dbPassword == null || dbPassword.isEmpty()) {
+            throw new RuntimeException("数据库配置不完整！\n" +
+                "请在 config/database.properties 中配置以下参数：\n" +
+                "- db.url (数据库连接URL)\n" +
+                "- db.username (数据库用户名)\n" +
+                "- db.password (数据库密码)");
+        }
+
         try {
             poolSize = Integer.parseInt(props.getProperty("db.pool.size", "10"));
         } catch (NumberFormatException e) {
@@ -111,19 +126,25 @@ public class DatabaseManager {
     }
 
     /**
-     * 保存默认配置文件
+     * 保存默认配置文件模板
      */
-    private static void saveDefaultConfig(Properties props) {
+    private static void saveDefaultConfigTemplate() {
         try {
             File configFile = new File(CONFIG_FILE);
             configFile.getParentFile().mkdirs();
 
+            Properties props = new Properties();
+            props.setProperty("db.url", "jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf8mb4");
+            props.setProperty("db.username", "cashier");
+            props.setProperty("db.password", "YourStrongPassword123!");
+            props.setProperty("db.pool.size", "10");
+
             try (FileOutputStream fos = new FileOutputStream(configFile)) {
-                props.store(fos, "收银系统数据库配置");
-                System.out.println("已创建默认配置文件: " + CONFIG_FILE);
+                props.store(fos, "收银系统数据库配置文件模板");
+                System.out.println("已创建默认配置文件模板: " + CONFIG_FILE);
             }
         } catch (IOException e) {
-            System.err.println("创建配置文件失败: " + e.getMessage());
+            System.err.println("创建配置文件模板失败: " + e.getMessage());
         }
     }
 
@@ -371,8 +392,7 @@ public class DatabaseManager {
             System.out.println("MySQL 数据库初始化成功");
 
         } catch (SQLException e) {
-            System.err.println("数据库表创建失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("数据库表创建失败", e);
         }
     }
 
@@ -500,8 +520,7 @@ public class DatabaseManager {
             }
 
         } catch (Exception e) {
-            System.err.println("数据库备份失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("数据库备份失败", e);
             return false;
         }
     }
@@ -613,8 +632,7 @@ public class DatabaseManager {
             }
 
         } catch (Exception e) {
-            System.err.println("数据库恢复失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("数据库恢复失败", e);
             return false;
         }
     }

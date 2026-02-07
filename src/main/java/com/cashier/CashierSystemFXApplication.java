@@ -8,6 +8,7 @@ import com.cashier.service.DataService;
 import com.cashier.model.User;
 import com.cashier.util.FXMLUtils;
 import com.cashier.util.FXUtils;
+import com.cashier.util.LoggerFactoryUtil;
 import javafx.application.Application;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
@@ -20,6 +21,7 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.net.URL;
+import org.slf4j.Logger;
 
 /**
  * 收银系统 JavaFX 主应用类
@@ -27,6 +29,7 @@ import java.net.URL;
  */
 public class CashierSystemFXApplication extends Application {
 
+    private static final Logger logger = LoggerFactoryUtil.getLogger(CashierSystemFXApplication.class);
     private static final String APP_TITLE = "收银系统";
     private static final double WINDOW_WIDTH = 1300;
     private static final double WINDOW_HEIGHT = 800;
@@ -102,8 +105,7 @@ public class CashierSystemFXApplication extends Application {
             primaryStage.setScene(scene);
 
         } catch (IOException e) {
-            System.err.println("加载登录界面失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载登录界面失败", e);
             System.exit(1);
         }
     }
@@ -132,8 +134,7 @@ public class CashierSystemFXApplication extends Application {
             primaryStage.setScene(scene);
 
         } catch (IOException e) {
-            System.err.println("加载主界面失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载主界面失败", e);
         }
     }
 
@@ -250,8 +251,7 @@ public class CashierSystemFXApplication extends Application {
             primaryStage.setTitle(APP_TITLE + " - " + user.name + " (" + user.getRoleDisplayName() + ")");
 
         } catch (IOException e) {
-            System.err.println("加载主界面失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载主界面失败", e);
         }
     }
 
@@ -283,17 +283,8 @@ public class CashierSystemFXApplication extends Application {
             primaryStage.setTitle(APP_TITLE);
 
         } catch (IOException e) {
-            System.err.println("加载登录界面失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载登录界面失败", e);
         }
-    }
-
-    /**
-     * 获取当前登录用户
-     * @return 当前用户
-     */
-    public User getCurrentUser() {
-        return currentUser;
     }
 
     /**
@@ -309,6 +300,16 @@ public class CashierSystemFXApplication extends Application {
      * @param args 命令行参数
      */
     public static void main(String[] args) {
+        // Windows DPI 缩放支持
+        // 确保应用程序在高 DPI 显示器上正确缩放
+        if (System.getProperty("os.name", "").toLowerCase().contains("win")) {
+            // 设置系统 DPI 感知
+            System.setProperty("sun.java2d.dpiaware", "true");
+            System.setProperty("sun.java2d.dpiaware", "true");
+            System.setProperty("sun.java2d.win.uiScaleX", "1.0");
+            System.setProperty("sun.java2d.win.uiScaleY", "1.0");
+        }
+
         launch(args);
     }
 }

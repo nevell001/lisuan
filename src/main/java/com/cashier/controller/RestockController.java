@@ -3,6 +3,8 @@ package com.cashier.controller;
 import com.cashier.dao.ProductDAO;
 import com.cashier.model.Product;
 import com.cashier.util.StatusBarManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import javafx.fxml.FXML;
 
 import java.sql.SQLException;
@@ -15,6 +17,7 @@ import java.util.Map;
  * 处理商品补货对话框的逻辑
  */
 public class RestockController {
+    private static final Logger logger = LoggerFactory.getLogger(RestockController.class);
 
     @FXML
     private Label titleLabel;
@@ -59,7 +62,7 @@ public class RestockController {
             }
         } catch (SQLException e) {
             System.err.println("加载商品数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载商品数据失败", e);
             inventory = new java.util.HashMap<>();
         }
     }
@@ -126,7 +129,7 @@ public class RestockController {
                 }
             } catch (SQLException e) {
                 System.err.println("补货失败: " + e.getMessage());
-                e.printStackTrace();
+                logger.error("补货失败", e);
                 errorLabel.setText("补货失败: " + e.getMessage());
             }
         }

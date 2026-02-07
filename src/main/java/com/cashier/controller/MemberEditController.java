@@ -4,6 +4,8 @@ import com.cashier.dao.MemberDAO;
 import com.cashier.model.Member;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import javafx.scene.control.*;
@@ -16,9 +18,19 @@ import java.util.Map;
  * 处理会员添加和编辑对话框的逻辑
  */
 public class MemberEditController {
+    private static final Logger logger = LoggerFactory.getLogger(MemberEditController.class);
 
     @FXML
     private Label titleLabel;
+
+    @FXML
+    private TextField idField;
+
+    @FXML
+    private CheckBox autoIdCheckBox;
+
+    @FXML
+    private TextField memberCodeField;
 
     @FXML
     private TextField phoneField;
@@ -69,7 +81,7 @@ public class MemberEditController {
             }
         } catch (SQLException e) {
             System.err.println("加载会员数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载会员数据失败", e);
             members = new java.util.HashMap<>();
         }
 
@@ -81,6 +93,15 @@ public class MemberEditController {
 
         // 设置默认折扣
         discountField.setText("10.0");
+
+        // 设置自动ID复选框默认选中
+        autoIdCheckBox.setSelected(true);
+        idField.setDisable(true);
+
+        // 添加复选框监听器
+        autoIdCheckBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            idField.setDisable(newVal);
+        });
     }
 
     /**
@@ -101,6 +122,10 @@ public class MemberEditController {
         if (member != null) {
             // 编辑模式
             titleLabel.setText("编辑会员");
+            idField.setText(String.valueOf(member.id));
+            idField.setDisable(true);
+            autoIdCheckBox.setDisable(true);
+            memberCodeField.setText(member.memberCode);
             phoneField.setText(member.phone);
             phoneField.setDisable(true); // 手机号不可修改
             nameField.setText(member.name);
@@ -113,6 +138,10 @@ public class MemberEditController {
             // 添加模式
             titleLabel.setText("添加会员");
             phoneField.setDisable(false);
+            autoIdCheckBox.setDisable(false);
+            autoIdCheckBox.setSelected(true);
+            idField.setDisable(true);
+            idField.clear();
         }
     }
 
@@ -144,9 +173,14 @@ public class MemberEditController {
                     phoneField.getText().trim(),
                     nameField.getText().trim()
                 );
+                // 如果不是自动生成ID，则设置用户提供的ID
+                if (!autoIdCheckBox.isSelected() && !idField.getText().trim().isEmpty()) {
+                    member.id = Integer.parseInt(idField.getText().trim());
+                }
             }
 
             // 更新会员信息
+            member.memberCode = memberCodeField.getText().trim();
             member.points = Double.parseDouble(pointsField.getText().trim());
             member.level = levelComboBox.getSelectionModel().getSelectedItem();
             member.discount = Double.parseDouble(discountField.getText().trim());
@@ -172,6 +206,18 @@ public class MemberEditController {
      */
     private boolean isInputValid() {
         String errorMessage = "";
+
+        // 验证ID（仅当手动输入时）
+        if (!autoIdCheckBox.isSelected() && !idField.getText().trim().isEmpty()) {
+            try {
+                int id = Integer.parseInt(idField.getText().trim());
+                if (id <= 0) {
+                    errorMessage += "ID必须是大于0的数字！\n";
+                }
+            } catch (NumberFormatException e) {
+                errorMessage += "ID格式不正确！\n";
+            }
+        }
 
         // 验证手机号
         String phone = phoneField.getText().trim();

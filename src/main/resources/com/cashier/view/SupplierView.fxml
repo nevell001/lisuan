@@ -1,0 +1,83 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.SupplierController"
+      spacing="0"
+      styleClass="supplier-view">
+
+    <!-- 顶部工具栏 -->
+    <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+
+        <!-- 操作按钮 -->
+        <Button fx:id="addButton"
+                text="添加供应商"
+                onAction="#handleAddSupplier"
+                prefWidth="120"
+                styleClass="primary-button"/>
+
+        <Button fx:id="editButton"
+                text="编辑"
+                onAction="#handleEditSupplier"
+                prefWidth="80"
+                disable="true"
+                styleClass="secondary-button"/>
+
+        <Button fx:id="deleteButton"
+                text="删除"
+                onAction="#handleDeleteSupplier"
+                prefWidth="80"
+                disable="true"
+                styleClass="danger-button"/>
+
+        <Separator orientation="VERTICAL"/>
+
+        <!-- 搜索 -->
+        <Label text="搜索:"/>
+        <TextField fx:id="searchField"
+                  promptText="输入编号、名称或联系人"
+                  prefWidth="200"
+                  onAction="#handleSearch"/>
+
+        <Button text="搜索"
+                onAction="#handleSearch"
+                prefWidth="60"
+                styleClass="secondary-button"/>
+
+        <Button text="清除"
+                onAction="#handleClearSearch"
+                prefWidth="60"
+                styleClass="secondary-button"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <!-- 统计信息 -->
+        <Label fx:id="countLabel" text="供应商数量: 0" style="-fx-text-fill: #757575;"/>
+    </HBox>
+
+    <!-- 供应商表格 -->
+    <TableView fx:id="supplierTable"
+              VBox.vgrow="ALWAYS"
+              styleClass="supplier-table">
+        <columns>
+            <TableColumn fx:id="codeColumn" text="供应商编号" prefWidth="120"/>
+            <TableColumn fx:id="nameColumn" text="供应商名称" prefWidth="150"/>
+            <TableColumn fx:id="contactColumn" text="联系人" prefWidth="100"/>
+            <TableColumn fx:id="phoneColumn" text="联系电话" prefWidth="120"/>
+            <TableColumn fx:id="rankColumn" text="等级" prefWidth="80"/>
+            <TableColumn fx:id="statusColumn" text="状态" prefWidth="80"/>
+            <TableColumn fx:id="addressColumn" text="地址" prefWidth="200"/>
+        </columns>
+        <placeholder>
+            <Label text="暂无供应商数据" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
+        </placeholder>
+    </TableView>
+
+</VBox>

@@ -1,11 +1,16 @@
 package com.cashier;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.Statement;
 
 public class TestMySQLConnection {
+    private static final Logger logger = LoggerFactory.getLogger(TestMySQLConnection.class);
+
     public static void main(String[] args) {
         String url = "jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true";
         String username = "cashier";
@@ -32,7 +37,7 @@ public class TestMySQLConnection {
 
         } catch (Exception e) {
             System.err.println("✗ 连接失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("MySQL连接失败", e);
         }
     }
 }

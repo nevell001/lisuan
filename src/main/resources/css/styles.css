@@ -314,8 +314,10 @@
 /* ========== 文本区域样式 ========== */
 .text-area {
     -fx-background-color: white;
+    -fx-background-insets: 0;
     -fx-background-radius: 4px;
     -fx-border-color: #E0E0E0;
+    -fx-border-insets: 0;
     -fx-border-radius: 4px;
     -fx-border-width: 1px;
     -fx-padding: 8px 12px;
@@ -328,15 +330,63 @@
     -fx-border-width: 1.5px;
 }
 
-/* ========== 组合框样式 ========== */
+/* TextArea 内部内容区域 - 去除重复边框 */
+.text-area .content {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+}
+
+/* TextArea 内部的 ScrollPane */
+.text-area .scroll-pane {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+}
+
+/* TextArea 内部的文本区域 */
+.text-area > .scroll-pane > .viewport > .content {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+}
+
+/* ========== 组合框样式（彻底去除所有边框） ========== */
+/* 最外层 ComboBox 容器 */
 .combo-box {
     -fx-background-color: white;
+    -fx-background-insets: 0;
     -fx-background-radius: 4px;
     -fx-border-color: #E0E0E0;
+    -fx-border-insets: 0;
     -fx-border-radius: 4px;
     -fx-border-width: 1px;
-    -fx-padding: 8px 12px;
+    -fx-padding: 6px 8px;
     -fx-font-size: 14px;
+    -fx-effect: null !important;
+}
+
+.combo-box-base {
+    -fx-background-color: white;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4px;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+    -fx-effect: null !important;
 }
 
 .combo-box:focused {
@@ -344,15 +394,110 @@
     -fx-border-width: 1.5px;
 }
 
-.combo-box .list-cell {
-    -fx-padding: 8px 12px;
-    -fx-font-size: 14px;
+.combo-box-base:focused {
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
 }
 
+.combo-box:hover {
+    -fx-border-color: #BDBDBD;
+}
+
+/* ComboBox 内容背景（去除默认背景） */
+.combo-box > *.list-cell {
+    -fx-background-color: transparent !important;
+    -fx-background-insets: 0 !important;
+    -fx-border-color: transparent !important;
+    -fx-border-width: 0 !important;
+    -fx-border-insets: 0 !important;
+    -fx-border-radius: 0 !important;
+    -fx-padding: 4px 8px;
+    -fx-font-size: 14px;
+    -fx-text-fill: #212121;
+}
+
+.combo-box > *.cell {
+    -fx-background-color: transparent !important;
+    -fx-background-insets: 0 !important;
+    -fx-border-color: transparent !important;
+    -fx-border-width: 0 !important;
+    -fx-border-insets: 0 !important;
+    -fx-border-radius: 0 !important;
+    -fx-padding: 4px 8px;
+    -fx-text-fill: #212121;
+}
+
+/* ComboBox 内部的 TextField（当 editable=true 时） */
+.combo-box > *.text-field {
+    -fx-background-color: transparent !important;
+    -fx-background-insets: 0 !important;
+    -fx-background-radius: 0 !important;
+    -fx-border-color: transparent !important;
+    -fx-border-width: 0 !important;
+    -fx-border-insets: 0 !important;
+    -fx-border-radius: 0 !important;
+    -fx-padding: 0;
+    -fx-font-size: 14px;
+    -fx-text-fill: #212121;
+    -fx-effect: null !important;
+}
+
+/* ComboBox 箭头按钮背景（去除默认背景） */
+.combo-box > *.arrow-button {
+    -fx-background-color: transparent !important;
+    -fx-background-insets: 0 !important;
+    -fx-background-radius: 0 !important;
+    -fx-border-color: transparent !important;
+    -fx-border-width: 0 !important;
+    -fx-border-insets: 0 !important;
+    -fx-border-radius: 0 !important;
+    -fx-padding: 0 4px 0 8px;
+    -fx-effect: null !important;
+}
+
+/* ComboBox 箭头 */
+.combo-box > *.arrow-button > *.arrow {
+    -fx-background-color: #757575;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-padding: 3px;
+    -fx-shape: "M 0 0 L 4 4 L 8 0";
+    -fx-effect: null !important;
+}
+
+/* 下拉列表弹出框 */
 .combo-box-popup .list-view {
     -fx-background-color: white;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
     -fx-border-color: #E0E0E0;
-    -fx-border-radius: 4px;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 6, 0, 0, 3);
+}
+
+/* 下拉列表弹出框中的单元格 */
+.combo-box-popup .list-view .list-cell {
+    -fx-background-color: white;
+    -fx-background-insets: 0;
+    -fx-background-radius: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-border-insets: 0;
+    -fx-border-radius: 0;
+    -fx-padding: 8px 12px;
+    -fx-font-size: 14px;
+    -fx-text-fill: #212121;
+}
+
+.combo-box-popup .list-view .list-cell:hover {
+    -fx-background-color: #F5F5F5;
+}
+
+.combo-box-popup .list-view .list-cell:filled:selected {
+    -fx-background-color: #E3F2FD;
+    -fx-text-fill: #3F51B5;
 }
 
 /* ========== 标签样式 ========== */
@@ -875,4 +1020,77 @@
 
 .member-table .table-row-cell {
     -fx-alignment: CENTER;
+}
+
+/* ========== 简洁组合框样式（去除多余边框） ========== */
+.clean-combo-box {
+    -fx-background-color: white;
+    -fx-background-radius: 4px;
+    -fx-border-color: #E0E0E0;
+    -fx-border-radius: 4px;
+    -fx-border-width: 1px;
+    -fx-padding: 6px 8px;
+    -fx-font-size: 14px;
+}
+
+.clean-combo-box:focused {
+    -fx-border-color: #3F51B5;
+    -fx-border-width: 1.5px;
+}
+
+.clean-combo-box:hover {
+    -fx-border-color: #BDBDBD;
+}
+
+/* 去除内部单元格的背景和边框 */
+.clean-combo-box .list-cell {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-width: 0;
+    -fx-padding: 4px 8px;
+    -fx-font-size: 14px;
+}
+
+/* 下拉箭头按钮 */
+.clean-combo-box .arrow-button {
+    -fx-background-color: transparent;
+    -fx-background-insets: 0;
+    -fx-border-width: 0;
+    -fx-padding: 0 4px 0 8px;
+}
+
+/* 下拉箭头 */
+.clean-combo-box .arrow {
+    -fx-background-color: #757575;
+    -fx-background-insets: 0;
+    -fx-padding: 3px;
+    -fx-shape: "M 0 0 L 4 4 L 8 0";
+}
+
+/* 下拉列表弹出框 */
+.clean-combo-box-popup .list-view {
+    -fx-background-color: white;
+    -fx-background-insets: 0;
+    -fx-border-color: #E0E0E0;
+    -fx-border-radius: 0;
+    -fx-border-width: 1px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 6, 0, 0, 3);
+}
+
+/* 下拉列表单元格 */
+.clean-combo-box-popup .list-cell {
+    -fx-background-color: white;
+    -fx-background-insets: 0;
+    -fx-border-width: 0;
+    -fx-padding: 8px 12px;
+    -fx-font-size: 14px;
+}
+
+.clean-combo-box-popup .list-cell:hover {
+    -fx-background-color: #F5F5F5;
+}
+
+.clean-combo-box-popup .list-cell:filled:selected {
+    -fx-background-color: #E3F2FD;
+    -fx-text-fill: #3F51B5;
 }

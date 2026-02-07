@@ -1,69 +1,70 @@
 @echo off
+chcp 65001 >nul 2>&1
 REM ============================================
-REM 收银系统 MySQL Docker 快速启动脚本 (Windows)
+REM Cashier System MySQL Docker Quick Start Script (Windows)
 REM ============================================
 
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo   收银系统 MySQL Docker 启动脚本
+echo   Cashier System MySQL Docker Startup
 echo ========================================
 echo.
 
-REM 检查 Docker 是否运行
+REM Check if Docker is running
 docker info >nul 2>&1
 if %errorlevel% neq 0 (
-    echo [错误] Docker 未运行！
-    echo 请先启动 Docker Desktop
+    echo [Error] Docker not running!
+    echo Please start Docker Desktop first
     pause
     exit /b 1
 )
 
-REM 创建必要的目录
-echo [1/4] 创建必要的目录...
+REM Create necessary directories
+echo [1/4] Creating necessary directories...
 if not exist "docker\mysql-init" mkdir "docker\mysql-init"
 if not exist "docker\mysql-backup" mkdir "docker\mysql-backup"
 if not exist "config" mkdir "config"
-echo [完成] 目录创建完成
+echo [Done] Directories created
 echo.
 
-REM 检查配置文件
+REM Check configuration file
 if not exist "config\database.properties" (
-    echo [2/4] 创建数据库配置文件...
+    echo [2/4] Creating database config file...
     copy "config\database.properties.example" "config\database.properties" >nul
-    echo [完成] 配置文件已创建: config\database.properties
-    echo [提示] 请编辑此文件并修改数据库连接信息
+    echo [Done] Config file created: config\database.properties
+    echo [Tip] Please edit this file and modify database connection info
 ) else (
-    echo [2/4] 配置文件已存在
+    echo [2/4] Config file already exists
 )
 echo.
 
-REM 检查是否已存在容器
+REM Check if container already exists
 docker ps -a | findstr "cashier-mysql" >nul
 if %errorlevel% equ 0 (
-    echo [3/4] 检测到已存在的 MySQL 容器
-    set /p REPLY="是否删除旧容器并重新创建？(y/N): "
+    echo [3/4] Detected existing MySQL container
+    set /p REPLY="Remove old container and recreate? (y/N): "
     if /i "!REPLY!"=="y" (
-        echo [停止] 停止并删除旧容器...
+        echo [Stop] Stopping and removing old container...
         docker-compose down -v
-        echo [完成] 旧容器已删除
+        echo [Done] Old container removed
     ) else (
-        echo [启动] 启动现有容器...
+        echo [Start] Starting existing container...
         docker-compose start
-        echo [完成] 容器已启动
+        echo [Done] Container started
         goto :success
     )
 )
 
-REM 启动 MySQL 容器
-echo [3/4] 启动 MySQL 容器...
+REM Start MySQL container
+echo [3/4] Starting MySQL container...
 docker-compose up -d
 
-REM 等待 MySQL 启动
-echo [等待] 等待 MySQL 启动...
+REM Wait for MySQL to start
+echo [Wait] Waiting for MySQL to start...
 timeout /t 15 /nobreak >nul
 
-REM 检查容器状态
+REM Check container status
 docker ps | findstr "cashier-mysql" >nul
 if %errorlevel% equ 0 (
     goto :success
@@ -74,29 +75,29 @@ if %errorlevel% equ 0 (
 :success
 echo.
 echo ========================================
-echo [成功] MySQL 启动成功！
+echo [Success] MySQL started successfully!
 echo ========================================
 echo.
-echo 数据库连接信息：
-echo   主机: localhost
-echo   端口: 3306
-echo   数据库: cashier_system
-echo   用户名: cashier
-echo   密码: YourStrongPassword123!
+echo Database connection info:
+echo   Host: localhost
+echo   Port: 3306
+echo   Database: cashier_system
+echo   Username: cashier
+echo   Password: YourStrongPassword123!
 echo.
-echo 管理工具：
+echo Management tools:
 echo   phpMyAdmin: http://localhost:8080
 echo.
-echo 常用命令：
-echo   查看日志: docker-compose logs -f mysql
-echo   停止容器: docker-compose stop
-echo   重启容器: docker-compose restart
-echo   进入容器: docker exec -it cashier-mysql bash
+echo Common commands:
+echo   View logs: docker-compose logs -f mysql
+echo   Stop container: docker-compose stop
+echo   Restart container: docker-compose restart
+echo   Enter container: docker exec -it cashier-mysql bash
 echo.
-echo 下一步：
-echo   1. 修改 config\database.properties
-echo   2. 启动收银系统应用
-echo   3. 应用会自动迁移数据到 MySQL
+echo Next steps:
+echo   1. Modify config\database.properties
+echo   2. Start cashier system application
+echo   3. Application will automatically migrate data to MySQL
 echo.
 pause
 exit /b 0
@@ -104,10 +105,10 @@ exit /b 0
 :failure
 echo.
 echo ========================================
-echo [失败] MySQL 启动失败！
+echo [Failure] MySQL startup failed!
 echo ========================================
 echo.
-echo 查看错误日志：
+echo View error logs:
 echo   docker-compose logs mysql
 echo.
 pause

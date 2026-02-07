@@ -1,0 +1,180 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.PurchaseReportController"
+      spacing="0"
+      styleClass="statistics-view">
+
+    <!-- 顶部工具栏 -->
+    <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+
+        <!-- 时间范围选择 -->
+        <Label text="时间范围:"/>
+        <ComboBox fx:id="timeRangeComboBox" prefWidth="120"/>
+
+        <Label text="开始日期:"/>
+        <DatePicker fx:id="startDatePicker" prefWidth="150"/>
+
+        <Label text="结束日期:"/>
+        <DatePicker fx:id="endDatePicker" prefWidth="150"/>
+
+        <Label text="供应商:"/>
+        <ComboBox fx:id="supplierComboBox" prefWidth="150"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <!-- 操作按钮 -->
+        <Button fx:id="queryButton"
+                text="查询"
+                onAction="#handleQuery"
+                prefWidth="100"
+                prefHeight="35"
+                styleClass="primary-button"/>
+
+        <Button fx:id="exportButton"
+                text="导出"
+                onAction="#handleExport"
+                prefWidth="100"
+                prefHeight="35"
+                styleClass="secondary-button"/>
+    </HBox>
+
+    <!-- 统计卡片区域 -->
+    <ScrollPane fitToWidth="true" VBox.vgrow="NEVER">
+        <HBox spacing="15" styleClass="cards-container">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+
+            <!-- 总订单数 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="总订单数" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="totalOrdersLabel" text="0" style="-fx-text-fill: #3F51B5; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 总金额 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="总金额" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="totalAmountLabel" text="¥0.00" style="-fx-text-fill: #4CAF50; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 总数量 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="总数量" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="totalQuantityLabel" text="0" style="-fx-text-fill: #FF9800; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 平均订单金额 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="平均订单金额" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="avgOrderAmountLabel" text="¥0.00" style="-fx-text-fill: #9C27B0; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 待审批订单 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="待审批订单" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="pendingOrdersLabel" text="0" style="-fx-text-fill: #F44336; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 已审批订单 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="已审批订单" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="approvedOrdersLabel" text="0" style="-fx-text-fill: #2196F3; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 已完成订单 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="已完成订单" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="completedOrdersLabel" text="0" style="-fx-text-fill: #00BCD4; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+        </HBox>
+    </ScrollPane>
+
+    <!-- 详细统计区域 -->
+    <SplitPane VBox.vgrow="ALWAYS" styleClass="statistics-split-pane">
+        <!-- 左侧：采购订单列表 -->
+        <VBox spacing="10">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <Label text="采购订单列表" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+            <TableView fx:id="orderTable" VBox.vgrow="ALWAYS" styleClass="order-table">
+                <columns>
+                    <TableColumn fx:id="orderNoColumn" text="订单号" prefWidth="150"/>
+                    <TableColumn fx:id="supplierColumn" text="供应商" prefWidth="150"/>
+                    <TableColumn fx:id="dateColumn" text="采购日期" prefWidth="120"/>
+                    <TableColumn fx:id="amountColumn" text="订单金额" prefWidth="120"/>
+                    <TableColumn fx:id="quantityColumn" text="总数量" prefWidth="100"/>
+                    <TableColumn fx:id="statusColumn" text="状态" prefWidth="100"/>
+                </columns>
+            </TableView>
+        </VBox>
+
+        <!-- 右侧：供应商排名和分类统计 -->
+        <SplitPane orientation="VERTICAL">
+            <!-- 供应商排名 -->
+            <VBox spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+
+                <Label text="供应商采购排名" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                <TableView fx:id="supplierRankTable" VBox.vgrow="ALWAYS" styleClass="supplier-rank-table">
+                    <columns>
+                        <TableColumn fx:id="rankColumn" text="排名" prefWidth="60"/>
+                        <TableColumn fx:id="supplierNameColumn" text="供应商名称" prefWidth="150"/>
+                        <TableColumn fx:id="orderCountColumn" text="订单数量" prefWidth="100"/>
+                        <TableColumn fx:id="supplierAmountColumn" text="采购金额" prefWidth="120"/>
+                    </columns>
+                </TableView>
+            </VBox>
+
+            <!-- 分类统计 -->
+            <VBox spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+
+                <Label text="商品分类统计" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                <TableView fx:id="categoryTable" VBox.vgrow="ALWAYS" styleClass="category-table">
+                    <columns>
+                        <TableColumn fx:id="categoryColumn" text="分类名称" prefWidth="150"/>
+                        <TableColumn fx:id="categoryQuantityColumn" text="采购数量" prefWidth="120"/>
+                        <TableColumn fx:id="categoryAmountColumn" text="采购金额" prefWidth="120"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </SplitPane>
+    </SplitPane>
+
+</VBox>

@@ -23,6 +23,10 @@ data/
 
 # 配置文件（敏感信息）
 config/*.properties
+config/*.config
+
+# Windows 批处理文件（跟踪这些文件）
+# *.bat
 !FLATLAF_README.md
 !FLATLAF_UPGRADE_SUMMARY.md
 !ICON_FIX_SUMMARY.md

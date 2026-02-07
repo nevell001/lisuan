@@ -1,0 +1,116 @@
+# ============================================
+# 打印机配置文件
+# 用于配置小票打印机的打印参数
+# ============================================
+
+# ============================================
+# 打印机选择
+# ============================================
+# 打印机名称（留空使用系统默认打印机）
+# 在 Windows 上，可以通过以下命令查看可用打印机：
+#   powershell -Command "Get-WmiObject -Class Win32_Printer | Select-Object Name"
+printer.name=
+
+# 打印机类型
+# 可选值: default, thermal, laser, inkjet
+printer.type=default
+
+# ============================================
+# 打印参数
+# ============================================
+# 纸张大小（Windows 上的纸张名称）
+# 常用值: A4, Letter, 80mm, 58mm
+paper.size=80mm
+
+# 打印方向
+# 可选值: portrait (纵向), landscape (横向)
+orientation=portrait
+
+# 打印质量
+# 可选值: low, normal, high, draft
+print.quality=normal
+
+# 打印份数
+copies=1
+
+# ============================================
+# 小票格式
+# ============================================
+# 小票宽度（字符数，用于格式化）
+receipt.width=40
+
+# 是否打印店铺信息
+print.store.info=true
+
+# 是否打印会员信息
+print.member.info=true
+
+# 是否打印商品明细
+print.item.details=true
+
+# 是否打印底部信息
+print.footer.info=true
+
+# ============================================
+# Windows 特定设置
+# ============================================
+# 是否使用后台打印
+use.background.printing=true
+
+# 是否双面打印
+print.duplex=false
+
+# 是否打印到文件（而非实际打印机）
+print.to.file=false
+
+# 打印到文件的路径（当 print.to.file=true 时使用）
+print.file.path=receipts\output
+
+# ============================================
+# 热敏打印机设置（适用于小票打印机）
+# ============================================
+# 是否使用热敏打印机模式
+thermal.printer.mode=false
+
+# 切纸指令（ESC/POS 指令）
+# 1 = 全切, 2 = 半切, 0 = 不切纸
+thermal.cut.paper=1
+
+# 初始化指令
+thermal.initialize=true
+
+# 是否打印条形码
+thermal.print.barcode=false
+
+# 是否打印二维码
+thermal.print.qrcode=false
+
+# ============================================
+# 打印机命令（高级用户使用）
+# ============================================
+# Windows 打印命令（自定义打印命令）
+# 变量:
+#   {printer} - 打印机名称
+#   {file} - 要打印的文件路径
+#   {copies} - 打印份数
+#
+# 示例:
+#   使用 notepad 打印: notepad /p {file}
+#   使用 PowerShell 打印: powershell -Command "Get-Content '{file}' | Out-Printer -Name '{printer}'"
+#   使用 Word 打印: winword /q /n /t "{file}" /mFilePrintDefault /mFileExit
+windows.print.command=notepad /p {file}
+
+# 是否在打印后删除临时文件
+delete.temp.file.after.print=true
+
+# ============================================
+# 调试选项
+# ============================================
+# 是否启用调试日志
+debug.enabled=false
+
+# 是否打印预览（在控制台显示小票内容）
+print.preview=false
+
+# 日志文件路径
+debug.log.file=logs\printer.log

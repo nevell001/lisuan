@@ -1,0 +1,185 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.InventoryReportController"
+      spacing="0"
+      styleClass="statistics-view">
+
+    <!-- 顶部工具栏 -->
+    <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+
+        <!-- 时间范围选择 -->
+        <Label text="时间范围:"/>
+        <ComboBox fx:id="timeRangeComboBox" prefWidth="120"/>
+
+        <Label text="开始日期:"/>
+        <DatePicker fx:id="startDatePicker" prefWidth="150"/>
+
+        <Label text="结束日期:"/>
+        <DatePicker fx:id="endDatePicker" prefWidth="150"/>
+
+        <Label text="分类:"/>
+        <ComboBox fx:id="categoryComboBox" prefWidth="150"/>
+
+        <Separator orientation="VERTICAL"/>
+
+        <!-- 阈值设置 -->
+        <Label text="周转率阈值:"/>
+        <TextField fx:id="turnoverThresholdField" prefWidth="80" promptText="1.0"/>
+
+        <Label text="滞销阈值:"/>
+        <TextField fx:id="slowSalesThresholdField" prefWidth="80" promptText="10"/>
+
+        <Label text="库存天数:"/>
+        <TextField fx:id="inventoryDaysField" prefWidth="80" promptText="90"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <!-- 操作按钮 -->
+        <Button fx:id="queryButton"
+                text="查询"
+                onAction="#handleQuery"
+                prefWidth="100"
+                prefHeight="35"
+                styleClass="primary-button"/>
+
+        <Button fx:id="exportButton"
+                text="导出"
+                onAction="#handleExport"
+                prefWidth="100"
+                prefHeight="35"
+                styleClass="secondary-button"/>
+    </HBox>
+
+    <!-- 统计卡片区域 -->
+    <ScrollPane fitToWidth="true" VBox.vgrow="NEVER">
+        <HBox spacing="15" styleClass="cards-container">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+
+            <!-- 总商品数 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="总商品数" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="totalProductsLabel" text="0" style="-fx-text-fill: #3F51B5; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 总库存价值 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="总库存价值" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="totalStockValueLabel" text="¥0.00" style="-fx-text-fill: #4CAF50; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 平均周转率 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="平均周转率" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="avgTurnoverRateLabel" text="0.00" style="-fx-text-fill: #FF9800; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 库存不足 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="库存不足" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="lowStockCountLabel" text="0" style="-fx-text-fill: #F44336; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 滞销商品 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="滞销商品" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="slowSalesCountLabel" text="0" style="-fx-text-fill: #9C27B0; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+
+            <!-- 积压商品 -->
+            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
+                <padding>
+                    <Insets top="15" right="15" bottom="15" left="15"/>
+                </padding>
+                <Label text="积压商品" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                <Label fx:id="overstockCountLabel" text="0" style="-fx-text-fill: #00BCD4; -fx-font-size: 24px; -fx-font-weight: bold;"/>
+            </VBox>
+        </HBox>
+    </ScrollPane>
+
+    <!-- 详细统计区域 -->
+    <TabPane VBox.vgrow="ALWAYS" styleClass="inventory-tab-pane" tabClosingPolicy="UNAVAILABLE">
+        <!-- 商品周转分析 -->
+        <Tab text="商品周转分析">
+            <VBox spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <TableView fx:id="productTable" VBox.vgrow="ALWAYS" styleClass="product-table">
+                    <columns>
+                        <TableColumn fx:id="productNameColumn" text="商品名称" prefWidth="200"/>
+                        <TableColumn fx:id="categoryColumn" text="分类" prefWidth="120"/>
+                        <TableColumn fx:id="currentStockColumn" text="当前库存" prefWidth="100"/>
+                        <TableColumn fx:id="stockValueColumn" text="库存价值" prefWidth="120"/>
+                        <TableColumn fx:id="salesQuantityColumn" text="销售数量" prefWidth="100"/>
+                        <TableColumn fx:id="turnoverRateColumn" text="周转率" prefWidth="100"/>
+                        <TableColumn fx:id="inventoryDaysColumn" text="库存天数" prefWidth="100"/>
+                        <TableColumn fx:id="statusColumn" text="状态" prefWidth="100"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- 滞销商品 -->
+        <Tab text="滞销商品">
+            <VBox spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <TableView fx:id="slowSalesTable" VBox.vgrow="ALWAYS" styleClass="slow-sales-table">
+                    <columns>
+                        <TableColumn fx:id="slowProductNameColumn" text="商品名称" prefWidth="200"/>
+                        <TableColumn fx:id="slowCategoryColumn" text="分类" prefWidth="120"/>
+                        <TableColumn fx:id="currentStockColumn2" text="当前库存" prefWidth="100"/>
+                        <TableColumn fx:id="salesQuantityColumn2" text="销售数量" prefWidth="100"/>
+                        <TableColumn fx:id="lastSaleDateColumn" text="最后销售日期" prefWidth="150"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+
+        <!-- 库存积压 -->
+        <Tab text="库存积压">
+            <VBox spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <TableView fx:id="overstockTable" VBox.vgrow="ALWAYS" styleClass="overstock-table">
+                    <columns>
+                        <TableColumn fx:id="overstockProductNameColumn" text="商品名称" prefWidth="200"/>
+                        <TableColumn fx:id="overstockCategoryColumn" text="分类" prefWidth="120"/>
+                        <TableColumn fx:id="overstockQuantityColumn" text="库存数量" prefWidth="100"/>
+                        <TableColumn fx:id="overstockValueColumn" text="库存价值" prefWidth="120"/>
+                        <TableColumn fx:id="overstockDaysColumn" text="库存天数" prefWidth="100"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </Tab>
+    </TabPane>
+
+</VBox>

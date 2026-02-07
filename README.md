@@ -2,7 +2,7 @@
 
 一个功能完整的收银系统，使用 JavaFX 17 开发，提供现代化的图形化界面。
 
-**当前版本**: v2.2.1 | **最新更新**: 2026-02-04
+**当前版本**: v2.3.0 | **最新更新**: 2026-02-07
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.8-blue)
@@ -33,6 +33,22 @@
 - **用户管理** - 用户增删改查、权限管理
 - **系统设置** - 主题切换、税率配置、数据备份/恢复
 
+### 🏭 采购管理
+- **供应商管理** - 供应商信息管理、供应商分级（A级/B级/C级）、供应商搜索
+- **采购订单** - 创建采购订单、多商品采购、订单状态管理、自动计算总金额
+- **采购审批** - 审批流程管理、审批通过/拒绝、审批意见记录、审批历史查询
+- **采购入库** - 基于已审批订单入库、支持部分入库、自动更新库存、生成入库单
+
+### 🔍 库存盘点
+- **盘点单管理** - 创建盘点单、盘点类型选择（全盘/部分盘点）
+- **实际库存录入** - 账面数量对比、实际数量录入、自动计算差异
+- **盘点完成** - 自动调整库存、差异原因记录、盘点统计
+
+### 📊 报表统计
+- **采购报表** - 采购订单统计、采购金额趋势（日/周/月）、供应商采购排名、分类采购统计
+- **库存报表** - 库存周转率分析、滞销商品分析、库存积压分析、库存不足提醒
+- **利润分析** - 采购成本统计、销售收入统计、毛利润和毛利率分析、净利润计算
+
 ### 🔒 安全与权限
 - 三种角色权限管理（管理员、收银员、财务）
 - 操作日志完整记录
@@ -40,6 +56,31 @@
 - 密码复杂度检查
 
 ## 🎯 最近更新
+
+### v2.3.0 (2026-02-07)
+
+**进销存功能完善**
+- 🏭 采购管理模块
+  - 供应商管理：支持供应商分级（A级、B级、C级）、供应商信息管理
+  - 采购订单：创建采购订单、多商品采购、订单状态管理（待审批、已审批、已拒绝、已完成）
+  - 采购审批：审批流程管理、审批通过/拒绝、审批意见记录
+  - 采购入库：基于已审批订单入库、支持部分入库、自动更新库存
+- 🔍 库存盘点模块
+  - 创建盘点单（全盘/部分盘点）
+  - 实际库存录入、自动计算差异
+  - 完成盘点后自动调整库存
+- 📊 报表统计模块
+  - 采购报表：采购订单统计、采购金额趋势、供应商采购排名
+  - 库存报表：库存周转率、滞销商品、库存积压分析
+  - 利润分析：采购成本、销售收入、毛利率、净利润计算
+- 🗄️ 数据库表设计
+  - 新增8张采购相关数据表
+  - 完整的DAO层封装（8个DAO类）
+  - 支持完整的采购业务流程
+- 🎨 界面优化
+  - 新增5个采购管理界面
+  - 新增3个报表统计界面
+  - 统一的UI风格和交互体验
 
 ### v2.2.1 (2026-02-04)
 
@@ -107,6 +148,48 @@
 - 🗂️ 优化顶端菜单，移除冗余菜单项
 
 ## 🚀 快速开始
+
+### Windows 10 快速开始
+
+专为 Windows 10 用户提供快速安装指南：
+
+#### 方式一：使用一键安装脚本（推荐）
+
+1. **双击运行 `install.bat`**
+   - 自动检查 Java、Maven 环境
+   - 下载依赖并编译项目
+   - 创建必要目录和配置文件
+   - 可选：创建桌面快捷方式
+
+2. **安装 MySQL 数据库**
+   - 查看 [Windows MySQL 安装指南](docs/WINDOWS_MYSQL_SETUP.md)
+   - 或使用 Docker Desktop：双击运行 `docker/start-mysql.bat`
+
+3. **配置数据库连接**
+   - 编辑 `config/database.properties`
+   - 修改数据库用户名和密码
+
+4. **启动应用**
+   - 双击运行 `start.bat`
+   - 或使用桌面快捷方式
+
+#### 方式二：使用便携版
+
+1. 下载便携版 ZIP（如果已提供）
+2. 解压到任意目录
+3. 双击运行 `start.bat`
+4. 首次运行会自动初始化
+
+#### Windows 特性支持
+
+- ✅ **一键启动** - 双击 `start.bat` 即可运行
+- ✅ **桌面快捷方式** - 运行 `create-shortcut.bat` 创建快捷方式
+- ✅ **高 DPI 支持** - 自动适配高分辨率显示器
+- ✅ **打印机支持** - 完整的 Windows 打印机配置
+- ✅ **性能优化** - 针对 Windows 10 优化的 JVM 参数
+- ✅ **安装程序** - 使用 `package-windows.bat` 创建 MSI 安装包
+
+详见 [Windows 使用文档](docs/WINDOWS_SETUP.md) (待创建)
 
 ### 环境要求
 
@@ -262,6 +345,63 @@ java -jar target/cashier-system-fx-2.2.1.jar
    - 自动登出设置
    - 密码安全设置
 
+10. **供应商管理**
+    - 供应商信息添加、编辑、删除
+    - 供应商分级（A级/B级/C级）
+    - 供应商搜索和筛选
+    - 供应商统计信息
+
+11. **采购订单**
+    - 创建采购订单
+    - 选择供应商和采购日期
+    - 添加商品到订单
+    - 编辑商品数量和单价
+    - 自动计算订单总金额
+    - 提交审批
+
+12. **采购审批**
+    - 查看待审批订单列表
+    - 审批通过或拒绝
+    - 填写审批意见
+    - 查看审批历史
+
+13. **采购入库**
+    - 选择待入库订单
+    - 输入入库数量（支持部分入库）
+    - 自动更新商品库存
+    - 生成入库单
+    - 查看入库历史
+
+14. **库存盘点**
+    - 创建盘点单
+    - 选择盘点类型（全盘/部分盘点）
+    - 添加盘点商品
+    - 输入实际库存数量
+    - 自动计算盘点差异
+    - 完成盘点并调整库存
+
+15. **采购报表**
+    - 采购订单统计
+    - 采购金额趋势分析（日/周/月）
+    - 供应商采购排名
+    - 分类采购统计
+    - 订单状态统计
+
+16. **库存报表**
+    - 库存周转率分析
+    - 滞销商品分析
+    - 库存积压分析
+    - 库存不足提醒
+    - 可配置阈值设置
+
+17. **利润分析**
+    - 采购成本统计
+    - 销售收入统计
+    - 毛利润和毛利率分析
+    - 净利润计算
+    - 分类利润分析
+    - 每日利润趋势
+
 ### 快捷键
 
 #### 主界面快捷键
@@ -346,7 +486,15 @@ hello/
 │       │   │   ├── OperationLogDAO.java        # 操作日志 DAO
 │       │   │   ├── RechargeRecordDAO.java      # 充值记录 DAO
 │       │   │   ├── SystemSettingsDAO.java      # 系统设置 DAO
-│       │   │   └── ThemePreferenceDAO.java     # 主题偏好 DAO
+│       │   │   ├── ThemePreferenceDAO.java     # 主题偏好 DAO
+│       │   │   ├── SupplierDAO.java            # 供应商 DAO
+│       │   │   ├── PurchaseOrderDAO.java       # 采购订单 DAO
+│       │   │   ├── PurchaseOrderItemDAO.java   # 采购订单明细 DAO
+│       │   │   ├── PurchaseApprovalDAO.java    # 采购审批 DAO
+│       │   │   ├── PurchaseInboundDAO.java     # 采购入库 DAO
+│       │   │   ├── PurchaseInboundItemDAO.java # 采购入库明细 DAO
+│       │   │   ├── InventoryCheckDAO.java      # 库存盘点 DAO
+│       │   │   └── InventoryCheckItemDAO.java  # 库存盘点明细 DAO
 │       │   ├── controller/
 │       │   │   ├── CartController.java          # 购物车控制器
 │       │   │   ├── CheckoutController.java      # 结账控制器
@@ -364,7 +512,15 @@ hello/
 │       │   │   ├── ProductEditController.java   # 商品编辑控制器
 │       │   │   ├── RechargeController.java      # 充值控制器
 │       │   │   ├── RestockController.java       # 补货控制器
-│       │   │   └── PasswordResetController.java # 密码重置控制器
+│       │   │   ├── PasswordResetController.java # 密码重置控制器
+│       │   │   ├── SupplierController.java     # 供应商管理控制器
+│       │   │   ├── PurchaseOrderController.java # 采购订单控制器
+│       │   │   ├── PurchaseApprovalController.java # 采购审批控制器
+│       │   │   ├── PurchaseInboundController.java # 采购入库控制器
+│       │   │   ├── InventoryCheckController.java # 库存盘点控制器
+│       │   │   ├── PurchaseReportController.java # 采购报表控制器
+│       │   │   ├── InventoryReportController.java # 库存报表控制器
+│       │   │   └── ProfitReportController.java # 利润分析控制器
 │       │   ├── model/
 │       │   │   ├── Product.java                 # 商品实体类
 │       │   │   ├── Member.java                  # 会员实体类
@@ -377,6 +533,14 @@ hello/
 │       │   │   ├── OperationLog.java            # 操作日志类
 │       │   │   ├── Shift.java                   # 交接班记录类
 │       │   │   ├── CartItem.java                # 购物车项类
+│       │   │   ├── Supplier.java                # 供应商实体类
+│       │   │   ├── PurchaseOrder.java           # 采购订单实体类
+│       │   │   ├── PurchaseOrderItem.java       # 采购订单明细类
+│       │   │   ├── PurchaseApproval.java        # 采购审批记录类
+│       │   │   ├── PurchaseInbound.java         # 采购入库记录类
+│       │   │   ├── PurchaseInboundItem.java     # 采购入库明细类
+│       │   │   ├── InventoryCheck.java          # 库存盘点实体类
+│       │   │   ├── InventoryCheckItem.java      # 库存盘点明细类
 │       │   │   └── DataManager.java             # 文件存储（备用）
 │       │   └── util/
 │       │       ├── DatabaseManager.java          # 数据库管理器
@@ -403,7 +567,15 @@ hello/
 │           │   ├── ProductEditView.fxml         # 商品编辑界面
 │           │   ├── RechargeView.fxml            # 充值界面
 │           │   ├── RestockView.fxml             # 补货界面
-│           │   └── PasswordResetView.fxml       # 密码重置界面
+│           │   ├── PasswordResetView.fxml       # 密码重置界面
+│           │   ├── SupplierView.fxml           # 供应商管理界面
+│           │   ├── PurchaseOrderView.fxml      # 采购订单界面
+│           │   ├── PurchaseApprovalView.fxml   # 采购审批界面
+│           │   ├── PurchaseInboundView.fxml    # 采购入库界面
+│           │   ├── InventoryCheckView.fxml     # 库存盘点界面
+│           │   ├── PurchaseReportView.fxml     # 采购报表界面
+│           │   ├── InventoryReportView.fxml    # 库存报表界面
+│           │   └── ProfitReportView.fxml       # 利润分析界面
 │           └── css/
 │               ├── styles.css                    # 主样式文件
 │               ├── light-theme.css               # 浅色主题
@@ -430,7 +602,13 @@ hello/
 │   ├── shifts.txt                   # 交接班记录
 │   └── settings.txt                 # 系统设置
 ├── README.md                        # 项目说明（本文件）
-└── LICENSE                          # 木兰宽松许可证 v2
+├── LICENSE                          # 木兰宽松许可证 v2
+└── docs/
+    ├── DATABASE_INIT.md             # 数据库初始化文档
+    ├── MYSQL_SETUP.md               # MySQL 部署指南
+    ├── PURCHASE_TABLE_DESIGN.md     # 采购表结构设计
+    ├── WINDOWS_MYSQL_SETUP.md       # Windows MySQL 安装指南
+    └── ICON_GUIDE.md                # 应用图标指南
 ```
 
 ## 🛠️ 开发
@@ -553,6 +731,18 @@ java -jar target/cashier-system-fx-2.2.1.jar
 - `system_settings` - 系统设置
 - `theme_preferences` - 主题偏好
 
+**采购管理表**：
+- `suppliers` - 供应商信息
+- `purchase_orders` - 采购订单
+- `purchase_order_items` - 采购订单明细
+- `purchase_approvals` - 采购审批记录
+- `purchase_inbound` - 采购入库记录
+- `purchase_inbound_items` - 采购入库明细
+
+**库存管理表**：
+- `inventory_check` - 库存盘点
+- `inventory_check_items` - 库存盘点明细
+
 ### 数据迁移
 
 系统首次启动时会自动执行数据迁移：
@@ -634,6 +824,70 @@ mysql -u root -p cashier_system < backup.sql
   - 从备份目录选择恢复
   - 按时间排序显示备份列表
 
+## 🔧 Windows 故障排除
+
+### 应用无法启动
+
+**问题**: 双击 `start.bat` 后闪退或无法启动
+
+**解决方案**:
+1. 打开命令提示符（cmd）
+2. 进入项目目录
+3. 手动运行 `start.bat` 查看错误信息
+4. 检查是否已安装 JDK 17 或更高版本
+
+### Java 版本不兼容
+
+**问题**: 提示 Java 版本过低
+
+**解决方案**:
+1. 下载并安装 JDK 17: https://www.oracle.com/java/technologies/downloads/
+2. 设置 JAVA_HOME 环境变量
+3. 将 JDK 的 bin 目录添加到 PATH
+
+### MySQL 连接失败
+
+**问题**: 应用无法连接到 MySQL 数据库
+
+**解决方案**:
+1. 检查 MySQL 服务是否运行
+   - 打开 "服务"（services.msc）
+   - 确保 MySQL80 服务正在运行
+2. 检查防火墙设置
+   - 允许 MySQL 端口 3306 通过
+3. 检查 `config/database.properties` 配置是否正确
+4. 详见 [Windows MySQL 安装指南](docs/WINDOWS_MYSQL_SETUP.md)
+
+### 打印机无法打印小票
+
+**问题**: 小票打印功能无法正常工作
+
+**解决方案**:
+1. 检查打印机是否正确安装
+2. 配置 `config/printer.properties` 文件
+3. 检查打印机驱动是否正常
+4. 尝试使用不同的打印命令
+
+### 界面模糊或显示异常
+
+**问题**: 在高分辨率显示器上界面模糊
+
+**解决方案**:
+1. 检查 `config/jvm.config` 中的 DPI 设置
+2. 确保 `-Dsun.java2d.dpiaware=true` 已启用
+3. 在 Windows 显示设置中调整缩放比例
+4. 重启应用
+
+### 打包失败
+
+**问题**: 运行 `package-windows.bat` 打包失败
+
+**解决方案**:
+1. 确保使用完整 JDK（非 JRE）
+2. 检查 jpackage 工具是否可用（JDK 14+）
+3. 确保已成功编译项目（`mvn clean package`）
+4. 检查是否有足够的磁盘空间
+
 ## 📝 许可证
 
 本项目采用 **木兰宽松许可证 v2 (MulanPSL2)**
@@ -711,6 +965,13 @@ JavaFX 官网: https://openjfx.io/
 - [x] 模型 ID 字段统一管理（v2.2.1 已实现）
 - [x] 数据库初始化脚本完善（v2.2.1 已实现）
 - [x] 字符编码修复（v2.2.1 已实现）
+- [x] 采购管理功能（v2.3.0 已实现）
+- [x] 库存盘点功能（v2.3.0 已实现）
+- [x] 报表统计功能（v2.3.0 已实现）
+- [ ] 退货管理功能
+- [ ] 数据导出功能（Excel/PDF）
+- [ ] 多仓库管理
+- [ ] 操作日志功能增强
 
 ---
 

@@ -93,29 +93,45 @@ public class ProductDAO {
 
     /**
      * 插入新商品
+     * 如果商品ID大于0，则使用指定的ID；否则由数据库自动生成ID
      */
     public static boolean insert(Product product) throws SQLException {
-        String sql = "INSERT INTO products (name, price, quantity, category, barcode, unit, description, " +
-                     "brand, supplier, spec, min_stock, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql;
+        boolean useProvidedId = product.id > 0;
+
+        if (useProvidedId) {
+            // 使用用户提供的ID
+            sql = "INSERT INTO products (id, name, price, quantity, category, barcode, unit, description, " +
+                  "brand, supplier, spec, min_stock, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        } else {
+            // 由数据库自动生成ID
+            sql = "INSERT INTO products (name, price, quantity, category, barcode, unit, description, " +
+                  "brand, supplier, spec, min_stock, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        }
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            pstmt.setString(1, product.name);
-            pstmt.setDouble(2, product.price);
-            pstmt.setInt(3, product.quantity);
-            pstmt.setString(4, product.category);
-            pstmt.setString(5, product.barcode);
-            pstmt.setString(6, product.unit);
-            pstmt.setString(7, product.description);
-            pstmt.setString(8, product.brand);
-            pstmt.setString(9, product.supplier);
-            pstmt.setString(10, product.spec);
-            pstmt.setInt(11, product.minStock);
-            pstmt.setDouble(12, product.cost);
+            int paramIndex = 1;
+            if (useProvidedId) {
+                pstmt.setInt(paramIndex++, product.id);
+            }
+
+            pstmt.setString(paramIndex++, product.name);
+            pstmt.setDouble(paramIndex++, product.price);
+            pstmt.setInt(paramIndex++, product.quantity);
+            pstmt.setString(paramIndex++, product.category);
+            pstmt.setString(paramIndex++, product.barcode);
+            pstmt.setString(paramIndex++, product.unit);
+            pstmt.setString(paramIndex++, product.description);
+            pstmt.setString(paramIndex++, product.brand);
+            pstmt.setString(paramIndex++, product.supplier);
+            pstmt.setString(paramIndex++, product.spec);
+            pstmt.setInt(paramIndex++, product.minStock);
+            pstmt.setDouble(paramIndex++, product.cost);
 
             int affectedRows = pstmt.executeUpdate();
-            if (affectedRows > 0) {
+            if (affectedRows > 0 && !useProvidedId) {
                 try (ResultSet generatedKeys = pstmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
                         product.id = generatedKeys.getInt(1);

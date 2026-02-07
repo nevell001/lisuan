@@ -5,6 +5,8 @@ import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Shift;
 import com.cashier.model.Transaction;
 import com.cashier.util.StatusBarManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
@@ -22,6 +24,7 @@ import java.util.List;
  * 处理交接班记录的查询和显示
  */
 public class ShiftController {
+    private static final Logger logger = LoggerFactory.getLogger(ShiftController.class);
 
     @FXML
     private TableView<Shift> shiftTable;
@@ -162,7 +165,7 @@ public class ShiftController {
             allShifts = ShiftDAO.findAll();
         } catch (SQLException e) {
             System.err.println("加载交接班数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载交接班数据失败", e);
             showError("加载交接班数据失败: " + e.getMessage());
             allShifts = new java.util.ArrayList<>();
         }
@@ -356,6 +359,7 @@ public class ShiftController {
             hasActiveShift = ShiftDAO.hasActiveShift();
         } catch (SQLException e) {
             System.err.println("检查活跃班次失败: " + e.getMessage());
+            logger.error("检查活跃班次失败", e);
             hasActiveShift = false;
         }
         startShiftButton.setDisable(hasActiveShift);
@@ -375,6 +379,7 @@ public class ShiftController {
             }
         } catch (SQLException e) {
             System.err.println("检查活跃班次失败: " + e.getMessage());
+            logger.error("检查活跃班次失败", e);
             showError("检查活跃班次失败，请稍后重试");
             return;
         }
@@ -402,7 +407,7 @@ public class ShiftController {
                 transactions = TransactionDAO.findAll();
             } catch (SQLException e) {
                 System.err.println("加载交易记录失败: " + e.getMessage());
-                e.printStackTrace();
+                logger.error("加载交易记录失败", e);
                 showError("加载交易记录失败: " + e.getMessage());
                 return;
             }
@@ -432,7 +437,7 @@ public class ShiftController {
                 ShiftDAO.insert(shift);
             } catch (SQLException e) {
                 System.err.println("保存班次失败: " + e.getMessage());
-                e.printStackTrace();
+                logger.error("保存班次失败", e);
                 showError("保存班次失败: " + e.getMessage());
                 return;
             }
@@ -445,7 +450,7 @@ public class ShiftController {
 
         } catch (Exception e) {
             showError("开班失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("开班失败", e);
         }
     }
 
@@ -460,7 +465,7 @@ try {
             activeShift = ShiftDAO.findActiveShift();
         } catch (SQLException e) {
             System.err.println("获取活跃班次失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("获取活跃班次失败", e);
             showError("获取活跃班次失败: " + e.getMessage());
             return;
         }
@@ -487,7 +492,7 @@ try {
                 allTransactions = TransactionDAO.findAll();
             } catch (SQLException e) {
                 System.err.println("加载交易记录失败: " + e.getMessage());
-                e.printStackTrace();
+                logger.error("加载交易记录失败", e);
                 showError("加载交易记录失败: " + e.getMessage());
                 return;
             }
@@ -535,7 +540,7 @@ try {
                 ShiftDAO.update(activeShift);
             } catch (SQLException e) {
                 System.err.println("更新班次失败: " + e.getMessage());
-                e.printStackTrace();
+                logger.error("更新班次失败", e);
                 showError("更新班次失败: " + e.getMessage());
                 return;
             }
@@ -580,7 +585,7 @@ try {
 
         } catch (Exception e) {
             showError("交班失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("交班失败", e);
         }
     }
 

@@ -207,6 +207,7 @@ public class PromotionController {
         grid.setVgap(10);
         grid.setPadding(new javafx.geometry.Insets(20, 150, 10, 10));
 
+        TextField promotionCodeField = new TextField();
         TextField nameField = new TextField();
         ComboBox<String> typeComboBox = new ComboBox<>();
         TextField thresholdField = new TextField();
@@ -219,6 +220,7 @@ public class PromotionController {
         typeComboBox.setItems(FXCollections.observableArrayList("满减", "打折", "优惠券"));
 
         if (promotion != null) {
+            promotionCodeField.setText(promotion.promotionCode);
             nameField.setText(promotion.name);
             typeComboBox.getSelectionModel().select(promotion.type);
             thresholdField.setText(String.valueOf(promotion.threshold));
@@ -229,22 +231,24 @@ public class PromotionController {
             maxUsageField.setText(promotion.maxUsage == -1 ? "" : String.valueOf(promotion.maxUsage));
         }
 
-        grid.add(new Label("促销名称:"), 0, 0);
-        grid.add(nameField, 1, 0);
-        grid.add(new Label("促销类型:"), 0, 1);
-        grid.add(typeComboBox, 1, 1);
-        grid.add(new Label("门槛金额:"), 0, 2);
-        grid.add(thresholdField, 1, 2);
-        grid.add(new Label("折扣值:"), 0, 3);
-        grid.add(discountField, 1, 3);
-        grid.add(new Label("描述:"), 0, 4);
-        grid.add(descriptionArea, 1, 4);
-        grid.add(new Label("开始日期:"), 0, 5);
-        grid.add(startDatePicker, 1, 5);
-        grid.add(new Label("结束日期:"), 0, 6);
-        grid.add(endDatePicker, 1, 6);
-        grid.add(new Label("最大使用次数:"), 0, 7);
-        grid.add(maxUsageField, 1, 7);
+        grid.add(new Label("促销编号:"), 0, 0);
+        grid.add(promotionCodeField, 1, 0);
+        grid.add(new Label("促销名称:"), 0, 1);
+        grid.add(nameField, 1, 1);
+        grid.add(new Label("促销类型:"), 0, 2);
+        grid.add(typeComboBox, 1, 2);
+        grid.add(new Label("门槛金额:"), 0, 3);
+        grid.add(thresholdField, 1, 3);
+        grid.add(new Label("折扣值:"), 0, 4);
+        grid.add(discountField, 1, 4);
+        grid.add(new Label("描述:"), 0, 5);
+        grid.add(descriptionArea, 1, 5);
+        grid.add(new Label("开始日期:"), 0, 6);
+        grid.add(startDatePicker, 1, 6);
+        grid.add(new Label("结束日期:"), 0, 7);
+        grid.add(endDatePicker, 1, 7);
+        grid.add(new Label("最大使用次数:"), 0, 8);
+        grid.add(maxUsageField, 1, 8);
 
         dialog.getDialogPane().setContent(grid);
 
@@ -254,6 +258,7 @@ public class PromotionController {
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == okButtonType) {
                 Promotion newPromotion = promotion != null ? promotion : new Promotion();
+                newPromotion.promotionCode = promotionCodeField.getText().trim();
                 newPromotion.name = nameField.getText().trim();
                 newPromotion.type = typeComboBox.getSelectionModel().getSelectedItem();
                 newPromotion.threshold = Double.parseDouble(thresholdField.getText().trim());

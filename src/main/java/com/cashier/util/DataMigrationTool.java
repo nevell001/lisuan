@@ -2,6 +2,8 @@ package com.cashier.util;
 
 import com.cashier.dao.*;
 import com.cashier.model.*;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.nio.file.Files;
@@ -15,6 +17,7 @@ import java.util.*;
  * 将现有的文本文件数据迁移到 MySQL 数据库
  */
 public class DataMigrationTool {
+    private static final Logger logger = LoggerFactory.getLogger(DataMigrationTool.class);
 
     private static final String DATA_DIR = "data";
 
@@ -67,7 +70,7 @@ public class DataMigrationTool {
 
         } catch (Exception e) {
             System.err.println("数据迁移失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("数据迁移失败", e);
             return false;
         }
     }

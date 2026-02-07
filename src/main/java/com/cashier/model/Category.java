@@ -2,11 +2,13 @@ package com.cashier.model;
 
 public class Category {
     public int id;               // 分类ID（数据库自增主键）
+    public String categoryCode;   // 分类编号（用户自定义编号）
     public String name;
     public String description;
 
     public Category() {
         this.id = 0;  // 默认ID为0，表示未保存到数据库
+        this.categoryCode = "";  // 分类编号
     }
 
     public Category(String name, String description) {
@@ -25,9 +27,20 @@ public class Category {
         this.description = description;
     }
 
+    public Category(int id, String categoryCode, String name, String description) {
+        this.id = id;
+        this.categoryCode = categoryCode;
+        this.name = name;
+        this.description = description;
+    }
+
     // Getter方法
     public int getId() {
         return id;
+    }
+
+    public String getCategoryCode() {
+        return categoryCode;
     }
 
     public String getName() {

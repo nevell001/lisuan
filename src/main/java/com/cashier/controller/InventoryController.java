@@ -7,6 +7,8 @@ import com.cashier.model.Category;
 import com.cashier.model.Product;
 import com.cashier.model.Unit;
 import com.cashier.util.StatusBarManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
@@ -32,6 +34,7 @@ import java.util.Map;
  * 处理商品库存的增删改查
  */
 public class InventoryController {
+    private static final Logger logger = LoggerFactory.getLogger(InventoryController.class);
 
     @FXML
     private TableView<Product> inventoryTable;
@@ -150,7 +153,7 @@ public class InventoryController {
             }
         } catch (SQLException e) {
             System.err.println("加载商品数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载商品数据失败", e);
             showError("加载商品数据失败: " + e.getMessage());
             inventory = new java.util.HashMap<>();
         }
@@ -220,7 +223,7 @@ public class InventoryController {
                     updateStatus("商品添加成功: " + newProduct.name);
                 } catch (SQLException e) {
                     System.err.println("添加商品失败: " + e.getMessage());
-                    e.printStackTrace();
+                    logger.error("添加商品失败", e);
                     showError("添加商品失败: " + e.getMessage());
                 }
             }
@@ -275,10 +278,10 @@ public class InventoryController {
                         loadInventory();
                         updateStatus("商品更新成功: " + updatedProduct.name);
                     } catch (SQLException e) {
-                        System.err.println("更新商品失败: " + e.getMessage());
-                        e.printStackTrace();
-                        showError("更新商品失败: " + e.getMessage());
-                    }
+                    System.err.println("更新商品失败: " + e.getMessage());
+                    logger.error("更新商品失败", e);
+                    showError("更新商品失败: " + e.getMessage());
+                }
                 }
 
             } catch (IOException e) {
@@ -306,7 +309,7 @@ public class InventoryController {
                     updateStatus("商品删除成功: " + selected.name);
                 } catch (SQLException e) {
                     System.err.println("删除商品失败: " + e.getMessage());
-                    e.printStackTrace();
+                    logger.error("删除商品失败", e);
                     showError("删除商品失败: " + e.getMessage());
                 }
             }
@@ -547,22 +550,26 @@ public class InventoryController {
         grid.setVgap(10);
         grid.setPadding(new Insets(20, 150, 10, 10));
 
+        TextField categoryCodeField = new TextField();
         TextField nameField = new TextField();
         TextField descField = new TextField();
 
-        grid.add(new Label("分类名称:"), 0, 0);
-        grid.add(nameField, 1, 0);
-        grid.add(new Label("描述:"), 0, 1);
-        grid.add(descField, 1, 1);
+        grid.add(new Label("分类编号:"), 0, 0);
+        grid.add(categoryCodeField, 1, 0);
+        grid.add(new Label("分类名称:"), 0, 1);
+        grid.add(nameField, 1, 1);
+        grid.add(new Label("描述:"), 0, 2);
+        grid.add(descField, 1, 2);
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
-        // 自动聚焦到名称字段
-        javafx.application.Platform.runLater(nameField::requestFocus);
+        // 自动聚焦到编号字段
+        javafx.application.Platform.runLater(categoryCodeField::requestFocus);
 
         dialog.showAndWait().ifPresent(buttonType -> {
             if (buttonType == ButtonType.OK) {
+                String categoryCode = categoryCodeField.getText().trim();
                 String name = nameField.getText().trim();
                 String description = descField.getText().trim();
 
@@ -578,6 +585,7 @@ public class InventoryController {
                     }
 
                     Category category = new Category(name, description);
+                    category.categoryCode = categoryCode;
                     if (CategoryDAO.insert(category)) {
                         categoryList.add(category);
                         showInfo("分类添加成功");
@@ -606,23 +614,28 @@ public class InventoryController {
         grid.setVgap(10);
         grid.setPadding(new Insets(20, 150, 10, 10));
 
+        TextField categoryCodeField = new TextField(category.categoryCode);
         TextField nameField = new TextField(category.name);
         nameField.setEditable(false); // 分类名称不可修改
         TextField descField = new TextField(category.description);
 
-        grid.add(new Label("分类名称:"), 0, 0);
-        grid.add(nameField, 1, 0);
-        grid.add(new Label("描述:"), 0, 1);
-        grid.add(descField, 1, 1);
+        grid.add(new Label("分类编号:"), 0, 0);
+        grid.add(categoryCodeField, 1, 0);
+        grid.add(new Label("分类名称:"), 0, 1);
+        grid.add(nameField, 1, 1);
+        grid.add(new Label("描述:"), 0, 2);
+        grid.add(descField, 1, 2);
 
         dialog.getDialogPane().setContent(grid);
         dialog.getDialogPane().getButtonTypes().addAll(ButtonType.OK, ButtonType.CANCEL);
 
         dialog.showAndWait().ifPresent(buttonType -> {
             if (buttonType == ButtonType.OK) {
+                String categoryCode = categoryCodeField.getText().trim();
                 String description = descField.getText().trim();
 
                 try {
+                    category.categoryCode = categoryCode;
                     category.description = description;
                     if (CategoryDAO.update(category)) {
                         categoryList.set(categoryList.indexOf(category), category);

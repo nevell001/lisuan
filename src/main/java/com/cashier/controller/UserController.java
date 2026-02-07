@@ -4,6 +4,8 @@ import com.cashier.dao.UserDAO;
 import com.cashier.model.User;
 import com.cashier.util.PasswordUtil;
 import com.cashier.util.StatusBarManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -15,6 +17,7 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
+import javafx.scene.layout.HBox;
 
 import java.text.SimpleDateFormat;
 import java.util.Map;
@@ -24,6 +27,7 @@ import java.util.Map;
  * 处理用户的增删改查
  */
 public class UserController {
+    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
 
     @FXML
     private TableView<User> userTable;
@@ -147,7 +151,7 @@ public class UserController {
             }
         } catch (SQLException e) {
             System.err.println("加载用户数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载用户数据失败", e);
             showError("加载用户数据失败: " + e.getMessage());
             users = new java.util.HashMap<>();
         }
@@ -210,6 +214,8 @@ public class UserController {
         grid.setVgap(10);
         grid.setPadding(new javafx.geometry.Insets(20, 150, 10, 10));
 
+        TextField idField = new TextField();
+        CheckBox autoIdCheckBox = new CheckBox("自动生成");
         TextField usernameField = new TextField();
         TextField passwordField = new TextField();
         TextField nameField = new TextField();
@@ -217,6 +223,21 @@ public class UserController {
 
         roleComboBox.setItems(FXCollections.observableArrayList("admin", "cashier", "finance"));
         roleComboBox.getItems().setAll("管理员", "收银员", "财务");
+
+        // 设置ID输入框和复选框的默认状态
+        if (user == null) {
+            autoIdCheckBox.setSelected(true);
+            idField.setDisable(true);
+        } else {
+            idField.setText(String.valueOf(user.id));
+            idField.setDisable(true);
+            autoIdCheckBox.setDisable(true);
+        }
+
+        // 添加复选框监听器
+        autoIdCheckBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            idField.setDisable(newVal);
+        });
 
         if (user != null) {
             usernameField.setText(user.username);
@@ -226,14 +247,21 @@ public class UserController {
             roleComboBox.getSelectionModel().select(user.getRoleDisplayName());
         }
 
-        grid.add(new Label("用户名:"), 0, 0);
-        grid.add(usernameField, 1, 0);
-        grid.add(new Label("密码:"), 0, 1);
-        grid.add(passwordField, 1, 1);
-        grid.add(new Label("姓名:"), 0, 2);
-        grid.add(nameField, 1, 2);
-        grid.add(new Label("角色:"), 0, 3);
-        grid.add(roleComboBox, 1, 3);
+        // 创建ID的HBox
+        HBox idBox = new HBox(10);
+        idBox.getChildren().addAll(idField, autoIdCheckBox);
+        idField.setPrefWidth(150);
+
+        grid.add(new Label("ID:"), 0, 0);
+        grid.add(idBox, 1, 0);
+        grid.add(new Label("用户名:"), 0, 1);
+        grid.add(usernameField, 1, 1);
+        grid.add(new Label("密码:"), 0, 2);
+        grid.add(passwordField, 1, 2);
+        grid.add(new Label("姓名:"), 0, 3);
+        grid.add(nameField, 1, 3);
+        grid.add(new Label("角色:"), 0, 4);
+        grid.add(roleComboBox, 1, 4);
 
         dialog.getDialogPane().setContent(grid);
 
@@ -243,6 +271,21 @@ public class UserController {
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == okButtonType) {
                 User newUser = user != null ? user : new User();
+
+                // 验证ID（仅当手动输入时）
+                if (user == null && !autoIdCheckBox.isSelected() && !idField.getText().trim().isEmpty()) {
+                    try {
+                        int id = Integer.parseInt(idField.getText().trim());
+                        if (id <= 0) {
+                            showError("ID必须是大于0的数字！");
+                            return null;
+                        }
+                        newUser.id = id;
+                    } catch (NumberFormatException e) {
+                        showError("ID格式不正确！");
+                        return null;
+                    }
+                }
 
                 if (user == null) {
                     newUser.username = usernameField.getText().trim();
@@ -255,7 +298,7 @@ public class UserController {
                 }
 
                 newUser.name = nameField.getText().trim();
-                
+
                 String roleDisplayName = roleComboBox.getSelectionModel().getSelectedItem();
                 switch (roleDisplayName) {
                     case "管理员":
@@ -297,7 +340,7 @@ public class UserController {
                 }
             } catch (SQLException e) {
                 System.err.println("保存用户失败: " + e.getMessage());
-                e.printStackTrace();
+                logger.error("保存用户失败", e);
                 showError("保存用户失败: " + e.getMessage());
             }
         });
@@ -332,7 +375,7 @@ public class UserController {
                     }
                 } catch (SQLException e) {
                     System.err.println("删除用户失败: " + e.getMessage());
-                    e.printStackTrace();
+                    logger.error("删除用户失败", e);
                     showError("删除用户失败: " + e.getMessage());
                 }
             }
@@ -367,7 +410,7 @@ public class UserController {
                     }
                 } catch (SQLException e) {
                     System.err.println("重置密码失败: " + e.getMessage());
-                    e.printStackTrace();
+                    logger.error("重置密码失败", e);
                     showError("重置密码失败: " + e.getMessage());
                 }
             });
@@ -391,7 +434,7 @@ public class UserController {
                 }
             } catch (SQLException e) {
                 System.err.println("激活用户失败: " + e.getMessage());
-                e.printStackTrace();
+                logger.error("激活用户失败", e);
                 showError("激活用户失败: " + e.getMessage());
             }
         }
@@ -426,7 +469,7 @@ public class UserController {
                     }
                 } catch (SQLException e) {
                     System.err.println("禁用用户失败: " + e.getMessage());
-                    e.printStackTrace();
+                    logger.error("禁用用户失败", e);
                     showError("禁用用户失败: " + e.getMessage());
                 }
             }

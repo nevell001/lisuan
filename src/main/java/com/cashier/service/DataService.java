@@ -3,6 +3,8 @@ package com.cashier.service;
 import com.cashier.dao.*;
 import com.cashier.model.*;
 import com.cashier.util.DatabaseManager;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.IOException;
@@ -15,6 +17,7 @@ import java.util.*;
  * 用于逐步从文件存储迁移到数据库存储
  */
 public class DataService {
+    private static final Logger logger = LoggerFactory.getLogger(DataService.class);
 
     /**
      * 加载库存数据
@@ -28,8 +31,7 @@ public class DataService {
             }
             return inventory;
         } catch (SQLException e) {
-            System.err.println("加载商品数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载商品数据失败", e);
             return new HashMap<>();
         }
     }
@@ -49,8 +51,7 @@ public class DataService {
             List<Product> products = new ArrayList<>(inventory.values());
             ProductDAO.batchInsert(products);
         } catch (SQLException e) {
-            System.err.println("保存商品数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("保存商品数据失败", e);
         }
     }
 
@@ -66,8 +67,7 @@ public class DataService {
             }
             return userMap;
         } catch (SQLException e) {
-            System.err.println("加载用户数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载用户数据失败", e);
             return new HashMap<>();
         }
     }
@@ -80,8 +80,7 @@ public class DataService {
             List<User> userList = new ArrayList<>(users.values());
             UserDAO.batchInsert(userList);
         } catch (SQLException e) {
-            System.err.println("保存用户数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("保存用户数据失败", e);
         }
     }
 
@@ -97,8 +96,7 @@ public class DataService {
             }
             return memberMap;
         } catch (SQLException e) {
-            System.err.println("加载会员数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载会员数据失败", e);
             return new HashMap<>();
         }
     }
@@ -111,8 +109,7 @@ public class DataService {
             List<Member> memberList = new ArrayList<>(members.values());
             MemberDAO.batchInsert(memberList);
         } catch (SQLException e) {
-            System.err.println("保存会员数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("保存会员数据失败", e);
         }
     }
 
@@ -123,8 +120,7 @@ public class DataService {
         try {
             return TransactionDAO.findAll();
         } catch (SQLException e) {
-            System.err.println("加载交易数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载交易数据失败", e);
             return new ArrayList<>();
         }
     }
@@ -136,8 +132,7 @@ public class DataService {
         try {
             TransactionDAO.batchInsert(transactions);
         } catch (SQLException e) {
-            System.err.println("保存交易数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("保存交易数据失败", e);
         }
     }
 
@@ -148,8 +143,7 @@ public class DataService {
         try {
             return PromotionDAO.findAll();
         } catch (SQLException e) {
-            System.err.println("加载促销数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载促销数据失败", e);
             return new ArrayList<>();
         }
     }
@@ -168,8 +162,7 @@ public class DataService {
             // 批量插入新促销
             PromotionDAO.batchInsert(promotions);
         } catch (SQLException e) {
-            System.err.println("保存促销数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("保存促销数据失败", e);
         }
     }
 
@@ -180,8 +173,7 @@ public class DataService {
         try {
             return RechargeRecordDAO.findAll();
         } catch (SQLException e) {
-            System.err.println("加载充值记录失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载充值记录失败", e);
             return new ArrayList<>();
         }
     }
@@ -193,8 +185,7 @@ public class DataService {
         try {
             RechargeRecordDAO.batchInsert(records);
         } catch (SQLException e) {
-            System.err.println("保存充值记录失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("保存充值记录失败", e);
         }
     }
 
@@ -205,8 +196,7 @@ public class DataService {
         try {
             return CategoryDAO.findAll();
         } catch (SQLException e) {
-            System.err.println("加载分类数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载分类数据失败", e);
             List<Category> categories = new ArrayList<>();
             // 返回默认分类
             categories.add(new Category("默认分类", "默认商品分类"));
@@ -231,8 +221,7 @@ public class DataService {
             // 批量插入新分类
             CategoryDAO.batchInsert(categories);
         } catch (SQLException e) {
-            System.err.println("保存分类数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("保存分类数据失败", e);
         }
     }
 
@@ -243,8 +232,7 @@ public class DataService {
         try {
             return OperationLogDAO.findAll();
         } catch (SQLException e) {
-            System.err.println("加载操作日志失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载操作日志失败", e);
             return new ArrayList<>();
         }
     }
@@ -256,8 +244,7 @@ public class DataService {
         try {
             OperationLogDAO.batchInsert(logs);
         } catch (SQLException e) {
-            System.err.println("保存操作日志失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("保存操作日志失败", e);
         }
     }
 
@@ -272,8 +259,7 @@ public class DataService {
             settings.put("taxRate", String.valueOf(taxRate));
             settings.put("transactionCount", String.valueOf(transactionCount));
         } catch (SQLException e) {
-            System.err.println("加载设置数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载设置数据失败", e);
             // 返回默认值
             settings.put("taxRate", "0.0");
             settings.put("transactionCount", "0");
@@ -289,8 +275,7 @@ public class DataService {
             SystemSettingsDAO.setTaxRate(taxRate);
             SystemSettingsDAO.setTransactionCount(transactionCount);
         } catch (SQLException e) {
-            System.err.println("保存设置数据失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("保存设置数据失败", e);
         }
     }
 
@@ -301,8 +286,7 @@ public class DataService {
         try {
             return ThemePreferenceDAO.getThemePreference();
         } catch (SQLException e) {
-            System.err.println("加载主题偏好失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("加载主题偏好失败", e);
             return "light"; // 默认主题
         }
     }
@@ -314,8 +298,7 @@ public class DataService {
         try {
             ThemePreferenceDAO.setThemePreference(themeName);
         } catch (SQLException e) {
-            System.err.println("保存主题偏好失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("保存主题偏好失败", e);
         }
     }
 
@@ -326,8 +309,7 @@ public class DataService {
         try {
             return ShiftDAO.hasActiveShift();
         } catch (SQLException e) {
-            System.err.println("检查活跃班次失败: " + e.getMessage());
-            e.printStackTrace();
+            logger.error("检查活跃班次失败", e);
             return false;
         }
     }
