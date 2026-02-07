@@ -20,6 +20,9 @@ desktop.ini
 # 数据文件（敏感信息）
 data/
 *.txt
+
+# 配置文件（敏感信息）
+config/*.properties
 !FLATLAF_README.md
 !FLATLAF_UPGRADE_SUMMARY.md
 !ICON_FIX_SUMMARY.md
