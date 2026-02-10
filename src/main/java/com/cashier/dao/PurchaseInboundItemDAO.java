@@ -25,8 +25,8 @@ public class PurchaseInboundItemDAO {
      * @throws SQLException 数据库操作异常
      */
     public static PurchaseInboundItem findById(int id) throws SQLException {
-        String sql = "SELECT id, inbound_id, order_item_id, product_id, product_name, quantity, unit_price, total_price " +
-                     "FROM purchase_inbound_items WHERE id = ?";
+        String sql = "SELECT ii.id, ii.inbound_id, ii.order_item_id, ii.product_id, p.name as product_name, ii.quantity, ii.unit_price, ii.total_price " +
+                     "FROM purchase_inbound_items ii LEFT JOIN products p ON ii.product_id = p.id WHERE ii.id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -50,8 +50,8 @@ public class PurchaseInboundItemDAO {
      */
     public static List<PurchaseInboundItem> findByInboundId(int inboundId) throws SQLException {
         List<PurchaseInboundItem> items = new ArrayList<>();
-        String sql = "SELECT id, inbound_id, order_item_id, product_id, product_name, quantity, unit_price, total_price " +
-                     "FROM purchase_inbound_items WHERE inbound_id = ? ORDER BY id";
+        String sql = "SELECT ii.id, ii.inbound_id, ii.order_item_id, ii.product_id, p.name as product_name, ii.quantity, ii.unit_price, ii.total_price " +
+                     "FROM purchase_inbound_items ii LEFT JOIN products p ON ii.product_id = p.id WHERE ii.inbound_id = ? ORDER BY ii.id";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -86,8 +86,8 @@ public class PurchaseInboundItemDAO {
      */
     public static List<PurchaseInboundItem> findByOrderItemId(int orderItemId) throws SQLException {
         List<PurchaseInboundItem> items = new ArrayList<>();
-        String sql = "SELECT id, inbound_id, order_item_id, product_id, product_name, quantity, unit_price, total_price " +
-                     "FROM purchase_inbound_items WHERE order_item_id = ? ORDER BY id";
+        String sql = "SELECT ii.id, ii.inbound_id, ii.order_item_id, ii.product_id, p.name as product_name, ii.quantity, ii.unit_price, ii.total_price " +
+                     "FROM purchase_inbound_items ii LEFT JOIN products p ON ii.product_id = p.id WHERE ii.order_item_id = ? ORDER BY ii.id";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -111,8 +111,8 @@ public class PurchaseInboundItemDAO {
      */
     public static List<PurchaseInboundItem> findByProductId(int productId) throws SQLException {
         List<PurchaseInboundItem> items = new ArrayList<>();
-        String sql = "SELECT id, inbound_id, order_item_id, product_id, product_name, quantity, unit_price, total_price " +
-                     "FROM purchase_inbound_items WHERE product_id = ? ORDER BY id DESC";
+        String sql = "SELECT ii.id, ii.inbound_id, ii.order_item_id, ii.product_id, p.name as product_name, ii.quantity, ii.unit_price, ii.total_price " +
+                     "FROM purchase_inbound_items ii LEFT JOIN products p ON ii.product_id = p.id WHERE ii.product_id = ? ORDER BY ii.id DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -136,8 +136,8 @@ public class PurchaseInboundItemDAO {
      * @throws SQLException 数据库操作异常
      */
     public static PurchaseInboundItem findByInboundAndProduct(int inboundId, int productId) throws SQLException {
-        String sql = "SELECT id, inbound_id, order_item_id, product_id, product_name, quantity, unit_price, total_price " +
-                     "FROM purchase_inbound_items WHERE inbound_id = ? AND product_id = ?";
+        String sql = "SELECT ii.id, ii.inbound_id, ii.order_item_id, ii.product_id, p.name as product_name, ii.quantity, ii.unit_price, ii.total_price " +
+                     "FROM purchase_inbound_items ii LEFT JOIN products p ON ii.product_id = p.id WHERE ii.inbound_id = ? AND ii.product_id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -161,8 +161,8 @@ public class PurchaseInboundItemDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean insert(PurchaseInboundItem item) throws SQLException {
-        String sql = "INSERT INTO purchase_inbound_items (inbound_id, order_item_id, product_id, product_name, quantity, unit_price, total_price) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO purchase_inbound_items (inbound_id, order_item_id, product_id, quantity, unit_price, total_price) " +
+                     "VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
@@ -170,10 +170,9 @@ public class PurchaseInboundItemDAO {
             pstmt.setInt(1, item.inboundId);
             pstmt.setInt(2, item.orderItemId);
             pstmt.setInt(3, item.productId);
-            pstmt.setString(4, item.productName);
-            pstmt.setInt(5, item.quantity);
-            pstmt.setBigDecimal(6, item.unitPrice);
-            pstmt.setBigDecimal(7, item.totalPrice);
+            pstmt.setInt(4, item.quantity);
+            pstmt.setBigDecimal(5, item.unitPrice);
+            pstmt.setBigDecimal(6, item.totalPrice);
 
             int affectedRows = pstmt.executeUpdate();
             if (affectedRows > 0) {
@@ -195,17 +194,16 @@ public class PurchaseInboundItemDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean update(PurchaseInboundItem item) throws SQLException {
-        String sql = "UPDATE purchase_inbound_items SET product_name = ?, quantity = ?, unit_price = ?, total_price = ? " +
+        String sql = "UPDATE purchase_inbound_items SET quantity = ?, unit_price = ?, total_price = ? " +
                      "WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setString(1, item.productName);
-            pstmt.setInt(2, item.quantity);
-            pstmt.setBigDecimal(3, item.unitPrice);
-            pstmt.setBigDecimal(4, item.totalPrice);
-            pstmt.setInt(5, item.id);
+            pstmt.setInt(1, item.quantity);
+            pstmt.setBigDecimal(2, item.unitPrice);
+            pstmt.setBigDecimal(3, item.totalPrice);
+            pstmt.setInt(4, item.id);
 
             return pstmt.executeUpdate() > 0;
         }
@@ -254,8 +252,8 @@ public class PurchaseInboundItemDAO {
      * @throws SQLException 数据库操作异常
      */
     public static void batchInsert(List<PurchaseInboundItem> items) throws SQLException {
-        String sql = "INSERT INTO purchase_inbound_items (inbound_id, order_item_id, product_id, product_name, quantity, unit_price, total_price) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO purchase_inbound_items (inbound_id, order_item_id, product_id, quantity, unit_price, total_price) " +
+                     "VALUES (?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -264,10 +262,9 @@ public class PurchaseInboundItemDAO {
                 pstmt.setInt(1, item.inboundId);
                 pstmt.setInt(2, item.orderItemId);
                 pstmt.setInt(3, item.productId);
-                pstmt.setString(4, item.productName);
-                pstmt.setInt(5, item.quantity);
-                pstmt.setBigDecimal(6, item.unitPrice);
-                pstmt.setBigDecimal(7, item.totalPrice);
+                pstmt.setInt(4, item.quantity);
+                pstmt.setBigDecimal(5, item.unitPrice);
+                pstmt.setBigDecimal(6, item.totalPrice);
                 pstmt.addBatch();
             }
 

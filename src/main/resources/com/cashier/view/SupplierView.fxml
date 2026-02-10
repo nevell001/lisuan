@@ -67,13 +67,13 @@
               VBox.vgrow="ALWAYS"
               styleClass="supplier-table">
         <columns>
-            <TableColumn fx:id="codeColumn" text="供应商编号" prefWidth="120"/>
-            <TableColumn fx:id="nameColumn" text="供应商名称" prefWidth="150"/>
-            <TableColumn fx:id="contactColumn" text="联系人" prefWidth="100"/>
-            <TableColumn fx:id="phoneColumn" text="联系电话" prefWidth="120"/>
-            <TableColumn fx:id="rankColumn" text="等级" prefWidth="80"/>
-            <TableColumn fx:id="statusColumn" text="状态" prefWidth="80"/>
-            <TableColumn fx:id="addressColumn" text="地址" prefWidth="200"/>
+            <TableColumn fx:id="codeColumn" text="供应商编号" prefWidth="120" minWidth="100"/>
+            <TableColumn fx:id="nameColumn" text="供应商名称" prefWidth="150" minWidth="120"/>
+            <TableColumn fx:id="contactColumn" text="联系人" prefWidth="100" minWidth="80"/>
+            <TableColumn fx:id="phoneColumn" text="联系电话" prefWidth="120" minWidth="100"/>
+            <TableColumn fx:id="rankColumn" text="等级" prefWidth="60" minWidth="50"/>
+            <TableColumn fx:id="statusColumn" text="状态" prefWidth="60" minWidth="50"/>
+            <TableColumn fx:id="addressColumn" text="地址" prefWidth="250" minWidth="150"/>
         </columns>
         <placeholder>
             <Label text="暂无供应商数据" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>

@@ -25,8 +25,8 @@ public class PurchaseInboundDAO {
      * @throws SQLException 数据库操作异常
      */
     public static PurchaseInbound findById(int id) throws SQLException {
-        String sql = "SELECT id, inbound_no, order_id, order_no, inbound_date, total_quantity, total_amount, operator, remark, create_time " +
-                     "FROM purchase_inbound WHERE id = ?";
+        String sql = "SELECT pi.id, pi.inbound_no, pi.order_id, po.order_no, pi.inbound_date, pi.total_quantity, pi.total_amount, pi.operator, pi.remark, pi.create_time " +
+                     "FROM purchase_inbound pi LEFT JOIN purchase_orders po ON pi.order_id = po.id WHERE pi.id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -49,8 +49,8 @@ public class PurchaseInboundDAO {
      */
     public static List<PurchaseInbound> findAll() throws SQLException {
         List<PurchaseInbound> inboundList = new ArrayList<>();
-        String sql = "SELECT id, inbound_no, order_id, order_no, inbound_date, total_quantity, total_amount, operator, remark, create_time " +
-                     "FROM purchase_inbound ORDER BY create_time DESC";
+        String sql = "SELECT pi.id, pi.inbound_no, pi.order_id, po.order_no, pi.inbound_date, pi.total_quantity, pi.total_amount, pi.operator, pi.remark, pi.create_time " +
+                     "FROM purchase_inbound pi LEFT JOIN purchase_orders po ON pi.order_id = po.id ORDER BY pi.create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
@@ -71,8 +71,8 @@ public class PurchaseInboundDAO {
      * @throws SQLException 数据库操作异常
      */
     public static PurchaseInbound findByInboundNo(String inboundNo) throws SQLException {
-        String sql = "SELECT id, inbound_no, order_id, order_no, inbound_date, total_quantity, total_amount, operator, remark, create_time " +
-                     "FROM purchase_inbound WHERE inbound_no = ?";
+        String sql = "SELECT pi.id, pi.inbound_no, pi.order_id, po.order_no, pi.inbound_date, pi.total_quantity, pi.total_amount, pi.operator, pi.remark, pi.create_time " +
+                     "FROM purchase_inbound pi LEFT JOIN purchase_orders po ON pi.order_id = po.id WHERE pi.inbound_no = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -96,8 +96,8 @@ public class PurchaseInboundDAO {
      */
     public static List<PurchaseInbound> findByOrderId(int orderId) throws SQLException {
         List<PurchaseInbound> inboundList = new ArrayList<>();
-        String sql = "SELECT id, inbound_no, order_id, order_no, inbound_date, total_quantity, total_amount, operator, remark, create_time " +
-                     "FROM purchase_inbound WHERE order_id = ? ORDER BY create_time DESC";
+        String sql = "SELECT pi.id, pi.inbound_no, pi.order_id, po.order_no, pi.inbound_date, pi.total_quantity, pi.total_amount, pi.operator, pi.remark, pi.create_time " +
+                     "FROM purchase_inbound pi LEFT JOIN purchase_orders po ON pi.order_id = po.id WHERE pi.order_id = ? ORDER BY pi.create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -121,8 +121,8 @@ public class PurchaseInboundDAO {
      */
     public static List<PurchaseInbound> findByOperator(String operator) throws SQLException {
         List<PurchaseInbound> inboundList = new ArrayList<>();
-        String sql = "SELECT id, inbound_no, order_id, order_no, inbound_date, total_quantity, total_amount, operator, remark, create_time " +
-                     "FROM purchase_inbound WHERE operator = ? ORDER BY create_time DESC";
+        String sql = "SELECT pi.id, pi.inbound_no, pi.order_id, po.order_no, pi.inbound_date, pi.total_quantity, pi.total_amount, pi.operator, pi.remark, pi.create_time " +
+                     "FROM purchase_inbound pi LEFT JOIN purchase_orders po ON pi.order_id = po.id WHERE pi.operator = ? ORDER BY pi.create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -147,8 +147,8 @@ public class PurchaseInboundDAO {
      */
     public static List<PurchaseInbound> findByDateRange(String startDate, String endDate) throws SQLException {
         List<PurchaseInbound> inboundList = new ArrayList<>();
-        String sql = "SELECT id, inbound_no, order_id, order_no, inbound_date, total_quantity, total_amount, operator, remark, create_time " +
-                     "FROM purchase_inbound WHERE inbound_date BETWEEN ? AND ? ORDER BY create_time DESC";
+        String sql = "SELECT pi.id, pi.inbound_no, pi.order_id, po.order_no, pi.inbound_date, pi.total_quantity, pi.total_amount, pi.operator, pi.remark, pi.create_time " +
+                     "FROM purchase_inbound pi LEFT JOIN purchase_orders po ON pi.order_id = po.id WHERE pi.inbound_date BETWEEN ? AND ? ORDER BY pi.create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -172,21 +172,20 @@ public class PurchaseInboundDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean insert(PurchaseInbound inbound) throws SQLException {
-        String sql = "INSERT INTO purchase_inbound (inbound_no, order_id, order_no, inbound_date, total_quantity, total_amount, operator, remark, create_time) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO purchase_inbound (inbound_no, order_id, inbound_date, total_quantity, total_amount, operator, remark, create_time) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             pstmt.setString(1, inbound.inboundNo);
             pstmt.setInt(2, inbound.orderId);
-            pstmt.setString(3, inbound.orderNo);
-            pstmt.setString(4, inbound.inboundDate);
-            pstmt.setInt(5, inbound.totalQuantity);
-            pstmt.setBigDecimal(6, inbound.totalAmount);
-            pstmt.setString(7, inbound.operator);
-            pstmt.setString(8, inbound.remark);
-            pstmt.setTimestamp(9, inbound.createTime);
+            pstmt.setString(3, inbound.inboundDate);
+            pstmt.setInt(4, inbound.totalQuantity);
+            pstmt.setBigDecimal(5, inbound.totalAmount);
+            pstmt.setString(6, inbound.operator);
+            pstmt.setString(7, inbound.remark);
+            pstmt.setTimestamp(8, inbound.createTime);
 
             int affectedRows = pstmt.executeUpdate();
             if (affectedRows > 0) {
@@ -208,7 +207,7 @@ public class PurchaseInboundDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean update(PurchaseInbound inbound) throws SQLException {
-        String sql = "UPDATE purchase_inbound SET inbound_no = ?, order_id = ?, order_no = ?, inbound_date = ?, " +
+        String sql = "UPDATE purchase_inbound SET inbound_no = ?, order_id = ?, inbound_date = ?, " +
                      "total_quantity = ?, total_amount = ?, operator = ?, remark = ? WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -216,13 +215,12 @@ public class PurchaseInboundDAO {
 
             pstmt.setString(1, inbound.inboundNo);
             pstmt.setInt(2, inbound.orderId);
-            pstmt.setString(3, inbound.orderNo);
-            pstmt.setString(4, inbound.inboundDate);
-            pstmt.setInt(5, inbound.totalQuantity);
-            pstmt.setBigDecimal(6, inbound.totalAmount);
-            pstmt.setString(7, inbound.operator);
-            pstmt.setString(8, inbound.remark);
-            pstmt.setInt(9, inbound.id);
+            pstmt.setString(3, inbound.inboundDate);
+            pstmt.setInt(4, inbound.totalQuantity);
+            pstmt.setBigDecimal(5, inbound.totalAmount);
+            pstmt.setString(6, inbound.operator);
+            pstmt.setString(7, inbound.remark);
+            pstmt.setInt(8, inbound.id);
 
             return pstmt.executeUpdate() > 0;
         }
@@ -253,8 +251,8 @@ public class PurchaseInboundDAO {
      * @throws SQLException 数据库操作异常
      */
     public static void batchInsert(List<PurchaseInbound> inboundList) throws SQLException {
-        String sql = "INSERT INTO purchase_inbound (inbound_no, order_id, order_no, inbound_date, total_quantity, total_amount, operator, remark, create_time) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO purchase_inbound (inbound_no, order_id, inbound_date, total_quantity, total_amount, operator, remark, create_time) " +
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -262,13 +260,12 @@ public class PurchaseInboundDAO {
             for (PurchaseInbound inbound : inboundList) {
                 pstmt.setString(1, inbound.inboundNo);
                 pstmt.setInt(2, inbound.orderId);
-                pstmt.setString(3, inbound.orderNo);
-                pstmt.setString(4, inbound.inboundDate);
-                pstmt.setInt(5, inbound.totalQuantity);
-                pstmt.setBigDecimal(6, inbound.totalAmount);
-                pstmt.setString(7, inbound.operator);
-                pstmt.setString(8, inbound.remark);
-                pstmt.setTimestamp(9, inbound.createTime);
+                pstmt.setString(3, inbound.inboundDate);
+                pstmt.setInt(4, inbound.totalQuantity);
+                pstmt.setBigDecimal(5, inbound.totalAmount);
+                pstmt.setString(6, inbound.operator);
+                pstmt.setString(7, inbound.remark);
+                pstmt.setTimestamp(8, inbound.createTime);
                 pstmt.addBatch();
             }
 

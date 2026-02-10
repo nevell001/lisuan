@@ -25,7 +25,7 @@ public class InventoryCheckDAO {
      */
     public static InventoryCheck findById(int id) throws SQLException {
         String sql = "SELECT id, check_no, check_date, check_type, total_items, diff_items, status, operator, checker, remark, create_time, update_time " +
-                     "FROM inventory_checks WHERE id = ?";
+                     "FROM inventory_check WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -49,7 +49,7 @@ public class InventoryCheckDAO {
     public static List<InventoryCheck> findAll() throws SQLException {
         List<InventoryCheck> checks = new ArrayList<>();
         String sql = "SELECT id, check_no, check_date, check_type, total_items, diff_items, status, operator, checker, remark, create_time, update_time " +
-                     "FROM inventory_checks ORDER BY create_time DESC";
+                     "FROM inventory_check ORDER BY create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
@@ -71,7 +71,7 @@ public class InventoryCheckDAO {
      */
     public static InventoryCheck findByCheckNo(String checkNo) throws SQLException {
         String sql = "SELECT id, check_no, check_date, check_type, total_items, diff_items, status, operator, checker, remark, create_time, update_time " +
-                     "FROM inventory_checks WHERE check_no = ?";
+                     "FROM inventory_check WHERE check_no = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -96,7 +96,7 @@ public class InventoryCheckDAO {
     public static List<InventoryCheck> findByCheckType(String checkType) throws SQLException {
         List<InventoryCheck> checks = new ArrayList<>();
         String sql = "SELECT id, check_no, check_date, check_type, total_items, diff_items, status, operator, checker, remark, create_time, update_time " +
-                     "FROM inventory_checks WHERE check_type = ? ORDER BY create_time DESC";
+                     "FROM inventory_check WHERE check_type = ? ORDER BY create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -121,7 +121,7 @@ public class InventoryCheckDAO {
     public static List<InventoryCheck> findByStatus(String status) throws SQLException {
         List<InventoryCheck> checks = new ArrayList<>();
         String sql = "SELECT id, check_no, check_date, check_type, total_items, diff_items, status, operator, checker, remark, create_time, update_time " +
-                     "FROM inventory_checks WHERE status = ? ORDER BY create_time DESC";
+                     "FROM inventory_check WHERE status = ? ORDER BY create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -146,7 +146,7 @@ public class InventoryCheckDAO {
     public static List<InventoryCheck> findByOperator(String operator) throws SQLException {
         List<InventoryCheck> checks = new ArrayList<>();
         String sql = "SELECT id, check_no, check_date, check_type, total_items, diff_items, status, operator, checker, remark, create_time, update_time " +
-                     "FROM inventory_checks WHERE operator = ? ORDER BY create_time DESC";
+                     "FROM inventory_check WHERE operator = ? ORDER BY create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -172,7 +172,7 @@ public class InventoryCheckDAO {
     public static List<InventoryCheck> findByDateRange(String startDate, String endDate) throws SQLException {
         List<InventoryCheck> checks = new ArrayList<>();
         String sql = "SELECT id, check_no, check_date, check_type, total_items, diff_items, status, operator, checker, remark, create_time, update_time " +
-                     "FROM inventory_checks WHERE check_date BETWEEN ? AND ? ORDER BY create_time DESC";
+                     "FROM inventory_check WHERE check_date BETWEEN ? AND ? ORDER BY create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -196,7 +196,7 @@ public class InventoryCheckDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean insert(InventoryCheck check) throws SQLException {
-        String sql = "INSERT INTO inventory_checks (check_no, check_date, check_type, total_items, diff_items, status, operator, checker, remark, create_time, update_time) " +
+        String sql = "INSERT INTO inventory_check (check_no, check_date, check_type, total_items, diff_items, status, operator, checker, remark, create_time, update_time) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -234,7 +234,7 @@ public class InventoryCheckDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean update(InventoryCheck check) throws SQLException {
-        String sql = "UPDATE inventory_checks SET check_no = ?, check_date = ?, check_type = ?, " +
+        String sql = "UPDATE inventory_check SET check_no = ?, check_date = ?, check_type = ?, " +
                      "total_items = ?, diff_items = ?, status = ?, operator = ?, checker = ?, remark = ?, update_time = ? " +
                      "WHERE id = ?";
 
@@ -266,7 +266,7 @@ public class InventoryCheckDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean updateStatus(int id, String status) throws SQLException {
-        String sql = "UPDATE inventory_checks SET status = ?, update_time = ? WHERE id = ?";
+        String sql = "UPDATE inventory_check SET status = ?, update_time = ? WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -289,7 +289,7 @@ public class InventoryCheckDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean updateStatistics(int id, int totalItems, int diffItems) throws SQLException {
-        String sql = "UPDATE inventory_checks SET total_items = ?, diff_items = ?, update_time = ? WHERE id = ?";
+        String sql = "UPDATE inventory_check SET total_items = ?, diff_items = ?, update_time = ? WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -312,7 +312,7 @@ public class InventoryCheckDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean complete(int id, String checker) throws SQLException {
-        String sql = "UPDATE inventory_checks SET status = 'completed', checker = ?, update_time = ? WHERE id = ?";
+        String sql = "UPDATE inventory_check SET status = 'completed', checker = ?, update_time = ? WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -333,7 +333,7 @@ public class InventoryCheckDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean delete(int id) throws SQLException {
-        String sql = "DELETE FROM inventory_checks WHERE id = ?";
+        String sql = "DELETE FROM inventory_check WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -350,7 +350,7 @@ public class InventoryCheckDAO {
      * @throws SQLException 数据库操作异常
      */
     public static void batchInsert(List<InventoryCheck> checks) throws SQLException {
-        String sql = "INSERT INTO inventory_checks (check_no, check_date, check_type, total_items, diff_items, status, operator, checker, remark, create_time, update_time) " +
+        String sql = "INSERT INTO inventory_check (check_no, check_date, check_type, total_items, diff_items, status, operator, checker, remark, create_time, update_time) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -385,9 +385,9 @@ public class InventoryCheckDAO {
     public static int countByStatus(String status) throws SQLException {
         String sql;
         if (status == null || status.isEmpty()) {
-            sql = "SELECT COUNT(*) as count FROM inventory_checks";
+            sql = "SELECT COUNT(*) as count FROM inventory_check";
         } else {
-            sql = "SELECT COUNT(*) as count FROM inventory_checks WHERE status = ?";
+            sql = "SELECT COUNT(*) as count FROM inventory_check WHERE status = ?";
         }
 
         try (Connection conn = DatabaseManager.getConnection();

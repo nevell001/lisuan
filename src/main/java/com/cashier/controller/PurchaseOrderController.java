@@ -13,9 +13,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -226,13 +228,36 @@ public class PurchaseOrderController {
     private void showOrderDialog(PurchaseOrder order) {
         try {
             // 创建对话框内容
-            VBox root = new VBox(10);
+            VBox root = new VBox(15);
             root.setPadding(new javafx.geometry.Insets(20));
+            root.setStyle("-fx-background-color: white;");
 
             // 表单字段
             GridPane gridPane = new GridPane();
-            gridPane.setHgap(10);
-            gridPane.setVgap(10);
+            gridPane.setHgap(15);
+            gridPane.setVgap(15);
+            gridPane.setStyle("-fx-background-color: white;");
+
+            // 设置列约束
+            javafx.scene.layout.ColumnConstraints col1 = new javafx.scene.layout.ColumnConstraints();
+            col1.setPrefWidth(100);
+            col1.setMinWidth(90);
+            
+            javafx.scene.layout.ColumnConstraints col2 = new javafx.scene.layout.ColumnConstraints();
+            col2.setPrefWidth(180);
+            col2.setMinWidth(150);
+            col2.setHgrow(javafx.scene.layout.Priority.ALWAYS);
+            
+            javafx.scene.layout.ColumnConstraints col3 = new javafx.scene.layout.ColumnConstraints();
+            col3.setPrefWidth(100);
+            col3.setMinWidth(90);
+            
+            javafx.scene.layout.ColumnConstraints col4 = new javafx.scene.layout.ColumnConstraints();
+            col4.setPrefWidth(180);
+            col4.setMinWidth(150);
+            col4.setHgrow(javafx.scene.layout.Priority.ALWAYS);
+            
+            gridPane.getColumnConstraints().addAll(col1, col2, col3, col4);
 
             TextField orderNoField = new TextField();
             orderNoField.setEditable(false);
@@ -266,13 +291,54 @@ public class PurchaseOrderController {
             TextArea remarkArea = new TextArea();
             remarkArea.setPromptText("备注");
             remarkArea.setPrefRowCount(2);
+            remarkArea.setPrefHeight(50);
+
+            // 如果是编辑模式，填充数据
+            boolean isEdit = order != null;
+            if (isEdit) {
+                orderNoField.setText(order.orderNo);
+                Supplier supplier = suppliers.get(order.supplierId);
+                if (supplier != null) {
+                    supplierCombo.setValue(supplier);
+                }
+                purchaseDatePicker.setValue(java.time.LocalDate.parse(order.purchaseDate));
+                if (order.expectedDate != null && !order.expectedDate.isEmpty()) {
+                    expectedDatePicker.setValue(java.time.LocalDate.parse(order.expectedDate));
+                }
+                purchaserField.setText(order.purchaser);
+                remarkArea.setText(order.remark);
+            } else {
+                // 自动生成订单号
+                orderNoField.setText(generateOrderNo());
+            }
+
+            // 第一行：订单号和供应商
+            gridPane.add(createLabel("订单号:"), 0, 0);
+            gridPane.add(orderNoField, 1, 0);
+            gridPane.add(createLabel("供应商*:"), 2, 0);
+            gridPane.add(supplierCombo, 3, 0);
+
+            // 第二行：采购日期和预计到货日期
+            gridPane.add(createLabel("采购日期:"), 0, 1);
+            gridPane.add(purchaseDatePicker, 1, 1);
+            gridPane.add(createLabel("预计到货日期:"), 2, 1);
+            gridPane.add(expectedDatePicker, 3, 1);
+
+            // 第三行：采购人和备注
+            gridPane.add(createLabel("采购人:"), 0, 2);
+            gridPane.add(purchaserField, 1, 2);
+            gridPane.add(createLabel("备注:"), 2, 2);
+            gridPane.add(remarkArea, 3, 2);
 
             // 商品列表表格
             TableView<PurchaseOrderItem> itemTable = new TableView<>();
             itemTable.setEditable(true);
+            itemTable.setStyle("-fx-font-size: 13px;");
+            itemTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
             TableColumn<PurchaseOrderItem, String> productNameCol = new TableColumn<>("商品名称");
             productNameCol.setPrefWidth(200);
+            productNameCol.setStyle("-fx-font-weight: bold;");
             productNameCol.setCellValueFactory(new PropertyValueFactory<>("productName"));
 
             TableColumn<PurchaseOrderItem, Integer> quantityCol = new TableColumn<>("数量");
@@ -301,6 +367,7 @@ public class PurchaseOrderController {
 
             TableColumn<PurchaseOrderItem, String> totalPriceCol = new TableColumn<>("小计");
             totalPriceCol.setPrefWidth(100);
+            totalPriceCol.setStyle("-fx-font-weight: bold;");
             totalPriceCol.setCellValueFactory(cellData ->
                 new SimpleStringProperty(String.format("%.2f", cellData.getValue().totalPrice)));
 
@@ -309,7 +376,7 @@ public class PurchaseOrderController {
             actionCol.setCellFactory(col -> new TableCell<PurchaseOrderItem, String>() {
                 private final Button deleteBtn = new Button("删除");
                 {
-                    deleteBtn.setStyle("-fx-background-color: #f44336; -fx-text-fill: white;");
+                    deleteBtn.setStyle("-fx-background-color: #f44336; -fx-text-fill: white; -fx-font-weight: bold;");
                     deleteBtn.setOnAction(e -> {
                         PurchaseOrderItem item = getTableView().getItems().get(getIndex());
                         itemTable.getItems().remove(item);
@@ -332,28 +399,8 @@ public class PurchaseOrderController {
             ObservableList<PurchaseOrderItem> items = FXCollections.observableArrayList();
             itemTable.setItems(items);
 
-            // 添加商品按钮
-            Button addProductButton = new Button("添加商品");
-            addProductButton.setOnAction(e -> showProductSelector(itemTable));
-
-            // 总金额标签
-            Label totalLabel = new Label("总金额: ¥0.00");
-
-            // 如果是编辑模式，填充数据
-            boolean isEdit = order != null;
+            // 如果是编辑模式，加载订单明细
             if (isEdit) {
-                orderNoField.setText(order.orderNo);
-                Supplier supplier = suppliers.get(order.supplierId);
-                if (supplier != null) {
-                    supplierCombo.setValue(supplier);
-                }
-                purchaseDatePicker.setValue(java.time.LocalDate.parse(order.purchaseDate));
-                if (order.expectedDate != null && !order.expectedDate.isEmpty()) {
-                    expectedDatePicker.setValue(java.time.LocalDate.parse(order.expectedDate));
-                }
-                purchaserField.setText(order.purchaser);
-                remarkArea.setText(order.remark);
-
                 try {
                     List<PurchaseOrderItem> orderItems = PurchaseOrderItemDAO.findByOrderId(order.id);
                     items.addAll(orderItems);
@@ -361,24 +408,20 @@ public class PurchaseOrderController {
                     logger.error("加载订单明细失败", ex);
                 }
                 updateItemTotal(itemTable);
-            } else {
-                // 自动生成订单号
-                orderNoField.setText(generateOrderNo());
             }
 
-            // 添加表单元素
-            gridPane.add(new Label("订单号:"), 0, 0);
-            gridPane.add(orderNoField, 1, 0);
-            gridPane.add(new Label("供应商*:"), 0, 1);
-            gridPane.add(supplierCombo, 1, 1);
-            gridPane.add(new Label("采购日期:"), 0, 2);
-            gridPane.add(purchaseDatePicker, 1, 2);
-            gridPane.add(new Label("预计到货日期:"), 0, 3);
-            gridPane.add(expectedDatePicker, 1, 3);
-            gridPane.add(new Label("采购人:"), 0, 4);
-            gridPane.add(purchaserField, 1, 4);
-            gridPane.add(new Label("备注:"), 0, 5);
-            gridPane.add(remarkArea, 1, 5);
+            // 添加商品按钮
+            Button addProductButton = new Button("添加商品");
+            addProductButton.setStyle("-fx-text-fill: white; -fx-font-weight: bold; -fx-font-size: 13px;");
+            addProductButton.setOnAction(e -> showProductSelector(itemTable));
+
+            // 总金额标签
+            Label totalLabel = new Label("总金额: ¥0.00");
+            totalLabel.setStyle("-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #000000;");
+
+            // 商品明细标签
+            Label itemLabel = new Label("商品明细:");
+            itemLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #000000;");
 
             // 创建对话框Stage（需要在按钮回调之前声明）
             final Stage dialogStage = new Stage();
@@ -444,9 +487,9 @@ public class PurchaseOrderController {
             HBox buttonBox = new HBox(10, saveButton, cancelButton);
             buttonBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
 
-            root.getChildren().addAll(gridPane, new Label("商品明细:"), addProductButton, itemTable, totalLabel, buttonBox);
+            root.getChildren().addAll(gridPane, itemLabel, addProductButton, itemTable, totalLabel, buttonBox);
 
-            Scene scene = new Scene(root, 700, 600);
+            Scene scene = new Scene(root, 750, 550);
             scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
             scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
 
@@ -470,27 +513,65 @@ public class PurchaseOrderController {
             selectorStage.initOwner(orderTable.getScene().getWindow());
 
             VBox root = new VBox(10);
-            root.setPadding(new javafx.geometry.Insets(10));
+            root.setPadding(new javafx.geometry.Insets(15));
+            root.setStyle("-fx-background-color: white;");
 
             // 搜索框
             TextField searchField = new TextField();
             searchField.setPromptText("输入商品名称搜索");
-            HBox searchBox = new HBox(10, new Label("搜索:"), searchField);
+            searchField.setStyle("-fx-text-fill: black; -fx-prompt-text-fill: #666666;");
+            
+            Label searchLabel = new Label("搜索:");
+            searchLabel.setStyle("-fx-text-fill: #000000; -fx-font-weight: bold; -fx-font-size: 13px;");
+            
+            HBox searchBox = new HBox(10, searchLabel, searchField);
 
             // 商品表格
-            TableView<Product> productTable = new TableView<>();
-            TableColumn<Product, String> nameCol = new TableColumn<>("商品名称");
-            nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
-
-            TableColumn<Product, Number> costCol = new TableColumn<>("成本价");
-            costCol.setCellValueFactory(new PropertyValueFactory<>("cost"));
-
-            TableColumn<Product, Number> stockCol = new TableColumn<>("库存");
-            stockCol.setCellValueFactory(new PropertyValueFactory<>("quantity"));
-
-            productTable.getColumns().addAll(nameCol, costCol, stockCol);
-
-            // 加载商品数据
+                        TableView<Product> productTable = new TableView<>();
+                        productTable.setStyle("-fx-font-size: 13px;");
+                        productTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+                        productTable.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+                        
+                        TableColumn<Product, String> nameCol = new TableColumn<>("商品名称");
+                        nameCol.setPrefWidth(200);
+                        nameCol.setStyle("-fx-font-weight: bold;");
+                        nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
+            
+                        TableColumn<Product, Number> costCol = new TableColumn<>("成本价");
+                        costCol.setPrefWidth(100);
+                        costCol.setCellValueFactory(new PropertyValueFactory<>("cost"));
+            
+                        TableColumn<Product, Number> stockCol = new TableColumn<>("库存");
+                        stockCol.setPrefWidth(80);
+                        stockCol.setCellValueFactory(new PropertyValueFactory<>("quantity"));
+            
+                        productTable.getColumns().addAll(nameCol, costCol, stockCol);
+                        
+                        // 设置行工厂，使选中行背景色更明显
+                        productTable.setRowFactory(tv -> {
+                            TableRow<Product> row = new TableRow<>();
+                            ChangeListener<Boolean> changeListener = (obs, wasSelected, isNowSelected) -> {
+                                if (isNowSelected) {
+                                    row.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
+                                    // 为每个单元格设置白色文字
+                                    for (Node node : row.getChildrenUnmodifiable()) {
+                                        if (node instanceof Labeled) {
+                                            ((Labeled) node).setTextFill(javafx.scene.paint.Color.WHITE);
+                                        }
+                                    }
+                                } else {
+                                    row.setStyle("");
+                                    // 恢复默认文字颜色
+                                    for (Node node : row.getChildrenUnmodifiable()) {
+                                        if (node instanceof Labeled) {
+                                            ((Labeled) node).setTextFill(javafx.scene.paint.Color.BLACK);
+                                        }
+                                    }
+                                }
+                            };
+                            row.selectedProperty().addListener(changeListener);
+                            return row;
+                        });            // 加载商品数据
             List<Product> products = ProductDAO.findAll();
             ObservableList<Product> productList = FXCollections.observableArrayList(products);
             productTable.setItems(productList);
@@ -509,23 +590,34 @@ public class PurchaseOrderController {
 
             // 添加按钮
             Button addButton = new Button("添加选中商品");
+            addButton.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
             addButton.setOnAction(e -> {
                 Product selected = productTable.getSelectionModel().getSelectedItem();
                 if (selected != null) {
                     PurchaseOrderItem item = new PurchaseOrderItem();
                     item.productId = selected.id;
-                    item.productName = selected.name;
+                    item.productName = selected.name != null ? selected.name : "";
                     item.quantity = 1;
-                    item.unitPrice = BigDecimal.valueOf(selected.cost);
-                    item.totalPrice = item.unitPrice;
+                    item.unitPrice = selected.cost > 0 ? BigDecimal.valueOf(selected.cost) : BigDecimal.valueOf(selected.price);
+                    item.totalPrice = item.unitPrice.multiply(BigDecimal.valueOf(item.quantity));
                     item.inboundQuantity = 0;
+                    
+                    // 添加到表格并刷新
                     itemTable.getItems().add(item);
+                    itemTable.refresh();
                     updateItemTotal(itemTable);
+                    
+                    // 关闭选择器
                     selectorStage.close();
+                    
+                    System.out.println("添加商品: " + item.productName + ", 数量: " + item.quantity + ", 单价: " + item.unitPrice);
+                } else {
+                    showError("请先选择一个商品");
                 }
             });
 
             Button cancelButton = new Button("取消");
+            cancelButton.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
             cancelButton.setOnAction(e -> selectorStage.close());
 
             HBox buttonBox = new HBox(10, addButton, cancelButton);
@@ -533,7 +625,7 @@ public class PurchaseOrderController {
 
             root.getChildren().addAll(searchBox, productTable, buttonBox);
 
-            Scene scene = new Scene(root, 500, 400);
+            Scene scene = new Scene(root, 550, 400);
             scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
             scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
 
@@ -799,5 +891,16 @@ public class PurchaseOrderController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    /**
+     * 创建带样式的标签
+     * @param text 标签文字
+     * @return Label对象
+     */
+    private Label createLabel(String text) {
+        Label label = new Label(text);
+        label.setStyle("-fx-text-fill: #000000; -fx-font-weight: bold; -fx-font-size: 13px;");
+        return label;
     }
 }

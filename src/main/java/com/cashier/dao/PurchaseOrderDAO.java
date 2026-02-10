@@ -25,9 +25,9 @@ public class PurchaseOrderDAO {
      * @throws SQLException 数据库操作异常
      */
     public static PurchaseOrder findById(int id) throws SQLException {
-        String sql = "SELECT id, order_no, supplier_id, supplier_name, purchase_date, expected_date, " +
-                     "total_amount, status, purchaser, approver, approval_time, approval_remark, remark, create_time, update_time " +
-                     "FROM purchase_orders WHERE id = ?";
+        String sql = "SELECT po.id, po.order_no, po.supplier_id, s.name as supplier_name, po.purchase_date, po.expected_date, " +
+                     "po.total_amount, po.status, po.purchaser, po.approver, po.approval_time, po.approval_remark, po.remark, po.create_time, po.update_time " +
+                     "FROM purchase_orders po LEFT JOIN suppliers s ON po.supplier_id = s.id WHERE po.id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -50,9 +50,9 @@ public class PurchaseOrderDAO {
      */
     public static List<PurchaseOrder> findAll() throws SQLException {
         List<PurchaseOrder> orders = new ArrayList<>();
-        String sql = "SELECT id, order_no, supplier_id, supplier_name, purchase_date, expected_date, " +
-                     "total_amount, status, purchaser, approver, approval_time, approval_remark, remark, create_time, update_time " +
-                     "FROM purchase_orders ORDER BY create_time DESC";
+        String sql = "SELECT po.id, po.order_no, po.supplier_id, s.name as supplier_name, po.purchase_date, po.expected_date, " +
+                     "po.total_amount, po.status, po.purchaser, po.approver, po.approval_time, po.approval_remark, po.remark, po.create_time, po.update_time " +
+                     "FROM purchase_orders po LEFT JOIN suppliers s ON po.supplier_id = s.id ORDER BY po.create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
@@ -73,9 +73,9 @@ public class PurchaseOrderDAO {
      * @throws SQLException 数据库操作异常
      */
     public static PurchaseOrder findByOrderNo(String orderNo) throws SQLException {
-        String sql = "SELECT id, order_no, supplier_id, supplier_name, purchase_date, expected_date, " +
-                     "total_amount, status, purchaser, approver, approval_time, approval_remark, remark, create_time, update_time " +
-                     "FROM purchase_orders WHERE order_no = ?";
+        String sql = "SELECT po.id, po.order_no, po.supplier_id, s.name as supplier_name, po.purchase_date, po.expected_date, " +
+                     "po.total_amount, po.status, po.purchaser, po.approver, po.approval_time, po.approval_remark, po.remark, po.create_time, po.update_time " +
+                     "FROM purchase_orders po LEFT JOIN suppliers s ON po.supplier_id = s.id WHERE po.order_no = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -99,9 +99,9 @@ public class PurchaseOrderDAO {
      */
     public static List<PurchaseOrder> findBySupplier(int supplierId) throws SQLException {
         List<PurchaseOrder> orders = new ArrayList<>();
-        String sql = "SELECT id, order_no, supplier_id, supplier_name, purchase_date, expected_date, " +
-                     "total_amount, status, purchaser, approver, approval_time, approval_remark, remark, create_time, update_time " +
-                     "FROM purchase_orders WHERE supplier_id = ? ORDER BY create_time DESC";
+        String sql = "SELECT po.id, po.order_no, po.supplier_id, s.name as supplier_name, po.purchase_date, po.expected_date, " +
+                     "po.total_amount, po.status, po.purchaser, po.approver, po.approval_time, po.approval_remark, po.remark, po.create_time, po.update_time " +
+                     "FROM purchase_orders po LEFT JOIN suppliers s ON po.supplier_id = s.id WHERE po.supplier_id = ? ORDER BY po.create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -125,9 +125,9 @@ public class PurchaseOrderDAO {
      */
     public static List<PurchaseOrder> findByStatus(String status) throws SQLException {
         List<PurchaseOrder> orders = new ArrayList<>();
-        String sql = "SELECT id, order_no, supplier_id, supplier_name, purchase_date, expected_date, " +
-                     "total_amount, status, purchaser, approver, approval_time, approval_remark, remark, create_time, update_time " +
-                     "FROM purchase_orders WHERE status = ? ORDER BY create_time DESC";
+        String sql = "SELECT po.id, po.order_no, po.supplier_id, s.name as supplier_name, po.purchase_date, po.expected_date, " +
+                     "po.total_amount, po.status, po.purchaser, po.approver, po.approval_time, po.approval_remark, po.remark, po.create_time, po.update_time " +
+                     "FROM purchase_orders po LEFT JOIN suppliers s ON po.supplier_id = s.id WHERE po.status = ? ORDER BY po.create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -152,9 +152,9 @@ public class PurchaseOrderDAO {
      */
     public static List<PurchaseOrder> findByDateRange(String startDate, String endDate) throws SQLException {
         List<PurchaseOrder> orders = new ArrayList<>();
-        String sql = "SELECT id, order_no, supplier_id, supplier_name, purchase_date, expected_date, " +
-                     "total_amount, status, purchaser, approver, approval_time, approval_remark, remark, create_time, update_time " +
-                     "FROM purchase_orders WHERE purchase_date BETWEEN ? AND ? ORDER BY create_time DESC";
+        String sql = "SELECT po.id, po.order_no, po.supplier_id, s.name as supplier_name, po.purchase_date, po.expected_date, " +
+                     "po.total_amount, po.status, po.purchaser, po.approver, po.approval_time, po.approval_remark, po.remark, po.create_time, po.update_time " +
+                     "FROM purchase_orders po LEFT JOIN suppliers s ON po.supplier_id = s.id WHERE po.purchase_date BETWEEN ? AND ? ORDER BY po.create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -179,9 +179,9 @@ public class PurchaseOrderDAO {
      */
     public static List<PurchaseOrder> findByPurchaser(String purchaser) throws SQLException {
         List<PurchaseOrder> orders = new ArrayList<>();
-        String sql = "SELECT id, order_no, supplier_id, supplier_name, purchase_date, expected_date, " +
-                     "total_amount, status, purchaser, approver, approval_time, approval_remark, remark, create_time, update_time " +
-                     "FROM purchase_orders WHERE purchaser = ? ORDER BY create_time DESC";
+        String sql = "SELECT po.id, po.order_no, po.supplier_id, s.name as supplier_name, po.purchase_date, po.expected_date, " +
+                     "po.total_amount, po.status, po.purchaser, po.approver, po.approval_time, po.approval_remark, po.remark, po.create_time, po.update_time " +
+                     "FROM purchase_orders po LEFT JOIN suppliers s ON po.supplier_id = s.id WHERE po.purchaser = ? ORDER BY po.create_time DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -204,27 +204,26 @@ public class PurchaseOrderDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean insert(PurchaseOrder order) throws SQLException {
-        String sql = "INSERT INTO purchase_orders (order_no, supplier_id, supplier_name, purchase_date, expected_date, " +
+        String sql = "INSERT INTO purchase_orders (order_no, supplier_id, purchase_date, expected_date, " +
                      "total_amount, status, purchaser, approver, approval_time, approval_remark, remark, create_time, update_time) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             pstmt.setString(1, order.orderNo);
             pstmt.setInt(2, order.supplierId);
-            pstmt.setString(3, order.supplierName);
-            pstmt.setString(4, order.purchaseDate);
-            pstmt.setString(5, order.expectedDate);
-            pstmt.setBigDecimal(6, order.totalAmount);
-            pstmt.setString(7, order.status);
-            pstmt.setString(8, order.purchaser);
-            pstmt.setString(9, order.approver);
-            pstmt.setTimestamp(10, order.approvalTime);
-            pstmt.setString(11, order.approvalRemark);
-            pstmt.setString(12, order.remark);
-            pstmt.setTimestamp(13, order.createTime);
-            pstmt.setTimestamp(14, order.updateTime);
+            pstmt.setString(3, order.purchaseDate);
+            pstmt.setString(4, order.expectedDate);
+            pstmt.setBigDecimal(5, order.totalAmount);
+            pstmt.setString(6, order.status);
+            pstmt.setString(7, order.purchaser);
+            pstmt.setString(8, order.approver);
+            pstmt.setTimestamp(9, order.approvalTime);
+            pstmt.setString(10, order.approvalRemark);
+            pstmt.setString(11, order.remark);
+            pstmt.setTimestamp(12, order.createTime);
+            pstmt.setTimestamp(13, order.updateTime);
 
             int affectedRows = pstmt.executeUpdate();
             if (affectedRows > 0) {
@@ -246,7 +245,7 @@ public class PurchaseOrderDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean update(PurchaseOrder order) throws SQLException {
-        String sql = "UPDATE purchase_orders SET supplier_id = ?, supplier_name = ?, purchase_date = ?, expected_date = ?, " +
+        String sql = "UPDATE purchase_orders SET supplier_id = ?, purchase_date = ?, expected_date = ?, " +
                      "total_amount = ?, status = ?, purchaser = ?, approver = ?, approval_time = ?, approval_remark = ?, " +
                      "remark = ?, update_time = ? WHERE id = ?";
 
@@ -254,18 +253,17 @@ public class PurchaseOrderDAO {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setInt(1, order.supplierId);
-            pstmt.setString(2, order.supplierName);
-            pstmt.setString(3, order.purchaseDate);
-            pstmt.setString(4, order.expectedDate);
-            pstmt.setBigDecimal(5, order.totalAmount);
-            pstmt.setString(6, order.status);
-            pstmt.setString(7, order.purchaser);
-            pstmt.setString(8, order.approver);
-            pstmt.setTimestamp(9, order.approvalTime);
-            pstmt.setString(10, order.approvalRemark);
-            pstmt.setString(11, order.remark);
-            pstmt.setTimestamp(12, new Timestamp(System.currentTimeMillis()));
-            pstmt.setInt(13, order.id);
+            pstmt.setString(2, order.purchaseDate);
+            pstmt.setString(3, order.expectedDate);
+            pstmt.setBigDecimal(4, order.totalAmount);
+            pstmt.setString(5, order.status);
+            pstmt.setString(6, order.purchaser);
+            pstmt.setString(7, order.approver);
+            pstmt.setTimestamp(8, order.approvalTime);
+            pstmt.setString(9, order.approvalRemark);
+            pstmt.setString(10, order.remark);
+            pstmt.setTimestamp(11, new Timestamp(System.currentTimeMillis()));
+            pstmt.setInt(12, order.id);
 
             return pstmt.executeUpdate() > 0;
         }
@@ -375,9 +373,9 @@ public class PurchaseOrderDAO {
      * @throws SQLException 数据库操作异常
      */
     public static void batchInsert(List<PurchaseOrder> orders) throws SQLException {
-        String sql = "INSERT INTO purchase_orders (order_no, supplier_id, supplier_name, purchase_date, expected_date, " +
+        String sql = "INSERT INTO purchase_orders (order_no, supplier_id, purchase_date, expected_date, " +
                      "total_amount, status, purchaser, approver, approval_time, approval_remark, remark, create_time, update_time) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -385,18 +383,17 @@ public class PurchaseOrderDAO {
             for (PurchaseOrder order : orders) {
                 pstmt.setString(1, order.orderNo);
                 pstmt.setInt(2, order.supplierId);
-                pstmt.setString(3, order.supplierName);
-                pstmt.setString(4, order.purchaseDate);
-                pstmt.setString(5, order.expectedDate);
-                pstmt.setBigDecimal(6, order.totalAmount);
-                pstmt.setString(7, order.status);
-                pstmt.setString(8, order.purchaser);
-                pstmt.setString(9, order.approver);
-                pstmt.setTimestamp(10, order.approvalTime);
-                pstmt.setString(11, order.approvalRemark);
-                pstmt.setString(12, order.remark);
-                pstmt.setTimestamp(13, order.createTime);
-                pstmt.setTimestamp(14, order.updateTime);
+                pstmt.setString(3, order.purchaseDate);
+                pstmt.setString(4, order.expectedDate);
+                pstmt.setBigDecimal(5, order.totalAmount);
+                pstmt.setString(6, order.status);
+                pstmt.setString(7, order.purchaser);
+                pstmt.setString(8, order.approver);
+                pstmt.setTimestamp(9, order.approvalTime);
+                pstmt.setString(10, order.approvalRemark);
+                pstmt.setString(11, order.remark);
+                pstmt.setTimestamp(12, order.createTime);
+                pstmt.setTimestamp(13, order.updateTime);
                 pstmt.addBatch();
             }
 

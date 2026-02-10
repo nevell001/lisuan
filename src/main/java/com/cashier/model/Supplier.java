@@ -61,4 +61,49 @@ public class Supplier {
     public String getStatusDisplayName() {
         return status ? "启用" : "禁用";
     }
+
+    // Getter 方法
+    public int getId() {
+        return id;
+    }
+
+    public String getSupplierCode() {
+        return supplierCode;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public String getContactPerson() {
+        return contactPerson;
+    }
+
+    public String getPhone() {
+        return phone;
+    }
+
+    public String getAddress() {
+        return address;
+    }
+
+    public String getRank() {
+        return rank;
+    }
+
+    public boolean isStatus() {
+        return status;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public Timestamp getCreateTime() {
+        return createTime;
+    }
+
+    public Timestamp getUpdateTime() {
+        return updateTime;
+    }
 }

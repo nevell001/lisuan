@@ -13,9 +13,12 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -111,16 +114,21 @@ public class PurchaseInboundController {
     private void loadApprovedOrders() {
         try {
             List<PurchaseOrder> orderData = PurchaseOrderDAO.findByStatus("approved");
+            System.out.println("找到 " + orderData.size() + " 个审批通过的订单");
+            
             orders = new HashMap<>();
             for (PurchaseOrder order : orderData) {
+                System.out.println("订单: " + order.orderNo + ", 供应商: " + order.supplierName + ", 采购日期: " + order.purchaseDate);
                 // 检查是否还有未入库的商品
                 List<PurchaseOrderItem> items = PurchaseOrderItemDAO.findByOrderId(order.id);
                 boolean hasUninbound = items.stream()
                     .anyMatch(item -> item.inboundQuantity < item.quantity);
+                System.out.println("  订单明细数: " + items.size() + ", 有未入库: " + hasUninbound);
                 if (hasUninbound) {
                     orders.put(order.id, order);
                 }
             }
+            System.out.println("可入库订单总数: " + orders.size());
         } catch (SQLException e) {
             logger.error("加载可入库订单失败", e);
             showError("加载可入库订单失败: " + e.getMessage());
@@ -192,52 +200,89 @@ public class PurchaseInboundController {
             // 商品明细表格
             TableView<InboundItemWrapper> itemTable = new TableView<>();
             itemTable.setEditable(true);
+            itemTable.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
 
             TableColumn<InboundItemWrapper, String> productNameCol = new TableColumn<>("商品名称");
-            productNameCol.setCellValueFactory(new PropertyValueFactory<>("productName"));
+            productNameCol.setCellValueFactory(cellData -> new SimpleStringProperty(cellData.getValue().getProductName()));
 
             TableColumn<InboundItemWrapper, Number> orderQtyCol = new TableColumn<>("订单数量");
-            orderQtyCol.setCellValueFactory(new PropertyValueFactory<>("orderQuantity"));
+            orderQtyCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleIntegerProperty(cellData.getValue().getOrderQuantity()));
 
             TableColumn<InboundItemWrapper, Number> inboundedQtyCol = new TableColumn<>("已入库");
-            inboundedQtyCol.setCellValueFactory(new PropertyValueFactory<>("inboundQuantity"));
+            inboundedQtyCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleIntegerProperty(cellData.getValue().getInboundQuantity()));
 
             TableColumn<InboundItemWrapper, Integer> inboundQtyCol = new TableColumn<>("本次入库");
             inboundQtyCol.setPrefWidth(100);
-            inboundQtyCol.setCellValueFactory(new PropertyValueFactory<>("thisInboundQuantity"));
+            inboundQtyCol.setCellValueFactory(cellData -> cellData.getValue().thisInboundQuantityProperty().asObject());
             inboundQtyCol.setCellFactory(TextFieldTableCell.forTableColumn(new IntegerStringConverter()));
             inboundQtyCol.setOnEditCommit(e -> {
                 int maxQty = e.getRowValue().orderQuantity - e.getRowValue().inboundQuantity;
-                int newQty = e.getNewValue();
-                if (newQty < 0) {
+                Integer newQty = e.getNewValue();
+                System.out.println("编辑提交 - 新值: " + newQty + ", 最大可入库: " + maxQty);
+                if (newQty == null || newQty < 0) {
                     newQty = 0;
                 } else if (newQty > maxQty) {
                     newQty = maxQty;
                 }
+                // 直接更新属性值
                 e.getRowValue().thisInboundQuantity.set(newQty);
-                itemTable.refresh();
+                System.out.println("设置后的值: " + e.getRowValue().thisInboundQuantity.get());
             });
 
             TableColumn<InboundItemWrapper, String> unitPriceCol = new TableColumn<>("单价");
             unitPriceCol.setCellValueFactory(cellData ->
-                new SimpleStringProperty(String.format("%.2f", cellData.getValue().unitPrice)));
+                new SimpleStringProperty(String.format("%.2f", cellData.getValue().getUnitPrice())));
 
             TableColumn<InboundItemWrapper, String> totalCol = new TableColumn<>("小计");
             totalCol.setCellValueFactory(cellData ->
                 new SimpleStringProperty(String.format("%.2f",
-                    cellData.getValue().unitPrice.multiply(BigDecimal.valueOf(cellData.getValue().thisInboundQuantity.get())))));
+                    cellData.getValue().getUnitPrice().multiply(BigDecimal.valueOf(cellData.getValue().thisInboundQuantity.get())))));
 
             itemTable.getColumns().addAll(productNameCol, orderQtyCol, inboundedQtyCol, inboundQtyCol, unitPriceCol, totalCol);
+            
+            // 设置行工厂，使选中行背景色更明显
+            itemTable.setRowFactory(tv -> {
+                TableRow<InboundItemWrapper> row = new TableRow<>();
+                ChangeListener<Boolean> changeListener = (obs, wasSelected, isNowSelected) -> {
+                    if (isNowSelected) {
+                        row.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
+                        // 为每个单元格设置白色文字
+                        for (Node node : row.getChildrenUnmodifiable()) {
+                            if (node instanceof Labeled) {
+                                ((Labeled) node).setTextFill(javafx.scene.paint.Color.WHITE);
+                            }
+                        }
+                    } else {
+                        row.setStyle("");
+                        // 恢复默认文字颜色
+                        for (Node node : row.getChildrenUnmodifiable()) {
+                            if (node instanceof Labeled) {
+                                ((Labeled) node).setTextFill(javafx.scene.paint.Color.BLACK);
+                            }
+                        }
+                    }
+                };
+                row.selectedProperty().addListener(changeListener);
+                return row;
+            });
 
             // 加载订单明细
             List<PurchaseOrderItem> items = PurchaseOrderItemDAO.findByOrderId(order.id);
-            ObservableList<InboundItemWrapper> wrappers = FXCollections.observableArrayList();
+            System.out.println("加载订单明细: 订单ID=" + order.id + ", 商品数=" + items.size());
+            // 使用提取器创建ObservableList，使JavaFX能监听属性变化
+            ObservableList<InboundItemWrapper> wrappers = FXCollections.observableArrayList(wrapper -> 
+                new javafx.beans.Observable[] { wrapper.thisInboundQuantityProperty() }
+            );
             for (PurchaseOrderItem item : items) {
+                System.out.println("商品明细: productName=" + item.productName + ", quantity=" + item.quantity + ", inboundQuantity=" + item.inboundQuantity + ", unitPrice=" + item.unitPrice);
                 if (item.inboundQuantity < item.quantity) {
-                    wrappers.add(new InboundItemWrapper(item));
+                    InboundItemWrapper wrapper = new InboundItemWrapper(item);
+                    System.out.println("创建Wrapper: productName=" + wrapper.getProductName() + ", orderQuantity=" + wrapper.getOrderQuantity() + ", inboundQuantity=" + wrapper.getInboundQuantity());
+                    wrappers.add(wrapper);
                 }
             }
             itemTable.setItems(wrappers);
+            System.out.println("可入库商品数: " + wrappers.size());
 
             // 总金额标签
             Label totalLabel = new Label("本次入库总金额: ¥0.00");
@@ -250,6 +295,10 @@ public class PurchaseInboundController {
                 }
                 totalLabel.setText("本次入库总金额: ¥" + String.format("%.2f", total));
             });
+
+            // 操作提示
+            Label hintLabel = new Label("提示：双击'本次入库'列输入入库数量");
+            hintLabel.setStyle("-fx-text-fill: #666; -fx-font-size: 12px;");
 
             // 备注字段
             TextArea remarkArea = new TextArea();
@@ -363,6 +412,7 @@ public class PurchaseInboundController {
                 new Label("商品明细:"),
                 itemTable,
                 totalLabel,
+                hintLabel,
                 new Label("备注:"),
                 remarkArea,
                 buttonBox

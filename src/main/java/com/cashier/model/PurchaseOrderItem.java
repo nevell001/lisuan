@@ -57,4 +57,37 @@ public class PurchaseOrderItem {
     public boolean isInboundComplete() {
         return inboundQuantity >= quantity;
     }
+
+    // Getter 方法
+    public int getId() {
+        return id;
+    }
+
+    public int getOrderId() {
+        return orderId;
+    }
+
+    public int getProductId() {
+        return productId;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public int getQuantity() {
+        return quantity;
+    }
+
+    public BigDecimal getUnitPrice() {
+        return unitPrice;
+    }
+
+    public BigDecimal getTotalPrice() {
+        return totalPrice;
+    }
+
+    public int getInboundQuantity() {
+        return inboundQuantity;
+    }
 }

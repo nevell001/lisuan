@@ -24,7 +24,7 @@ public class SupplierDAO {
      * @throws SQLException 数据库操作异常
      */
     public static Supplier findById(int id) throws SQLException {
-        String sql = "SELECT id, supplier_code, name, contact_person, phone, address, rank, status, remark, create_time, update_time " +
+        String sql = "SELECT id, supplier_code, name, contact_person, phone, address, `rank`, status, remark, create_time, update_time " +
                      "FROM suppliers WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -48,7 +48,7 @@ public class SupplierDAO {
      */
     public static List<Supplier> findAll() throws SQLException {
         List<Supplier> suppliers = new ArrayList<>();
-        String sql = "SELECT id, supplier_code, name, contact_person, phone, address, rank, status, remark, create_time, update_time " +
+        String sql = "SELECT id, supplier_code, name, contact_person, phone, address, `rank`, status, remark, create_time, update_time " +
                      "FROM suppliers ORDER BY id";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -70,7 +70,7 @@ public class SupplierDAO {
      * @throws SQLException 数据库操作异常
      */
     public static Supplier findByCode(String supplierCode) throws SQLException {
-        String sql = "SELECT id, supplier_code, name, contact_person, phone, address, rank, status, remark, create_time, update_time " +
+        String sql = "SELECT id, supplier_code, name, contact_person, phone, address, `rank`, status, remark, create_time, update_time " +
                      "FROM suppliers WHERE supplier_code = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -95,7 +95,7 @@ public class SupplierDAO {
      */
     public static List<Supplier> findByName(String name) throws SQLException {
         List<Supplier> suppliers = new ArrayList<>();
-        String sql = "SELECT id, supplier_code, name, contact_person, phone, address, rank, status, remark, create_time, update_time " +
+        String sql = "SELECT id, supplier_code, name, contact_person, phone, address, `rank`, status, remark, create_time, update_time " +
                      "FROM suppliers WHERE name LIKE ? ORDER BY name";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -120,8 +120,8 @@ public class SupplierDAO {
      */
     public static List<Supplier> findByRank(String rank) throws SQLException {
         List<Supplier> suppliers = new ArrayList<>();
-        String sql = "SELECT id, supplier_code, name, contact_person, phone, address, rank, status, remark, create_time, update_time " +
-                     "FROM suppliers WHERE rank = ? ORDER BY name";
+        String sql = "SELECT id, supplier_code, name, contact_person, phone, address, `rank`, status, remark, create_time, update_time " +
+                     "FROM suppliers WHERE `rank` = ? ORDER BY name";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -145,7 +145,7 @@ public class SupplierDAO {
      */
     public static List<Supplier> findByStatus(boolean status) throws SQLException {
         List<Supplier> suppliers = new ArrayList<>();
-        String sql = "SELECT id, supplier_code, name, contact_person, phone, address, rank, status, remark, create_time, update_time " +
+        String sql = "SELECT id, supplier_code, name, contact_person, phone, address, `rank`, status, remark, create_time, update_time " +
                      "FROM suppliers WHERE status = ? ORDER BY name";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -169,7 +169,7 @@ public class SupplierDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean insert(Supplier supplier) throws SQLException {
-        String sql = "INSERT INTO suppliers (supplier_code, name, contact_person, phone, address, rank, status, remark, create_time, update_time) " +
+        String sql = "INSERT INTO suppliers (supplier_code, name, contact_person, phone, address, `rank`, status, remark, create_time, update_time) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -207,7 +207,7 @@ public class SupplierDAO {
      */
     public static boolean update(Supplier supplier) throws SQLException {
         String sql = "UPDATE suppliers SET supplier_code = ?, name = ?, contact_person = ?, phone = ?, " +
-                     "address = ?, rank = ?, status = ?, remark = ?, update_time = ? WHERE id = ?";
+                     "address = ?, `rank` = ?, status = ?, remark = ?, update_time = ? WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -252,7 +252,7 @@ public class SupplierDAO {
      * @throws SQLException 数据库操作异常
      */
     public static void batchInsert(List<Supplier> suppliers) throws SQLException {
-        String sql = "INSERT INTO suppliers (supplier_code, name, contact_person, phone, address, rank, status, remark, create_time, update_time) " +
+        String sql = "INSERT INTO suppliers (supplier_code, name, contact_person, phone, address, `rank`, status, remark, create_time, update_time) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();

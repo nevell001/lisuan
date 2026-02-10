@@ -78,4 +78,65 @@ public class PurchaseOrder {
     public boolean canInbound() {
         return "approved".equals(status);
     }
+
+    // Getter 方法
+    public int getId() {
+        return id;
+    }
+
+    public String getOrderNo() {
+        return orderNo;
+    }
+
+    public int getSupplierId() {
+        return supplierId;
+    }
+
+    public String getSupplierName() {
+        return supplierName;
+    }
+
+    public String getPurchaseDate() {
+        return purchaseDate;
+    }
+
+    public String getExpectedDate() {
+        return expectedDate;
+    }
+
+    public BigDecimal getTotalAmount() {
+        return totalAmount;
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public String getPurchaser() {
+        return purchaser;
+    }
+
+    public String getApprover() {
+        return approver;
+    }
+
+    public Timestamp getApprovalTime() {
+        return approvalTime;
+    }
+
+    public String getApprovalRemark() {
+        return approvalRemark;
+    }
+
+    public String getRemark() {
+        return remark;
+    }
+
+    public Timestamp getCreateTime() {
+        return createTime;
+    }
+
+    public Timestamp getUpdateTime() {
+        return updateTime;
+    }
 }

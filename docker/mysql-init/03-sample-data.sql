@@ -5,10 +5,76 @@
 -- 使用方法: docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < 03-sample-data.sql
 
 -- 清除旧数据
+DELETE FROM inventory_check_items;
+DELETE FROM inventory_check;
+DELETE FROM purchase_inbound_items;
+DELETE FROM purchase_inbound;
+DELETE FROM purchase_approvals;
+DELETE FROM purchase_order_items;
+DELETE FROM purchase_orders;
+DELETE FROM suppliers;
 DELETE FROM products;
 DELETE FROM transactions;
 DELETE FROM members;
 DELETE FROM promotions;
+
+-- ============================================
+-- v2.3.0 新增：采购管理模块示例数据
+-- ============================================
+
+-- 插入示例供应商
+INSERT INTO suppliers (supplier_code, name, contact_person, phone, address, `rank`, status, remark) VALUES 
+('SUP001', '康师傅宝鸡分公司', '张经理', '0917-88886666', '宝鸡市金台区', 'A', 1, '长期合作供应商'),
+('SUP002', '达利园食品', '李经理', '0917-88887777', '西安市雁塔区', 'B', 1, '主要供应商'),
+('SUP003', '可口可乐陕西', '王经理', '029-88885555', '西安市未央区', 'A', 1, '饮料供应商');
+
+-- 插入示例采购订单
+INSERT INTO purchase_orders (order_no, supplier_id, purchase_date, expected_date, total_amount, status, purchaser, remark) VALUES 
+('PO202602100001', 1, '2026-02-10', '2026-02-15', 30.00, 'approved', '张三', '月度采购'),
+('PO202602100002', 1, '2026-02-10', '2026-02-15', 45.00, 'approved', '张三', '紧急补货'),
+('PO202602100003', 2, '2026-02-10', '2026-02-20', 50.00, 'approved', '李四', '常规采购');
+
+-- 插入示例采购订单明细
+INSERT INTO purchase_order_items (order_id, product_id, product_name, quantity, unit_price, total_price, inbound_quantity) VALUES 
+(1, 4, '巧克力棒', 10, 5.00, 50.00, 5),
+(2, 4, '巧克力棒', 15, 5.00, 75.00, 10),
+(3, 1, '可口可乐 330ml', 20, 3.50, 70.00, 0),
+(3, 3, '农夫山泉 550ml', 20, 2.00, 40.00, 0);
+
+-- 插入示例采购审批记录
+INSERT INTO purchase_approvals (order_id, approver, action, remark) VALUES 
+(1, 'admin', 'approve', '审批通过，价格合理'),
+(2, 'admin', 'approve', '审批通过，同意采购'),
+(3, 'admin', 'approve', '审批通过');
+
+-- 插入示例采购入库记录
+INSERT INTO purchase_inbound (inbound_no, order_id, inbound_date, total_quantity, total_amount, operator, remark) VALUES 
+('IB202602100001', 1, '2026-02-10', 5, 25.00, '张三', '部分入库'),
+('IB202602100002', 2, '2026-02-10', 10, 50.00, '张三', '部分入库');
+
+-- 插入示例采购入库明细
+INSERT INTO purchase_inbound_items (inbound_id, order_item_id, product_id, quantity, unit_price, total_price) VALUES 
+(1, 1, 4, 5, 5.00, 25.00),
+(2, 2, 4, 10, 5.00, 50.00);
+
+-- ============================================
+-- v2.3.0 新增：库存盘点模块示例数据
+-- ============================================
+
+-- 插入示例库存盘点记录
+INSERT INTO inventory_check (check_no, check_date, check_type, total_items, diff_items, status, operator, remark) VALUES 
+('IC202602100001', '2026-02-10', 'full', 10, 2, 'completed', '张三', '月度盘点'),
+('IC202602100002', '2026-02-10', 'partial', 5, 1, 'pending', '李四', '部分盘点');
+
+-- 插入示例库存盘点明细
+INSERT INTO inventory_check_items (check_id, product_id, product_name, book_quantity, actual_quantity, diff_quantity, diff_reason) VALUES 
+(1, 1, '可口可乐 330ml', 100, 98, -2, '破损2瓶'),
+(1, 4, '巧克力棒', 60, 62, 2, '账实不符'),
+(2, 1, '可口可乐 330ml', 100, 99, -1, '销售未及时更新');
+
+-- ============================================
+-- 示例商品、会员、交易记录
+-- ============================================
 
 -- 插入示例商品
 INSERT INTO products (name, price, quantity, category, barcode, unit, description, brand, min_stock, cost) VALUES 
@@ -49,3 +115,7 @@ SELECT COUNT(*) as 商品数量 FROM products;
 SELECT COUNT(*) as 会员数量 FROM members;
 SELECT COUNT(*) as 促销数量 FROM promotions;
 SELECT COUNT(*) as 交易记录数量 FROM transactions;
+SELECT COUNT(*) as 供应商数量 FROM suppliers;
+SELECT COUNT(*) as 采购订单数量 FROM purchase_orders;
+SELECT COUNT(*) as 采购入库数量 FROM purchase_inbound;
+SELECT COUNT(*) as 库存盘点数量 FROM inventory_check;

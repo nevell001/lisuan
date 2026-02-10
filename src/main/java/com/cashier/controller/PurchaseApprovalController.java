@@ -242,8 +242,11 @@ public class PurchaseApprovalController {
                 }
 
                 try {
+                    // 转换状态值：approve -> approved, reject -> rejected
+                    String statusValue = "approve".equals(action) ? "approved" : "rejected";
+                    
                     // 更新订单状态
-                    PurchaseOrderDAO.approve(order.id, currentUser, remark, action);
+                    PurchaseOrderDAO.approve(order.id, currentUser, remark, statusValue);
 
                     // 添加审批记录
                     PurchaseApproval approval = new PurchaseApproval();

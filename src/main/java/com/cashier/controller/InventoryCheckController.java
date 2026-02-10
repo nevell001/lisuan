@@ -12,9 +12,11 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -261,7 +263,7 @@ public class InventoryCheckController {
             itemTable.setEditable(true);
 
             TableColumn<CheckItemWrapper, String> productNameCol = new TableColumn<>("商品名称");
-            productNameCol.setCellValueFactory(new PropertyValueFactory<>("productName"));
+            productNameCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleStringProperty(cellData.getValue().getProductName()));
 
             TableColumn<CheckItemWrapper, Integer> bookQtyCol = new TableColumn<>("账面数量");
             bookQtyCol.setCellValueFactory(cellData -> new javafx.beans.property.SimpleIntegerProperty(cellData.getValue().bookQuantity).asObject());
@@ -457,6 +459,8 @@ public class InventoryCheckController {
 
             // 商品表格
             TableView<Product> productTable = new TableView<>();
+            productTable.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+            
             TableColumn<Product, String> nameCol = new TableColumn<>("商品名称");
             nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
 
@@ -467,6 +471,32 @@ public class InventoryCheckController {
             costCol.setCellValueFactory(new PropertyValueFactory<>("cost"));
 
             productTable.getColumns().addAll(nameCol, stockCol, costCol);
+            
+            // 设置行工厂，使选中行背景色更明显
+            productTable.setRowFactory(tv -> {
+                TableRow<Product> row = new TableRow<>();
+                ChangeListener<Boolean> changeListener = (obs, wasSelected, isNowSelected) -> {
+                    if (isNowSelected) {
+                        row.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
+                        // 为每个单元格设置白色文字
+                        for (Node node : row.getChildrenUnmodifiable()) {
+                            if (node instanceof Labeled) {
+                                ((Labeled) node).setTextFill(javafx.scene.paint.Color.WHITE);
+                            }
+                        }
+                    } else {
+                        row.setStyle("");
+                        // 恢复默认文字颜色
+                        for (Node node : row.getChildrenUnmodifiable()) {
+                            if (node instanceof Labeled) {
+                                ((Labeled) node).setTextFill(javafx.scene.paint.Color.BLACK);
+                            }
+                        }
+                    }
+                };
+                row.selectedProperty().addListener(changeListener);
+                return row;
+            });
 
             // 加载商品数据
             List<Product> products = ProductDAO.findAll();
@@ -491,9 +521,14 @@ public class InventoryCheckController {
             addButton.setOnAction(e -> {
                 Product selected = productTable.getSelectionModel().getSelectedItem();
                 if (selected != null) {
+                    System.out.println("选中的商品 - ID: " + selected.id + ", 名称: " + selected.name + ", 名称是否为null: " + (selected.name == null));
                     CheckItemWrapper wrapper = new CheckItemWrapper(selected);
+                    System.out.println("Wrapper 商品名称: " + wrapper.getProductName());
                     itemTable.getItems().add(wrapper);
+                    itemTable.refresh();
                     selectorStage.close();
+                } else {
+                    showError("请先选择一个商品");
                 }
             });
 

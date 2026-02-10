@@ -174,34 +174,54 @@ public class SupplierController {
         try {
             // 创建对话框内容
             GridPane gridPane = new GridPane();
-            gridPane.setHgap(10);
-            gridPane.setVgap(10);
-            gridPane.setPadding(new javafx.geometry.Insets(20));
+            gridPane.setHgap(15);
+            gridPane.setVgap(15);
+            gridPane.setPadding(new javafx.geometry.Insets(25));
+
+            // 设置列约束：标签列宽度120px，输入框列自动填充
+            javafx.scene.layout.ColumnConstraints labelCol = new javafx.scene.layout.ColumnConstraints();
+            labelCol.setPrefWidth(120);
+            labelCol.setMinWidth(110);
+            labelCol.setMaxWidth(130);
+
+            javafx.scene.layout.ColumnConstraints fieldCol = new javafx.scene.layout.ColumnConstraints();
+            fieldCol.setPrefWidth(300);
+            fieldCol.setMinWidth(250);
+            fieldCol.setHgrow(javafx.scene.layout.Priority.ALWAYS);
+
+            gridPane.getColumnConstraints().addAll(labelCol, fieldCol);
 
             // 表单字段
             TextField codeField = new TextField();
             codeField.setPromptText("自动生成");
             codeField.setEditable(false);
+            codeField.setPrefWidth(300);
 
             TextField nameField = new TextField();
-            nameField.setPromptText("供应商名称");
+            nameField.setPromptText("请输入供应商名称");
+            nameField.setPrefWidth(300);
 
             TextField contactField = new TextField();
-            contactField.setPromptText("联系人");
+            contactField.setPromptText("请输入联系人");
+            contactField.setPrefWidth(300);
 
             TextField phoneField = new TextField();
-            phoneField.setPromptText("联系电话");
+            phoneField.setPromptText("请输入联系电话");
+            phoneField.setPrefWidth(300);
 
             TextField addressField = new TextField();
-            addressField.setPromptText("地址");
+            addressField.setPromptText("请输入地址");
+            addressField.setPrefWidth(300);
 
             ComboBox<String> rankCombo = new ComboBox<>();
             rankCombo.getItems().addAll("A", "B", "C");
             rankCombo.setValue("C");
+            rankCombo.setPrefWidth(300);
 
             TextArea remarkArea = new TextArea();
-            remarkArea.setPromptText("备注");
+            remarkArea.setPromptText("请输入备注");
             remarkArea.setPrefRowCount(3);
+            remarkArea.setPrefWidth(300);
 
             // 如果是编辑模式，填充数据
             boolean isEdit = supplier != null;
@@ -244,7 +264,12 @@ public class SupplierController {
 
             // 按钮
             Button saveButton = new Button("保存");
+            saveButton.setPrefWidth(80);
+            saveButton.setDefaultButton(true);
+
             Button cancelButton = new Button("取消");
+            cancelButton.setPrefWidth(80);
+            cancelButton.setCancelButton(true);
 
             saveButton.setOnAction(e -> {
                 if (nameField.getText().trim().isEmpty()) {
@@ -288,13 +313,15 @@ public class SupplierController {
 
             cancelButton.setOnAction(e -> dialogStage.close());
 
-            HBox buttonBox = new HBox(10, saveButton, cancelButton);
+            HBox buttonBox = new HBox(15, saveButton, cancelButton);
             buttonBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
+            buttonBox.setPadding(new javafx.geometry.Insets(10, 0, 0, 0));
 
-            VBox root = new VBox(10, gridPane, buttonBox);
-            root.setPadding(new javafx.geometry.Insets(10));
+            VBox root = new VBox(15, gridPane, buttonBox);
+            root.setPadding(new javafx.geometry.Insets(20));
+            root.setPrefWidth(500);
 
-            Scene scene = new Scene(root, 450, 400);
+            Scene scene = new Scene(root);
             scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
             scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
 
