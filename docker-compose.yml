@@ -16,7 +16,7 @@ services:
         protocol: tcp
     volumes:
       - cashier-mysql-data:/var/lib/mysql
-      - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
+      - ./docker/mysql-init/00-init-complete.sql:/docker-entrypoint-initdb.d/00-init-complete.sql:ro
       - ./docker/mysql-backup:/backup
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
