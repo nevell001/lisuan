@@ -16,7 +16,7 @@ public class UserDAO {
      * 根据ID查找用户
      */
     public static User findById(int id) throws SQLException {
-        String sql = "SELECT id, username, password, name, role, create_time, last_login_time, active FROM users WHERE id = ?";
+        String sql = "SELECT id, username, password, name, role, create_time, last_login_time, active, force_password_change FROM users WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -35,7 +35,7 @@ public class UserDAO {
      * 根据用户名查找用户
      */
     public static User findByUsername(String username) throws SQLException {
-        String sql = "SELECT id, username, password, name, role, create_time, last_login_time, active FROM users WHERE username = ?";
+        String sql = "SELECT id, username, password, name, role, create_time, last_login_time, active, force_password_change FROM users WHERE username = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -65,7 +65,7 @@ public class UserDAO {
      */
     public static List<User> findAll() throws SQLException {
         List<User> users = new ArrayList<>();
-        String sql = "SELECT id, username, password, name, role, create_time, last_login_time, active FROM users ORDER BY username";
+        String sql = "SELECT id, username, password, name, role, create_time, last_login_time, active, force_password_change FROM users ORDER BY username";
 
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
@@ -248,6 +248,38 @@ public class UserDAO {
     }
 
     /**
+     * 更新用户密码
+     */
+    public static boolean updatePassword(int id, String newPassword) throws SQLException {
+        String sql = "UPDATE users SET password = ?, force_password_change = 0 WHERE id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, newPassword);
+            pstmt.setInt(2, id);
+
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * 根据用户名更新密码
+     */
+    public static boolean updatePasswordByUsername(String username, String newPassword) throws SQLException {
+        String sql = "UPDATE users SET password = ?, force_password_change = 0 WHERE username = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, newPassword);
+            pstmt.setString(2, username);
+
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
      * 将 ResultSet 映射为 User 对象
      */
     private static User mapRowToUser(ResultSet rs) throws SQLException {
@@ -270,6 +302,7 @@ public class UserDAO {
         }
 
         user.active = rs.getBoolean("active");
+        user.forcePasswordChange = rs.getBoolean("force_password_change");
         return user;
     }
 }

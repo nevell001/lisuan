@@ -268,12 +268,30 @@ public class PurchaseOrderController {
             supplierCombo.setConverter(new javafx.util.StringConverter<Supplier>() {
                 @Override
                 public String toString(Supplier supplier) {
-                    return supplier != null ? supplier.name : "";
+                    if (supplier == null) {
+                        return "";
+                    }
+                    // 显示格式：编号 - 名称 (等级)
+                    return String.format("%s - %s (%s级)", 
+                        supplier.supplierCode, 
+                        supplier.name, 
+                        supplier.rank);
                 }
                 @Override
                 public Supplier fromString(String string) {
+                    // 从字符串中提取供应商名称（格式：编号 - 名称 (等级)）
+                    if (string == null || string.isEmpty()) {
+                        return null;
+                    }
+                    String name = string;
+                    int dashIndex = string.indexOf(" - ");
+                    int spaceIndex = string.lastIndexOf(" (");
+                    if (dashIndex != -1 && spaceIndex != -1 && spaceIndex > dashIndex) {
+                        name = string.substring(dashIndex + 3, spaceIndex);
+                    }
+                    final String finalName = name;
                     return suppliers.values().stream()
-                        .filter(s -> s.name.equals(string))
+                        .filter(s -> s.name.equals(finalName))
                         .findFirst()
                         .orElse(null);
                 }
@@ -312,11 +330,47 @@ public class PurchaseOrderController {
                 orderNoField.setText(generateOrderNo());
             }
 
+            // 创建对话框Stage（需要在按钮回调之前声明）
+            final Stage dialogStage = new Stage();
+            dialogStage.setTitle(isEdit ? "编辑采购订单" : "新建采购订单");
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(orderTable.getScene().getWindow());
+
             // 第一行：订单号和供应商
             gridPane.add(createLabel("订单号:"), 0, 0);
             gridPane.add(orderNoField, 1, 0);
             gridPane.add(createLabel("供应商*:"), 2, 0);
-            gridPane.add(supplierCombo, 3, 0);
+            HBox supplierBox = new HBox(10);
+            supplierBox.getChildren().add(supplierCombo);
+            Button newSupplierButton = new Button("新建供应商");
+            newSupplierButton.setStyle("-fx-font-size: 11px; -fx-padding: 3 8;");
+            newSupplierButton.setOnAction(e -> showSupplierManagementDialog(dialogStage, supplierCombo));
+            supplierBox.getChildren().add(newSupplierButton);
+            gridPane.add(supplierBox, 3, 0);
+
+            // 供应商详细信息显示区域
+            Label supplierInfoLabel = new Label("供应商信息:");
+            supplierInfoLabel.setStyle("-fx-font-weight: bold; -fx-text-fill: #666;");
+            Label supplierDetailLabel = new Label("请选择供应商");
+            supplierDetailLabel.setStyle("-fx-text-fill: #999; -fx-font-size: 12px;");
+            supplierDetailLabel.setWrapText(true);
+
+            // 监听供应商选择变化
+            supplierCombo.valueProperty().addListener((obs, oldVal, newVal) -> {
+                if (newVal != null) {
+                    StringBuilder info = new StringBuilder();
+                    info.append("联系人: ").append(newVal.contactPerson != null ? newVal.contactPerson : "-");
+                    info.append("  |  电话: ").append(newVal.phone != null ? newVal.phone : "-");
+                    if (newVal.address != null && !newVal.address.isEmpty()) {
+                        info.append("  |  地址: ").append(newVal.address);
+                    }
+                    supplierDetailLabel.setText(info.toString());
+                    supplierDetailLabel.setStyle("-fx-text-fill: #333; -fx-font-size: 12px;");
+                } else {
+                    supplierDetailLabel.setText("请选择供应商");
+                    supplierDetailLabel.setStyle("-fx-text-fill: #999; -fx-font-size: 12px;");
+                }
+            });
 
             // 第二行：采购日期和预计到货日期
             gridPane.add(createLabel("采购日期:"), 0, 1);
@@ -329,6 +383,10 @@ public class PurchaseOrderController {
             gridPane.add(purchaserField, 1, 2);
             gridPane.add(createLabel("备注:"), 2, 2);
             gridPane.add(remarkArea, 3, 2);
+
+            // 供应商详细信息显示行
+            gridPane.add(supplierInfoLabel, 0, 3);
+            gridPane.add(supplierDetailLabel, 1, 3, 3, 1); // 跨越3列
 
             // 商品列表表格
             TableView<PurchaseOrderItem> itemTable = new TableView<>();
@@ -422,12 +480,6 @@ public class PurchaseOrderController {
             // 商品明细标签
             Label itemLabel = new Label("商品明细:");
             itemLabel.setStyle("-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #000000;");
-
-            // 创建对话框Stage（需要在按钮回调之前声明）
-            final Stage dialogStage = new Stage();
-            dialogStage.setTitle(isEdit ? "编辑采购订单" : "新建采购订单");
-            dialogStage.initModality(Modality.WINDOW_MODAL);
-            dialogStage.initOwner(orderTable.getScene().getWindow());
 
             // 按钮
             Button saveButton = new Button("保存");
@@ -897,6 +949,121 @@ public class PurchaseOrderController {
      * 创建带样式的标签
      * @param text 标签文字
      * @return Label对象
+     */
+    /**
+     * 显示供应商管理对话框
+     */
+    private void showSupplierManagementDialog(Stage parentStage, ComboBox<Supplier> supplierCombo) {
+        try {
+            // 简化的供应商添加对话框
+            javafx.scene.control.Dialog<ButtonType> dialog = new javafx.scene.control.Dialog<>();
+            dialog.setTitle("新建供应商");
+            dialog.setHeaderText("添加新供应商");
+
+            // 创建表单
+            javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
+            grid.setHgap(10);
+            grid.setVgap(10);
+            grid.setPadding(new javafx.geometry.Insets(20, 150, 10, 10));
+
+            TextField codeField = new TextField();
+            codeField.setPromptText("如: SUP001");
+
+            TextField nameField = new TextField();
+            nameField.setPromptText("供应商名称");
+
+            TextField contactField = new TextField();
+            contactField.setPromptText("联系人");
+
+            TextField phoneField = new TextField();
+            phoneField.setPromptText("联系电话");
+
+            TextField addressField = new TextField();
+            addressField.setPromptText("地址");
+
+            ComboBox<String> rankCombo = new ComboBox<>();
+            rankCombo.getItems().addAll("A", "B", "C");
+            rankCombo.setValue("C");
+
+            grid.add(new Label("编号*:"), 0, 0);
+            grid.add(codeField, 1, 0);
+            grid.add(new Label("名称*:"), 0, 1);
+            grid.add(nameField, 1, 1);
+            grid.add(new Label("联系人:"), 0, 2);
+            grid.add(contactField, 1, 2);
+            grid.add(new Label("电话:"), 0, 3);
+            grid.add(phoneField, 1, 3);
+            grid.add(new Label("地址:"), 0, 4);
+            grid.add(addressField, 1, 4);
+            grid.add(new Label("等级:"), 0, 5);
+            grid.add(rankCombo, 1, 5);
+
+            dialog.getDialogPane().setContent(grid);
+
+            // 添加按钮
+            dialog.getDialogPane().getButtonTypes().addAll(
+                ButtonType.OK,
+                ButtonType.CANCEL
+            );
+
+            // 验证输入
+            Runnable validate = () -> {
+                boolean valid = !codeField.getText().trim().isEmpty() 
+                             && !nameField.getText().trim().isEmpty();
+                dialog.getDialogPane().lookupButton(ButtonType.OK).setDisable(!valid);
+            };
+
+            codeField.textProperty().addListener((obs, oldVal, newVal) -> validate.run());
+            nameField.textProperty().addListener((obs, oldVal, newVal) -> validate.run());
+
+            // 显示对话框
+            dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            dialog.initOwner(parentStage);
+
+            dialog.showAndWait().ifPresent(response -> {
+                if (response == ButtonType.OK) {
+                    try {
+                        Supplier supplier = new Supplier();
+                        supplier.supplierCode = codeField.getText().trim();
+                        supplier.name = nameField.getText().trim();
+                        supplier.contactPerson = contactField.getText().trim();
+                        supplier.phone = phoneField.getText().trim();
+                        supplier.address = addressField.getText().trim();
+                        supplier.rank = rankCombo.getValue();
+                        supplier.status = true;
+
+                        SupplierDAO.insert(supplier);
+                        
+                        // 刷新供应商列表
+                        loadSuppliers();
+                        supplierCombo.getItems().setAll(suppliers.values());
+                        
+                        // 选择新添加的供应商
+                        Supplier newSupplier = suppliers.values().stream()
+                            .filter(s -> s.supplierCode.equals(supplier.supplierCode))
+                            .findFirst()
+                            .orElse(null);
+                        if (newSupplier != null) {
+                            supplierCombo.setValue(newSupplier);
+                        }
+                        
+                        updateStatus("供应商添加成功");
+                        
+                    } catch (SQLException e) {
+                        logger.error("添加供应商失败", e);
+                        showError("添加供应商失败: " + e.getMessage());
+                    }
+                }
+            });
+
+        } catch (Exception e) {
+            logger.error("显示供应商管理对话框失败", e);
+            showError("显示供应商管理对话框失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 创建标签
      */
     private Label createLabel(String text) {
         Label label = new Label(text);

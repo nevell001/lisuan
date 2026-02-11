@@ -33,6 +33,11 @@ SELECT user, host FROM mysql.user WHERE user IN ('root', 'cashier');
 -- 第二部分：升级现有表结构
 -- ============================================
 
+-- 创建默认管理员用户（如果不存在）
+INSERT INTO users (username, password, name, role, active, force_password_change, create_time, last_login_time)
+SELECT 'admin', 'admin123', '系统管理员', 'admin', 1, 1, UNIX_TIMESTAMP() * 1000, NULL
+WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
+
 -- 为 products 表添加 product_code 字段（如果不存在）
 SET @column_exists = (
     SELECT COUNT(*)

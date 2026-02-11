@@ -181,6 +181,7 @@ public class DatabaseManager {
                     name VARCHAR(100) NOT NULL,
                     role VARCHAR(20) NOT NULL,
                     active TINYINT(1) DEFAULT 1,
+                    force_password_change TINYINT(1) DEFAULT 0,
                     last_login_time BIGINT,
                     create_time BIGINT,
                     INDEX idx_username (username),
@@ -550,6 +551,9 @@ public class DatabaseManager {
             // 升级表结构（添加 id 字段）
             upgradeTableStructure(stmt);
 
+            // 创建默认管理员用户（如果不存在）
+            createDefaultAdminUser(stmt);
+
             initialized = true;
             System.out.println("MySQL 数据库初始化成功");
 
@@ -642,8 +646,48 @@ public class DatabaseManager {
             """);
         }
         rs.close();
+
+        // 为 users 表添加 force_password_change 字段（如果不存在）
+        rs = stmt.executeQuery("""
+            SELECT COUNT(*) as count 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'users' 
+            AND COLUMN_NAME = 'force_password_change'
+        """);
+        if (rs.next() && rs.getInt("count") == 0) {
+            System.out.println("正在为 users 表添加 force_password_change 字段...");
+            stmt.execute("ALTER TABLE users ADD COLUMN force_password_change TINYINT(1) DEFAULT 0 AFTER active");
+        }
+        rs.close();
         
         System.out.println("表结构检查完成");
+    }
+
+    /**
+     * 创建默认管理员用户（如果不存在）
+     */
+    private static void createDefaultAdminUser(Statement stmt) throws SQLException {
+        System.out.println("检查默认用户...");
+
+        ResultSet rs = stmt.executeQuery("SELECT COUNT(*) as count FROM users");
+        if (rs.next() && rs.getInt("count") == 0) {
+            System.out.println("创建默认管理员用户...");
+            // 使用明文密码，首次登录时强制修改
+            String plainPassword = "admin123";
+            long currentTime = System.currentTimeMillis();
+
+            String sql = "INSERT INTO users (username, password, name, role, active, force_password_change, create_time, last_login_time) " +
+                         "VALUES ('admin', '" + plainPassword + "', '系统管理员', 'admin', 1, 1, " + currentTime + ", NULL)";
+            stmt.execute(sql);
+
+            System.out.println("默认管理员用户创建成功:");
+            System.out.println("  用户名: admin");
+            System.out.println("  密码: admin123 (明文，首次登录需修改)");
+        } else {
+            System.out.println("用户表已有数据，跳过创建默认用户");
+        }
+        rs.close();
     }
 
     /**

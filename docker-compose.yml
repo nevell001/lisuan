@@ -9,6 +9,8 @@ services:
       MYSQL_ROOT_PASSWORD: RootPassword123!
       MYSQL_DATABASE: cashier_system
       TZ: Asia/Shanghai
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
     ports:
       - target: 3306
         published: 3306
@@ -16,6 +18,7 @@ services:
         protocol: tcp
     volumes:
       - cashier-mysql-data:/var/lib/mysql
+      - ./docker/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
       - ./docker/mysql-init/00-init-complete.sql:/docker-entrypoint-initdb.d/00-init-complete.sql:ro
       - ./docker/mysql-backup:/backup
     healthcheck:

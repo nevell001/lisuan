@@ -13,6 +13,7 @@ public class User {
     public Date createTime;      // 创建时间
     public Date lastLoginTime;   // 最后登录时间
     public boolean active;       // 是否激活
+    public boolean forcePasswordChange;  // 是否强制修改密码
 
     public User() {
         this.id = 0;  // 默认ID为0，表示未保存到数据库
@@ -23,6 +24,7 @@ public class User {
         this.createTime = new Date();
         this.lastLoginTime = new Date();
         this.active = true;
+        this.forcePasswordChange = false;
     }
 
     public User(String username, String password, String name, String role) {
@@ -33,7 +35,7 @@ public class User {
         this.role = role;
     }
 
-    public User(int id, String username, String password, String name, String email, String role, Date createTime, Date lastLoginTime, boolean active) {
+    public User(int id, String username, String password, String name, String email, String role, Date createTime, Date lastLoginTime, boolean active, boolean forcePasswordChange) {
         this.id = id;
         this.username = username;
         this.password = password;
@@ -43,6 +45,7 @@ public class User {
         this.createTime = createTime;
         this.lastLoginTime = lastLoginTime;
         this.active = active;
+        this.forcePasswordChange = forcePasswordChange;
     }
 
     // 检查是否有指定权限

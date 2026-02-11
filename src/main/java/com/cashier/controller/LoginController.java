@@ -154,7 +154,12 @@ public class LoginController {
                 // 登录成功，切换到主界面
                 javafx.application.Platform.runLater(() -> {
                     if (application != null) {
-                        application.switchToMainView(user);
+                        // 检查是否需要修改密码
+                        if (user.forcePasswordChange) {
+                            showPasswordChangeDialog(user);
+                        } else {
+                            application.switchToMainView(user);
+                        }
                     }
                 });
 
@@ -174,6 +179,101 @@ public class LoginController {
     @FXML
     private void handleExit() {
         System.exit(0);
+    }
+
+    /**
+     * 显示密码修改对话框（首次登录）
+     */
+    private void showPasswordChangeDialog(com.cashier.model.User user) {
+        try {
+            // 创建对话框
+            javafx.scene.control.Dialog<ButtonType> dialog = new javafx.scene.control.Dialog<>();
+            dialog.setTitle("首次登录 - 修改密码");
+            dialog.setHeaderText("为了安全起见，请修改您的初始密码");
+
+            // 创建UI
+            javafx.scene.layout.GridPane grid = new javafx.scene.layout.GridPane();
+            grid.setHgap(10);
+            grid.setVgap(10);
+            grid.setPadding(new javafx.geometry.Insets(20, 150, 10, 10));
+
+            javafx.scene.control.Label newPasswordLabel = new javafx.scene.control.Label("新密码:");
+            javafx.scene.control.PasswordField newPasswordField = new javafx.scene.control.PasswordField();
+            newPasswordField.setPromptText("请输入新密码");
+
+            javafx.scene.control.Label confirmPasswordLabel = new javafx.scene.control.Label("确认密码:");
+            javafx.scene.control.PasswordField confirmPasswordField = new javafx.scene.control.PasswordField();
+            confirmPasswordField.setPromptText("请再次输入新密码");
+
+            grid.add(newPasswordLabel, 0, 0);
+            grid.add(newPasswordField, 1, 0);
+            grid.add(confirmPasswordLabel, 0, 1);
+            grid.add(confirmPasswordField, 1, 1);
+
+            // 添加提示信息
+            javafx.scene.control.Label hintLabel = new javafx.scene.control.Label("密码要求：至少6位字符");
+            hintLabel.setStyle("-fx-text-fill: #999; -fx-font-size: 11;");
+            grid.add(hintLabel, 1, 2);
+
+            dialog.getDialogPane().setContent(grid);
+
+            // 添加按钮
+            dialog.getDialogPane().getButtonTypes().addAll(
+                ButtonType.OK,
+                ButtonType.CANCEL
+            );
+
+            // 禁用OK按钮，直到输入有效
+            javafx.scene.control.Button okButton = (javafx.scene.control.Button) dialog.getDialogPane().lookupButton(ButtonType.OK);
+            okButton.setDisable(true);
+
+            // 验证输入
+            Runnable validate = () -> {
+                String newPassword = newPasswordField.getText();
+                String confirmPassword = confirmPasswordField.getText();
+                boolean valid = newPassword.length() >= 6 && newPassword.equals(confirmPassword);
+                okButton.setDisable(!valid);
+            };
+
+            newPasswordField.textProperty().addListener((obs, oldVal, newVal) -> validate.run());
+            confirmPasswordField.textProperty().addListener((obs, oldVal, newVal) -> validate.run());
+
+            // 显示对话框并等待响应
+            dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
+            dialog.initOwner(usernameField.getScene().getWindow());
+
+            dialog.showAndWait().ifPresent(response -> {
+                if (response == ButtonType.OK) {
+                    try {
+                        String newPassword = newPasswordField.getText();
+                        String hashedPassword = com.cashier.util.PasswordUtil.hashPassword(newPassword);
+
+                        // 更新密码
+                        com.cashier.dao.UserDAO.updatePassword(user.id, hashedPassword);
+
+                        // 显示成功消息
+                        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                        alert.setTitle("密码修改成功");
+                        alert.setHeaderText(null);
+                        alert.setContentText("密码修改成功！现在可以进入系统了。");
+                        alert.showAndWait();
+
+                        // 切换到主界面
+                        if (application != null) {
+                            application.switchToMainView(user);
+                        }
+
+                    } catch (Exception e) {
+                        logger.error("密码修改失败", e);
+                        showError("密码修改失败：" + e.getMessage());
+                    }
+                }
+            });
+
+        } catch (Exception e) {
+            logger.error("显示密码修改对话框失败", e);
+            showError("显示密码修改对话框失败：" + e.getMessage());
+        }
     }
 
     /**
