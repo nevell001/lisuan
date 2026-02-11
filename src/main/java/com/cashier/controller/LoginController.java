@@ -352,7 +352,7 @@ public class LoginController {
     }
 
     /**
-     * 保存凭据（仅保存用户名，不保存密码）
+     * 保存记住的密码
      * @param username 用户名
      * @param password 密码
      */
@@ -363,6 +363,7 @@ public class LoginController {
 
             Properties props = new Properties();
             props.setProperty("username", username);
+            props.setProperty("password", password);
             props.setProperty("remember", "true");
 
             try (OutputStream output = new FileOutputStream(configFile)) {
@@ -374,7 +375,7 @@ public class LoginController {
     }
 
     /**
-     * 加载保存的凭据（仅加载用户名，不加载密码）
+     * 加载保存的凭据
      */
     private void loadSavedCredentials() {
         try {
@@ -391,6 +392,7 @@ public class LoginController {
             String remember = props.getProperty("remember", "false");
             if ("true".equals(remember)) {
                 usernameField.setText(props.getProperty("username", ""));
+                passwordField.setText(props.getProperty("password", ""));
                 rememberMeCheckBox.setSelected(true);
             }
         } catch (IOException e) {

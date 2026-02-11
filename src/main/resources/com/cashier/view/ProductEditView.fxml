@@ -9,126 +9,137 @@
       fx:controller="com.cashier.controller.ProductEditController"
       spacing="15"
       styleClass="product-edit-view"
-      prefWidth="700"
+      prefWidth="800"
       prefHeight="650">
 
     <padding>
-        <Insets top="20" right="20" bottom="20" left="20"/>
+        <Insets top="20" right="25" bottom="20" left="25"/>
     </padding>
 
     <!-- 标题 -->
     <Label fx:id="titleLabel"
            text="添加商品"
-           style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+           style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
 
     <!-- 表单 - 双列布局 -->
-    <GridPane hgap="15" vgap="12" VBox.vgrow="ALWAYS">
+    <GridPane hgap="20" vgap="15" VBox.vgrow="ALWAYS">
         <padding>
             <Insets top="10" right="0" bottom="10" left="0"/>
         </padding>
+        <columnConstraints>
+            <ColumnConstraints hgrow="NEVER" minWidth="90"/>
+            <ColumnConstraints hgrow="SOMETIMES" prefWidth="240"/>
+            <ColumnConstraints hgrow="NEVER" minWidth="90"/>
+            <ColumnConstraints hgrow="SOMETIMES" prefWidth="240"/>
+        </columnConstraints>
 
-        <!-- 第一列：ID -->
-        <Label text="ID:" GridPane.columnIndex="0" GridPane.rowIndex="0"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
-        <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="0">
-            <TextField fx:id="idField"
-                       prefWidth="180" promptText="留空则自动生成"/>
-            <CheckBox fx:id="autoIdCheckBox" text="自动生成"/>
+        <!-- 第一列：商品编号 -->
+        <Label text="商品编号:" GridPane.columnIndex="0" GridPane.rowIndex="0"
+               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+        <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="0" alignment="CENTER_LEFT">
+            <TextField fx:id="productCodeField"
+                       prefWidth="180" promptText="留空则自动生成"
+                       style="-fx-font-size: 14px;"/>
+            <CheckBox fx:id="autoCodeCheckBox" text="自动生成" style="-fx-font-size: 14px;"/>
         </HBox>
 
-        <!-- 第二列：商品编号 -->
-        <Label text="商品编号:" GridPane.columnIndex="2" GridPane.rowIndex="0"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
-        <TextField fx:id="productCodeField"
+        <!-- 第二列：单价 -->
+        <Label text="单价(元):" GridPane.columnIndex="2" GridPane.rowIndex="0"
+               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+        <TextField fx:id="priceField"
                    GridPane.columnIndex="3" GridPane.rowIndex="0"
-                   prefWidth="250" promptText="可选"/>
+                   prefWidth="240" promptText="0.00"
+                   style="-fx-font-size: 14px;"/>
 
         <!-- 第一列：商品名称 -->
         <Label text="商品名称:" GridPane.columnIndex="0" GridPane.rowIndex="1"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
+               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <TextField fx:id="nameField"
                    GridPane.columnIndex="1" GridPane.rowIndex="1"
-                   prefWidth="250" promptText="请输入商品名称"/>
+                   prefWidth="240" promptText="请输入商品名称"
+                   style="-fx-font-size: 14px;"/>
 
-        <!-- 第二列：单价 -->
-        <Label text="单价(元):" GridPane.columnIndex="2" GridPane.rowIndex="1"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
-        <TextField fx:id="priceField"
-                   GridPane.columnIndex="3" GridPane.rowIndex="1"
-                   prefWidth="250" promptText="0.00"/>
-
-        <!-- 第一列：成本价 -->
-        <Label text="成本价(元):" GridPane.columnIndex="0" GridPane.rowIndex="2"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
+        <!-- 第二列：成本价 -->
+        <Label text="成本价(元):" GridPane.columnIndex="2" GridPane.rowIndex="1"
+               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <TextField fx:id="costField"
-                   GridPane.columnIndex="1" GridPane.rowIndex="2"
-                   prefWidth="250" promptText="0.00"/>
+                   GridPane.columnIndex="3" GridPane.rowIndex="1"
+                   prefWidth="240" promptText="0.00"
+                   style="-fx-font-size: 14px;"/>
 
-        <!-- 第二列：库存数量 -->
-        <Label text="库存数量:" GridPane.columnIndex="2" GridPane.rowIndex="2"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
+        <!-- 第一列：库存数量 -->
+        <Label text="库存数量:" GridPane.columnIndex="0" GridPane.rowIndex="2"
+               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <TextField fx:id="quantityField"
-                   GridPane.columnIndex="3" GridPane.rowIndex="2"
-                   prefWidth="250" promptText="0"/>
+                   GridPane.columnIndex="1" GridPane.rowIndex="2"
+                   prefWidth="240" promptText="0"
+                   style="-fx-font-size: 14px;"/>
 
-        <!-- 第一列：最低库存 -->
-        <Label text="最低库存:" GridPane.columnIndex="0" GridPane.rowIndex="3"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
+        <!-- 第二列：最低库存 -->
+        <Label text="最低库存:" GridPane.columnIndex="2" GridPane.rowIndex="2"
+               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <TextField fx:id="minStockField"
-                   GridPane.columnIndex="1" GridPane.rowIndex="3"
-                   prefWidth="250" promptText="10"/>
+                   GridPane.columnIndex="3" GridPane.rowIndex="2"
+                   prefWidth="240" promptText="10"
+                   style="-fx-font-size: 14px;"/>
 
-        <!-- 第二列：分类 -->
-        <Label text="分类:" GridPane.columnIndex="2" GridPane.rowIndex="3"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
+        <!-- 第一列：分类 -->
+        <Label text="分类:" GridPane.columnIndex="0" GridPane.rowIndex="3"
+               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <ComboBox fx:id="categoryComboBox"
-                  GridPane.columnIndex="3" GridPane.rowIndex="3"
-                  prefWidth="250" promptText="选择分类" editable="true"/>
+                  GridPane.columnIndex="1" GridPane.rowIndex="3"
+                  prefWidth="240" promptText="选择分类" editable="true"
+                  style="-fx-font-size: 14px;"/>
 
-        <!-- 第一列：单位 -->
-        <Label text="单位:" GridPane.columnIndex="0" GridPane.rowIndex="4"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
+        <!-- 第二列：单位 -->
+        <Label text="单位:" GridPane.columnIndex="2" GridPane.rowIndex="3"
+               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <ComboBox fx:id="unitComboBox"
-                  GridPane.columnIndex="1" GridPane.rowIndex="4"
-                  prefWidth="250" promptText="选择单位" editable="true"/>
+                  GridPane.columnIndex="3" GridPane.rowIndex="3"
+                  prefWidth="240" promptText="选择单位" editable="true"
+                  style="-fx-font-size: 14px;"/>
 
-        <!-- 第二列：品牌 -->
-        <Label text="品牌:" GridPane.columnIndex="2" GridPane.rowIndex="4"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
+        <!-- 第一列：品牌 -->
+        <Label text="品牌:" GridPane.columnIndex="0" GridPane.rowIndex="4"
+               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <TextField fx:id="brandField"
-                   GridPane.columnIndex="3" GridPane.rowIndex="4"
-                   prefWidth="250" promptText="可选"/>
+                   GridPane.columnIndex="1" GridPane.rowIndex="4"
+                   prefWidth="240" promptText="可选"
+                   style="-fx-font-size: 14px;"/>
 
-        <!-- 第一列：规格 -->
-        <Label text="规格:" GridPane.columnIndex="0" GridPane.rowIndex="5"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
+        <!-- 第二列：规格 -->
+        <Label text="规格:" GridPane.columnIndex="2" GridPane.rowIndex="4"
+               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <TextField fx:id="specField"
-                   GridPane.columnIndex="1" GridPane.rowIndex="5"
-                   prefWidth="250" promptText="可选"/>
+                   GridPane.columnIndex="3" GridPane.rowIndex="4"
+                   prefWidth="240" promptText="可选"
+                   style="-fx-font-size: 14px;"/>
 
-        <!-- 第二列：条形码 -->
-        <Label text="条形码:" GridPane.columnIndex="2" GridPane.rowIndex="5"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
+        <!-- 第一列：条形码 -->
+        <Label text="条形码:" GridPane.columnIndex="0" GridPane.rowIndex="5"
+               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <TextField fx:id="barcodeField"
-                   GridPane.columnIndex="3" GridPane.rowIndex="5"
-                   prefWidth="250" promptText="可选，扫描输入"/>
+                   GridPane.columnIndex="1" GridPane.rowIndex="5"
+                   prefWidth="240" promptText="可选，扫描输入"
+                   style="-fx-font-size: 14px;"/>
 
-        <!-- 供应商 - 跨两列 -->
-        <Label text="供应商:" GridPane.columnIndex="0" GridPane.rowIndex="6"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
-        <TextField fx:id="supplierField"
-                   GridPane.columnIndex="1" GridPane.rowIndex="6"
-                   GridPane.columnSpan="3"
-                   prefWidth="780" promptText="可选"/>
+        <!-- 第二列：供应商 -->
+        <Label text="供应商:" GridPane.columnIndex="2" GridPane.rowIndex="5"
+               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+        <ComboBox fx:id="supplierComboBox"
+                  GridPane.columnIndex="3" GridPane.rowIndex="5"
+                  prefWidth="240" promptText="选择供应商" editable="true"
+                  style="-fx-font-size: 14px;"/>
 
         <!-- 商品描述 - 跨两列 -->
-        <Label text="商品描述:" GridPane.columnIndex="0" GridPane.rowIndex="7"
-               style="-fx-font-weight: 600; -fx-text-fill: #424242;"/>
+        <Label text="商品描述:" GridPane.columnIndex="0" GridPane.rowIndex="6"
+               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <TextArea fx:id="descriptionField"
-                  GridPane.columnIndex="1" GridPane.rowIndex="7"
+                  GridPane.columnIndex="1" GridPane.rowIndex="6"
                   GridPane.columnSpan="3"
-                  prefWidth="780" prefHeight="60"
-                  promptText="可选，请输入商品详细描述"/>
+                  prefWidth="780" prefHeight="80"
+                  promptText="可选，请输入商品详细描述"
+                  style="-fx-font-size: 14px;"/>
     </GridPane>
 
     <!-- 错误提示 -->

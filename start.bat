@@ -13,7 +13,7 @@ echo.
 
 REM Set application info
 set APP_NAME=Cashier System
-set APP_VERSION=v2.2.1
+set APP_VERSION=2.2.1
 set MAIN_CLASS=com.cashier.CashierSystemFXApplication
 set CONFIG_FILE=config\jvm.config
 
@@ -23,7 +23,7 @@ cd /d "%APP_DIR%"
 
 echo [1/6] Checking Java environment...
 where java >nul 2>&1
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo [Error] Java runtime not found!
     echo Please ensure JDK 17 or higher is installed
     echo Download: https://www.oracle.com/java/technologies/downloads/
@@ -38,7 +38,7 @@ echo [Info] Java version: %JAVA_VERSION%
 
 REM Check if javac exists (to determine if it's a full JDK)
 where javac >nul 2>&1
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo [Warning] Only JRE detected, full JDK recommended
 )
 
@@ -67,7 +67,7 @@ echo [Done] Configuration files checked
 echo.
 
 echo [4/6] Checking dependency files...
-if not exist "target\cashier-system-fx-%APP_VERSION%.jar" (
+if not exist "target\cashier-system-fx-%APP_VERSION%-jar-with-dependencies.jar" (
     echo [Warning] Compiled JAR file not found
     echo [Tip] Please run install.bat for compilation
     echo.
@@ -78,8 +78,8 @@ if not exist "target\cashier-system-fx-%APP_VERSION%.jar" (
         exit /b 1
     )
     echo [Compile] Starting project compilation...
-    call install.bat
-    if %errorlevel% neq 0 (
+    call mvn clean package -DskipTests
+    if !errorlevel! neq 0 (
         echo [Error] Compilation failed
         pause
         exit /b 1
@@ -93,9 +93,12 @@ echo [5/6] Building JVM parameters...
 set JVM_OPTS=
 if exist "%CONFIG_FILE%" (
     for /f "usebackq tokens=*" %%a in ("%CONFIG_FILE%") do (
-        REM Ignore empty lines and comments
-        if not "%%a"=="" if not "%%a:~0,1%"=="#" (
-            set JVM_OPTS=!JVM_OPTS! %%a
+        set "LINE=%%a"
+        REM Ignore empty lines and comments (lines starting with #)
+        if not "!LINE!"=="" (
+            if not "!LINE:~0,1!"=="#" (
+                set JVM_OPTS=!JVM_OPTS! !LINE!
+            )
         )
     )
 )
@@ -105,7 +108,6 @@ if "%JVM_OPTS%"=="" (
     set JVM_OPTS=-Xms512m -Xmx1024m -Dfile.encoding=UTF-8 -Dsun.java2d.dpiaware=true
 )
 
-echo [Info] JVM parameters: %JVM_OPTS%
 echo [Done] JVM parameters built
 echo.
 
@@ -118,18 +120,17 @@ echo.
 echo Starting, please wait...
 echo.
 
-REM Set JavaFX module path
-set MODULE_PATH=target\lib
-set CLASSPATH=target\cashier-system-fx-%APP_VERSION%.jar;target\lib\*
+REM Set JAR file path (fat jar with all dependencies included)
+set JAR_FILE=target\cashier-system-fx-%APP_VERSION%-jar-with-dependencies.jar
 
-REM Start application
-java %JVM_OPTS% -cp "%CLASSPATH%" %MAIN_CLASS%
+REM Start application using Maven JavaFX plugin (best for JavaFX apps)
+mvn javafx:run
 
 REM Check exit code
-if %errorlevel% neq 0 (
+if !errorlevel! neq 0 (
     echo.
     echo ========================================
-    echo [Error] Application exited abnormally (Error code: %errorlevel%)
+    echo [Error] Application exited abnormally (Error code: !errorlevel!)
     echo ========================================
     echo.
     echo Check log file: logs\app.log

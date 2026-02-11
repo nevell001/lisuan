@@ -967,7 +967,7 @@ public class MainController {
             placeholder.setStyle("-fx-background-color: #F5F5F5; -fx-padding: 40;");
             
             Label iconLabel = new Label(icon);
-            iconLabel.setStyle("-fx-font-size: 64px;");
+            iconLabel.setStyle("-fx-font-size: 64px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;");
             
             Label titleLabel = new Label(title);
             titleLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;");

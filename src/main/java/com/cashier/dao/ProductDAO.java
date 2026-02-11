@@ -17,7 +17,7 @@ public class ProductDAO {
      */
     public static List<Product> findAll() throws SQLException {
         List<Product> products = new ArrayList<>();
-        String sql = "SELECT id, name, price, quantity, category, barcode, unit, description, " +
+        String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
                      "brand, supplier, spec, min_stock, cost FROM products ORDER BY name";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -35,7 +35,7 @@ public class ProductDAO {
      * 根据ID查找商品
      */
     public static Product findById(int id) throws SQLException {
-        String sql = "SELECT id, name, price, quantity, category, barcode, unit, description, " +
+        String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
                      "brand, supplier, spec, min_stock, cost FROM products WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -55,7 +55,7 @@ public class ProductDAO {
      * 根据名称查找商品
      */
     public static Product findByName(String name) throws SQLException {
-        String sql = "SELECT id, name, price, quantity, category, barcode, unit, description, " +
+        String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
                      "brand, supplier, spec, min_stock, cost FROM products WHERE name = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -72,10 +72,30 @@ public class ProductDAO {
     }
 
     /**
+     * 根据商品编号查找商品
+     */
+    public static Product findByProductCode(String productCode) throws SQLException {
+        String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
+                     "brand, supplier, spec, min_stock, cost FROM products WHERE product_code = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, productCode);
+            ResultSet rs = pstmt.executeQuery();
+
+            if (rs.next()) {
+                return mapRowToProduct(rs);
+            }
+        }
+        return null;
+    }
+
+    /**
      * 根据条形码查找商品
      */
     public static Product findByBarcode(String barcode) throws SQLException {
-        String sql = "SELECT id, name, price, quantity, category, barcode, unit, description, " +
+        String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
                      "brand, supplier, spec, min_stock, cost FROM products WHERE barcode = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -101,12 +121,12 @@ public class ProductDAO {
 
         if (useProvidedId) {
             // 使用用户提供的ID
-            sql = "INSERT INTO products (id, name, price, quantity, category, barcode, unit, description, " +
-                  "brand, supplier, spec, min_stock, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO products (id, product_code, name, price, quantity, category, barcode, unit, description, " +
+                  "brand, supplier, spec, min_stock, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         } else {
             // 由数据库自动生成ID
-            sql = "INSERT INTO products (name, price, quantity, category, barcode, unit, description, " +
-                  "brand, supplier, spec, min_stock, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO products (product_code, name, price, quantity, category, barcode, unit, description, " +
+                  "brand, supplier, spec, min_stock, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
         }
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -117,6 +137,7 @@ public class ProductDAO {
                 pstmt.setInt(paramIndex++, product.id);
             }
 
+            pstmt.setString(paramIndex++, product.productCode);
             pstmt.setString(paramIndex++, product.name);
             pstmt.setDouble(paramIndex++, product.price);
             pstmt.setInt(paramIndex++, product.quantity);
@@ -146,26 +167,27 @@ public class ProductDAO {
      * 更新商品
      */
     public static boolean update(Product product) throws SQLException {
-        String sql = "UPDATE products SET name = ?, price = ?, quantity = ?, category = ?, barcode = ?, " +
+        String sql = "UPDATE products SET product_code = ?, name = ?, price = ?, quantity = ?, category = ?, barcode = ?, " +
                      "unit = ?, description = ?, brand = ?, supplier = ?, spec = ?, " +
                      "min_stock = ?, cost = ? WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setString(1, product.name);
-            pstmt.setDouble(2, product.price);
-            pstmt.setInt(3, product.quantity);
-            pstmt.setString(4, product.category);
-            pstmt.setString(5, product.barcode);
-            pstmt.setString(6, product.unit);
-            pstmt.setString(7, product.description);
-            pstmt.setString(8, product.brand);
-            pstmt.setString(9, product.supplier);
-            pstmt.setString(10, product.spec);
-            pstmt.setInt(11, product.minStock);
-            pstmt.setDouble(12, product.cost);
-            pstmt.setInt(13, product.id);
+            pstmt.setString(1, product.productCode);
+            pstmt.setString(2, product.name);
+            pstmt.setDouble(3, product.price);
+            pstmt.setInt(4, product.quantity);
+            pstmt.setString(5, product.category);
+            pstmt.setString(6, product.barcode);
+            pstmt.setString(7, product.unit);
+            pstmt.setString(8, product.description);
+            pstmt.setString(9, product.brand);
+            pstmt.setString(10, product.supplier);
+            pstmt.setString(11, product.spec);
+            pstmt.setInt(12, product.minStock);
+            pstmt.setDouble(13, product.cost);
+            pstmt.setInt(14, product.id);
 
             return pstmt.executeUpdate() > 0;
         }
@@ -234,7 +256,7 @@ public class ProductDAO {
      */
     public static List<Product> findLowStock() throws SQLException {
         List<Product> products = new ArrayList<>();
-        String sql = "SELECT id, name, price, quantity, category, barcode, unit, description, " +
+        String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
                      "brand, supplier, spec, min_stock, cost FROM products " +
                      "WHERE quantity <= min_stock ORDER BY quantity";
 
@@ -254,7 +276,7 @@ public class ProductDAO {
      */
     public static List<Product> findByCategory(String category) throws SQLException {
         List<Product> products = new ArrayList<>();
-        String sql = "SELECT name, price, quantity, category, barcode, unit, description, " +
+        String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
                      "brand, supplier, spec, min_stock, cost FROM products " +
                      "WHERE category = ? ORDER BY name";
 
@@ -272,13 +294,13 @@ public class ProductDAO {
     }
 
     /**
-     * 搜索商品（按名称或条形码）
+     * 搜索商品（按名称、商品编号或条形码）
      */
     public static List<Product> search(String keyword) throws SQLException {
         List<Product> products = new ArrayList<>();
-        String sql = "SELECT name, price, quantity, category, barcode, unit, description, " +
+        String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
                      "brand, supplier, spec, min_stock, cost FROM products " +
-                     "WHERE name LIKE ? OR barcode LIKE ? OR description LIKE ? ORDER BY name";
+                     "WHERE name LIKE ? OR product_code LIKE ? OR barcode LIKE ? OR description LIKE ? ORDER BY name";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -287,6 +309,7 @@ public class ProductDAO {
             pstmt.setString(1, pattern);
             pstmt.setString(2, pattern);
             pstmt.setString(3, pattern);
+            pstmt.setString(4, pattern);
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
@@ -300,25 +323,26 @@ public class ProductDAO {
      * 批量插入商品
      */
     public static void batchInsert(List<Product> products) throws SQLException {
-        String sql = "INSERT INTO products (name, price, quantity, category, barcode, unit, description, " +
-                     "brand, supplier, spec, min_stock, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String sql = "INSERT INTO products (product_code, name, price, quantity, category, barcode, unit, description, " +
+                     "brand, supplier, spec, min_stock, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             for (Product product : products) {
-                pstmt.setString(1, product.name);
-                pstmt.setDouble(2, product.price);
-                pstmt.setInt(3, product.quantity);
-                pstmt.setString(4, product.category);
-                pstmt.setString(5, product.barcode);
-                pstmt.setString(6, product.unit);
-                pstmt.setString(7, product.description);
-                pstmt.setString(8, product.brand);
-                pstmt.setString(9, product.supplier);
-                pstmt.setString(10, product.spec);
-                pstmt.setInt(11, product.minStock);
-                pstmt.setDouble(12, product.cost);
+                pstmt.setString(1, product.productCode);
+                pstmt.setString(2, product.name);
+                pstmt.setDouble(3, product.price);
+                pstmt.setInt(4, product.quantity);
+                pstmt.setString(5, product.category);
+                pstmt.setString(6, product.barcode);
+                pstmt.setString(7, product.unit);
+                pstmt.setString(8, product.description);
+                pstmt.setString(9, product.brand);
+                pstmt.setString(10, product.supplier);
+                pstmt.setString(11, product.spec);
+                pstmt.setInt(12, product.minStock);
+                pstmt.setDouble(13, product.cost);
                 pstmt.addBatch();
             }
 
@@ -332,6 +356,7 @@ public class ProductDAO {
     private static Product mapRowToProduct(ResultSet rs) throws SQLException {
         Product product = new Product(
             rs.getInt("id"),
+            rs.getString("product_code"),
             rs.getString("name"),
             rs.getDouble("price"),
             rs.getInt("quantity"),

@@ -5,7 +5,7 @@
 -- 使用方法: docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < 00-init-complete.sql
 -- 
 -- 版本: v2.3.0
--- 更新日期: 2026-02-10
+-- 更新日期: 2026-02-11
 
 -- ============================================
 -- 第一部分：创建专用用户
@@ -30,8 +30,42 @@ SELECT '=== MySQL 用户创建完成 ===' AS status;
 SELECT user, host FROM mysql.user WHERE user IN ('root', 'cashier');
 
 -- ============================================
--- 第二部分：表结构初始化
+-- 第二部分：升级现有表结构
 -- ============================================
+
+-- 为 products 表添加 product_code 字段（如果不存在）
+SET @column_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'products'
+    AND COLUMN_NAME = 'product_code'
+);
+
+SET @sql = IF(@column_exists = 0,
+    'ALTER TABLE products ADD COLUMN product_code VARCHAR(50) UNIQUE COMMENT ''商品编号'' AFTER id',
+    'SELECT "products.product_code column already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 为 products 表添加 product_code 索引（如果不存在）
+SET @index_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'products'
+    AND INDEX_NAME = 'idx_product_code'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE products ADD INDEX idx_product_code (product_code)',
+    'SELECT "products.idx_product_code index already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- 为 members 表添加 id 字段（如果不存在）
 SET @column_exists = (
@@ -358,7 +392,7 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
-SELECT '=== 表结构初始化完成 ===' AS status;
+SELECT '=== 表结构升级完成 ===' AS status;
 
 -- ============================================
 -- 第三部分：示例数据

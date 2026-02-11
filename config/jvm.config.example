@@ -26,9 +26,6 @@
 # GC 线程数 (建议设置为 CPU 核心数)
 -XX:ParallelGCThreads=4
 
-# 启用编译优化
--XX:+AggressiveOpts
-
 # JIT 编译阈值
 -XX:CompileThreshold=1000
 

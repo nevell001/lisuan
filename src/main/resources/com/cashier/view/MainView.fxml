@@ -85,7 +85,7 @@
                             onAction="#handleCart"
                             styleClass="nav-button, nav-button-active">
                         <graphic>
-                            <Label text="🛒" style="-fx-font-size: 16px;"/>
+                            <Label text="🛒" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -94,7 +94,7 @@
                             onAction="#handleInventory"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="📦" style="-fx-font-size: 16px;"/>
+                            <Label text="📦" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -103,7 +103,7 @@
                             onAction="#handleMembers"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="👥" style="-fx-font-size: 16px;"/>
+                            <Label text="👥" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -114,7 +114,7 @@
                             onAction="#handleSupplier"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="🏭" style="-fx-font-size: 16px;"/>
+                            <Label text="🏭" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -123,7 +123,7 @@
                             onAction="#handlePurchaseOrder"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="📝" style="-fx-font-size: 16px;"/>
+                            <Label text="📝" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -132,7 +132,7 @@
                             onAction="#handlePurchaseApproval"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="✅" style="-fx-font-size: 16px;"/>
+                            <Label text="✅" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -141,7 +141,7 @@
                             onAction="#handlePurchaseInbound"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="📥" style="-fx-font-size: 16px;"/>
+                            <Label text="📥" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -150,7 +150,7 @@
                             onAction="#handleInventoryCheck"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="🔍" style="-fx-font-size: 16px;"/>
+                            <Label text="🔍" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -161,7 +161,7 @@
                             onAction="#handlePromotions"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="🎉" style="-fx-font-size: 16px;"/>
+                            <Label text="🎉" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -170,7 +170,7 @@
                             onAction="#handleTransactions"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="📊" style="-fx-font-size: 16px;"/>
+                            <Label text="📊" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -179,7 +179,7 @@
                             onAction="#handleStatistics"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="📈" style="-fx-font-size: 16px;"/>
+                            <Label text="📈" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -190,7 +190,7 @@
                             onAction="#handlePurchaseReport"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="📊" style="-fx-font-size: 16px;"/>
+                            <Label text="📊" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -199,7 +199,7 @@
                             onAction="#handleInventoryReport"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="📉" style="-fx-font-size: 16px;"/>
+                            <Label text="📉" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -208,7 +208,7 @@
                             onAction="#handleProfitReport"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="💰" style="-fx-font-size: 16px;"/>
+                            <Label text="💰" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -219,7 +219,7 @@
                             onAction="#handleShift"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="🔄" style="-fx-font-size: 16px;"/>
+                            <Label text="🔄" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
@@ -228,16 +228,16 @@
                             onAction="#handleUserManagement"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="👤" style="-fx-font-size: 16px;"/>
+                            <Label text="👤" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
 
                     <Button fx:id="settingsBtn"
-                            text=" 系统设置"
+                            text="系统设置"
                             onAction="#handleSettings"
                             styleClass="nav-button">
                         <graphic>
-                            <Label text="⚙️" style="-fx-font-size: 16px;"/>
+                            <Label text="⚙" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
                         </graphic>
                     </Button>
                 </VBox>

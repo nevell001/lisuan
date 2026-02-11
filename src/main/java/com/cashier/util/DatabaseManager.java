@@ -192,6 +192,7 @@ public class DatabaseManager {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS products (
                     id INT AUTO_INCREMENT PRIMARY KEY,
+                    product_code VARCHAR(50) UNIQUE COMMENT '商品编号',
                     name VARCHAR(200) NOT NULL,
                     price DECIMAL(10,2) NOT NULL,
                     quantity INT DEFAULT 0,
@@ -206,6 +207,7 @@ public class DatabaseManager {
                     cost DECIMAL(10,2),
                     created_at BIGINT,
                     updated_at BIGINT,
+                    INDEX idx_product_code (product_code),
                     INDEX idx_name (name),
                     INDEX idx_barcode (barcode),
                     INDEX idx_category (category),
@@ -562,8 +564,23 @@ public class DatabaseManager {
     private static void upgradeTableStructure(Statement stmt) throws SQLException {
         System.out.println("检查表结构...");
         
-        // 为 members 表添加 id 字段（如果不存在）
+        // 为 products 表添加 product_code 字段（如果不存在）
         ResultSet rs = stmt.executeQuery("""
+            SELECT COUNT(*) as count 
+            FROM INFORMATION_SCHEMA.COLUMNS 
+            WHERE TABLE_SCHEMA = DATABASE() 
+            AND TABLE_NAME = 'products' 
+            AND COLUMN_NAME = 'product_code'
+        """);
+        if (rs.next() && rs.getInt("count") == 0) {
+            System.out.println("正在为 products 表添加 product_code 字段...");
+            stmt.execute("ALTER TABLE products ADD COLUMN product_code VARCHAR(50) UNIQUE COMMENT '商品编号' AFTER id");
+            stmt.execute("ALTER TABLE products ADD INDEX idx_product_code (product_code)");
+        }
+        rs.close();
+        
+        // 为 members 表添加 id 字段（如果不存在）
+        rs = stmt.executeQuery("""
             SELECT COUNT(*) as count 
             FROM INFORMATION_SCHEMA.COLUMNS 
             WHERE TABLE_SCHEMA = DATABASE() 

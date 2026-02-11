@@ -2,9 +2,11 @@ package com.cashier.controller;
 
 import com.cashier.dao.CategoryDAO;
 import com.cashier.dao.ProductDAO;
+import com.cashier.dao.SupplierDAO;
 import com.cashier.dao.UnitDAO;
 import com.cashier.model.Category;
 import com.cashier.model.Product;
+import com.cashier.model.Supplier;
 import com.cashier.model.Unit;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
@@ -57,9 +59,6 @@ public class ProductEditController {
     private TextField brandField;
 
     @FXML
-    private TextField supplierField;
-
-    @FXML
     private TextField specField;
 
     @FXML
@@ -69,10 +68,10 @@ public class ProductEditController {
     private TextField productCodeField;
 
     @FXML
-    private TextField idField;
+    private ComboBox<String> supplierComboBox;
 
     @FXML
-    private CheckBox autoIdCheckBox;
+    private CheckBox autoCodeCheckBox;
 
     @FXML
     private Label errorLabel;
@@ -112,26 +111,30 @@ public class ProductEditController {
         // 加载单位数据
         loadUnits();
 
+        // 加载供应商数据
+        loadSuppliers();
+
         // 设置默认值
         minStockField.setText("10");
         categoryComboBox.getSelectionModel().select("默认分类");
         unitComboBox.getSelectionModel().select("个");
 
-        // 自动ID复选框默认选中
-        autoIdCheckBox.setSelected(true);
-        idField.setDisable(true);
+        // 自动编号复选框默认选中
+        autoCodeCheckBox.setSelected(true);
+        productCodeField.setDisable(true);
 
-        // 监听自动ID复选框变化
-        autoIdCheckBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
-            idField.setDisable(newVal);
+        // 监听自动编号复选框变化
+        autoCodeCheckBox.selectedProperty().addListener((obs, oldVal, newVal) -> {
+            productCodeField.setDisable(newVal);
             if (newVal) {
-                idField.clear();
+                productCodeField.clear();
             }
         });
 
         // 强制设置 ComboBox 样式，去除所有内部边框
         styleComboBox(categoryComboBox);
         styleComboBox(unitComboBox);
+        styleComboBox(supplierComboBox);
 
         // 强制设置 TextArea 样式，去除所有内部边框
         styleTextArea(descriptionField);
@@ -220,6 +223,27 @@ public class ProductEditController {
     }
 
     /**
+     * 加载供应商数据
+     */
+    private void loadSuppliers() {
+        List<String> suppliers = new ArrayList<>();
+        // 不添加默认供应商，要求必须选择
+
+        try {
+            List<Supplier> supplierList = SupplierDAO.findAll();
+            for (Supplier supplier : supplierList) {
+                if (supplier.status) { // 只加载启用的供应商
+                    suppliers.add(supplier.name);
+                }
+            }
+        } catch (SQLException e) {
+            System.err.println("加载供应商数据失败: " + e.getMessage());
+        }
+
+        supplierComboBox.setItems(javafx.collections.FXCollections.observableArrayList(suppliers));
+    }
+
+    /**
      * 设置对话框舞台
      * @param dialogStage 对话框舞台
      */
@@ -237,10 +261,9 @@ public class ProductEditController {
         if (product != null) {
             // 编辑模式
             titleLabel.setText("编辑商品");
-            idField.setText(String.valueOf(product.id));
-            autoIdCheckBox.setSelected(false);
-            idField.setDisable(false);
             productCodeField.setText(product.productCode);
+            autoCodeCheckBox.setSelected(false);
+            productCodeField.setDisable(false);
             nameField.setText(product.name);
             priceField.setText(String.format("%.2f", product.price));
             quantityField.setText(String.valueOf(product.quantity));
@@ -250,14 +273,14 @@ public class ProductEditController {
             unitComboBox.getSelectionModel().select(product.unit);
             descriptionField.setText(product.description);
             brandField.setText(product.brand);
-            supplierField.setText(product.supplier);
+            supplierComboBox.getSelectionModel().select(product.supplier);
             specField.setText(product.spec);
             costField.setText(String.format("%.2f", product.cost));
         } else {
             // 添加模式
             titleLabel.setText("添加商品");
-            autoIdCheckBox.setSelected(true);
-            idField.setDisable(true);
+            autoCodeCheckBox.setSelected(true);
+            productCodeField.setDisable(true);
         }
     }
 
@@ -290,15 +313,6 @@ public class ProductEditController {
                     Double.parseDouble(priceField.getText().trim()),
                     Integer.parseInt(quantityField.getText().trim())
                 );
-                // 设置ID（如果不是自动生成）
-                if (!autoIdCheckBox.isSelected()) {
-                    try {
-                        product.id = Integer.parseInt(idField.getText().trim());
-                    } catch (NumberFormatException e) {
-                        errorLabel.setText("ID必须是数字");
-                        return;
-                    }
-                }
             } else {
                 // 编辑现有商品
                 product.name = nameField.getText().trim();
@@ -306,8 +320,12 @@ public class ProductEditController {
                 product.quantity = Integer.parseInt(quantityField.getText().trim());
             }
 
+            // 更新商品编号（如果不是自动生成）
+            if (!autoCodeCheckBox.isSelected()) {
+                product.productCode = productCodeField.getText().trim();
+            }
+
             // 更新商品信息
-            product.productCode = productCodeField.getText().trim();
             product.minStock = Integer.parseInt(minStockField.getText().trim());
             product.category = categoryComboBox.getSelectionModel().getSelectedItem();
             if (product.category == null || product.category.trim().isEmpty()) {
@@ -320,7 +338,7 @@ public class ProductEditController {
             }
             product.description = descriptionField.getText().trim();
             product.brand = brandField.getText().trim();
-            product.supplier = supplierField.getText().trim();
+            product.supplier = supplierComboBox.getSelectionModel().getSelectedItem();
             product.spec = specField.getText().trim();
             product.cost = costField.getText().trim().isEmpty() ? product.price * 0.7 : Double.parseDouble(costField.getText().trim());
 
@@ -344,16 +362,9 @@ public class ProductEditController {
     private boolean isInputValid() {
         String errorMessage = "";
 
-        // 验证ID（如果不是自动生成）
-        if (!autoIdCheckBox.isSelected() && !idField.getText().trim().isEmpty()) {
-            try {
-                int id = Integer.parseInt(idField.getText().trim());
-                if (id <= 0) {
-                    errorMessage += "ID必须大于0！\n";
-                }
-            } catch (NumberFormatException e) {
-                errorMessage += "ID格式不正确！\n";
-            }
+        // 验证商品编号（如果不是自动生成）
+        if (!autoCodeCheckBox.isSelected() && productCodeField.getText().trim().isEmpty()) {
+            errorMessage += "商品编号不能为空！\n";
         }
 
         // 验证商品名称
