@@ -3,6 +3,20 @@ chcp 65001 >nul 2>&1
 REM ============================================
 REM Cashier System Startup Script (Windows)
 REM ============================================
+REM 
+REM 安全提示：
+REM 为了安全起见，建议设置环境变量 CASHER_DB_PASSWORD 来存储数据库密码
+REM 
+REM Windows CMD 设置方式:
+REM   set CASHER_DB_PASSWORD=YourPassword
+REM   start.bat
+REM 
+REM Windows PowerShell 设置方式:
+REM   $env:CASHER_DB_PASSWORD="YourPassword"
+REM   .\start.bat
+REM 
+REM 如果设置了环境变量，config\database.properties 中的 db.password 将被忽略
+REM ============================================
 
 setlocal enabledelayedexpansion
 
@@ -13,7 +27,7 @@ echo.
 
 REM Set application info
 set APP_NAME=Cashier System
-set APP_VERSION=2.2.1
+set APP_VERSION=2.3.0
 set MAIN_CLASS=com.cashier.CashierSystemFXApplication
 set CONFIG_FILE=config\jvm.config
 

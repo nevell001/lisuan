@@ -20,9 +20,7 @@ public class TransactionDAO {
      * 插入新交易（包含明细）
      */
     public static boolean insert(Transaction transaction) throws SQLException {
-        Connection conn = null;
-        try {
-            conn = DatabaseManager.getConnection();
+        try (Connection conn = DatabaseManager.getConnection()) {
             conn.setAutoCommit(false);
 
             // 插入交易主记录
@@ -63,23 +61,8 @@ public class TransactionDAO {
             return true;
 
         } catch (SQLException e) {
-            if (conn != null) {
-                try {
-                    conn.rollback();
-                } catch (SQLException ex) {
-                    logger.error("事务回滚失败", ex);
-                }
-            }
+            logger.error("插入交易失败: transactionId={}", transaction.transactionId, e);
             throw e;
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException e) {
-                    logger.error("关闭数据库连接失败", e);
-                }
-            }
         }
     }
 

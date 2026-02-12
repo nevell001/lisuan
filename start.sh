@@ -3,6 +3,21 @@
 # ============================================
 # Cashier System Startup Script (Linux/Mac)
 # ============================================
+#
+# 安全提示：
+# 为了安全起见，建议设置环境变量 CASHER_DB_PASSWORD 来存储数据库密码
+#
+# Linux/Mac 设置方式:
+#   export CASHER_DB_PASSWORD="YourPassword"
+#   ./start.sh
+#
+# 或者创建 .env 文件（需要先 source .env）:
+#   echo 'export CASHER_DB_PASSWORD="YourPassword"' >> .env
+#   source .env
+#   ./start.sh
+#
+# 如果设置了环境变量，config/database.properties 中的 db.password 将被忽略
+# ============================================
 
 APP_NAME="Cashier System"
 APP_VERSION="2.3.0"

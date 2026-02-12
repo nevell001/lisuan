@@ -100,22 +100,31 @@ public class DatabaseManager {
                 "请先配置数据库连接信息：\n" +
                 "1. 编辑 config/database.properties 文件\n" +
                 "2. 设置正确的数据库 URL、用户名和密码\n" +
-                "3. 然后重新启动应用");
+                "3. 或者设置环境变量 CASHER_DB_PASSWORD 来避免明文存储密码\n" +
+                "4. 然后重新启动应用");
         }
 
         // 验证必需的配置项
         dbUrl = props.getProperty("db.url");
         dbUsername = props.getProperty("db.username");
-        dbPassword = props.getProperty("db.password");
+        
+        // 优先从环境变量读取密码（更安全），如果没有则从配置文件读取
+        String envPassword = System.getenv("CASHER_DB_PASSWORD");
+        if (envPassword != null && !envPassword.isEmpty()) {
+            dbPassword = envPassword;
+            System.out.println("已从环境变量读取数据库密码");
+        } else {
+            dbPassword = props.getProperty("db.password");
+        }
 
         if (dbUrl == null || dbUrl.isEmpty() ||
             dbUsername == null || dbUsername.isEmpty() ||
             dbPassword == null || dbPassword.isEmpty()) {
             throw new RuntimeException("数据库配置不完整！\n" +
-                "请在 config/database.properties 中配置以下参数：\n" +
+                "请配置以下参数：\n" +
                 "- db.url (数据库连接URL)\n" +
                 "- db.username (数据库用户名)\n" +
-                "- db.password (数据库密码)");
+                "- db.password (数据库密码，或设置环境变量 CASHER_DB_PASSWORD)");
         }
 
         try {
@@ -136,11 +145,15 @@ public class DatabaseManager {
             Properties props = new Properties();
             props.setProperty("db.url", "jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf8mb4");
             props.setProperty("db.username", "cashier");
+            // 安全提示：建议使用环境变量 CASHER_DB_PASSWORD 存储密码，避免明文存储
+            // Windows: set CASHER_DB_PASSWORD=YourPassword
+            // Linux/Mac: export CASHER_DB_PASSWORD=YourPassword
             props.setProperty("db.password", "YourStrongPassword123!");
             props.setProperty("db.pool.size", "10");
 
             try (FileOutputStream fos = new FileOutputStream(configFile)) {
-                props.store(fos, "收银系统数据库配置文件模板");
+                props.store(fos, "收银系统数据库配置文件模板\n" +
+                    "安全提示：建议设置环境变量 CASHER_DB_PASSWORD 来存储数据库密码，避免明文存储");
                 System.out.println("已创建默认配置文件模板: " + CONFIG_FILE);
             }
         } catch (IOException e) {

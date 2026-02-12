@@ -2,10 +2,12 @@ package com.cashier.controller;
 
 import com.cashier.dao.ProductDAO;
 import com.cashier.dao.PurchaseInboundDAO;
+import com.cashier.dao.PurchaseInboundItemDAO;
 import com.cashier.dao.PurchaseOrderDAO;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Product;
 import com.cashier.model.PurchaseInbound;
+import com.cashier.model.PurchaseInboundItem;
 import com.cashier.model.PurchaseOrder;
 import com.cashier.model.Transaction;
 import org.slf4j.Logger;
@@ -27,6 +29,9 @@ import java.util.*;
  */
 public class ProfitReportController {
     private static final Logger logger = LoggerFactory.getLogger(ProfitReportController.class);
+
+    // 运营成本比例（默认为收入的5%）
+    private static final double DEFAULT_OPERATING_COST_RATIO = 0.05;
 
     @FXML
     private DatePicker startDatePicker;
@@ -136,6 +141,9 @@ public class ProfitReportController {
     private List<Product> allProducts;
     private List<Transaction> allTransactions;
     private List<PurchaseInbound> allInboundRecords;
+    private List<PurchaseInboundItem> allInboundItems;
+    private Map<String, Double> productActualCostMap; // 商品实际成本（加权平均）
+    private Map<String, Product> productNameMap; // 商品名称到商品的映射
     private Set<String> allCategories;
 
     /**
@@ -234,7 +242,27 @@ public class ProfitReportController {
             allProducts = ProductDAO.findAll();
             allTransactions = TransactionDAO.findAll();
             allInboundRecords = PurchaseInboundDAO.findAll();
+            allInboundItems = new ArrayList<>();
+            productActualCostMap = new HashMap<>();
+            productNameMap = new HashMap<>();
             allCategories = new TreeSet<>();
+
+            // 加载所有采购入库明细
+            for (PurchaseInbound inbound : allInboundRecords) {
+                List<PurchaseInboundItem> items = PurchaseInboundItemDAO.findByInboundId(inbound.id);
+                allInboundItems.addAll(items);
+            }
+
+            // 计算每个商品的加权平均成本
+            calculateProductActualCosts();
+
+            // 构建商品名称映射（用于快速查找）
+            productNameMap = new HashMap<>();
+            for (Product product : allProducts) {
+                if (product.name != null && !product.name.isEmpty()) {
+                    productNameMap.put(product.name, product);
+                }
+            }
 
             // 收集所有分类
             for (Product product : allProducts) {
@@ -250,16 +278,46 @@ public class ProfitReportController {
             categoryComboBox.setItems(categoryList);
             categoryComboBox.getSelectionModel().select(0);
 
-            logger.info("成功加载 {} 个商品，{} 条交易记录，{} 条入库记录",
-                allProducts.size(), allTransactions.size(), allInboundRecords.size());
+            logger.info("成功加载 {} 个商品，{} 条交易记录，{} 条入库记录，{} 条入库明细",
+                allProducts.size(), allTransactions.size(), allInboundRecords.size(), allInboundItems.size());
         } catch (SQLException e) {
             logger.error("加载数据失败", e);
             showError("加载数据失败: " + e.getMessage());
             allProducts = new ArrayList<>();
             allTransactions = new ArrayList<>();
             allInboundRecords = new ArrayList<>();
+            allInboundItems = new ArrayList<>();
+            productActualCostMap = new HashMap<>();
+            productNameMap = new HashMap<>();
             allCategories = new TreeSet<>();
         }
+    }
+
+    /**
+     * 计算每个商品的加权平均成本
+     */
+    private void calculateProductActualCosts() {
+        Map<Integer, Double> totalCostMap = new HashMap<>();
+        Map<Integer, Integer> totalQuantityMap = new HashMap<>();
+
+        // 统计每个商品的总成本和总数量
+        for (PurchaseInboundItem item : allInboundItems) {
+            if (item.productId > 0) {
+                double cost = item.unitPrice.doubleValue();
+                totalCostMap.put(item.productId, totalCostMap.getOrDefault(item.productId, 0.0) + cost * item.quantity);
+                totalQuantityMap.put(item.productId, totalQuantityMap.getOrDefault(item.productId, 0) + item.quantity);
+            }
+        }
+
+        // 计算加权平均成本并映射到商品名称
+        for (Product product : allProducts) {
+            if (totalCostMap.containsKey(product.id) && totalQuantityMap.get(product.id) > 0) {
+                double avgCost = totalCostMap.get(product.id) / totalQuantityMap.get(product.id);
+                productActualCostMap.put(product.name, avgCost);
+            }
+        }
+
+        logger.info("计算了 {} 个商品的实际成本", productActualCostMap.size());
     }
 
     /**
@@ -370,9 +428,21 @@ public class ProfitReportController {
 
                     if (transaction.items != null) {
                         for (var item : transaction.items) {
-                            // 查找商品成本
+                            // 查找商品信息
                             Product product = findProductByName(item.name);
-                            double cost = product != null ? product.cost : item.price * 0.7; // 默认成本为售价的70%
+                            double cost;
+
+                            // 优先使用实际采购成本（加权平均）
+                            if (productActualCostMap.containsKey(item.name)) {
+                                cost = productActualCostMap.get(item.name);
+                            } else if (product != null && product.cost > 0) {
+                                // 使用商品成本价
+                                cost = product.cost;
+                            } else {
+                                // 默认成本为售价的70%（仅用于没有采购记录的商品）
+                                cost = item.price * 0.7;
+                            }
+
                             String category = product != null && product.category != null ? product.category : "未分类";
 
                             // 分类筛选
@@ -422,8 +492,10 @@ public class ProfitReportController {
         double grossProfit = totalRevenue - totalCost;
         double grossMargin = totalRevenue > 0 ? grossProfit / totalRevenue : 0.0;
 
-        // 净利润（简化计算：假设运营成本为收入的5%）
-        double operatingCost = totalRevenue * 0.05;
+        // 净利润计算（毛利润 - 运营成本）
+        // 运营成本包括：人工、水电、租金等，这里使用固定比例估算
+        // TODO: 可以从配置文件读取或让用户自定义运营成本比例
+        double operatingCost = totalRevenue * DEFAULT_OPERATING_COST_RATIO;
         double netProfit = grossProfit - operatingCost;
 
         // 平均毛利率
@@ -464,6 +536,18 @@ public class ProfitReportController {
         worstMarginProductLabel.setText(worstMarginProduct);
         worstMarginValueLabel.setText(String.format("%.2f%%", worstMarginValue * 100));
 
+        // 记录成本来源统计信息
+        int actualCostCount = 0;
+        int estimatedCostCount = 0;
+        for (ProductProfit pp : productProfitMap.values()) {
+            if (productActualCostMap.containsKey(pp.productName)) {
+                actualCostCount++;
+            } else {
+                estimatedCostCount++;
+            }
+        }
+        logger.info("成本来源统计: 实际成本商品 {} 个, 估算成本商品 {} 个", actualCostCount, estimatedCostCount);
+
         // 更新表格
         updateProductProfitTable(productProfitMap);
         updateCategoryProfitTable(categoryProfitMap);
@@ -474,12 +558,7 @@ public class ProfitReportController {
      * 根据名称查找商品
      */
     private Product findProductByName(String name) {
-        for (Product product : allProducts) {
-            if (product.name.equals(name)) {
-                return product;
-            }
-        }
-        return null;
+        return productNameMap.get(name);
     }
 
     /**

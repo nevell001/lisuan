@@ -6,7 +6,7 @@ echo   Cashier System Installation
 echo ========================================
 echo.
 
-set APP_VERSION=2.2.1
+set APP_VERSION=2.3.0
 set DB_TYPE=none
 set DB_HOST=localhost
 set DB_PORT=3306
@@ -289,7 +289,7 @@ echo         String dbName = "%DB_NAME%";
 echo         String baseDir = "docker" + File.separator + "mysql-init";
 echo.
 echo         // 1. ?????
-echo         String url = "jdbc:mysql://" + host + ":" + port + "?useSSL=false^&serverTimezone=Asia/Shanghai^&allowPublicKeyRetrieval=true^&characterEncoding=utf8mb4";
+echo         String url = "jdbc:mysql://" + host + ":" + port + "?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8";
 echo         try ^(Connection conn = DriverManager.getConnection(url, user, password^)^) {
 echo             Statement stmt = conn.createStatement(^);
 echo             stmt.execute("CREATE DATABASE IF NOT EXISTS " + dbName + " CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"^);
@@ -298,7 +298,7 @@ echo             stmt.close(^);
 echo         }
 echo.
 echo         // 2. ????????
-echo         url = "jdbc:mysql://" + host + ":" + port + "/" + dbName + "?useSSL=false^&serverTimezone=Asia/Shanghai^&allowPublicKeyRetrieval=true^&characterEncoding=utf8mb4";
+echo         url = "jdbc:mysql://" + host + ":" + port + "/" + dbName + "?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8";
 echo         try ^(Connection conn = DriverManager.getConnection(url, user, password^)^) {
 echo             // ????????
 echo             File scriptFile = new File(baseDir, "03-sample-data.sql"^);
@@ -378,7 +378,7 @@ goto :write_config
 :write_config
 (
     echo # Database Configuration
-    echo db.url=jdbc:mysql://%DB_HOST%:%DB_PORT%/%DB_NAME%?useSSL=false^&serverTimezone=Asia/Shanghai^&allowPublicKeyRetrieval=true^&characterEncoding=utf8mb4
+    echo db.url=jdbc:mysql://%DB_HOST%:%DB_PORT%/%DB_NAME%?useSSL=false^&serverTimezone=Asia/Shanghai^&allowPublicKeyRetrieval=true^&characterEncoding=UTF-8
     echo db.username=%DB_USERNAME%
     echo db.password=%DB_PASSWORD%
     echo db.pool.size=10
