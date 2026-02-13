@@ -205,7 +205,7 @@ public class CashierSystemFXApplication extends Application {
                 if (buttonType == yesButton) {
                     // 用户选择先交班，这里不执行任何操作
                     // 因为无法直接切换到交班页面，用户需要手动操作
-                    System.out.println("用户选择先交班");
+                    logger.info("用户选择先交班");
                 } else if (buttonType == noButton) {
                     // 用户选择直接退出
                     System.exit(0);

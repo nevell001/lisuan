@@ -4,7 +4,7 @@ import com.cashier.dao.MemberDAO;
 import com.cashier.model.Member;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
@@ -27,7 +27,7 @@ import java.util.Map;
  * 处理会员的增删改查和充值
  */
 public class MemberController {
-    private static final Logger logger = LoggerFactory.getLogger(MemberController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(MemberController.class);
 
     @FXML
     private TableView<Member> memberTable;
@@ -120,7 +120,6 @@ public class MemberController {
                 members.put(member.phone, member);
             }
         } catch (SQLException e) {
-            System.err.println("加载会员数据失败: " + e.getMessage());
             logger.error("加载会员数据失败", e);
             showError("加载会员数据失败: " + e.getMessage());
             members = new java.util.HashMap<>();
@@ -190,7 +189,6 @@ public class MemberController {
                     loadMembers();
                     updateStatus("会员添加成功: " + newMember.name);
                 } catch (SQLException e) {
-                    System.err.println("添加会员失败: " + e.getMessage());
                     logger.error("添加会员失败", e);
                     showError("添加会员失败: " + e.getMessage());
                 }
@@ -246,7 +244,6 @@ public class MemberController {
                         loadMembers();
                         updateStatus("会员更新成功: " + updatedMember.name);
                     } catch (SQLException e) {
-                    System.err.println("更新会员失败: " + e.getMessage());
                     logger.error("更新会员失败", e);
                     showError("更新会员失败: " + e.getMessage());
                 }
@@ -276,7 +273,6 @@ public class MemberController {
                     loadMembers();
                     updateStatus("会员删除成功: " + selected.name);
                 } catch (SQLException e) {
-                    System.err.println("删除会员失败: " + e.getMessage());
                     logger.error("删除会员失败", e);
                     showError("删除会员失败: " + e.getMessage());
                 }

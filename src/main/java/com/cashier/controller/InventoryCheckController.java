@@ -4,7 +4,7 @@ import com.cashier.dao.*;
 import com.cashier.model.*;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
@@ -32,8 +32,9 @@ import javafx.util.converter.IntegerStringConverter;
  * 库存盘点控制器
  * 处理库存盘点操作
  */
+@SuppressWarnings("unchecked")
 public class InventoryCheckController {
-    private static final Logger logger = LoggerFactory.getLogger(InventoryCheckController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(InventoryCheckController.class);
 
     @FXML
     private TableView<InventoryCheck> checkTable;
@@ -76,6 +77,9 @@ public class InventoryCheckController {
 
     @FXML
     private Button deleteButton;
+
+    // 差异统计标签（在表单中使用）
+    private Label diffLabel;
 
     @FXML
     private Button viewDetailButton;
@@ -318,12 +322,18 @@ public class InventoryCheckController {
             ObservableList<CheckItemWrapper> items = FXCollections.observableArrayList();
             itemTable.setItems(items);
 
+            // 监听列表变化，更新差异统计
+            items.addListener((javafx.collections.ListChangeListener<CheckItemWrapper>) change -> {
+                int diffCount = (int) items.stream().filter(item -> item.diffQuantity.get() != 0).count();
+                diffLabel.setText("差异商品: " + diffCount + " 个");
+            });
+
             // 添加商品按钮
             Button addProductButton = new Button("添加商品");
             addProductButton.setOnAction(e -> showProductSelector(itemTable));
 
             // 差异统计
-            Label diffLabel = new Label("差异商品: 0 个");
+            diffLabel = new Label("差异商品: 0 个");
 
             // 如果是编辑模式，填充数据
             boolean isEdit = check != null;
@@ -521,9 +531,9 @@ public class InventoryCheckController {
             addButton.setOnAction(e -> {
                 Product selected = productTable.getSelectionModel().getSelectedItem();
                 if (selected != null) {
-                    System.out.println("选中的商品 - ID: " + selected.id + ", 名称: " + selected.name + ", 名称是否为null: " + (selected.name == null));
+                    logger.debug("选中的商品 - ID: {}, 名称: {}, 名称是否为null: {}", selected.id, selected.name, selected.name == null);
                     CheckItemWrapper wrapper = new CheckItemWrapper(selected);
-                    System.out.println("Wrapper 商品名称: " + wrapper.getProductName());
+                    logger.debug("Wrapper 商品名称: {}", wrapper.getProductName());
                     itemTable.getItems().add(wrapper);
                     itemTable.refresh();
                     selectorStage.close();

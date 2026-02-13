@@ -8,7 +8,7 @@ import com.cashier.model.Product;
 import com.cashier.model.Unit;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
@@ -30,11 +30,12 @@ import java.io.IOException;
 import java.util.Map;
 
 /**
- * 库存管理控制器
- * 处理商品库存的增删改查
+ * 商品管理控制器
+ * 处理商品的添加、编辑、删除、补货等操作
  */
+@SuppressWarnings("unchecked")
 public class InventoryController {
-    private static final Logger logger = LoggerFactory.getLogger(InventoryController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(InventoryController.class);
 
     @FXML
     private TableView<Product> inventoryTable;
@@ -152,7 +153,6 @@ public class InventoryController {
                 inventory.put(product.name, product);
             }
         } catch (SQLException e) {
-            System.err.println("加载商品数据失败: " + e.getMessage());
             logger.error("加载商品数据失败", e);
             showError("加载商品数据失败: " + e.getMessage());
             inventory = new java.util.HashMap<>();
@@ -214,18 +214,11 @@ public class InventoryController {
             // 显示对话框并等待响应
             dialogStage.showAndWait();
 
-            // 如果用户点击了保存
+            // 如果用户点击了保存（ProductEditController 内部已经完成数据库操作）
             if (controller.isOkClicked()) {
                 Product newProduct = controller.getProduct();
-                try {
-                    ProductDAO.insert(newProduct);
-                    loadInventory();
-                    updateStatus("商品添加成功: " + newProduct.name);
-                } catch (SQLException e) {
-                    System.err.println("添加商品失败: " + e.getMessage());
-                    logger.error("添加商品失败", e);
-                    showError("添加商品失败: " + e.getMessage());
-                }
+                loadInventory();
+                updateStatus("商品添加成功: " + newProduct.name);
             }
 
         } catch (IOException e) {
@@ -270,18 +263,11 @@ public class InventoryController {
                 // 显示对话框并等待响应
                 dialogStage.showAndWait();
 
-                // 如果用户点击了保存
+                // 如果用户点击了保存（ProductEditController 内部已经完成数据库操作）
                 if (controller.isOkClicked()) {
                     Product updatedProduct = controller.getProduct();
-                    try {
-                        ProductDAO.update(updatedProduct);
-                        loadInventory();
-                        updateStatus("商品更新成功: " + updatedProduct.name);
-                    } catch (SQLException e) {
-                    System.err.println("更新商品失败: " + e.getMessage());
-                    logger.error("更新商品失败", e);
-                    showError("更新商品失败: " + e.getMessage());
-                }
+                    loadInventory();
+                    updateStatus("商品更新成功: " + updatedProduct.name);
                 }
 
             } catch (IOException e) {
@@ -308,7 +294,6 @@ public class InventoryController {
                     loadInventory();
                     updateStatus("商品删除成功: " + selected.name);
                 } catch (SQLException e) {
-                    System.err.println("删除商品失败: " + e.getMessage());
                     logger.error("删除商品失败", e);
                     showError("删除商品失败: " + e.getMessage());
                 }
@@ -317,14 +302,14 @@ public class InventoryController {
     }
 
     /**
-     * 处理补货
+     * 处理快速入库
      */
     @FXML
     private void handleRestock() {
         Product selected = inventoryTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             try {
-                // 加载补货对话框
+                // 加载快速入库对话框
                 FXMLLoader loader = new FXMLLoader();
                 loader.setLocation(getClass().getResource("/com/cashier/view/RestockView.fxml"));
                 VBox root = loader.load();
@@ -334,7 +319,7 @@ public class InventoryController {
 
                 // 创建对话框
                 Stage dialogStage = new Stage();
-                dialogStage.setTitle("补货");
+                dialogStage.setTitle("快速入库");
                 dialogStage.initModality(Modality.WINDOW_MODAL);
                 dialogStage.initOwner(inventoryTable.getScene().getWindow());
                 dialogStage.setResizable(false);
@@ -356,11 +341,11 @@ public class InventoryController {
                 // 如果用户点击了确认
                 if (controller.isOkClicked()) {
                     loadInventory();
-                    updateStatus("补货成功: " + selected.name + " (+" + controller.getRestockQuantity() + ")");
+                    updateStatus("快速入库成功: " + selected.name + " (+" + controller.getRestockQuantity() + ")");
                 }
 
             } catch (IOException e) {
-                showError("加载补货对话框失败: " + e.getMessage());
+                showError("加载快速入库对话框失败: " + e.getMessage());
             }
         }
     }
@@ -480,7 +465,7 @@ public class InventoryController {
         try {
             categoryList.addAll(CategoryDAO.findAll());
         } catch (SQLException e) {
-            System.err.println("加载分类失败: " + e.getMessage());
+            logger.error("加载分类失败", e);
         }
         categoryTable.setItems(categoryList);
 
@@ -593,7 +578,7 @@ public class InventoryController {
                         showInfo("分类添加失败");
                     }
                 } catch (SQLException e) {
-                    System.err.println("添加分类失败: " + e.getMessage());
+                    logger.error("添加分类失败", e);
                     showInfo("添加分类失败: " + e.getMessage());
                 }
             }
@@ -644,7 +629,7 @@ public class InventoryController {
                         showInfo("分类更新失败");
                     }
                 } catch (SQLException e) {
-                    System.err.println("更新分类失败: " + e.getMessage());
+                    logger.error("更新分类失败", e);
                     showInfo("更新分类失败: " + e.getMessage());
                 }
             }
@@ -670,7 +655,7 @@ public class InventoryController {
                         showInfo("分类删除失败");
                     }
                 } catch (SQLException e) {
-                    System.err.println("删除分类失败: " + e.getMessage());
+                    logger.error("删除分类失败", e);
                     showInfo("删除分类失败: " + e.getMessage());
                 }
             }
@@ -711,7 +696,7 @@ public class InventoryController {
         try {
             unitList.addAll(UnitDAO.findAll());
         } catch (SQLException e) {
-            System.err.println("加载单位失败: " + e.getMessage());
+            logger.error("加载单位失败", e);
         }
         unitTable.setItems(unitList);
 
@@ -819,7 +804,7 @@ public class InventoryController {
                         showInfo("单位添加失败");
                     }
                 } catch (SQLException e) {
-                    System.err.println("添加单位失败: " + e.getMessage());
+                    logger.error("添加单位失败", e);
                     showInfo("添加单位失败: " + e.getMessage());
                 }
             }
@@ -865,7 +850,7 @@ public class InventoryController {
                         showInfo("单位更新失败");
                     }
                 } catch (SQLException e) {
-                    System.err.println("更新单位失败: " + e.getMessage());
+                    logger.error("更新单位失败", e);
                     showInfo("更新单位失败: " + e.getMessage());
                 }
             }
@@ -891,7 +876,7 @@ public class InventoryController {
                         showInfo("单位删除失败");
                     }
                 } catch (SQLException e) {
-                    System.err.println("删除单位失败: " + e.getMessage());
+                    logger.error("删除单位失败", e);
                     showInfo("删除单位失败: " + e.getMessage());
                 }
             }

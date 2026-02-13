@@ -2,7 +2,7 @@
 
 一个功能完整的收银系统，使用 JavaFX 17 开发，提供现代化的图形化界面。
 
-**当前版本**: v2.3.0 | **最新更新**: 2026-02-07
+**当前版本**: v2.3.1 | **最新更新**: 2026-02-13
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.8-blue)
@@ -24,7 +24,11 @@
   - 微信支付
   - 支付宝支付
   - 银行卡支付
-- **库存管理** - 商品添加、编辑、删除、补货、搜索
+- **商品管理** - 商品添加、编辑、删除、快速入库、搜索
+  - 商品编号自动生成
+  - 库存通过进销存流程管理（采购入库、快速入库、库存盘点）
+  - 商品分类和单位管理
+  - 库存预警显示
 - **会员管理** - 会员注册、积分、等级、折扣、余额充值
 - **促销管理** - 满减、折扣、优惠券等多种促销类型
 - **交易记录** - 完整的交易历史记录和查询
@@ -56,6 +60,24 @@
 - 密码复杂度检查
 
 ## 🎯 最近更新
+
+### v2.3.1 (2026-02-13)
+
+**商品管理优化**
+- 📦 商品管理模块重构
+  - 将"库存管理"改名为"商品管理"，更准确反映功能定位
+  - 移除添加商品时的库存数量输入，通过进销存流程管理库存
+  - 新增商品编号自动生成功能（格式：P + 年月日 + 4位序号）
+  - 修复条形码重复问题（移除 UNIQUE 约束）
+- 🎨 界面优化
+  - 优化商品管理列表选中效果（渐变背景色 + 左侧边框）
+  - 优化补货功能为"快速入库"，支持多种入库来源
+  - 实时预览入库后库存和金额
+  - 添加入库来源选择（采购入库、退回入库、调拨入库等）
+- 🔧 数据库优化
+  - 自动检测并添加 `member_code` 字段
+  - 为现有会员自动生成会员编号
+  - 优化数据库迁移逻辑
 
 ### v2.3.0 (2026-02-07)
 
@@ -120,11 +142,9 @@
 **数据库迁移完成**
 - ✨ 完整迁移到 MySQL 8.0 数据库
   - 所有核心功能使用 MySQL 数据持久化
-  - 实现优雅降级：数据库失败时自动切换到文件存储
   - 使用 HikariCP 连接池，高性能数据库访问
   - DAO 层封装：UserDAO, ProductDAO, MemberDAO, TransactionDAO, ShiftDAO
 - 📊 支持通过 Docker Compose 一键启动 MySQL
-- 🔄 自动数据迁移工具：从文件存储无缝迁移到 MySQL
 - 📦 完整的数据备份和恢复方案
 - 🛡️ 事务支持：确保数据一致性
 
@@ -296,11 +316,13 @@ java -jar target/cashier-system-fx-2.2.1.jar
    - 现金找零自动计算
    - 结算后自动清除会员信息
 
-2. **库存管理**
+2. **商品管理**
    - 商品添加、编辑、删除
-   - 库存补货
+   - 商品编号自动生成
+   - 快速入库（采购入库、退回入库、调拨入库、盘盈入库等）
    - 商品搜索和筛选
    - 库存预警显示
+   - 商品分类和单位管理
 
 3. **会员管理**
    - 会员注册
@@ -409,7 +431,7 @@ java -jar target/cashier-system-fx-2.2.1.jar
 | 功能键 | 功能 |
 |--------|------|
 | F1 | 添加商品 |
-| F2 | 补货 |
+| F2 | 快速入库 |
 | F3 | 删除商品 |
 | F4 | 搜索 |
 | F5 | 刷新当前面板 |
@@ -498,7 +520,7 @@ hello/
 │       │   ├── controller/
 │       │   │   ├── CartController.java          # 购物车控制器
 │       │   │   ├── CheckoutController.java      # 结账控制器
-│       │   │   ├── InventoryController.java     # 库存管理控制器
+│       │   │   ├── InventoryController.java     # 商品管理控制器
 │       │   │   ├── MemberController.java        # 会员管理控制器
 │       │   │   ├── PromotionController.java     # 促销管理控制器
 │       │   │   ├── TransactionController.java   # 交易记录控制器
@@ -540,11 +562,9 @@ hello/
 │       │   │   ├── PurchaseInbound.java         # 采购入库记录类
 │       │   │   ├── PurchaseInboundItem.java     # 采购入库明细类
 │       │   │   ├── InventoryCheck.java          # 库存盘点实体类
-│       │   │   ├── InventoryCheckItem.java      # 库存盘点明细类
-│       │   │   └── DataManager.java             # 文件存储（备用）
+│       │   │   └── InventoryCheckItem.java      # 库存盘点明细类
 │       │   └── util/
 │       │       ├── DatabaseManager.java          # 数据库管理器
-│       │       ├── DataMigrationTool.java        # 数据迁移工具
 │       │       ├── PasswordUtil.java             # 密码工具
 │       │       ├── FXUtils.java                 # JavaFX 工具类
 │       │       ├── FXMLUtils.java               # FXML 工具类
@@ -555,7 +575,7 @@ hello/
 │           │   ├── LoginView.fxml               # 登录界面
 │           │   ├── CartView.fxml                # 购物车界面
 │           │   ├── CheckoutView.fxml            # 结账界面
-│           │   ├── InventoryView.fxml           # 库存管理界面
+│           │   ├── InventoryView.fxml           # 商品管理界面
 │           │   ├── MemberView.fxml              # 会员管理界面
 │           │   ├── PromotionView.fxml           # 促销管理界面
 │           │   ├── TransactionView.fxml         # 交易记录界面
@@ -590,17 +610,6 @@ hello/
 │       ├── 02-alter-tables.sql      # 表结构升级脚本
 │       └── 03-sample-data.sql       # 示例数据脚本
 ├── docker-compose.yml               # Docker Compose 配置
-├── data/                            # 数据目录（备用，自动创建）
-│   ├── inventory.txt                # 库存数据
-│   ├── transactions.txt             # 交易记录
-│   ├── members.txt                  # 会员数据
-│   ├── users.txt                    # 用户数据
-│   ├── promotions.txt               # 促销数据
-│   ├── categories.txt               # 分类数据
-│   ├── recharge.txt                 # 充值记录
-│   ├── operation_logs.txt           # 操作日志
-│   ├── shifts.txt                   # 交接班记录
-│   └── settings.txt                 # 系统设置
 ├── README.md                        # 项目说明（本文件）
 ├── LICENSE                          # 木兰宽松许可证 v2
 └── docs/
@@ -699,18 +708,13 @@ java -jar target/cashier-system-fx-2.2.1.jar
 
 ### 数据存储策略
 
-系统采用**双存储架构**，确保数据安全和高可用性：
+系统采用 **MySQL 8.0 数据库** 作为唯一数据存储方案：
 
-1. **主存储：MySQL 8.0 数据库**
-   - 使用 HikariCP 连接池，高性能数据库访问
-   - 完整的 DAO 层封装，提供类型安全的数据库操作
-   - 事务支持，确保数据一致性
-   - 自动创建表结构和索引
-
-2. **备用存储：文件系统**
-   - 当数据库不可用时自动降级
-   - 数据存储在 `data/` 目录的 `.txt` 文件中
-   - 确保系统在数据库故障时仍可运行
+- 使用 HikariCP 连接池，高性能数据库访问
+- 完整的 DAO 层封装，提供类型安全的数据库操作
+- 事务支持，确保数据一致性
+- 自动创建表结构和索引
+- 支持数据备份和恢复功能
 
 ### 数据库表结构
 
@@ -743,12 +747,7 @@ java -jar target/cashier-system-fx-2.2.1.jar
 - `inventory_check` - 库存盘点
 - `inventory_check_items` - 库存盘点明细
 
-### 数据迁移
 
-系统首次启动时会自动执行数据迁移：
-1. 检测 MySQL 数据库是否为空
-2. 自动备份原有 `.txt` 数据文件到 `data/backup_<timestamp>/`
-3. 将数据迁移到 MySQL 数据库
 4. 显示迁移统计信息
 
 ### 数据备份
@@ -943,8 +942,6 @@ JavaFX 官网: https://openjfx.io/
 - **数据库**: MySQL 8.0
 - **连接池**: HikariCP 5.1.0
 - **ORM**: 自定义 DAO 层
-- **数据迁移**: 自动迁移工具（文件 → MySQL）
-- **容灾机制**: 优雅降级（MySQL → 文件存储）
 - **测试框架**: JUnit 5 + TestFX
 
 ## 🔮 未来计划
@@ -965,6 +962,11 @@ JavaFX 官网: https://openjfx.io/
 - [x] 模型 ID 字段统一管理（v2.2.1 已实现）
 - [x] 数据库初始化脚本完善（v2.2.1 已实现）
 - [x] 字符编码修复（v2.2.1 已实现）
+- [x] 商品管理功能优化（v2.3.1 已实现）
+- [x] 商品编号自动生成（v2.3.1 已实现）
+- [x] 快速入库功能（v2.3.1 已实现）
+- [x] 会员编号自动迁移（v2.3.1 已实现）
+- [x] 商品管理列表选中效果优化（v2.3.1 已实现）
 - [x] 采购管理功能（v2.3.0 已实现）
 - [x] 库存盘点功能（v2.3.0 已实现）
 - [x] 报表统计功能（v2.3.0 已实现）

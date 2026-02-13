@@ -4,7 +4,7 @@ import com.cashier.dao.*;
 import com.cashier.model.*;
 import com.cashier.util.DatabaseManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.io.File;
 import java.io.IOException;
@@ -13,11 +13,10 @@ import java.util.*;
 
 /**
  * 数据服务
- * 提供与 DataManager 相同的接口，但使用 MySQL 数据库
- * 用于逐步从文件存储迁移到数据库存储
+ * 提供数据访问接口，使用 MySQL 数据库
  */
 public class DataService {
-    private static final Logger logger = LoggerFactory.getLogger(DataService.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(DataService.class);
 
     /**
      * 加载库存数据
@@ -315,7 +314,7 @@ public class DataService {
     }
 
     /**
-     * 初始化（无操作，用于兼容 DataManager）
+     * 初始化数据服务
      */
     public static void initialize() {
         // 数据库已通过 DatabaseManager 初始化

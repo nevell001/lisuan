@@ -601,6 +601,35 @@
     -fx-background-color: rgba(63, 81, 181, 0.08);
 }
 
+/* ========== 商品管理表格特殊样式 ========== */
+/* 商品管理表格 - 选中行更明显的样式 */
+.table-view.inventory-table .table-row-cell:selected {
+    -fx-background-color: linear-gradient(to right, rgba(63, 81, 181, 0.25), rgba(63, 81, 181, 0.35));
+    -fx-text-fill: #3F51B5;
+    -fx-font-weight: bold;
+    -fx-font-size: 15px;
+    -fx-border-color: #3F51B5;
+    -fx-border-width: 0 0 0 4px;
+    -fx-effect: dropshadow(three-pass-box, rgba(63, 81, 181, 0.2), 3, 0, 0, 1);
+}
+
+/* 商品管理表格 - 选中行的单元格 */
+.table-view.inventory-table .table-row-cell:selected .table-cell {
+    -fx-text-fill: #3F51B5;
+    -fx-font-weight: bold;
+    -fx-font-size: 15px;
+}
+
+/* 商品管理表格 - 悬停效果 */
+.table-view.inventory-table .table-row-cell:hover {
+    -fx-background-color: rgba(63, 81, 181, 0.12);
+}
+
+/* 商品管理表格 - 选中后悬停 */
+.table-view.inventory-table .table-row-cell:selected:hover {
+    -fx-background-color: linear-gradient(to right, rgba(63, 81, 181, 0.3), rgba(63, 81, 181, 0.4));
+}
+
 /* ========== 滚动条样式 ========== */
 .scroll-bar {
     -fx-background-color: transparent;
@@ -1093,4 +1122,25 @@
 .clean-combo-box-popup .list-cell:filled:selected {
     -fx-background-color: #E3F2FD;
     -fx-text-fill: #3F51B5;
+}
+
+/* ========== 快速入库界面样式 ========== */
+/* 商品信息卡片 */
+.product-info-card {
+    -fx-background-color: #F8FAFC;
+    -fx-background-radius: 8px;
+    -fx-border-color: #E0E7FF;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-effect: dropshadow(three-pass-box, rgba(63, 81, 181, 0.05), 2, 0, 0, 1);
+}
+
+/* 预览信息框 */
+.preview-box {
+    -fx-background-color: linear-gradient(to right, #E8EAF6, #E3F2FD);
+    -fx-background-radius: 8px;
+    -fx-border-color: #C5CAE9;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-effect: dropshadow(three-pass-box, rgba(63, 81, 181, 0.08), 2, 0, 0, 1);
 }

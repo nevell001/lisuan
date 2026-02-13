@@ -128,7 +128,7 @@ public class UserDAO {
      * 更新用户
      */
     public static boolean update(User user) throws SQLException {
-        String sql = "UPDATE users SET password = ?, name = ?, role = ?, active = ? WHERE id = ?";
+        String sql = "UPDATE users SET password = ?, name = ?, role = ?, active = ?, force_password_change = ? WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -137,7 +137,8 @@ public class UserDAO {
             pstmt.setString(2, user.name);
             pstmt.setString(3, user.role);
             pstmt.setBoolean(4, user.active);
-            pstmt.setInt(5, user.id);
+            pstmt.setBoolean(5, user.forcePasswordChange);
+            pstmt.setInt(6, user.id);
 
             return pstmt.executeUpdate() > 0;
         }
@@ -226,11 +227,15 @@ public class UserDAO {
      * 批量插入用户
      */
     public static void batchInsert(List<User> users) throws SQLException {
+        if (users == null || users.isEmpty()) {
+            return;
+        }
+
         String sql = "INSERT INTO users (username, password, name, role, create_time, last_login_time, active) " +
                      "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             for (User user : users) {
                 pstmt.setString(1, user.username);
@@ -243,7 +248,18 @@ public class UserDAO {
                 pstmt.addBatch();
             }
 
-            pstmt.executeBatch();
+            int[] results = pstmt.executeBatch();
+
+            // 获取生成的自增ID
+            try (ResultSet rs = pstmt.getGeneratedKeys()) {
+                int index = 0;
+                while (rs.next()) {
+                    if (index < users.size()) {
+                        users.get(index).id = rs.getInt(1);
+                        index++;
+                    }
+                }
+            }
         }
     }
 
@@ -290,15 +306,33 @@ public class UserDAO {
         user.name = rs.getString("name");
         user.role = rs.getString("role");
 
-        // 从 BIGINT 读取时间戳并转换为 Date
-        long createTime = rs.getLong("create_time");
-        if (!rs.wasNull()) {
-            user.createTime = new java.util.Date(createTime);
+        // 兼容MySQL (BIGINT) 和H2 (TIMESTAMP) 的时间戳读取
+        try {
+            // 尝试作为BIGINT读取（MySQL）
+            long createTime = rs.getLong("create_time");
+            if (!rs.wasNull()) {
+                user.createTime = new java.util.Date(createTime);
+            }
+        } catch (SQLException e) {
+            // 如果失败，尝试作为TIMESTAMP读取（H2）
+            java.sql.Timestamp createTime = rs.getTimestamp("create_time");
+            if (createTime != null) {
+                user.createTime = new java.util.Date(createTime.getTime());
+            }
         }
 
-        long lastLoginTime = rs.getLong("last_login_time");
-        if (!rs.wasNull()) {
-            user.lastLoginTime = new java.util.Date(lastLoginTime);
+        try {
+            // 尝试作为BIGINT读取（MySQL）
+            long lastLoginTime = rs.getLong("last_login_time");
+            if (!rs.wasNull()) {
+                user.lastLoginTime = new java.util.Date(lastLoginTime);
+            }
+        } catch (SQLException e) {
+            // 如果失败，尝试作为TIMESTAMP读取（H2）
+            java.sql.Timestamp lastLoginTime = rs.getTimestamp("last_login_time");
+            if (lastLoginTime != null) {
+                user.lastLoginTime = new java.util.Date(lastLoginTime.getTime());
+            }
         }
 
         user.active = rs.getBoolean("active");

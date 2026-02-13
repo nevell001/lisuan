@@ -4,7 +4,7 @@ import com.cashier.dao.ProductDAO;
 import com.cashier.model.Product;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 import javafx.fxml.FXML;
 
 import java.sql.SQLException;
@@ -13,11 +13,11 @@ import javafx.scene.control.*;
 import java.util.Map;
 
 /**
- * 补货控制器
- * 处理商品补货对话框的逻辑
+ * 快速入库控制器
+ * 处理商品快速入库对话框的逻辑
  */
 public class RestockController {
-    private static final Logger logger = LoggerFactory.getLogger(RestockController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(RestockController.class);
 
     @FXML
     private Label titleLabel;
@@ -29,13 +29,25 @@ public class RestockController {
     private Label currentStockLabel;
 
     @FXML
+    private Label costPriceLabel;
+
+    @FXML
     private TextField quantityField;
+
+    @FXML
+    private ComboBox<String> sourceComboBox;
 
     @FXML
     private TextField reasonField;
 
     @FXML
     private Label errorLabel;
+
+    @FXML
+    private Label afterStockLabel;
+
+    @FXML
+    private Label totalCostLabel;
 
     @FXML
     private Button cancelButton;
@@ -61,9 +73,53 @@ public class RestockController {
                 inventory.put(p.name, p);
             }
         } catch (SQLException e) {
-            System.err.println("加载商品数据失败: " + e.getMessage());
             logger.error("加载商品数据失败", e);
             inventory = new java.util.HashMap<>();
+        }
+
+        // 初始化入库来源下拉框
+        sourceComboBox.getItems().addAll(
+            "采购入库",
+            "退回入库",
+            "调拨入库",
+            "盘盈入库",
+            "其他"
+        );
+        sourceComboBox.getSelectionModel().selectFirst();
+
+        // 监听数量变化，实时更新预览
+        quantityField.textProperty().addListener((obs, oldVal, newVal) -> {
+            updatePreview();
+        });
+    }
+
+    /**
+     * 更新预览信息
+     */
+    private void updatePreview() {
+        if (product == null) {
+            afterStockLabel.setText("-");
+            totalCostLabel.setText("-");
+            return;
+        }
+
+        try {
+            int quantity = Integer.parseInt(quantityField.getText().trim());
+            if (quantity > 0) {
+                // 入库后库存
+                int afterStock = product.quantity + quantity;
+                afterStockLabel.setText(String.format("%d %s", afterStock, product.unit));
+
+                // 入库金额
+                double totalCost = product.cost * quantity;
+                totalCostLabel.setText(String.format("¥%.2f", totalCost));
+            } else {
+                afterStockLabel.setText(String.format("%d %s", product.quantity, product.unit));
+                totalCostLabel.setText("¥0.00");
+            }
+        } catch (NumberFormatException e) {
+            afterStockLabel.setText("-");
+            totalCostLabel.setText("-");
         }
     }
 
@@ -76,7 +132,7 @@ public class RestockController {
     }
 
     /**
-     * 设置要补货的商品
+     * 设置要入库的商品
      * @param product 商品对象
      */
     public void setProduct(Product product) {
@@ -85,12 +141,14 @@ public class RestockController {
         if (product != null) {
             productLabel.setText(product.name);
             currentStockLabel.setText(String.format("当前库存: %d %s", product.quantity, product.unit));
+            costPriceLabel.setText(String.format("成本价: ¥%.2f/%s", product.cost, product.unit));
+            updatePreview();
         }
     }
 
     /**
-     * 获取补货数量
-     * @return 补货数量
+     * 获取入库数量
+     * @return 入库数量
      */
     public int getRestockQuantity() {
         try {
@@ -115,22 +173,21 @@ public class RestockController {
     private void handleConfirm() {
         if (isInputValid()) {
             int quantity = Integer.parseInt(quantityField.getText().trim());
-            
+
             // 更新库存
             product.quantity += quantity;
-            
+
             // 保存到数据库
             try {
                 if (ProductDAO.update(product)) {
                     okClicked = true;
                     dialogStage.close();
                 } else {
-                    errorLabel.setText("补货失败");
+                    errorLabel.setText("入库失败");
                 }
             } catch (SQLException e) {
-                System.err.println("补货失败: " + e.getMessage());
-                logger.error("补货失败", e);
-                errorLabel.setText("补货失败: " + e.getMessage());
+                logger.error("入库失败", e);
+                errorLabel.setText("入库失败: " + e.getMessage());
             }
         }
     }
@@ -150,14 +207,17 @@ public class RestockController {
     private boolean isInputValid() {
         String errorMessage = "";
 
-        // 验证补货数量
+        // 验证入库数量
         try {
             int quantity = Integer.parseInt(quantityField.getText().trim());
             if (quantity <= 0) {
-                errorMessage += "补货数量必须大于0！\n";
+                errorMessage += "入库数量必须大于0！\n";
+            }
+            if (quantity > 100000) {
+                errorMessage += "入库数量过大，请检查输入！\n";
             }
         } catch (NumberFormatException e) {
-            errorMessage += "补货数量格式不正确！\n";
+            errorMessage += "入库数量格式不正确！\n";
         }
 
         if (errorMessage.isEmpty()) {

@@ -22,8 +22,11 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.animation.Timeline;
+import javafx.animation.KeyFrame;
+import javafx.util.Duration;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.io.IOException;
 import java.text.SimpleDateFormat;
@@ -34,7 +37,12 @@ import java.util.*;
  * 处理购物车的增删改查和结算
  */
 public class CartController {
-    private static final Logger logger = LoggerFactory.getLogger(CartController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(CartController.class);
+    
+    // 音效文件路径
+    private static final String SCAN_SUCCESS_SOUND = "/sounds/scan_success.mp3";
+    private static final String SCAN_ERROR_SOUND = "/sounds/scan_error.mp3";
+    private static final String SCAN_NOT_FOUND_SOUND = "/sounds/scan_not_found.mp3";
 
     @FXML
     private TableView<CartItem> cartTable;
@@ -389,7 +397,7 @@ public class CartController {
      * 加载库存数据
      */
     private void loadInventory() {
-        System.out.println("CartController: 开始加载库存数据...");
+        logger.info("CartController: 开始加载库存数据...");
         try {
             List<Product> products = ProductDAO.findAll();
             inventory = new HashMap<>();
@@ -397,14 +405,13 @@ public class CartController {
                 inventory.put(product.name, product);
             }
         } catch (Exception e) {
-            System.err.println("从数据库加载商品失败: " + e.getMessage());
             logger.error("从数据库加载商品失败", e);
             inventory = DataService.loadInventory();
         }
-        System.out.println("CartController: 加载了 " + inventory.size() + " 个商品");
+        logger.info("CartController: 加载了 {} 个商品", inventory.size());
         productList.setAll(inventory.values());
         updateCountLabel();
-        System.out.println("CartController: 库存数据加载完成");
+        logger.info("CartController: 库存数据加载完成");
     }
 
     /**
@@ -520,16 +527,52 @@ public class CartController {
      */
     @FXML
     private void handleSearch() {
-        String searchText = searchField.getText().trim().toLowerCase();
+        String searchText = searchField.getText().trim();
         if (searchText.isEmpty()) {
             productList.setAll(inventory.values());
-        } else {
-            productList.setAll(inventory.values().stream()
-                .filter(p -> p.name.toLowerCase().contains(searchText) || 
-                          p.barcode.toLowerCase().contains(searchText))
-                .toList());
+            updateCountLabel();
+            return;
         }
-        updateCountLabel();
+
+        // 搜索匹配的商品（支持名称和条形码）
+        List<Product> matchedProducts = inventory.values().stream()
+            .filter(p -> p.name.toLowerCase().contains(searchText.toLowerCase()) || 
+                      p.barcode.toLowerCase().contains(searchText.toLowerCase()) ||
+                      (p.productCode != null && p.productCode.toLowerCase().contains(searchText.toLowerCase())))
+            .toList();
+
+        if (matchedProducts.isEmpty()) {
+            // 未找到商品
+            playScanNotFoundSound();
+            showScanMessage("未找到商品: " + searchText, false);
+            searchField.clear();
+            searchField.requestFocus();
+            return;
+        }
+
+        if (matchedProducts.size() == 1) {
+            // 找到唯一商品，自动添加到购物车
+            Product product = matchedProducts.get(0);
+            if (product.quantity > 0) {
+                addToCart(product, 1);
+                playScanSuccessSound();
+                flashTable(cartTable);
+                showScanMessage("已添加: " + product.name, true);
+                searchField.clear();
+                searchField.requestFocus();
+            } else {
+                playScanErrorSound();
+                showScanMessage("商品库存不足: " + product.name, false);
+                searchField.clear();
+                searchField.requestFocus();
+            }
+        } else {
+            // 找到多个匹配商品，显示列表让用户选择
+            productList.setAll(matchedProducts);
+            updateCountLabel();
+            playScanSuccessSound();
+            showScanMessage("找到 " + matchedProducts.size() + " 个匹配商品，请选择", true);
+        }
     }
 
     /**
@@ -557,7 +600,7 @@ public class CartController {
         try {
             member = MemberDAO.findByPhone(phone);
         } catch (Exception e) {
-            System.err.println("从数据库查找会员失败: " + e.getMessage());
+            logger.error("从数据库查找会员失败", e);
             Map<String, Member> members = DataService.loadMembers();
             member = members.get(phone);
         }
@@ -678,20 +721,6 @@ public class CartController {
         ButtonType okButtonType = new ButtonType("确认", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(okButtonType, ButtonType.CANCEL);
         
-        // 设置确认按钮大小
-        dialog.setOnShown(event -> {
-            Button okButton = (Button) dialog.getDialogPane().lookupButton(okButtonType);
-            if (okButton != null) {
-                okButton.setPrefSize(120, 50);
-                okButton.setStyle("-fx-font-size: 16px; -fx-font-weight: bold;");
-            }
-            Button cancelButton = (Button) dialog.getDialogPane().lookupButton(ButtonType.CANCEL);
-            if (cancelButton != null) {
-                cancelButton.setPrefSize(120, 50);
-                cancelButton.setStyle("-fx-font-size: 16px;");
-            }
-        });
-        
         // 实时计算找零
         receivedField.textProperty().addListener((obs, oldVal, newVal) -> {
             try {
@@ -732,10 +761,12 @@ public class CartController {
             return null;
         });
         
-        // 自动聚焦到输入框并设置按钮大小
+        // 自动聚焦到输入框并设置按钮大小（合并后的处理）
         dialog.setOnShown(event -> {
+            // 聚焦到输入框
             javafx.application.Platform.runLater(receivedField::requestFocus);
             
+            // 设置确认按钮大小
             Button okButton = (Button) dialog.getDialogPane().lookupButton(okButtonType);
             if (okButton != null) {
                 okButton.setPrefSize(120, 50);
@@ -807,9 +838,8 @@ public class CartController {
                 }
             }
         } catch (Exception e) {
-            System.err.println("更新数据库库存失败: " + e.getMessage());
             logger.error("更新数据库库存失败", e);
-            // 降级到文件存储
+            // 更新内存中的库存数据
             for (CartItem item : cartList) {
                 Product product = inventory.get(item.product.name);
                 if (product != null) {
@@ -829,8 +859,8 @@ public class CartController {
                 MemberDAO.updateBalanceByPhone(currentMember.phone, -finalAmount);
                 MemberDAO.updatePointsByPhone(currentMember.phone, (int)(finalAmount * 10));
             } catch (Exception e) {
-                System.err.println("更新数据库会员信息失败: " + e.getMessage());
-                // 降级到文件存储
+                logger.error("更新数据库会员信息失败", e);
+                // 使用 DataService 更新会员信息
                 Map<String, Member> members = DataService.loadMembers();
                 members.put(currentMember.phone, currentMember);
                 DataService.saveMembers(members);
@@ -922,12 +952,11 @@ public class CartController {
      */
     private void saveTransaction(Transaction transaction) {
         try {
-            // 先尝试保存到数据库
+            // 保存到数据库
             TransactionDAO.insert(transaction);
         } catch (Exception e) {
-            System.err.println("保存交易到数据库失败: " + e.getMessage());
             logger.error("保存交易到数据库失败", e);
-            // 降级到文件存储
+            // 使用 DataService 保存交易记录
             try {
                 List<Transaction> transactions = DataService.loadTransactions();
                 transactions.add(transaction);
@@ -1104,6 +1133,65 @@ public class CartController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    /**
+     * 播放扫描成功音效
+     */
+    private void playScanSuccessSound() {
+        // TODO: 实现音效播放功能
+        // 可以使用 JavaFX AudioClip 或 Java Sound API
+        logger.debug("播放扫描成功音效");
+    }
+
+    /**
+     * 播放扫描错误音效
+     */
+    private void playScanErrorSound() {
+        // TODO: 实现音效播放功能
+        logger.debug("播放扫描错误音效");
+    }
+
+    /**
+     * 播放扫描未找到音效
+     */
+    private void playScanNotFoundSound() {
+        // TODO: 实现音效播放功能
+        logger.debug("播放扫描未找到音效");
+    }
+
+    /**
+     * 添加视觉闪烁效果
+     * @param table 要闪烁的表格
+     */
+    private void flashTable(TableView<?> table) {
+        String originalStyle = table.getStyle();
+        
+        Timeline timeline = new Timeline(
+            new KeyFrame(Duration.ZERO, event -> {
+                table.setStyle("-fx-background-color: #4CAF50; -fx-opacity: 0.8;");
+            }),
+            new KeyFrame(Duration.millis(100), event -> {
+                table.setStyle("-fx-background-color: #8BC34A; -fx-opacity: 0.9;");
+            }),
+            new KeyFrame(Duration.millis(200), event -> {
+                table.setStyle(originalStyle);
+            })
+        );
+        timeline.play();
+    }
+
+    /**
+     * 显示扫描提示消息
+     * @param message 消息内容
+     * @param success 是否成功
+     */
+    private void showScanMessage(String message, boolean success) {
+        if (success) {
+            showInfo(message);
+        } else {
+            showError("扫描失败: " + message);
+        }
     }
 
     /**

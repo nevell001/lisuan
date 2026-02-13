@@ -6,6 +6,8 @@ import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.stage.DirectoryChooser;
+import org.slf4j.Logger;
+import com.cashier.util.LoggerFactoryUtil;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
@@ -16,6 +18,7 @@ import java.util.Map;
  * 处理系统配置和设置
  */
 public class SettingsController {
+    private static final Logger logger = LoggerFactoryUtil.getLogger(SettingsController.class);
 
     @FXML
     private TabPane settingsTabPane;
@@ -95,8 +98,8 @@ public class SettingsController {
      */
     @FXML
     private void initialize() {
-        System.out.println("SettingsController: 初始化系统设置...");
-        
+        logger.info("SettingsController: 初始化系统设置...");
+
         // 初始化货币下拉框
         currencyComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
             "CNY (人民币)",
@@ -138,50 +141,50 @@ public class SettingsController {
         backupFrequencyComboBox.getSelectionModel().select(0);
 
         // 初始化自动登出时间
-        SpinnerValueFactory<Integer> logoutMinutesFactory = 
+        SpinnerValueFactory<Integer> logoutMinutesFactory =
             new SpinnerValueFactory.IntegerSpinnerValueFactory(5, 120, 30);
         autoLogoutMinutesSpinner.setValueFactory(logoutMinutesFactory);
 
         // 初始化密码最小长度
-        SpinnerValueFactory<Integer> passwordMinLengthFactory = 
+        SpinnerValueFactory<Integer> passwordMinLengthFactory =
             new SpinnerValueFactory.IntegerSpinnerValueFactory(4, 20, 6);
         passwordMinLengthSpinner.setValueFactory(passwordMinLengthFactory);
 
         // 初始化密码最大尝试次数
-        SpinnerValueFactory<Integer> passwordMaxAttemptsFactory = 
+        SpinnerValueFactory<Integer> passwordMaxAttemptsFactory =
             new SpinnerValueFactory.IntegerSpinnerValueFactory(3, 10, 5);
         passwordMaxAttemptsSpinner.setValueFactory(passwordMaxAttemptsFactory);
 
         // 加载设置
         loadSettings();
-        
-        System.out.println("SettingsController: 系统设置初始化完成");
+
+        logger.info("SettingsController: 系统设置初始化完成");
     }
 
     /**
      * 加载设置
      */
     private void loadSettings() {
-        System.out.println("SettingsController: 开始加载设置...");
-        
+        logger.info("SettingsController: 开始加载设置...");
+
         Map<String, String> settings = DataService.loadSettings();
-        
+
         // 加载基本设置
         storeNameField.setText(settings.getOrDefault("storeName", ""));
         storeAddressField.setText(settings.getOrDefault("storeAddress", ""));
         storePhoneField.setText(settings.getOrDefault("storePhone", ""));
         taxRateField.setText(settings.getOrDefault("taxRate", "0.0"));
-        
+
         // 加载打印设置
         enablePrintCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("enablePrint", "false")));
         printerNameField.setText(settings.getOrDefault("printerName", ""));
         printLogoCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("printLogo", "true")));
         printBarcodeCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("printBarcode", "true")));
-        
+
         // 加载备份设置
         autoBackupCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("autoBackup", "false")));
         backupPathField.setText(settings.getOrDefault("backupPath", ""));
-        
+
         // 加载安全设置
         autoLogoutCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("autoLogout", "true")));
         passwordComplexityCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("passwordComplexity", "true")));
@@ -190,8 +193,8 @@ public class SettingsController {
         String savedThemeCode = DataService.loadThemePreference();
         String savedThemeName = convertThemeCodeToName(savedThemeCode);
         themeComboBox.getSelectionModel().select(savedThemeName);
-        
-        System.out.println("SettingsController: 设置加载完成，当前主题: " + savedThemeCode);
+
+        logger.info("SettingsController: 设置加载完成，当前主题: {}", savedThemeCode);
     }
 
     /**
@@ -519,14 +522,13 @@ public class SettingsController {
             0
         );
         
-        // 保存主题偏好
-        String themeName = settings.getOrDefault("theme", "浅色主题");
-        String themeCode = convertThemeNameToCode(themeName);
-        DataService.saveThemePreference(themeCode);
+            // 保存主题偏好
+            String themeName = settings.getOrDefault("theme", "浅色主题");
+            String themeCode = convertThemeNameToCode(themeName);
+            DataService.saveThemePreference(themeCode);
         
-        System.out.println("SettingsController: 设置保存成功，主题: " + themeCode);
-    }
-
+            logger.info("SettingsController: 设置保存成功，主题: {}", themeCode);
+        }
     /**
      * 显示成功消息
      * @param message 消息内容

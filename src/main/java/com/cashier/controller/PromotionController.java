@@ -10,6 +10,8 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
+import org.slf4j.Logger;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.text.SimpleDateFormat;
 import java.util.List;
@@ -22,6 +24,7 @@ import java.time.format.DateTimeFormatter;
  * 处理促销活动的增删改查
  */
 public class PromotionController {
+    private static final Logger logger = LoggerFactoryUtil.getLogger(PromotionController.class);
 
     @FXML
     private TableView<Promotion> promotionTable;
@@ -147,12 +150,12 @@ public class PromotionController {
      * 加载促销数据
      */
     private void loadPromotions() {
-        System.out.println("PromotionController: 开始加载促销数据...");
+        logger.info("PromotionController: 开始加载促销数据...");
         allPromotions = DataService.loadPromotions();
         promotionList = FXCollections.observableArrayList(allPromotions);
         promotionTable.setItems(promotionList);
         updateCountLabel();
-        System.out.println("PromotionController: 加载了 " + allPromotions.size() + " 条促销记录");
+        logger.info("PromotionController: 加载了 {} 条促销记录", allPromotions.size());
     }
 
     /**

@@ -9,7 +9,7 @@ import com.cashier.model.User;
 import com.cashier.util.FXUtils;
 import com.cashier.util.ReceiptPrinter;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -25,7 +25,7 @@ import java.util.*;
  * 处理结账和支付逻辑
  */
 public class CheckoutController {
-    private static final Logger logger = LoggerFactory.getLogger(CheckoutController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(CheckoutController.class);
 
     @FXML
     private TableView<CartItem> cartTable;

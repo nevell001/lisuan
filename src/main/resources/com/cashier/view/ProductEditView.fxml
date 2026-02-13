@@ -67,35 +67,27 @@
                    prefWidth="240" promptText="0.00"
                    style="-fx-font-size: 14px;"/>
 
-        <!-- 第一列：库存数量 -->
-        <Label text="库存数量:" GridPane.columnIndex="0" GridPane.rowIndex="2"
-               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
-        <TextField fx:id="quantityField"
-                   GridPane.columnIndex="1" GridPane.rowIndex="2"
-                   prefWidth="240" promptText="0"
-                   style="-fx-font-size: 14px;"/>
-
-        <!-- 第二列：最低库存 -->
-        <Label text="最低库存:" GridPane.columnIndex="2" GridPane.rowIndex="2"
+        <!-- 第一列：最低库存 -->
+        <Label text="最低库存:" GridPane.columnIndex="0" GridPane.rowIndex="2"
                style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <TextField fx:id="minStockField"
-                   GridPane.columnIndex="3" GridPane.rowIndex="2"
+                   GridPane.columnIndex="1" GridPane.rowIndex="2"
                    prefWidth="240" promptText="10"
                    style="-fx-font-size: 14px;"/>
 
-        <!-- 第一列：分类 -->
-        <Label text="分类:" GridPane.columnIndex="0" GridPane.rowIndex="3"
+        <!-- 第二列：分类 -->
+        <Label text="分类:" GridPane.columnIndex="2" GridPane.rowIndex="2"
                style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <ComboBox fx:id="categoryComboBox"
-                  GridPane.columnIndex="1" GridPane.rowIndex="3"
+                  GridPane.columnIndex="3" GridPane.rowIndex="2"
                   prefWidth="240" promptText="选择分类" editable="true"
                   style="-fx-font-size: 14px;"/>
 
-        <!-- 第二列：单位 -->
-        <Label text="单位:" GridPane.columnIndex="2" GridPane.rowIndex="3"
+        <!-- 第一列：单位 -->
+        <Label text="单位:" GridPane.columnIndex="0" GridPane.rowIndex="3"
                style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <ComboBox fx:id="unitComboBox"
-                  GridPane.columnIndex="3" GridPane.rowIndex="3"
+                  GridPane.columnIndex="1" GridPane.rowIndex="3"
                   prefWidth="240" promptText="选择单位" editable="true"
                   style="-fx-font-size: 14px;"/>
 

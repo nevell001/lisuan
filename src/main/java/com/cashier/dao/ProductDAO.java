@@ -116,6 +116,22 @@ public class ProductDAO {
      * 如果商品ID大于0，则使用指定的ID；否则由数据库自动生成ID
      */
     public static boolean insert(Product product) throws SQLException {
+        // 验证必填字段
+        if (product.name == null || product.name.trim().isEmpty()) {
+            throw new SQLException("商品名称不能为空");
+        }
+
+        // 验证商品编号
+        if (product.productCode == null || product.productCode.trim().isEmpty()) {
+            throw new SQLException("商品编号不能为空");
+        }
+
+        // 检查商品编号是否已存在
+        Product existingProduct = findByProductCode(product.productCode);
+        if (existingProduct != null) {
+            throw new SQLException("商品编号 '" + product.productCode + "' 已存在，请使用其他编号");
+        }
+
         String sql;
         boolean useProvidedId = product.id > 0;
 
@@ -197,6 +213,12 @@ public class ProductDAO {
      * 删除商品
      */
     public static boolean delete(int id) throws SQLException {
+        // 检查是否有采购订单明细、入库明细、盘点明细引用此商品
+        String references = getProductReferences(id);
+        if (!references.isEmpty()) {
+            throw new SQLException("该商品存在以下引用，无法删除：" + references);
+        }
+
         String sql = "DELETE FROM products WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -211,14 +233,63 @@ public class ProductDAO {
      * 根据名称删除商品（兼容旧代码）
      */
     public static boolean deleteByName(String name) throws SQLException {
-        String sql = "DELETE FROM products WHERE name = ?";
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setString(1, name);
-            return pstmt.executeUpdate() > 0;
+        // 先查找ID
+        Product product = findByName(name);
+        if (product == null) {
+            return false;
         }
+        return delete(product.id);
+    }
+
+    /**
+     * 获取商品的所有引用
+     * @param id 商品ID
+     * @return 引用信息列表
+     * @throws SQLException 数据库操作异常
+     */
+    public static String getProductReferences(int id) throws SQLException {
+        StringBuilder references = new StringBuilder();
+
+        // 检查采购订单明细
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement("SELECT COUNT(*) FROM purchase_order_items WHERE product_id = ?")) {
+            pstmt.setInt(1, id);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next() && rs.getInt(1) > 0) {
+                if (references.length() > 0) {
+                    references.append("、");
+                }
+                references.append("采购订单明细");
+            }
+        }
+
+        // 检查采购入库明细
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement("SELECT COUNT(*) FROM purchase_inbound_items WHERE product_id = ?")) {
+            pstmt.setInt(1, id);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next() && rs.getInt(1) > 0) {
+                if (references.length() > 0) {
+                    references.append("、");
+                }
+                references.append("采购入库明细");
+            }
+        }
+
+        // 检查库存盘点明细
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement("SELECT COUNT(*) FROM inventory_check_items WHERE product_id = ?")) {
+            pstmt.setInt(1, id);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next() && rs.getInt(1) > 0) {
+                if (references.length() > 0) {
+                    references.append("、");
+                }
+                references.append("库存盘点明细");
+            }
+        }
+
+        return references.toString();
     }
 
     /**
@@ -323,11 +394,15 @@ public class ProductDAO {
      * 批量插入商品
      */
     public static void batchInsert(List<Product> products) throws SQLException {
+        if (products == null || products.isEmpty()) {
+            return;
+        }
+
         String sql = "INSERT INTO products (product_code, name, price, quantity, category, barcode, unit, description, " +
                      "brand, supplier, spec, min_stock, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
             for (Product product : products) {
                 pstmt.setString(1, product.productCode);
@@ -346,7 +421,18 @@ public class ProductDAO {
                 pstmt.addBatch();
             }
 
-            pstmt.executeBatch();
+            int[] results = pstmt.executeBatch();
+
+            // 获取生成的自增ID
+            try (ResultSet rs = pstmt.getGeneratedKeys()) {
+                int index = 0;
+                while (rs.next()) {
+                    if (index < products.size()) {
+                        products.get(index).id = rs.getInt(1);
+                        index++;
+                    }
+                }
+            }
         }
     }
 

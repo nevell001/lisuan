@@ -78,7 +78,7 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- ============================================
--- v2.3.0 新增表：采购管理模块
+-- v2.3.0-v2.3.1 新增表：采购管理模块
 -- ============================================
 
 -- 5. 创建供应商表
@@ -264,7 +264,7 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- ============================================
--- v2.3.0 新增表：库存盘点模块
+-- v2.3.0-v2.3.1 新增表：库存盘点模块
 -- ============================================
 
 -- 11. 创建库存盘点表
@@ -329,4 +329,66 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- ============================================
+-- v2.3.0-v2.3.1 更新：添加会员编号字段
+-- ============================================
+
+-- 13. 为 members 表添加 member_code 字段（如果不存在）
+SET @column_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'members'
+    AND COLUMN_NAME = 'member_code'
+);
+
+SET @sql = IF(@column_exists = 0,
+    'ALTER TABLE members ADD COLUMN member_code VARCHAR(50) UNIQUE COMMENT ''会员编号'' AFTER id',
+    'SELECT "members.member_code column already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 SELECT '=== 表结构升级完成 ===' AS status;
+
+-- ============================================
+-- v2.3.1 更新：移除 barcode 字段的唯一约束
+-- ============================================
+
+-- 14. 移除 products 表 barcode 字段的 UNIQUE 约束（如果存在）
+SET @constraint_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'products'
+    AND CONSTRAINT_TYPE = 'UNIQUE'
+    AND CONSTRAINT_NAME = 'barcode'
+);
+
+SET @sql = IF(@constraint_exists > 0,
+    'ALTER TABLE products DROP INDEX barcode',
+    'SELECT "products.barcode UNIQUE constraint does not exist" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 确保 barcode 索引存在（普通索引）
+SET @index_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'products'
+    AND INDEX_NAME = 'idx_barcode'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE products ADD INDEX idx_barcode (barcode)',
+    'SELECT "products.idx_barcode index already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SELECT '=== barcode 字段唯一约束已移除 ===' AS status;

@@ -79,13 +79,11 @@ mvn javafx:run
 java -jar target/cashier-system-fx.jar
 ```
 
-### 3. 数据迁移
+### 3. 数据初始化
 
 应用启动时会自动：
 1. 检测数据库表结构
 2. 自动创建所有表（users, products, members等）
-3. 从 .txt 文件迁移数据到 MySQL
-4. 备份原有数据到 `data/backup_<timestamp>/`
 
 ---
 

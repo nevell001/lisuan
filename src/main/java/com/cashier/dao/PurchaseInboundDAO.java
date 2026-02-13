@@ -3,7 +3,7 @@ package com.cashier.dao;
 import com.cashier.model.PurchaseInbound;
 import com.cashier.util.DatabaseManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.*;
 import java.math.BigDecimal;
@@ -15,7 +15,7 @@ import java.util.List;
  * 负责采购入库记录相关的数据库操作
  */
 public class PurchaseInboundDAO {
-    private static final Logger logger = LoggerFactory.getLogger(PurchaseInboundDAO.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(PurchaseInboundDAO.class);
 
     /**
      * 根据ID查找采购入库记录

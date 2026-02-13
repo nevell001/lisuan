@@ -254,32 +254,7 @@ sudo ufw reload
 
 ---
 
-## 数据迁移
 
-### 从文件存储迁移到 MySQL
-
-启动应用时，会自动检测并执行数据迁移：
-
-```bash
-# 运行应用
-java -jar cashier-system-fx.jar
-
-# 或使用 Maven
-mvn javafx:run
-```
-
-**迁移过程**:
-1. 检测 MySQL 数据库是否为空
-2. 自动备份原有 .txt 数据文件到 `data/backup_<timestamp>/`
-3. 将数据迁移到 MySQL 数据库
-4. 显示迁移统计信息
-
-**手动运行迁移工具**:
-```bash
-java -cp target/classes com.cashier.util.DataMigrationTool
-```
-
----
 
 ## 备份与恢复
 

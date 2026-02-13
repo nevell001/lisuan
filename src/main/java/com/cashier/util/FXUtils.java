@@ -274,19 +274,18 @@ public class FXUtils {
     }
 
     /**
-     * 延迟执行任务
+     * 延迟执行任务（使用 JavaFX Timeline，不阻塞UI线程）
      * @param delay 延迟时间（毫秒）
      * @param task 要执行的任务
      */
     public static void delay(int delay, Runnable task) {
-        javafx.application.Platform.runLater(() -> {
-            try {
-                Thread.sleep(delay);
-                task.run();
-            } catch (InterruptedException e) {
-                Thread.currentThread().interrupt();
-            }
-        });
+        javafx.animation.Timeline timeline = new javafx.animation.Timeline(
+            new javafx.animation.KeyFrame(
+                javafx.util.Duration.millis(delay),
+                event -> task.run()
+            )
+        );
+        timeline.play();
     }
 
     /**

@@ -11,7 +11,7 @@ import com.cashier.model.PurchaseInboundItem;
 import com.cashier.model.PurchaseOrder;
 import com.cashier.model.Transaction;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -28,7 +28,7 @@ import java.util.*;
  * 处理采购成本、销售收入、毛利率分析
  */
 public class ProfitReportController {
-    private static final Logger logger = LoggerFactory.getLogger(ProfitReportController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(ProfitReportController.class);
 
     // 运营成本比例（默认为收入的5%）
     private static final double DEFAULT_OPERATING_COST_RATIO = 0.05;

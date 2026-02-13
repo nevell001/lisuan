@@ -7,6 +7,8 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.stage.Stage;
+import org.slf4j.Logger;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -16,6 +18,7 @@ import java.util.*;
  * 处理会员充值操作
  */
 public class RechargeController {
+    private static final Logger logger = LoggerFactoryUtil.getLogger(RechargeController.class);
 
     @FXML
     private Label memberNameLabel;
@@ -147,7 +150,7 @@ public class RechargeController {
 
             historyTable.getItems().setAll(memberRecords);
         } catch (Exception e) {
-            System.err.println("加载充值历史记录失败: " + e.getMessage());
+            logger.error("加载充值历史记录失败", e);
         }
     }
 

@@ -3,10 +3,10 @@ package com.cashier.util;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.*;
 import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -18,10 +18,11 @@ import java.util.Properties;
  */
 public class DatabaseManager {
 
-    private static final Logger logger = LoggerFactory.getLogger(DatabaseManager.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(DatabaseManager.class);
 
     private static HikariDataSource dataSource;
     private static boolean initialized = false;
+    private static HikariDataSource testDataSource = null; // 测试用数据源（连接池）
 
     // 数据库配置
     private static final String CONFIG_FILE = "config/database.properties";
@@ -167,10 +168,35 @@ public class DatabaseManager {
      * @throws SQLException 如果获取连接失败
      */
     public static Connection getConnection() throws SQLException {
+        // 如果设置了测试数据源，优先返回测试数据源的连接
+        if (testDataSource != null && !testDataSource.isClosed()) {
+            return testDataSource.getConnection();
+        }
+
         if (dataSource == null || dataSource.isClosed()) {
             throw new SQLException("数据源未初始化或已关闭");
         }
         return dataSource.getConnection();
+    }
+
+    /**
+     * 设置测试数据源（仅用于单元测试）
+     * @param dataSource 测试数据库数据源（连接池）
+     */
+    public static void setTestConnection(HikariDataSource dataSource) {
+        testDataSource = dataSource;
+        System.out.println("DatabaseManager: 测试数据源已设置，testDataSource=" + testDataSource);
+    }
+
+    /**
+     * 清除测试数据源（仅用于单元测试）
+     */
+    public static void clearTestConnection() {
+        if (testDataSource != null && !testDataSource.isClosed()) {
+            testDataSource.close();
+        }
+        testDataSource = null;
+        System.out.println("DatabaseManager: 测试数据源已清除");
     }
 
     /**
@@ -211,7 +237,7 @@ public class DatabaseManager {
                     price DECIMAL(10,2) NOT NULL,
                     quantity INT DEFAULT 0,
                     category VARCHAR(50),
-                    barcode VARCHAR(50) UNIQUE,
+                    barcode VARCHAR(50),
                     unit VARCHAR(20) DEFAULT '件',
                     description TEXT,
                     brand VARCHAR(100),
@@ -233,6 +259,7 @@ public class DatabaseManager {
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS members (
                     id INT AUTO_INCREMENT PRIMARY KEY,
+                    member_code VARCHAR(50) UNIQUE COMMENT '会员编号',
                     phone VARCHAR(20) UNIQUE NOT NULL,
                     name VARCHAR(100) NOT NULL,
                     balance DECIMAL(10,2) DEFAULT 0,
@@ -241,10 +268,38 @@ public class DatabaseManager {
                     discount DECIMAL(4,2) DEFAULT 10.00,
                     join_date BIGINT,
                     birthday VARCHAR(10),
+                    INDEX idx_member_code (member_code),
                     INDEX idx_name (name),
                     INDEX idx_level (level)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);
+
+            // 为已存在的 members 表添加 member_code 字段（如果不存在）
+            try {
+                String checkColumnSql = """
+                    SELECT COUNT(*)
+                    FROM INFORMATION_SCHEMA.COLUMNS
+                    WHERE TABLE_SCHEMA = DATABASE()
+                    AND TABLE_NAME = 'members'
+                    AND COLUMN_NAME = 'member_code'
+                """;
+                ResultSet rs = stmt.executeQuery(checkColumnSql);
+                if (rs.next() && rs.getInt(1) == 0) {
+                    stmt.execute("ALTER TABLE members ADD COLUMN member_code VARCHAR(50) UNIQUE COMMENT '会员编号' AFTER id");
+                    logger.info("已为 members 表添加 member_code 字段");
+                    
+                    // 为现有会员生成会员编号
+                    stmt.execute("""
+                        UPDATE members 
+                        SET member_code = CONCAT('M', LPAD(id, 6, '0'))
+                        WHERE member_code IS NULL OR member_code = ''
+                    """);
+                    logger.info("已为现有会员生成会员编号");
+                }
+                rs.close();
+            } catch (SQLException e) {
+                logger.warn("检查或添加 member_code 字段时出错（可能已存在）: " + e.getMessage());
+            }
 
             // 创建交易表
             stmt.execute("""
@@ -401,7 +456,7 @@ public class DatabaseManager {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);
 
-            // ========== v2.3.0 新增表：采购管理相关表 ==========
+            // ========== v2.3.0-v2.3.1 新增表：采购管理相关表 ==========
 
             // 创建供应商表
             stmt.execute("""
@@ -559,7 +614,7 @@ public class DatabaseManager {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='库存盘点明细表'
                 """);
 
-            // ========== v2.3.0 新增表结束 ==========
+            // ========== v2.3.0-v2.3.1 新增表结束 ==========
 
             // 升级表结构（添加 id 字段）
             upgradeTableStructure(stmt);
@@ -690,9 +745,21 @@ public class DatabaseManager {
             String plainPassword = "admin123";
             long currentTime = System.currentTimeMillis();
 
+            // 使用 PreparedStatement 防止 SQL 注入
             String sql = "INSERT INTO users (username, password, name, role, active, force_password_change, create_time, last_login_time) " +
-                         "VALUES ('admin', '" + plainPassword + "', '系统管理员', 'admin', 1, 1, " + currentTime + ", NULL)";
-            stmt.execute(sql);
+                         "VALUES (?, ?, ?, ?, ?, ?, ?, NULL)";
+            
+            try (Connection conn = getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, "admin");
+                pstmt.setString(2, plainPassword);
+                pstmt.setString(3, "系统管理员");
+                pstmt.setString(4, "admin");
+                pstmt.setInt(5, 1);
+                pstmt.setInt(6, 1);
+                pstmt.setLong(7, currentTime);
+                pstmt.executeUpdate();
+            }
 
             System.out.println("默认管理员用户创建成功:");
             System.out.println("  用户名: admin");

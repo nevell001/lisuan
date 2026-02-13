@@ -4,7 +4,7 @@ import com.cashier.dao.SupplierDAO;
 import com.cashier.model.Supplier;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
@@ -32,7 +32,7 @@ import javafx.stage.Stage;
  * 处理供应商的增删改查
  */
 public class SupplierController {
-    private static final Logger logger = LoggerFactory.getLogger(SupplierController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(SupplierController.class);
 
     @FXML
     private TableView<Supplier> supplierTable;
@@ -122,7 +122,6 @@ public class SupplierController {
                 suppliers.put(supplier.id, supplier);
             }
         } catch (SQLException e) {
-            System.err.println("加载供应商数据失败: " + e.getMessage());
             logger.error("加载供应商数据失败", e);
             showError("加载供应商数据失败: " + e.getMessage());
             suppliers = new HashMap<>();

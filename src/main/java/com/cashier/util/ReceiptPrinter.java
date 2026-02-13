@@ -7,7 +7,8 @@ import com.cashier.model.Transaction;
 import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
-import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
 
@@ -17,7 +18,8 @@ import java.util.List;
  */
 public class ReceiptPrinter {
 
-    private static final SimpleDateFormat DATE_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    // 使用线程安全的 DateTimeFormatter 替代 SimpleDateFormat
+    private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
     private static final String RECEIPT_DIR = "receipts";
 
     /**
@@ -38,7 +40,7 @@ public class ReceiptPrinter {
             // 生成小票文件名
             String fileName = String.format("receipt_%s_%s.txt",
                 transaction.transactionId,
-                new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()));
+                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss")));
 
             File receiptFile = new File(dir, fileName);
 
@@ -75,8 +77,12 @@ public class ReceiptPrinter {
         // 交易信息
         sb.append("订单号: ").append(transaction.transactionId).append("\n");
         try {
-            Date date = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").parse(transaction.timestamp);
-            sb.append("时间: ").append(DATE_FORMAT.format(date)).append("\n");
+            // 解析时间戳字符串并重新格式化
+            java.time.LocalDateTime dateTime = java.time.LocalDateTime.parse(
+                transaction.timestamp, 
+                java.time.format.DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
+            );
+            sb.append("时间: ").append(DATE_FORMATTER.format(dateTime)).append("\n");
         } catch (Exception e) {
             sb.append("时间: ").append(transaction.timestamp).append("\n");
         }
@@ -204,7 +210,7 @@ public class ReceiptPrinter {
             // 生成小票文件名
             String fileName = String.format("receipt_%s_%s.txt",
                 transaction.transactionId,
-                new SimpleDateFormat("yyyyMMddHHmmss").format(new Date()));
+                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss")));
 
             File receiptFile = new File(dir, fileName);
 

@@ -3,7 +3,7 @@ package com.cashier.dao;
 import com.cashier.model.PurchaseOrder;
 import com.cashier.util.DatabaseManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.*;
 import java.math.BigDecimal;
@@ -15,7 +15,7 @@ import java.util.List;
  * 负责采购订单相关的数据库操作
  */
 public class PurchaseOrderDAO {
-    private static final Logger logger = LoggerFactory.getLogger(PurchaseOrderDAO.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(PurchaseOrderDAO.class);
 
     /**
      * 根据ID查找采购订单
@@ -326,6 +326,11 @@ public class PurchaseOrderDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean delete(int id) throws SQLException {
+        // 检查是否有入库单引用此订单
+        if (hasInboundRecords(id)) {
+            throw new SQLException("该采购订单存在入库记录，无法删除。请先删除相关入库记录。");
+        }
+
         String sql = "DELETE FROM purchase_orders WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -334,6 +339,28 @@ public class PurchaseOrderDAO {
             pstmt.setInt(1, id);
             return pstmt.executeUpdate() > 0;
         }
+    }
+
+    /**
+     * 检查采购订单是否有入库记录
+     *
+     * @param orderId 订单ID
+     * @return 如果有入库记录返回 true
+     * @throws SQLException 数据库操作异常
+     */
+    public static boolean hasInboundRecords(int orderId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM purchase_inbound WHERE order_id = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setInt(1, orderId);
+            ResultSet rs = pstmt.executeQuery();
+            if (rs.next()) {
+                return rs.getInt(1) > 0;
+            }
+        }
+        return false;
     }
 
     /**

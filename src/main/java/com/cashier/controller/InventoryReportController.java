@@ -5,7 +5,7 @@ import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Product;
 import com.cashier.model.Transaction;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
@@ -21,7 +21,7 @@ import java.util.*;
  * 处理库存周转率、滞销商品、库存积压分析
  */
 public class InventoryReportController {
-    private static final Logger logger = LoggerFactory.getLogger(InventoryReportController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(InventoryReportController.class);
 
     @FXML
     private DatePicker startDatePicker;

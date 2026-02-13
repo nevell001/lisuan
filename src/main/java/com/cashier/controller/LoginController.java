@@ -6,7 +6,7 @@ import com.cashier.model.User;
 import com.cashier.util.FXUtils;
 import com.cashier.util.PasswordUtil;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 import javafx.animation.FadeTransition;
 import javafx.animation.ScaleTransition;
 import javafx.fxml.FXML;
@@ -26,7 +26,7 @@ import java.util.Properties;
  * 处理用户登录逻辑
  */
 public class LoginController {
-    private static final Logger logger = LoggerFactory.getLogger(LoginController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(LoginController.class);
 
     @FXML
     private TextField usernameField;
@@ -330,7 +330,7 @@ public class LoginController {
                 "- Maven 3.8+\n" +
                 "- JDK 17\n\n" +
                 "功能特性：\n" +
-                "- 库存管理\n" +
+                "- 商品管理\n" +
                 "- 购物车\n" +
                 "- 结账系统\n" +
                 "- 会员管理\n" +
@@ -470,7 +470,7 @@ public class LoginController {
                 props.store(output, "Login Configuration");
             }
         } catch (IOException e) {
-            System.err.println("保存凭据失败: " + e.getMessage());
+            logger.error("保存凭据失败", e);
         }
     }
 
@@ -496,7 +496,7 @@ public class LoginController {
                 rememberMeCheckBox.setSelected(true);
             }
         } catch (IOException e) {
-            System.err.println("加载凭据失败: " + e.getMessage());
+            logger.error("加载凭据失败", e);
         }
     }
 
@@ -510,7 +510,7 @@ public class LoginController {
                 configFile.delete();
             }
         } catch (Exception e) {
-            System.err.println("清除凭据失败: " + e.getMessage());
+            logger.error("清除凭据失败", e);
         }
     }
 }

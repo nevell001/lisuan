@@ -4,7 +4,7 @@ import com.cashier.dao.*;
 import com.cashier.model.*;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.SQLException;
 import java.math.BigDecimal;
@@ -34,8 +34,9 @@ import javafx.util.converter.IntegerStringConverter;
  * 采购入库控制器
  * 处理采购订单的入库操作
  */
+@SuppressWarnings("unchecked")
 public class PurchaseInboundController {
-    private static final Logger logger = LoggerFactory.getLogger(PurchaseInboundController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(PurchaseInboundController.class);
 
     @FXML
     private TableView<PurchaseOrder> orderTable;
@@ -114,21 +115,20 @@ public class PurchaseInboundController {
     private void loadApprovedOrders() {
         try {
             List<PurchaseOrder> orderData = PurchaseOrderDAO.findByStatus("approved");
-            System.out.println("找到 " + orderData.size() + " 个审批通过的订单");
-            
+            logger.info("找到 {} 个审批通过的订单", orderData.size());
+
             orders = new HashMap<>();
             for (PurchaseOrder order : orderData) {
-                System.out.println("订单: " + order.orderNo + ", 供应商: " + order.supplierName + ", 采购日期: " + order.purchaseDate);
-                // 检查是否还有未入库的商品
-                List<PurchaseOrderItem> items = PurchaseOrderItemDAO.findByOrderId(order.id);
-                boolean hasUninbound = items.stream()
-                    .anyMatch(item -> item.inboundQuantity < item.quantity);
-                System.out.println("  订单明细数: " + items.size() + ", 有未入库: " + hasUninbound);
-                if (hasUninbound) {
-                    orders.put(order.id, order);
-                }
-            }
-            System.out.println("可入库订单总数: " + orders.size());
+                            logger.info("订单: {}, 供应商: {}, 采购日期: {}", order.orderNo, order.supplierName, order.purchaseDate);
+                            // 检查是否还有未入库的商品
+                            List<PurchaseOrderItem> items = PurchaseOrderItemDAO.findByOrderId(order.id);
+                            boolean hasUninbound = items.stream()
+                                .anyMatch(item -> item.inboundQuantity < item.quantity);
+                            logger.info("  订单明细数: {}, 有未入库: {}", items.size(), hasUninbound);
+                            if (hasUninbound) {
+                                orders.put(order.id, order);
+                            }            }
+            logger.info("可入库订单总数: {}", orders.size());
         } catch (SQLException e) {
             logger.error("加载可入库订单失败", e);
             showError("加载可入库订单失败: " + e.getMessage());
@@ -218,7 +218,7 @@ public class PurchaseInboundController {
             inboundQtyCol.setOnEditCommit(e -> {
                 int maxQty = e.getRowValue().orderQuantity - e.getRowValue().inboundQuantity;
                 Integer newQty = e.getNewValue();
-                System.out.println("编辑提交 - 新值: " + newQty + ", 最大可入库: " + maxQty);
+                logger.debug("编辑提交 - 新值: {}, 最大可入库: {}", newQty, maxQty);
                 if (newQty == null || newQty < 0) {
                     newQty = 0;
                 } else if (newQty > maxQty) {
@@ -226,7 +226,7 @@ public class PurchaseInboundController {
                 }
                 // 直接更新属性值
                 e.getRowValue().thisInboundQuantity.set(newQty);
-                System.out.println("设置后的值: " + e.getRowValue().thisInboundQuantity.get());
+                logger.debug("设置后的值: {}", e.getRowValue().thisInboundQuantity.get());
             });
 
             TableColumn<InboundItemWrapper, String> unitPriceCol = new TableColumn<>("单价");
@@ -268,21 +268,23 @@ public class PurchaseInboundController {
 
             // 加载订单明细
             List<PurchaseOrderItem> items = PurchaseOrderItemDAO.findByOrderId(order.id);
-            System.out.println("加载订单明细: 订单ID=" + order.id + ", 商品数=" + items.size());
+            logger.debug("加载订单明细: 订单ID={}, 商品数={}", order.id, items.size());
             // 使用提取器创建ObservableList，使JavaFX能监听属性变化
             ObservableList<InboundItemWrapper> wrappers = FXCollections.observableArrayList(wrapper -> 
                 new javafx.beans.Observable[] { wrapper.thisInboundQuantityProperty() }
             );
             for (PurchaseOrderItem item : items) {
-                System.out.println("商品明细: productName=" + item.productName + ", quantity=" + item.quantity + ", inboundQuantity=" + item.inboundQuantity + ", unitPrice=" + item.unitPrice);
+                logger.debug("商品明细: productName={}, quantity={}, inboundQuantity={}, unitPrice={}", 
+                        item.productName, item.quantity, item.inboundQuantity, item.unitPrice);
                 if (item.inboundQuantity < item.quantity) {
                     InboundItemWrapper wrapper = new InboundItemWrapper(item);
-                    System.out.println("创建Wrapper: productName=" + wrapper.getProductName() + ", orderQuantity=" + wrapper.getOrderQuantity() + ", inboundQuantity=" + wrapper.getInboundQuantity());
+                    logger.debug("创建Wrapper: productName={}, orderQuantity={}, inboundQuantity={}", 
+                            wrapper.getProductName(), wrapper.getOrderQuantity(), wrapper.getInboundQuantity());
                     wrappers.add(wrapper);
                 }
             }
             itemTable.setItems(wrappers);
-            System.out.println("可入库商品数: " + wrappers.size());
+            logger.debug("可入库商品数: {}", wrappers.size());
 
             // 总金额标签
             Label totalLabel = new Label("本次入库总金额: ¥0.00");
@@ -589,6 +591,18 @@ public class PurchaseInboundController {
 
             inboundTable.getColumns().addAll(inboundNoCol, orderNoCol, dateCol, qtyCol, amountCol, operatorCol);
 
+            // 添加双击事件查看详情
+            inboundTable.setRowFactory(tv -> {
+                TableRow<PurchaseInbound> row = new TableRow<>();
+                row.setOnMouseClicked(event -> {
+                    if (event.getClickCount() == 2 && !row.isEmpty()) {
+                        PurchaseInbound inbound = row.getItem();
+                        showInboundDetailDialog(inbound, dialogStage);
+                    }
+                });
+                return row;
+            });
+
             List<PurchaseInbound> inboundList = PurchaseInboundDAO.findAll();
             inboundTable.setItems(FXCollections.observableArrayList(inboundList));
 
@@ -607,6 +621,85 @@ public class PurchaseInboundController {
         } catch (SQLException e) {
             logger.error("加载入库历史失败", e);
             showError("加载入库历史失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 显示入库详情对话框
+     */
+    private void showInboundDetailDialog(PurchaseInbound inbound, Stage parentStage) {
+        try {
+            VBox root = new VBox(10);
+            root.setPadding(new javafx.geometry.Insets(20));
+
+            // 入库单信息
+            GridPane infoPane = new GridPane();
+            infoPane.setHgap(10);
+            infoPane.setVgap(10);
+            infoPane.add(new Label("入库单号:"), 0, 0);
+            infoPane.add(new Label(inbound.inboundNo), 1, 0);
+            infoPane.add(new Label("订单号:"), 0, 1);
+            infoPane.add(new Label(inbound.orderNo), 1, 1);
+            infoPane.add(new Label("入库日期:"), 0, 2);
+            infoPane.add(new Label(inbound.inboundDate), 1, 2);
+            infoPane.add(new Label("入库数量:"), 0, 3);
+            infoPane.add(new Label(String.valueOf(inbound.totalQuantity)), 1, 3);
+            infoPane.add(new Label("入库金额:"), 0, 4);
+            infoPane.add(new Label("¥" + String.format("%.2f", inbound.totalAmount)), 1, 4);
+            infoPane.add(new Label("操作人:"), 0, 5);
+            infoPane.add(new Label(inbound.operator), 1, 5);
+            infoPane.add(new Label("备注:"), 0, 6);
+            infoPane.add(new Label(inbound.remark != null ? inbound.remark : ""), 1, 6);
+
+            // 入库明细
+            TableView<PurchaseInboundItem> itemTable = new TableView<>();
+            
+            TableColumn<PurchaseInboundItem, String> productNameCol = new TableColumn<>("商品名称");
+            productNameCol.setCellValueFactory(new PropertyValueFactory<>("productName"));
+
+            TableColumn<PurchaseInboundItem, Number> quantityCol = new TableColumn<>("入库数量");
+            quantityCol.setCellValueFactory(new PropertyValueFactory<>("quantity"));
+
+            TableColumn<PurchaseInboundItem, String> unitPriceCol = new TableColumn<>("单价");
+            unitPriceCol.setCellValueFactory(cellData ->
+                new SimpleStringProperty(String.format("%.2f", cellData.getValue().unitPrice)));
+
+            TableColumn<PurchaseInboundItem, String> totalCol = new TableColumn<>("小计");
+            totalCol.setCellValueFactory(cellData ->
+                new SimpleStringProperty(String.format("%.2f", cellData.getValue().totalPrice)));
+
+            itemTable.getColumns().addAll(productNameCol, quantityCol, unitPriceCol, totalCol);
+
+            // 加载入库明细
+            List<PurchaseInboundItem> items = PurchaseInboundItemDAO.findByInboundId(inbound.id);
+            itemTable.setItems(FXCollections.observableArrayList(items));
+
+            Button closeButton = new Button("关闭");
+            closeButton.setOnAction(e -> parentStage.close());
+
+            root.getChildren().addAll(
+                new Label("入库单信息:"),
+                infoPane,
+                new Label("入库明细:"),
+                itemTable,
+                closeButton
+            );
+
+            Stage detailStage = new Stage();
+            detailStage.setTitle("入库详情 - " + inbound.inboundNo);
+            detailStage.initModality(Modality.WINDOW_MODAL);
+            detailStage.initOwner(parentStage);
+
+            Scene scene = new Scene(root, 600, 500);
+            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
+
+            detailStage.setScene(scene);
+            detailStage.showAndWait();
+
+        } catch (SQLException e) {
+            logger.error("加载入库详情失败", e);
+            showError("加载入库详情失败: " + e.getMessage());
         }
     }
 

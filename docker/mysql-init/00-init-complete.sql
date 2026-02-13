@@ -4,8 +4,8 @@
 -- 此脚本整合了用户创建、表结构初始化和示例数据
 -- 使用方法: docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < 00-init-complete.sql
 -- 
--- 版本: v2.3.0
--- 更新日期: 2026-02-11
+-- 版本: v2.3.1
+-- 更新日期: 2026-02-13
 
 -- ============================================
 -- 第一部分：创建专用用户
@@ -89,6 +89,23 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- 为 members 表添加 member_code 字段（如果不存在）
+SET @column_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'members'
+    AND COLUMN_NAME = 'member_code'
+);
+
+SET @sql = IF(@column_exists = 0,
+    'ALTER TABLE members ADD COLUMN member_code VARCHAR(50) UNIQUE COMMENT ''会员编号'' AFTER id',
+    'SELECT "members.member_code column already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 -- 为 categories 表添加 id 字段（如果不存在）
 SET @column_exists = (
     SELECT COUNT(*)
@@ -146,7 +163,7 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- ============================================
--- v2.3.0 新增表：采购管理模块
+-- v2.3.0-v2.3.1 新增表：采购管理模块
 -- ============================================
 
 -- 创建供应商表
@@ -332,7 +349,7 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- ============================================
--- v2.3.0 新增表：库存盘点模块
+-- v2.3.0-v2.3.1 新增表：库存盘点模块
 -- ============================================
 
 -- 创建库存盘点表
@@ -403,7 +420,7 @@ SELECT '=== 表结构升级完成 ===' AS status;
 -- 第三部分：示例数据
 -- ============================================
 
--- 清除旧数据（仅清理新增的v2.3.0表，避免影响原有数据）
+-- 清除旧数据（仅清理新增的v2.3.0-v2.3.1表，避免影响原有数据）
 DELETE FROM inventory_check_items;
 DELETE FROM inventory_check;
 DELETE FROM purchase_inbound_items;
@@ -413,7 +430,7 @@ DELETE FROM purchase_order_items;
 DELETE FROM purchase_orders;
 DELETE FROM suppliers;
 
--- v2.3.0 采购管理模块示例数据
+-- v2.3.0-v2.3.1 采购管理模块示例数据
 
 -- 插入示例供应商
 INSERT INTO suppliers (supplier_code, name, contact_person, phone, address, `rank`, status, remark) VALUES 
@@ -450,7 +467,7 @@ INSERT INTO purchase_inbound_items (inbound_id, order_item_id, product_id, quant
 (1, 1, 4, 5, 5.00, 25.00),
 (2, 2, 4, 10, 5.00, 50.00);
 
--- v2.3.0 库存盘点模块示例数据
+-- v2.3.0-v2.3.1 库存盘点模块示例数据
 
 -- 插入示例库存盘点记录
 INSERT INTO inventory_check (check_no, check_date, check_type, total_items, diff_items, status, operator, remark) VALUES 

@@ -2,7 +2,7 @@
 
 ## 概述
 
-收银系统使用 MySQL 8.0 作为主数据库，采用双存储架构（MySQL + 文件存储），支持优雅降级。数据库初始化分为两个阶段：
+收银系统使用 MySQL 8.0 作为主数据库。数据库初始化分为两个阶段：
 
 1. **MySQL 容器初始化** - 创建数据库和专用用户
 2. **应用启动初始化** - 创建所有数据表结构
@@ -303,45 +303,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 ---
 
-## 数据迁移
 
-### 自动迁移
-
-系统首次启动时会自动执行数据迁移：
-
-1. 检测 MySQL 数据库是否为空
-2. 自动备份原有 `.txt` 数据文件到 `data/backup_<timestamp>/`
-3. 将数据从文件存储迁移到 MySQL
-4. 显示迁移统计信息
-
-### 手动迁移
-
-如需手动触发迁移：
-
-```bash
-# 方式1: 运行迁移工具
-java -cp target/classes com.cashier.util.DataMigrationTool
-
-# 方式2: 重新启动应用（会自动执行）
-mvn javafx:run
-```
-
-### 迁移的数据类型
-
-| 数据类型 | 文件存储 | MySQL 表 |
-|---------|---------|----------|
-| 用户数据 | `users.txt` | `users` |
-| 商品库存 | `inventory.txt` | `products` |
-| 会员数据 | `members.txt` | `members` |
-| 交易记录 | `transactions.txt` | `transactions` + `transaction_items` |
-| 交接班记录 | `shifts.txt` | `shifts` |
-| 促销数据 | `promotions.txt` | `promotions` |
-| 充值记录 | `recharge.txt` | `recharges` |
-| 分类数据 | `categories.txt` | `categories` |
-| 操作日志 | `operation_logs.txt` | `operation_logs` |
-| 系统设置 | `settings.txt` | `settings` |
-
----
 
 ## 备份和恢复
 
@@ -457,16 +419,7 @@ db.url=jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=As
 CREATE DATABASE cashier_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
-### 4. 数据迁移失败
-
-**原因**: 原有数据文件损坏或格式错误
-
-**解决**:
-1. 检查 `data/` 目录下的 `.txt` 文件
-2. 查看迁移日志
-3. 使用备份文件恢复
-
-### 5. 权限不足
+### 4. 权限不足
 
 **现象**: Access denied for user 'cashier'@'%'
 
@@ -496,5 +449,4 @@ FLUSH PRIVILEGES;
 - [MySQL 官方文档](https://dev.mysql.com/doc/)
 - [HikariCP 文档](https://github.com/brettwooldridge/HikariCP)
 - [Docker MySQL 文档](https://hub.docker.com/_/mysql)
-- 数据迁移工具: `com.cashier.util.DataMigrationTool`
 - 数据库管理器: `com.cashier.util.DatabaseManager`

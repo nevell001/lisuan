@@ -4,7 +4,7 @@ import com.cashier.dao.*;
 import com.cashier.model.*;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.SQLException;
 import java.math.BigDecimal;
@@ -34,8 +34,9 @@ import javafx.util.converter.IntegerStringConverter;
  * 采购订单控制器
  * 处理采购订单的创建、编辑、提交审批
  */
+@SuppressWarnings("unchecked")
 public class PurchaseOrderController {
-    private static final Logger logger = LoggerFactory.getLogger(PurchaseOrderController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(PurchaseOrderController.class);
 
     @FXML
     private TableView<PurchaseOrder> orderTable;
@@ -661,8 +662,8 @@ public class PurchaseOrderController {
                     
                     // 关闭选择器
                     selectorStage.close();
-                    
-                    System.out.println("添加商品: " + item.productName + ", 数量: " + item.quantity + ", 单价: " + item.unitPrice);
+
+                    logger.debug("添加商品: {}, 数量: {}, 单价: {}", item.productName, item.quantity, item.unitPrice);
                 } else {
                     showError("请先选择一个商品");
                 }

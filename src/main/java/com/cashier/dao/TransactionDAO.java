@@ -4,7 +4,7 @@ import com.cashier.model.Transaction;
 import com.cashier.model.Product;
 import com.cashier.util.DatabaseManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.*;
 import java.util.*;
@@ -14,7 +14,7 @@ import java.util.*;
  * 负责交易相关的数据库操作
  */
 public class TransactionDAO {
-    private static final Logger logger = LoggerFactory.getLogger(TransactionDAO.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(TransactionDAO.class);
 
     /**
      * 插入新交易（包含明细）

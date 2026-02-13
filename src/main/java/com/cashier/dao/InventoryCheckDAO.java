@@ -3,7 +3,7 @@ package com.cashier.dao;
 import com.cashier.model.InventoryCheck;
 import com.cashier.util.DatabaseManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.*;
 import java.util.ArrayList;
@@ -14,7 +14,7 @@ import java.util.List;
  * 负责库存盘点相关的数据库操作
  */
 public class InventoryCheckDAO {
-    private static final Logger logger = LoggerFactory.getLogger(InventoryCheckDAO.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(InventoryCheckDAO.class);
 
     /**
      * 根据ID查找库存盘点记录

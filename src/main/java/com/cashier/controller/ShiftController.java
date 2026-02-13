@@ -6,7 +6,7 @@ import com.cashier.model.Shift;
 import com.cashier.model.Transaction;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
@@ -24,7 +24,7 @@ import java.util.List;
  * 处理交接班记录的查询和显示
  */
 public class ShiftController {
-    private static final Logger logger = LoggerFactory.getLogger(ShiftController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(ShiftController.class);
 
     @FXML
     private TableView<Shift> shiftTable;
@@ -160,11 +160,10 @@ public class ShiftController {
      * 加载交接班数据
      */
     private void loadShifts() {
-        System.out.println("ShiftController: 开始加载交接班数据...");
+        logger.info("ShiftController: 开始加载交接班数据...");
         try {
             allShifts = ShiftDAO.findAll();
         } catch (SQLException e) {
-            System.err.println("加载交接班数据失败: " + e.getMessage());
             logger.error("加载交接班数据失败", e);
             showError("加载交接班数据失败: " + e.getMessage());
             allShifts = new java.util.ArrayList<>();
@@ -172,7 +171,7 @@ public class ShiftController {
         shiftList = FXCollections.observableArrayList(allShifts);
         shiftTable.setItems(shiftList);
         updateStatistics();
-        System.out.println("ShiftController: 加载了 " + allShifts.size() + " 条交接班记录");
+        logger.info("ShiftController: 加载了 {} 条交接班记录", allShifts.size());
     }
 
     /**
@@ -358,7 +357,6 @@ public class ShiftController {
         try {
             hasActiveShift = ShiftDAO.hasActiveShift();
         } catch (SQLException e) {
-            System.err.println("检查活跃班次失败: " + e.getMessage());
             logger.error("检查活跃班次失败", e);
             hasActiveShift = false;
         }
@@ -378,7 +376,6 @@ public class ShiftController {
                 return;
             }
         } catch (SQLException e) {
-            System.err.println("检查活跃班次失败: " + e.getMessage());
             logger.error("检查活跃班次失败", e);
             showError("检查活跃班次失败，请稍后重试");
             return;
@@ -406,7 +403,6 @@ public class ShiftController {
             try {
                 transactions = TransactionDAO.findAll();
             } catch (SQLException e) {
-                System.err.println("加载交易记录失败: " + e.getMessage());
                 logger.error("加载交易记录失败", e);
                 showError("加载交易记录失败: " + e.getMessage());
                 return;
@@ -436,7 +432,6 @@ public class ShiftController {
             try {
                 ShiftDAO.insert(shift);
             } catch (SQLException e) {
-                System.err.println("保存班次失败: " + e.getMessage());
                 logger.error("保存班次失败", e);
                 showError("保存班次失败: " + e.getMessage());
                 return;
@@ -464,7 +459,6 @@ public class ShiftController {
 try {
             activeShift = ShiftDAO.findActiveShift();
         } catch (SQLException e) {
-            System.err.println("获取活跃班次失败: " + e.getMessage());
             logger.error("获取活跃班次失败", e);
             showError("获取活跃班次失败: " + e.getMessage());
             return;
@@ -491,7 +485,6 @@ try {
             try {
                 allTransactions = TransactionDAO.findAll();
             } catch (SQLException e) {
-                System.err.println("加载交易记录失败: " + e.getMessage());
                 logger.error("加载交易记录失败", e);
                 showError("加载交易记录失败: " + e.getMessage());
                 return;
@@ -525,7 +518,7 @@ try {
                         }
                     }
                 } catch (Exception e) {
-                    System.err.println("解析交易时间失败: " + t.timestamp);
+                    logger.error("解析交易时间失败: {}", t.timestamp, e);
                 }
             }
 
@@ -539,7 +532,6 @@ try {
             try {
                 ShiftDAO.update(activeShift);
             } catch (SQLException e) {
-                System.err.println("更新班次失败: " + e.getMessage());
                 logger.error("更新班次失败", e);
                 showError("更新班次失败: " + e.getMessage());
                 return;

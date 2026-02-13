@@ -22,7 +22,7 @@ FLUSH PRIVILEGES;
 -- 5. 创建初始数据（如果需要）
 
 -- 插入默认管理员用户（密码: admin123，需要 BCrypt 加密）
--- 注意：实际密码应该在应用启动时通过 DataMigrationTool 迁移
+-- 注意：密码已在应用启动时创建
 -- INSERT INTO users (username, password, name, role, active, last_login, created_at)
 -- VALUES ('admin', '$2a$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy', '系统管理员', 'admin', 1, UNIX_TIMESTAMP() * 1000, UNIX_TIMESTAMP() * 1000);
 

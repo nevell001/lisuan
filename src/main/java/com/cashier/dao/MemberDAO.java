@@ -4,6 +4,7 @@ import com.cashier.model.Member;
 import com.cashier.util.DatabaseManager;
 
 import java.sql.*;
+import java.text.SimpleDateFormat;
 import java.util.*;
 
 /**
@@ -16,26 +17,27 @@ public class MemberDAO {
      * 根据ID查找会员
      */
     public static Member findById(int id) throws SQLException {
-        String sql = "SELECT id, phone, name, points, level, discount, balance, birthday FROM members WHERE id = ?";
-
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
-            pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                return mapRowToMember(rs);
+            String sql = "SELECT id, member_code, phone, name, points, level, discount, balance, birthday FROM members WHERE id = ?";
+    
+            try (Connection conn = DatabaseManager.getConnection();
+                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
+    
+                pstmt.setInt(1, id);
+                ResultSet rs = pstmt.executeQuery();
+    
+                if (rs.next()) {
+                    return mapRowToMember(rs);
+                }
             }
+    
+            return null;
         }
-        return null;
-    }
 
     /**
      * 根据手机号查找会员
      */
     public static Member findByPhone(String phone) throws SQLException {
-        String sql = "SELECT id, phone, name, points, level, discount, balance, birthday FROM members WHERE phone = ?";
+        String sql = "SELECT id, member_code, phone, name, points, level, discount, balance, birthday FROM members WHERE phone = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -55,7 +57,7 @@ public class MemberDAO {
      */
     public static List<Member> findAll() throws SQLException {
         List<Member> members = new ArrayList<>();
-        String sql = "SELECT id, phone, name, points, level, discount, balance, birthday FROM members ORDER BY name";
+        String sql = "SELECT id, member_code, phone, name, points, level, discount, balance, birthday FROM members ORDER BY name";
 
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
@@ -73,17 +75,22 @@ public class MemberDAO {
      * 如果会员ID大于0，则使用指定的ID；否则由数据库自动生成ID
      */
     public static boolean insert(Member member) throws SQLException {
+        // 自动生成会员编号
+        if (member.memberCode == null || member.memberCode.trim().isEmpty()) {
+            member.memberCode = generateMemberCode();
+        }
+
         String sql;
         boolean useProvidedId = member.id > 0;
 
         if (useProvidedId) {
             // 使用用户提供的ID
-            sql = "INSERT INTO members (id, phone, name, points, level, discount, balance, birthday) " +
-                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO members (id, member_code, phone, name, points, level, discount, balance, birthday) " +
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
         } else {
             // 由数据库自动生成ID
-            sql = "INSERT INTO members (phone, name, points, level, discount, balance, birthday) " +
-                  "VALUES (?, ?, ?, ?, ?, ?, ?)";
+            sql = "INSERT INTO members (member_code, phone, name, points, level, discount, balance, birthday) " +
+                  "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
         }
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -94,6 +101,7 @@ public class MemberDAO {
                 pstmt.setInt(paramIndex++, member.id);
             }
 
+            pstmt.setString(paramIndex++, member.memberCode);
             pstmt.setString(paramIndex++, member.phone);
             pstmt.setString(paramIndex++, member.name);
             pstmt.setDouble(paramIndex++, member.points);
@@ -115,23 +123,57 @@ public class MemberDAO {
     }
 
     /**
+     * 生成会员编号
+     * @return 会员编号
+     */
+    private static String generateMemberCode() throws SQLException {
+        // 格式: MEM + yyyyMMdd + 4位递增序号
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
+        String dateStr = sdf.format(new java.util.Date());
+        
+        String sql = "SELECT member_code FROM members WHERE member_code LIKE ? ORDER BY member_code DESC LIMIT 1";
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            
+            pstmt.setString(1, "MEM" + dateStr + "%");
+            ResultSet rs = pstmt.executeQuery();
+            
+            int sequence = 1;
+            if (rs.next()) {
+                String lastCode = rs.getString("member_code");
+                // 提取序号部分（最后4位）
+                try {
+                    String lastSeq = lastCode.substring(lastCode.length() - 4);
+                    sequence = Integer.parseInt(lastSeq) + 1;
+                } catch (Exception e) {
+                    // 如果解析失败，使用默认值
+                }
+            }
+            
+            // 格式化为4位数字，前面补0
+            return String.format("MEM%s%04d", dateStr, sequence);
+        }
+    }
+
+    /**
      * 更新会员
      */
     public static boolean update(Member member) throws SQLException {
-        String sql = "UPDATE members SET phone = ?, name = ?, points = ?, level = ?, discount = ?, balance = ?, birthday = ? " +
+        String sql = "UPDATE members SET member_code = ?, phone = ?, name = ?, points = ?, level = ?, discount = ?, balance = ?, birthday = ? " +
                      "WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setString(1, member.phone);
-            pstmt.setString(2, member.name);
-            pstmt.setDouble(3, member.points);
-            pstmt.setString(4, member.level);
-            pstmt.setDouble(5, member.discount);
-            pstmt.setDouble(6, member.balance);
-            pstmt.setString(7, member.birthday);
-            pstmt.setInt(8, member.id);
+            pstmt.setString(1, member.memberCode);
+            pstmt.setString(2, member.phone);
+            pstmt.setString(3, member.name);
+            pstmt.setDouble(4, member.points);
+            pstmt.setString(5, member.level);
+            pstmt.setDouble(6, member.discount);
+            pstmt.setDouble(7, member.balance);
+            pstmt.setString(8, member.birthday);
+            pstmt.setInt(9, member.id);
 
             return pstmt.executeUpdate() > 0;
         }
@@ -298,16 +340,17 @@ public class MemberDAO {
      * 将 ResultSet 映射为 Member 对象
      */
     private static Member mapRowToMember(ResultSet rs) throws SQLException {
-        Member member = new Member(
-            rs.getInt("id"),
-            rs.getString("phone"),
-            rs.getString("name"),
-            rs.getDouble("points"),
-            rs.getString("level"),
-            rs.getDouble("discount"),
-            rs.getDouble("balance"),
-            rs.getString("birthday")
-        );
+        Member member = new Member();
+        member.id = rs.getInt("id");
+        member.memberCode = rs.getString("member_code");
+        member.phone = rs.getString("phone");
+        member.name = rs.getString("name");
+        member.points = rs.getDouble("points");
+        member.level = rs.getString("level");
+        member.discount = rs.getDouble("discount");
+        member.discountRate = member.discount;
+        member.balance = rs.getDouble("balance");
+        member.birthday = rs.getString("birthday");
         return member;
     }
 }

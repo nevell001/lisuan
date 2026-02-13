@@ -4,7 +4,7 @@ import com.cashier.dao.*;
 import com.cashier.model.*;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.SQLException;
 import java.math.BigDecimal;
@@ -28,8 +28,9 @@ import javafx.stage.Stage;
  * 采购审批控制器
  * 处理采购订单的审批
  */
+@SuppressWarnings("unchecked")
 public class PurchaseApprovalController {
-    private static final Logger logger = LoggerFactory.getLogger(PurchaseApprovalController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(PurchaseApprovalController.class);
 
     @FXML
     private TableView<PurchaseOrder> orderTable;

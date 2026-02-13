@@ -10,7 +10,7 @@ import com.cashier.model.Supplier;
 import com.cashier.model.Unit;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 import javafx.fxml.FXML;
 
 import java.sql.SQLException;
@@ -26,7 +26,7 @@ import java.util.Map;
  * 处理商品添加和编辑对话框的逻辑
  */
 public class ProductEditController {
-    private static final Logger logger = LoggerFactory.getLogger(ProductEditController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(ProductEditController.class);
 
     @FXML
     private Label titleLabel;
@@ -100,7 +100,6 @@ public class ProductEditController {
                 inventory.put(p.name, p);
             }
         } catch (SQLException e) {
-            System.err.println("加载商品数据失败: " + e.getMessage());
             logger.error("加载商品数据失败", e);
             inventory = new java.util.HashMap<>();
         }
@@ -197,7 +196,7 @@ public class ProductEditController {
                 categories.add(category.name);
             }
         } catch (SQLException e) {
-            System.err.println("加载分类数据失败: " + e.getMessage());
+            logger.error("加载分类数据失败", e);
         }
 
         categoryComboBox.setItems(javafx.collections.FXCollections.observableArrayList(categories));
@@ -216,7 +215,7 @@ public class ProductEditController {
                 units.add(unit.name);
             }
         } catch (SQLException e) {
-            System.err.println("加载单位数据失败: " + e.getMessage());
+            logger.error("加载单位数据失败", e);
         }
 
         unitComboBox.setItems(javafx.collections.FXCollections.observableArrayList(units));
@@ -237,7 +236,7 @@ public class ProductEditController {
                 }
             }
         } catch (SQLException e) {
-            System.err.println("加载供应商数据失败: " + e.getMessage());
+            logger.error("加载供应商数据失败", e);
         }
 
         supplierComboBox.setItems(javafx.collections.FXCollections.observableArrayList(suppliers));
@@ -266,7 +265,6 @@ public class ProductEditController {
             productCodeField.setDisable(false);
             nameField.setText(product.name);
             priceField.setText(String.format("%.2f", product.price));
-            quantityField.setText(String.valueOf(product.quantity));
             minStockField.setText(String.valueOf(product.minStock));
             categoryComboBox.getSelectionModel().select(product.category);
             barcodeField.setText(product.barcode);
@@ -301,49 +299,120 @@ public class ProductEditController {
     }
 
     /**
+     * 生成自动商品编号
+     * 格式：P + 年月日 + 4位序号（如：P202602130001）
+     * @return 自动生成的商品编号
+     */
+    private String generateProductCode() {
+        // 获取当前日期字符串
+        String dateStr = java.time.LocalDate.now().toString().replace("-", ""); // 如：20260213
+
+        // 查询当天生成的商品数量
+        String prefix = "P" + dateStr;
+        int count = 0;
+        try {
+            List<Product> allProducts = ProductDAO.findAll();
+            for (Product p : allProducts) {
+                if (p.productCode != null && p.productCode.startsWith(prefix)) {
+                    count++;
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("查询商品数量失败", e);
+        }
+
+        // 生成4位序号，从0001开始
+        String sequence = String.format("%04d", count + 1);
+        return prefix + sequence;
+    }
+
+    /**
      * 处理保存
      */
     @FXML
     private void handleSave() {
         if (isInputValid()) {
-            if (product == null) {
-                // 添加新商品
-                product = new Product(
-                    nameField.getText().trim(),
-                    Double.parseDouble(priceField.getText().trim()),
-                    Integer.parseInt(quantityField.getText().trim())
-                );
-            } else {
-                // 编辑现有商品
-                product.name = nameField.getText().trim();
-                product.price = Double.parseDouble(priceField.getText().trim());
-                product.quantity = Integer.parseInt(quantityField.getText().trim());
-            }
+            try {
+                        if (product == null) {
+                            // 添加新商品
+                            product = new Product(
+                                nameField.getText().trim(),
+                                Double.parseDouble(priceField.getText().trim()),
+                                0  // 库存数量默认为0，通过进销存管理
+                            );
+            
+                            // 自动生成商品编号
+                            if (autoCodeCheckBox.isSelected()) {
+                                product.productCode = generateProductCode();
+                            } else {
+                                product.productCode = productCodeField.getText().trim();
+                            }
+            
+                            // 更新商品信息
+                            product.minStock = Integer.parseInt(minStockField.getText().trim());
+                            product.category = categoryComboBox.getSelectionModel().getSelectedItem();
+                            if (product.category == null || product.category.trim().isEmpty()) {
+                                product.category = "默认分类";
+                            }
+                            product.barcode = barcodeField.getText().trim();
+                            product.unit = unitComboBox.getSelectionModel().getSelectedItem();
+                            if (product.unit == null || product.unit.trim().isEmpty()) {
+                                product.unit = "个";
+                            }
+                            product.description = descriptionField.getText().trim();
+                            product.brand = brandField.getText().trim();
+                            product.supplier = supplierComboBox.getSelectionModel().getSelectedItem();
+                            product.spec = specField.getText().trim();
+                            product.cost = costField.getText().trim().isEmpty() ? product.price * 0.7 : Double.parseDouble(costField.getText().trim());
+            
+                            // 插入数据库
+                            boolean success = ProductDAO.insert(product);
+                            if (!success) {
+                                errorLabel.setText("添加商品失败，请重试");
+                                return;
+                            }
+                        } else {
+                            // 编辑现有商品（不修改库存数量）
+                            product.name = nameField.getText().trim();
+                            product.price = Double.parseDouble(priceField.getText().trim());
+            
+                            // 更新商品编号（如果不是自动生成）
+                            if (!autoCodeCheckBox.isSelected()) {
+                                product.productCode = productCodeField.getText().trim();
+                            }
+            
+                            // 更新商品信息
+                            product.minStock = Integer.parseInt(minStockField.getText().trim());
+                            product.category = categoryComboBox.getSelectionModel().getSelectedItem();
+                            if (product.category == null || product.category.trim().isEmpty()) {
+                                product.category = "默认分类";
+                            }
+                            product.barcode = barcodeField.getText().trim();
+                            product.unit = unitComboBox.getSelectionModel().getSelectedItem();
+                            if (product.unit == null || product.unit.trim().isEmpty()) {
+                                product.unit = "个";
+                            }
+                            product.description = descriptionField.getText().trim();
+                            product.brand = brandField.getText().trim();
+                            product.supplier = supplierComboBox.getSelectionModel().getSelectedItem();
+                            product.spec = specField.getText().trim();
+                            product.cost = costField.getText().trim().isEmpty() ? product.price * 0.7 : Double.parseDouble(costField.getText().trim());
+            
+                            // 更新数据库
+                            boolean success = ProductDAO.update(product);
+                            if (!success) {
+                                errorLabel.setText("更新商品失败，请重试");
+                                return;
+                            }
+                        }
+                // 操作成功，关闭对话框
+                okClicked = true;
+                dialogStage.close();
 
-            // 更新商品编号（如果不是自动生成）
-            if (!autoCodeCheckBox.isSelected()) {
-                product.productCode = productCodeField.getText().trim();
+            } catch (SQLException e) {
+                logger.error("保存商品失败", e);
+                errorLabel.setText("保存商品失败: " + e.getMessage());
             }
-
-            // 更新商品信息
-            product.minStock = Integer.parseInt(minStockField.getText().trim());
-            product.category = categoryComboBox.getSelectionModel().getSelectedItem();
-            if (product.category == null || product.category.trim().isEmpty()) {
-                product.category = "默认分类";
-            }
-            product.barcode = barcodeField.getText().trim();
-            product.unit = unitComboBox.getSelectionModel().getSelectedItem();
-            if (product.unit == null || product.unit.trim().isEmpty()) {
-                product.unit = "个";
-            }
-            product.description = descriptionField.getText().trim();
-            product.brand = brandField.getText().trim();
-            product.supplier = supplierComboBox.getSelectionModel().getSelectedItem();
-            product.spec = specField.getText().trim();
-            product.cost = costField.getText().trim().isEmpty() ? product.price * 0.7 : Double.parseDouble(costField.getText().trim());
-
-            okClicked = true;
-            dialogStage.close();
         }
     }
 
@@ -362,9 +431,21 @@ public class ProductEditController {
     private boolean isInputValid() {
         String errorMessage = "";
 
-        // 验证商品编号（如果不是自动生成）
-        if (!autoCodeCheckBox.isSelected() && productCodeField.getText().trim().isEmpty()) {
-            errorMessage += "商品编号不能为空！\n";
+        // 验证商品编号（仅当手动输入时才验证）
+        if (!autoCodeCheckBox.isSelected()) {
+            if (productCodeField.getText().trim().isEmpty()) {
+                errorMessage += "商品编号不能为空！\n";
+            } else {
+                // 验证商品编号是否已存在
+                try {
+                    Product existingProduct = ProductDAO.findByProductCode(productCodeField.getText().trim());
+                    if (existingProduct != null && (product == null || existingProduct.id != product.id)) {
+                        errorMessage += "商品编号已存在，请使用其他编号！\n";
+                    }
+                } catch (SQLException e) {
+                    logger.error("验证商品编号失败", e);
+                }
+            }
         }
 
         // 验证商品名称
@@ -382,16 +463,6 @@ public class ProductEditController {
             }
         } catch (NumberFormatException e) {
             errorMessage += "单价格式不正确！\n";
-        }
-
-        // 验证库存数量
-        try {
-            int quantity = Integer.parseInt(quantityField.getText().trim());
-            if (quantity < 0) {
-                errorMessage += "库存数量不能为负数！\n";
-            }
-        } catch (NumberFormatException e) {
-            errorMessage += "库存数量格式不正确！\n";
         }
 
         // 验证最低库存

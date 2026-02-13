@@ -5,7 +5,7 @@ import com.cashier.model.User;
 import com.cashier.util.PasswordUtil;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -27,7 +27,7 @@ import java.util.Map;
  * 处理用户的增删改查
  */
 public class UserController {
-    private static final Logger logger = LoggerFactory.getLogger(UserController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(UserController.class);
 
     @FXML
     private TableView<User> userTable;
@@ -142,7 +142,7 @@ public class UserController {
      * 加载用户数据
      */
     private void loadUsers() {
-        System.out.println("UserController: 开始加载用户数据...");
+        logger.info("UserController: 开始加载用户数据...");
         try {
             List<User> userListData = UserDAO.findAll();
             users = new java.util.HashMap<>();
@@ -150,7 +150,6 @@ public class UserController {
                 users.put(user.username, user);
             }
         } catch (SQLException e) {
-            System.err.println("加载用户数据失败: " + e.getMessage());
             logger.error("加载用户数据失败", e);
             showError("加载用户数据失败: " + e.getMessage());
             users = new java.util.HashMap<>();
@@ -158,7 +157,7 @@ public class UserController {
         userList = FXCollections.observableArrayList(users.values());
         userTable.setItems(userList);
         updateCountLabel();
-        System.out.println("UserController: 加载了 " + users.size() + " 个用户");
+        logger.info("UserController: 加载了 {} 个用户", users.size());
     }
 
     /**
@@ -339,7 +338,6 @@ public class UserController {
                     }
                 }
             } catch (SQLException e) {
-                System.err.println("保存用户失败: " + e.getMessage());
                 logger.error("保存用户失败", e);
                 showError("保存用户失败: " + e.getMessage());
             }
@@ -374,7 +372,6 @@ public class UserController {
                         showError("用户删除失败");
                     }
                 } catch (SQLException e) {
-                    System.err.println("删除用户失败: " + e.getMessage());
                     logger.error("删除用户失败", e);
                     showError("删除用户失败: " + e.getMessage());
                 }
@@ -409,7 +406,6 @@ public class UserController {
                         showError("密码重置失败");
                     }
                 } catch (SQLException e) {
-                    System.err.println("重置密码失败: " + e.getMessage());
                     logger.error("重置密码失败", e);
                     showError("重置密码失败: " + e.getMessage());
                 }
@@ -433,7 +429,6 @@ public class UserController {
                     showError("激活用户失败");
                 }
             } catch (SQLException e) {
-                System.err.println("激活用户失败: " + e.getMessage());
                 logger.error("激活用户失败", e);
                 showError("激活用户失败: " + e.getMessage());
             }
@@ -468,7 +463,6 @@ public class UserController {
                         showError("禁用用户失败");
                     }
                 } catch (SQLException e) {
-                    System.err.println("禁用用户失败: " + e.getMessage());
                     logger.error("禁用用户失败", e);
                     showError("禁用用户失败: " + e.getMessage());
                 }

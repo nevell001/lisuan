@@ -5,7 +5,7 @@ import com.cashier.model.User;
 import javafx.animation.FadeTransition;
 import javafx.fxml.FXML;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.SQLException;
 import javafx.scene.control.*;
@@ -19,7 +19,7 @@ import java.util.Map;
  * 处理用户密码重置请求
  */
 public class PasswordResetController {
-    private static final Logger logger = LoggerFactory.getLogger(PasswordResetController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(PasswordResetController.class);
 
     @FXML
     private TextField usernameField;

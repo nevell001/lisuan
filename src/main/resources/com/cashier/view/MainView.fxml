@@ -90,7 +90,7 @@
                     </Button>
 
                     <Button fx:id="inventoryBtn" 
-                            text="库存管理" 
+                            text="商品管理" 
                             onAction="#handleInventory"
                             styleClass="nav-button">
                         <graphic>

@@ -4,7 +4,7 @@
 
 **项目名称**: 收银系统 (Cashier System)
 
-**当前版本**: v2.3.0
+**当前版本**: v2.3.1
 
 **项目类型**: JavaFX 桌面应用程序
 
@@ -18,7 +18,9 @@
 - **连接池**: HikariCP 5.1.0
 - **ORM**: 自定义 DAO 层
 - **日志**: SLF4J + Logback
+- **测试**: JUnit 5.10.0 + TestFX 4.0.18
 - **UI 增强**: ControlsFX 11.2.1, FontAwesomeFX 4.7.0-9.1.2
+- **密码加密**: BCrypt 0.10.2
 
 **主入口**: `com.cashier.CashierSystemFXApplication`
 
@@ -48,10 +50,18 @@ mvn javafx:run
 mvn clean package
 
 # 运行打包后的 JAR
-java -jar target/cashier-system-fx-2.2.1.jar
+java -jar target/cashier-system-fx-2.3.0.jar
 
-# 运行测试
+# 运行所有测试
 mvn test
+
+# 运行特定测试类
+mvn test -Dtest=PasswordUtilTest
+mvn test -Dtest=ProductDAOTest
+mvn test -Dtest=UserDAOTest
+
+# 跳过测试打包
+mvn clean package -DskipTests
 ```
 
 ### Windows 快速启动
@@ -75,18 +85,29 @@ package-windows.bat
 **使用 Docker Compose（推荐）**:
 ```bash
 docker-compose up -d mysql
+
+# 查看日志
+docker-compose logs -f mysql
+
+# 访问 phpMyAdmin
+# URL: http://localhost:8080
+# 用户名: root
+# 密码: RootPassword123!
 ```
 
-**访问 phpMyAdmin**（可选）:
-- URL: http://localhost:8080
-- 用户名: root
-- 密码: RootPassword123!
+**手动初始化数据库**:
+```bash
+# 使用初始化脚本
+docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/00-init-complete.sql
+```
 
 ### 配置文件
 
 - **数据库配置**: `config/database.properties`
 - **JVM 配置**: `config/jvm.config`
 - **打印机配置**: `config/printer.properties`
+
+**安全提示**: 数据库密码建议使用环境变量 `CASHER_DB_PASSWORD` 存储，避免明文存储在配置文件中。
 
 ---
 
@@ -99,28 +120,33 @@ hello/
 │   ├── constant/
 │   │   ├── FXConstants.java               # JavaFX 常量
 │   │   └── SpacingConstants.java          # 间距常量
-│   ├── controller/                        # 控制器层 (20+ 个)
+│   ├── controller/                        # 控制器层 (25 个)
 │   │   ├── CartController.java            # 购物车控制器
 │   │   ├── CheckoutController.java        # 结账控制器
 │   │   ├── InventoryController.java       # 库存管理控制器
+│   │   ├── InventoryCheckController.java  # 库存盘点控制器
+│   │   ├── InventoryReportController.java # 库存报表控制器
 │   │   ├── MemberController.java          # 会员管理控制器
+│   │   ├── MemberEditController.java      # 会员编辑控制器
 │   │   ├── PromotionController.java       # 促销管理控制器
 │   │   ├── TransactionController.java     # 交易记录控制器
 │   │   ├── StatisticsController.java      # 数据统计控制器
 │   │   ├── ShiftController.java           # 交接班控制器
 │   │   ├── UserController.java            # 用户管理控制器
+│   │   ├── PasswordResetController.java   # 密码重置控制器
 │   │   ├── SettingsController.java        # 系统设置控制器
 │   │   ├── LoginController.java           # 登录控制器
 │   │   ├── MainController.java            # 主界面控制器
+│   │   ├── ProductEditController.java     # 商品编辑控制器
+│   │   ├── RestockController.java         # 补货控制器
+│   │   ├── RechargeController.java        # 充值控制器
 │   │   ├── SupplierController.java        # 供应商管理控制器
 │   │   ├── PurchaseOrderController.java   # 采购订单控制器
 │   │   ├── PurchaseApprovalController.java # 采购审批控制器
 │   │   ├── PurchaseInboundController.java # 采购入库控制器
-│   │   ├── InventoryCheckController.java  # 库存盘点控制器
 │   │   ├── PurchaseReportController.java  # 采购报表控制器
-│   │   ├── InventoryReportController.java # 库存报表控制器
 │   │   └── ProfitReportController.java    # 利润分析控制器
-│   ├── dao/                               # 数据访问层 (18+ 个)
+│   ├── dao/                               # 数据访问层 (20 个)
 │   │   ├── UserDAO.java                   # 用户 DAO
 │   │   ├── ProductDAO.java                # 商品 DAO
 │   │   ├── MemberDAO.java                 # 会员 DAO
@@ -141,7 +167,7 @@ hello/
 │   │   ├── PurchaseInboundItemDAO.java    # 采购入库明细 DAO
 │   │   ├── InventoryCheckDAO.java         # 库存盘点 DAO
 │   │   └── InventoryCheckItemDAO.java     # 库存盘点明细 DAO
-│   ├── model/                             # 实体类 (15+ 个)
+│   ├── model/                             # 实体类 (20 个)
 │   │   ├── Product.java                   # 商品实体类
 │   │   ├── Member.java                    # 会员实体类
 │   │   ├── User.java                      # 用户实体类
@@ -160,21 +186,25 @@ hello/
 │   │   ├── PurchaseInbound.java           # 采购入库记录类
 │   │   ├── PurchaseInboundItem.java       # 采购入库明细类
 │   │   ├── InventoryCheck.java            # 库存盘点实体类
-│   │   ├── InventoryCheckItem.java        # 库存盘点明细类
-│   │   └── DataManager.java               # 文件存储（备用）
+│   │   └── InventoryCheckItem.java        # 库存盘点明细类
 │   ├── service/
 │   │   └── DataService.java               # 数据服务
 │   └── util/                              # 工具类
 │       ├── DatabaseManager.java           # 数据库管理器
-│       ├── DataMigrationTool.java         # 数据迁移工具
 │       ├── PasswordUtil.java              # 密码工具
 │       ├── FXUtils.java                   # JavaFX 工具类
 │       ├── FXMLUtils.java                 # FXML 工具类
 │       ├── LoggerFactoryUtil.java         # 日志工厂工具
 │       ├── StatusBarManager.java          # 状态栏管理器
 │       └── ReceiptPrinter.java            # 收据打印机
+├── src/test/java/com/cashier/             # 测试代码
+│   ├── util/
+│   │   └── PasswordUtilTest.java          # 密码工具测试
+│   └── dao/
+│       ├── ProductDAOTest.java            # 商品 DAO 测试
+│       └── UserDAOTest.java               # 用户 DAO 测试
 ├── src/main/resources/
-│   ├── com/cashier/view/                  # FXML 视图文件 (20+ 个)
+│   ├── com/cashier/view/                  # FXML 视图文件 (25 个)
 │   ├── css/                               # 样式文件
 │   │   ├── styles.css                     # 主样式文件
 │   │   ├── light-theme.css                # 浅色主题
@@ -183,6 +213,8 @@ hello/
 │   └── logback.xml                        # 日志配置
 ├── config/                                # 配置目录
 ├── docker/                                # Docker 配置
+│   ├── mysql-init/                        # 数据库初始化脚本
+│   └── mysql-backup/                      # 数据库备份目录
 ├── docs/                                  # 文档目录
 └── pom.xml                                # Maven 配置文件
 ```
@@ -197,12 +229,15 @@ hello/
 - 会员信息查询和绑定
 - 多种支付方式（现金、微信、支付宝、银行卡）
 - 现金找零自动计算
+- 会员折扣自动应用（折扣值 0-10，10 表示不打折，0 表示免费）
 
 ### 2. 库存管理
 - 商品添加、编辑、删除
 - 库存补货
 - 商品搜索和筛选
 - 库存预警显示
+- 分类管理
+- 单位管理
 
 ### 3. 会员管理
 - 会员注册
@@ -210,12 +245,14 @@ hello/
 - 等级自动升级（普通→银卡→金卡→钻石）
 - 余额充值
 - 生日特权
+- 折扣值系统（10=不打折，9.8=9.8折，9=9折，0=免费）
 
 ### 4. 促销管理
 - 满减活动
 - 折扣活动
 - 优惠券管理
 - 促销时间范围设置
+- 促销使用统计
 
 ### 5. 交易记录
 - 完整交易历史
@@ -232,21 +269,26 @@ hello/
 - 班次开始/结束
 - 班次收入统计
 - 多支付方式收入明细
+- 班次对比分析
 
 ### 8. 用户管理
 - 用户增删改查
-- 权限分配
+- 权限分配（管理员、收银员、财务）
 - 密码重置
+- 密码修改
 
 ### 9. 系统设置
 - 主题切换（浅色/深色/IntelliJ）
 - 税率配置
 - 数据备份/恢复
+- 主题偏好持久化
 
 ### 10. 采购管理 (v2.3.0)
 - 供应商管理（A/B/C级分级）
 - 采购订单创建和审批
+- 采购订单状态管理（待审批、已审批、已拒绝、已完成）
 - 采购入库管理
+- 支持部分入库
 - 自动更新库存
 
 ### 11. 库存盘点 (v2.3.0)
@@ -254,11 +296,12 @@ hello/
 - 实际库存录入
 - 自动计算差异
 - 完成盘点并调整库存
+- 盘点单审核
 
 ### 12. 报表统计 (v2.3.0)
 - 采购报表（订单统计、金额趋势、供应商排名）
 - 库存报表（周转率、滞销商品、积压分析）
-- 利润分析（成本、收入、毛利率、净利润）
+- 利润分析（采购成本、销售收入、毛利率、净利润）
 
 ---
 
@@ -329,7 +372,7 @@ hello/
 - `system_settings` - 系统设置
 - `theme_preferences` - 主题偏好
 
-### 采购管理表
+### 采购管理表 (v2.3.0)
 
 - `suppliers` - 供应商信息
 - `purchase_orders` - 采购订单
@@ -338,10 +381,47 @@ hello/
 - `purchase_inbound` - 采购入库记录
 - `purchase_inbound_items` - 采购入库明细
 
-### 库存管理表
+### 库存管理表 (v2.3.0)
 
 - `inventory_check` - 库存盘点
 - `inventory_check_items` - 库存盘点明细
+
+---
+
+## 测试
+
+### 测试框架
+
+- **JUnit 5.10.0** - 单元测试框架
+- **TestFX 4.0.18** - JavaFX UI 测试框架
+
+### 运行测试
+
+```bash
+# 运行所有测试
+mvn test
+
+# 运行特定测试类
+mvn test -Dtest=PasswordUtilTest
+mvn test -Dtest=ProductDAOTest
+mvn test -Dtest=UserDAOTest
+
+# 运行特定测试方法
+mvn test -Dtest=PasswordUtilTest#testHashPassword
+```
+
+### 现有测试
+
+- **PasswordUtilTest** - 密码加密工具测试（10个测试用例）
+- **ProductDAOTest** - 商品数据访问测试（10个测试用例）
+- **UserDAOTest** - 用户数据访问测试（10个测试用例）
+
+### 测试约定
+
+1. 测试类命名: `{ClassName}Test.java`
+2. 测试方法命名: `test{MethodName}` 或使用 `@DisplayName` 注解
+3. 使用 `@Test`、`@BeforeAll`、`@BeforeEach` 等注解组织测试
+4. 测试文件位置: `src/test/java/com/cashier/`
 
 ---
 
@@ -365,12 +445,22 @@ hello/
 - `findAll()` - 查询所有记录
 - 其他特定查询方法（如 `findByName()`, `findByDateRange()` 等）
 
+使用 PreparedStatement 防止 SQL 注入，所有参数化查询。
+
 ### 控制器层规范
 
 - 所有控制器应使用 `@FXML` 注解注入 UI 组件
 - 初始化逻辑放在 `initialize()` 方法中
 - 事件处理方法使用 `@FXML` 注解
 - 使用 `showError()` 和 `showAlert()` 方法显示提示信息
+
+### 测试规范
+
+- 使用 `@DisplayName` 注解提供清晰的测试描述
+- 使用 `@Order` 注解控制测试执行顺序（如需要）
+- 测试应独立运行，不依赖执行顺序
+- 每个测试方法应测试单一功能点
+- 使用 `@BeforeAll` 和 `@AfterAll` 进行测试环境的设置和清理
 
 ### 日志规范
 
@@ -396,6 +486,13 @@ logger.error("错误日志", exception);
 getApp().applyTheme(getScene(), themeName);
 ```
 
+### 数据库安全
+
+1. 使用 PreparedStatement 防止 SQL 注入
+2. 密码使用 BCrypt 加密存储
+3. 数据库密码建议使用环境变量 `CASHER_DB_PASSWORD`
+4. 生产环境避免使用 root 用户
+
 ---
 
 ## 常见任务
@@ -407,6 +504,7 @@ getApp().applyTheme(getScene(), themeName);
 3. 创建 Controller 类（在 `controller/` 目录）
 4. 创建 FXML 视图文件（在 `view/` 目录）
 5. 在 `MainController` 中添加菜单项
+6. 在 `DatabaseManager` 中添加建表 SQL（如需要）
 
 ### 数据库表变更
 
@@ -414,12 +512,20 @@ getApp().applyTheme(getScene(), themeName);
 2. 或在 `docker/mysql-init/` 中添加迁移脚本
 3. 创建对应的 DAO 类
 4. 更新 Model 类
+5. 添加对应的测试用例
 
 ### 添加新的快捷键
 
 1. 在 `MainView.fxml` 或相关 FXML 文件中添加快捷键提示
 2. 在对应的 Controller 中添加事件处理方法
-3. 更新 README.md 中的快捷键说明
+3. 更新 AGENTS.md 中的快捷键说明
+
+### 添加单元测试
+
+1. 在 `src/test/java/com/cashier/` 下创建测试类
+2. 继承或使用 JUnit 5 注解
+3. 编写测试方法并使用断言验证结果
+4. 运行测试确保通过
 
 ---
 
@@ -438,6 +544,7 @@ getApp().applyTheme(getScene(), themeName);
 2. 检查防火墙设置
 3. 验证数据库用户名和密码
 4. 确认数据库 URL 格式正确
+5. 尝试使用环境变量 `CASHER_DB_PASSWORD` 存储密码
 
 ### 编译错误
 
@@ -447,6 +554,19 @@ mvn clean compile
 
 # 如果依赖下载失败
 mvn dependency:resolve
+
+# 查看详细错误信息
+mvn compile -X
+```
+
+### 测试失败
+
+```bash
+# 运行单个测试类查看详细错误
+mvn test -Dtest=ClassName
+
+# 查看测试报告
+cat target/surefire-reports/*.txt
 ```
 
 ---
@@ -462,6 +582,32 @@ mvn dependency:resolve
 
 ---
 
+## 版本历史
+
+### v2.3.0 (2026-02-07)
+- ✨ 完善采购管理模块（供应商、订单、审批、入库）
+- ✨ 完善库存盘点模块
+- ✨ 完善报表统计模块（采购、库存、利润）
+- ✨ 添加单元测试支持
+- 🐛 修复多项UI和数据库问题
+
+### v2.2.1 (2026-02-04)
+- 🎨 UI 优化和数据库初始化完善
+- 🗄️ 添加数据库初始化脚本
+- 🔤 修复中文字符编码问题
+
+### v2.2.0 (2026-02-03)
+- ✨ 完整迁移到 MySQL 8.0 数据库
+- 📊 Docker Compose 一键部署支持
+- 🔄 自动数据迁移工具
+
+### v2.1.0 (2026-01-08)
+- ✨ 实现完整的快捷键系统
+- 🎨 UI 优化和菜单结构调整
+- 🐛 修复退出登录功能
+
+---
+
 ## 许可证
 
 木兰宽松许可证 v2 (MulanPSL2)
@@ -470,12 +616,15 @@ mvn dependency:resolve
 
 ## 未来计划
 
-- 云端数据同步
-- 移动端应用
-- 二维码扫描支持
-- 更多统计图表
-- 多语言支持
-- 短信通知功能
-- 退货管理功能
-- 数据导出功能（Excel/PDF）
-- 多仓库管理
+- [ ] 云端数据同步
+- [ ] 移动端应用
+- [ ] 二维码扫描支持
+- [ ] 更多统计图表
+- [ ] 多语言支持
+- [ ] 短信通知功能
+- [ ] 退货管理功能
+- [ ] 数据导出功能（Excel/PDF）
+- [ ] 多仓库管理
+- [x] 单元测试覆盖
+- [ ] 集成测试
+- [ ] 性能优化

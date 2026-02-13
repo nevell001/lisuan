@@ -27,7 +27,7 @@
         <DatePicker fx:id="endDatePicker" prefWidth="150"/>
 
         <Label text="供应商:"/>
-        <ComboBox fx:id="supplierComboBox" prefWidth="150"/>
+        <ComboBox fx:id="supplierComboBox" prefWidth="200"/>
 
         <Region HBox.hgrow="ALWAYS"/>
 
@@ -131,7 +131,7 @@
             <TableView fx:id="orderTable" VBox.vgrow="ALWAYS" styleClass="order-table">
                 <columns>
                     <TableColumn fx:id="orderNoColumn" text="订单号" prefWidth="150"/>
-                    <TableColumn fx:id="supplierColumn" text="供应商" prefWidth="150"/>
+                    <TableColumn fx:id="supplierColumn" text="供应商" prefWidth="200"/>
                     <TableColumn fx:id="dateColumn" text="采购日期" prefWidth="120"/>
                     <TableColumn fx:id="amountColumn" text="订单金额" prefWidth="120"/>
                     <TableColumn fx:id="quantityColumn" text="总数量" prefWidth="100"/>
@@ -152,7 +152,7 @@
                 <TableView fx:id="supplierRankTable" VBox.vgrow="ALWAYS" styleClass="supplier-rank-table">
                     <columns>
                         <TableColumn fx:id="rankColumn" text="排名" prefWidth="60"/>
-                        <TableColumn fx:id="supplierNameColumn" text="供应商名称" prefWidth="150"/>
+                        <TableColumn fx:id="supplierNameColumn" text="供应商名称" prefWidth="200"/>
                         <TableColumn fx:id="orderCountColumn" text="订单数量" prefWidth="100"/>
                         <TableColumn fx:id="supplierAmountColumn" text="采购金额" prefWidth="120"/>
                     </columns>

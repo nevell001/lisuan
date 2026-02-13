@@ -4,7 +4,7 @@ import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Transaction;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
@@ -23,7 +23,7 @@ import java.util.Map;
  * 处理交易记录的查询和显示
  */
 public class TransactionController {
-    private static final Logger logger = LoggerFactory.getLogger(TransactionController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(TransactionController.class);
 
     @FXML
     private TableView<Transaction> transactionTable;
@@ -154,11 +154,10 @@ public class TransactionController {
      * 加载交易数据
      */
     private void loadTransactions() {
-        System.out.println("TransactionController: 开始加载交易数据...");
+        logger.info("TransactionController: 开始加载交易数据...");
         try {
             allTransactions = TransactionDAO.findAll();
         } catch (SQLException e) {
-            System.err.println("加载交易数据失败: " + e.getMessage());
             logger.error("加载交易数据失败", e);
             showError("加载交易数据失败: " + e.getMessage());
             allTransactions = new java.util.ArrayList<>();
@@ -166,7 +165,7 @@ public class TransactionController {
         transactionList = FXCollections.observableArrayList(allTransactions);
         transactionTable.setItems(transactionList);
         updateStatistics();
-        System.out.println("TransactionController: 加载了 " + allTransactions.size() + " 条交易记录");
+        logger.info("TransactionController: 加载了 {} 条交易记录", allTransactions.size());
     }
 
     /**

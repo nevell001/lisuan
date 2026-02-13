@@ -6,7 +6,7 @@ import com.cashier.model.User;
 import com.cashier.util.FXUtils;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 import javafx.animation.Animation;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -35,7 +35,7 @@ import java.util.Map;
  * 处理主界面的导航和功能
  */
 public class MainController {
-    private static final Logger logger = LoggerFactory.getLogger(MainController.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(MainController.class);
 
     @FXML
     private Label currentUserLabel;
@@ -545,7 +545,7 @@ public class MainController {
         updateStatus("关于");
         String about =
             "收银系统 Cashier System\n\n" +
-            "版本: 2.2.1 (JavaFX)\n" +
+            "版本: 2.3.0 (JavaFX)\n" +
             "开发: nevell\n\n" +
             "技术栈:\n" +
             "- JavaFX 17.0.8\n" +
@@ -560,11 +560,11 @@ public class MainController {
 
     @FXML
     private void handleInventory() {
-        updateStatus("库存管理");
+        updateStatus("商品管理");
         setActiveButton(inventoryBtn);
         
         try {
-            // 加载库存管理界面
+            // 加载商品管理界面
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(getClass().getResource("/com/cashier/view/InventoryView.fxml"));
             VBox root = loader.load();
@@ -573,10 +573,10 @@ public class MainController {
             InventoryController controller = loader.getController();
             
             // 创建内容标签页
-            createContentTab("库存管理", root);
+            createContentTab("商品管理", root);
             
         } catch (IOException e) {
-            showError("加载库存管理界面失败: " + e.getMessage());
+            showError("加载商品管理界面失败: " + e.getMessage());
         }
     }
 
@@ -586,27 +586,25 @@ public class MainController {
         setActiveButton(cartBtn);
 
         try {
-            System.out.println("MainController: 开始加载购物车界面...");
+            logger.debug("MainController: 开始加载购物车界面...");
             // 加载购物车界面（购物车和结账已合并）
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(getClass().getResource("/com/cashier/view/CartView.fxml"));
-            System.out.println("MainController: FXML文件路径: " + getClass().getResource("/com/cashier/view/CartView.fxml"));
+            logger.debug("MainController: FXML文件路径: {}", getClass().getResource("/com/cashier/view/CartView.fxml"));
             VBox root = loader.load();
 
             // 获取控制器
             CartController controller = loader.getController();
-            System.out.println("MainController: 获取控制器成功");
+            logger.debug("MainController: 获取控制器成功");
 
             // 创建内容标签页
             createContentTab("pos/结账", root);
-            System.out.println("MainController: 购物车界面加载成功");
+            logger.debug("MainController: 购物车界面加载成功");
 
         } catch (IOException e) {
-            System.err.println("MainController: 加载购物车界面失败");
             logger.error("加载购物车界面失败", e);
             showError("加载POS界面失败: " + e.getMessage());
         } catch (Exception e) {
-            System.err.println("MainController: 加载购物车界面时发生异常");
             logger.error("加载购物车界面时发生异常", e);
             showError("加载POS界面失败: " + e.getMessage());
         }
@@ -1047,7 +1045,7 @@ public class MainController {
 
         // 根据标题重新打开对应的界面
         switch (title) {
-            case "库存管理":
+            case "商品管理":
                 handleInventory();
                 break;
             case "pos/结账":
