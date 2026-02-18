@@ -174,6 +174,84 @@ echo [Docker] Checking Docker Compose...
 docker-compose --version >nul 2>&1
 if errorlevel 1 goto :no_docker_compose
 
+echo [Docker] Checking for local MySQL instance...
+REM 检查 3306 端口是否被占用
+netstat -ano | findstr ":3306" | findstr "LISTENING" >nul 2>&1
+if errorlevel 1 goto :port_free
+
+REM 端口被占用，检查是否是 MySQL
+for /f "tokens=5" %%a in ('netstat -ano ^| findstr ":3306" ^| findstr "LISTENING"') do set LOCAL_MYSQL_PID=%%a
+tasklist /FI "PID eq %LOCAL_MYSQL_PID%" /FI "IMAGENAME eq mysqld.exe" 2>nul | find /i "mysqld.exe" >nul 2>&1
+if errorlevel 1 goto :port_not_mysql
+
+REM 本地 MySQL 正在运行
+echo [Warning] Local MySQL is already running on port 3306!
+echo.
+echo Detected MySQL process:
+echo   PID: %LOCAL_MYSQL_PID%
+tasklist /FI "PID eq %LOCAL_MYSQL_PID%" /V 2>nul | findstr "mysqld.exe"
+echo.
+echo This will cause a port conflict with Docker MySQL.
+echo.
+echo Please select an option:
+echo   1 - Stop local MySQL and use Docker MySQL (Recommended)
+echo   2 - Use Docker MySQL on different port (3307)
+echo   3 - Use existing local MySQL instead
+echo.
+set /p LOCAL_MYSQL_CHOICE="Enter option (1/2/3, default=1): "
+if "%LOCAL_MYSQL_CHOICE%"=="" set LOCAL_MYSQL_CHOICE=1
+
+if "%LOCAL_MYSQL_CHOICE%"=="1" goto :stop_local_mysql
+if "%LOCAL_MYSQL_CHOICE%"=="2" goto :use_port_3307
+if "%LOCAL_MYSQL_CHOICE%"=="3" goto :use_local_mysql_instead
+
+echo [Warning] Invalid option, continuing with Docker MySQL on port 3306
+echo [Warning] This may cause a port conflict
+goto :docker_start_mysql
+
+:stop_local_mysql
+echo [Docker] Stopping local MySQL...
+REM 尝试停止 MySQL 服务
+net stop MySQL >nul 2>&1
+net stop MySQL80 >nul 2>&1
+net stop MySQL84 >nul 2>&1
+REM 如果服务停止失败，尝试杀死进程
+taskkill /F /PID %LOCAL_MYSQL_PID% >nul 2>&1
+echo [Docker] Waiting for port 3306 to be released...
+timeout /t 3 /nobreak >nul
+goto :docker_start_mysql
+
+:use_port_3307
+echo [Docker] Using Docker MySQL on port 3307...
+REM 临时修改 docker-compose.yml 中的端口映射
+if exist docker-compose.yml (
+    findstr /V "published:" docker-compose.yml > docker-compose.yml.tmp
+    echo     - "3307:3306" >> docker-compose.yml.tmp
+    move /Y docker-compose.yml.tmp docker-compose.yml >nul
+    set DB_PORT=3307
+    echo [Note] docker-compose.yml has been modified to use port 3307
+) else (
+    echo [Error] docker-compose.yml not found
+    echo [Fallback] Continuing with default port 3306 (may cause conflict)
+)
+goto :docker_start_mysql
+
+:use_local_mysql_instead
+echo [Info] Switching to local MySQL setup...
+set DB_TYPE=local
+goto :local_setup
+
+:port_not_mysql
+echo [Docker] Port 3306 is in use by another process (not MySQL)
+echo [Warning] This may cause issues with Docker MySQL
+set /p CONTINUE_ANYWAY="Continue anyway? (y/N): "
+if /i not "%CONTINUE_ANYWAY%"=="y" goto :cancel_install
+goto :docker_start_mysql
+
+:port_free
+echo [Docker] Port 3306 is free
+
+:docker_start_mysql
 echo [Docker] Starting MySQL container...
 docker-compose up -d mysql
 if errorlevel 1 goto :docker_start_failed
@@ -272,73 +350,71 @@ echo [Warning] MySQL client not found in PATH
 echo.
 echo [Java] Using Java to initialize database...
 
-REM ???? Java ???? SQL ???
-(
-echo import java.io.*;
-echo import java.sql.*;
-echo import java.nio.file.*;
-echo import java.util.*;
-echo.
-echo public class InitDatabase {
-echo     public static void main(String[] args^) throws Exception {
-echo         String host = "%DB_HOST%";
-echo         int port = Integer.parseInt("%DB_PORT%"^);
-echo         String user = "%DB_USERNAME%";
-echo         String password = "%DB_PASSWORD%";
-echo         String dbName = "%DB_NAME%";
-echo         String baseDir = "docker" + File.separator + "mysql-init";
-echo.
-echo         // 1. ?????
-echo         String url = "jdbc:mysql://" + host + ":" + port + "?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8";
-echo         try ^(Connection conn = DriverManager.getConnection(url, user, password^)^) {
-echo             Statement stmt = conn.createStatement(^);
-echo             stmt.execute("CREATE DATABASE IF NOT EXISTS " + dbName + " CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"^);
-echo             System.out.println("[OK] Database created"^);
-echo             stmt.close(^);
-echo         }
-echo.
-echo         // 2. ????????
-echo         url = "jdbc:mysql://" + host + ":" + port + "/" + dbName + "?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8";
-echo         try ^(Connection conn = DriverManager.getConnection(url, user, password^)^) {
-echo             // ????????
-echo             File scriptFile = new File(baseDir, "03-sample-data.sql"^);
-echo             if ^(!scriptFile.exists(^)^) {
-echo                 System.err.println("[Error] Script file not found: " + scriptFile.getAbsolutePath(^)^);
-echo                 System.exit^(1^);
-echo             }
-echo.
-echo             String content = new String^(Files.readAllBytes^(scriptFile.toPath^(^)^)^);
-echo             // ?? SQL ??????????
-echo             String[] statements = content.split^(";\\s*\\n"^);
-echo.
-echo             Statement stmt = conn.createStatement(^);
-echo             int count = 0, errors = 0;
-echo             for ^(String sql : statements^) {
-echo                 sql = sql.trim(^);
-echo                 if ^(!sql.isEmpty(^) ^&^& ^!sql.startsWith^("--"^) ^&^& ^!sql.startsWith^("/*"^)^) {
-echo                     try {
-echo                         stmt.execute^(sql^);
-echo                         count++;
-echo                     } catch ^(SQLException e^) {
-echo                         errors++;
-echo                         // ???????????????????????
-echo                         if ^(!e.getMessage^(^).toLowerCase^(^).contains^("doesn't exist"^)^) {
-echo                             System.err.println("[Warning] SQL Error: " + e.getMessage^(^)^);
-echo                         }
-echo                     }
-echo                 }
-echo             }
-echo             System.out.println("[OK] " + count + " SQL statements executed, " + errors + " errors (tables will be created on app start)"^);
-echo             stmt.close(^);
-echo         }
-echo.
-echo         System.out.println("[Success] Database initialization completed"^);
-echo         System.out.println("[Note] Tables will be created automatically when you start the application"^);
-echo     }
-echo }
-) > InitDatabase.java
+REM 创建 Java 初始化程序文件
+echo import java.io.*; > InitDatabase.java
+echo import java.sql.*; >> InitDatabase.java
+echo import java.nio.file.*; >> InitDatabase.java
+echo import java.util.*; >> InitDatabase.java
+echo. >> InitDatabase.java
+echo public class InitDatabase { >> InitDatabase.java
+echo     public static void main(String[] args) throws Exception { >> InitDatabase.java
+echo         String host = "%DB_HOST%"; >> InitDatabase.java
+echo         int port = Integer.parseInt("%DB_PORT%"); >> InitDatabase.java
+echo         String user = "%DB_USERNAME%"; >> InitDatabase.java
+echo         String password = "%DB_PASSWORD%"; >> InitDatabase.java
+echo         String dbName = "%DB_NAME%"; >> InitDatabase.java
+echo         String baseDir = "docker" + File.separator + "mysql-init"; >> InitDatabase.java
+echo. >> InitDatabase.java
+echo         // 1. 创建数据库 >> InitDatabase.java
+echo         String url = "jdbc:mysql://" + host + ":" + port + "?useSSL=false^&serverTimezone=Asia/Shanghai^&allowPublicKeyRetrieval=true^&characterEncoding=UTF-8"; >> InitDatabase.java
+echo         try (Connection conn = DriverManager.getConnection(url, user, password)) { >> InitDatabase.java
+echo             Statement stmt = conn.createStatement(); >> InitDatabase.java
+echo             stmt.execute("CREATE DATABASE IF NOT EXISTS " + dbName + " CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci"); >> InitDatabase.java
+echo             System.out.println("[OK] Database created"); >> InitDatabase.java
+echo             stmt.close(); >> InitDatabase.java
+echo         } >> InitDatabase.java
+echo. >> InitDatabase.java
+echo         // 2. 导入示例数据 >> InitDatabase.java
+echo         url = "jdbc:mysql://" + host + ":" + port + "/" + dbName + "?useSSL=false^&serverTimezone=Asia/Shanghai^&allowPublicKeyRetrieval=true^&characterEncoding=UTF-8"; >> InitDatabase.java
+echo         try (Connection conn = DriverManager.getConnection(url, user, password)) { >> InitDatabase.java
+echo             // 读取初始化脚本 >> InitDatabase.java
+echo             File scriptFile = new File(baseDir, "03-sample-data.sql"); >> InitDatabase.java
+echo             if (!scriptFile.exists()) { >> InitDatabase.java
+echo                 System.err.println("[Error] Script file not found: " + scriptFile.getAbsolutePath()); >> InitDatabase.java
+echo                 System.exit(1); >> InitDatabase.java
+echo             } >> InitDatabase.java
+echo. >> InitDatabase.java
+echo             String content = new String(Files.readAllBytes(scriptFile.toPath())); >> InitDatabase.java
+echo             // 拆分 SQL 语句（忽略空行和注释） >> InitDatabase.java
+echo             String[] statements = content.split(";\\s*\\n"); >> InitDatabase.java
+echo. >> InitDatabase.java
+echo             Statement stmt = conn.createStatement(); >> InitDatabase.java
+echo             int count = 0, errors = 0; >> InitDatabase.java
+echo             for (String sql : statements) { >> InitDatabase.java
+echo                 sql = sql.trim(); >> InitDatabase.java
+echo                 if (!sql.isEmpty() ^&^& !sql.startsWith("--") ^&^& !sql.startsWith("/*")) { >> InitDatabase.java
+echo                     try { >> InitDatabase.java
+echo                         stmt.execute(sql); >> InitDatabase.java
+echo                         count++; >> InitDatabase.java
+echo                     } catch (SQLException e) { >> InitDatabase.java
+echo                         errors++; >> InitDatabase.java
+echo                         // 忽略表已存在的错误（表将在应用启动时自动创建） >> InitDatabase.java
+echo                         if (!e.getMessage().toLowerCase().contains("doesn't exist")) { >> InitDatabase.java
+echo                             System.err.println("[Warning] SQL Error: " + e.getMessage()); >> InitDatabase.java
+echo                         } >> InitDatabase.java
+echo                     } >> InitDatabase.java
+echo                 } >> InitDatabase.java
+echo             } >> InitDatabase.java
+echo             System.out.println("[OK] " + count + " SQL statements executed, " + errors + " errors (tables will be created on app start)"); >> InitDatabase.java
+echo             stmt.close(); >> InitDatabase.java
+echo         } >> InitDatabase.java
+echo. >> InitDatabase.java
+echo         System.out.println("[Success] Database initialization completed"); >> InitDatabase.java
+echo         System.out.println("[Note] Tables will be created automatically when you start the application"); >> InitDatabase.java
+echo     } >> InitDatabase.java
+echo } >> InitDatabase.java
 
-REM ??????????
+REM 编译并运行初始化程序
 echo [Java] Compiling database initializer...
 javac -cp target\cashier-system-fx-%APP_VERSION%-jar-with-dependencies.jar InitDatabase.java 2>nul
 if errorlevel 1 (
@@ -355,13 +431,18 @@ if errorlevel 1 (
     goto :write_local_config
 )
 
-REM ??????
+REM 清理临时文件
 del InitDatabase.java >nul 2>&1
 del InitDatabase.class >nul 2>&1
 
 echo [Done] Database initialization completed using Java
 echo.
 goto :write_local_config
+
+:cancel_install
+echo [Info] Installation cancelled
+pause
+exit /b 0
 
 :write_docker_config
 set DB_HOST=localhost
