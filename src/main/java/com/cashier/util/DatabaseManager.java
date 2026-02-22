@@ -451,8 +451,7 @@ public class DatabaseManager {
                     username VARCHAR(50) PRIMARY KEY,
                     theme_name VARCHAR(20) DEFAULT 'light',
                     updated_at BIGINT,
-                    INDEX idx_username (username),
-                    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+                    INDEX idx_username (username)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);
 

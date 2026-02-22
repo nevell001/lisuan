@@ -12,10 +12,7 @@ services:
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_unicode_ci
     ports:
-      - target: 3306
-        published: 3306
-        host_ip: 0.0.0.0
-        protocol: tcp
+      - "3306:3306"
     volumes:
       - cashier-mysql-data:/var/lib/mysql
       - ./docker/my.cnf:/etc/mysql/conf.d/custom.cnf:ro

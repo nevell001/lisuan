@@ -282,8 +282,15 @@ public class DataService {
      * 加载主题偏好
      */
     public static String loadThemePreference() {
+        return loadThemePreference("default");
+    }
+
+    /**
+     * 加载指定用户的主题偏好
+     */
+    public static String loadThemePreference(String username) {
         try {
-            return ThemePreferenceDAO.getThemePreference();
+            return ThemePreferenceDAO.getThemePreference(username);
         } catch (SQLException e) {
             logger.error("加载主题偏好失败", e);
             return "light"; // 默认主题
@@ -294,8 +301,15 @@ public class DataService {
      * 保存主题偏好
      */
     public static void saveThemePreference(String themeName) {
+        saveThemePreference("default", themeName);
+    }
+
+    /**
+     * 保存指定用户的主题偏好
+     */
+    public static void saveThemePreference(String username, String themeName) {
         try {
-            ThemePreferenceDAO.setThemePreference(themeName);
+            ThemePreferenceDAO.setThemePreference(username, themeName);
         } catch (SQLException e) {
             logger.error("保存主题偏好失败", e);
         }
