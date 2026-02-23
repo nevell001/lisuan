@@ -254,6 +254,85 @@
             </ScrollPane>
         </Tab>
 
+        <!-- 条码查询 API 设置标签页 -->
+        <Tab text="条码查询 API">
+            <ScrollPane fitToWidth="true" fitToHeight="true">
+                <VBox spacing="20" styleClass="settings-content">
+                    <padding>
+                        <Insets top="20" right="20" bottom="20" left="20"/>
+                    </padding>
+
+                    <CheckBox fx:id="enableBarcodeApiCheckBox" text="启用条码查询功能"/>
+
+                    <Separator/>
+
+                    <Label text="API 配置" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    
+                    <GridPane hgap="10" vgap="10">
+                        <padding>
+                            <Insets top="10" right="0" bottom="0" left="0"/>
+                        </padding>
+
+                        <Label text="API 提供商:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <ComboBox fx:id="apiProviderComboBox" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="200"/>
+
+                        <Label text="API 密钥:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <TextField fx:id="apiKeyField" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="300" promptText="请输入 API 密钥"/>
+                    </GridPane>
+
+                    <VBox spacing="5">
+                        <padding>
+                            <Insets top="10" right="0" bottom="0" left="0"/>
+                        </padding>
+                        <Label text="获取 API 密钥:" style="-fx-font-weight: 600;"/>
+                        <HBox spacing="5">
+                            <Hyperlink text="探数API" onAction="#handleOpenTanshuApi"/>
+                            <Label text="|" style="-fx-text-fill: #BDBDBD;"/>
+                            <Hyperlink text="聚合数据" onAction="#handleOpenJuheApi"/>
+                            <Label text="|" style="-fx-text-fill: #BDBDBD;"/>
+                            <Hyperlink text="天聚数据" onAction="#handleOpenTianapiApi"/>
+                        </HBox>
+                    </VBox>
+
+                    <Separator/>
+
+                    <Label text="自动查询设置" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    
+                    <VBox spacing="10">
+                        <padding>
+                            <Insets top="10" right="0" bottom="0" left="0"/>
+                        </padding>
+
+                        <CheckBox fx:id="autoQueryBarcodeCheckBox" text="扫描条码时自动查询（仅8位以上纯数字）"/>
+                        <CheckBox fx:id="autoSaveNewProductCheckBox" text="查询到新商品时自动保存到数据库"/>
+                    </VBox>
+
+                    <Separator/>
+
+                    <VBox spacing="10" style="-fx-background-color: #FFF3E0; -fx-padding: 15; -fx-background-radius: 5;">
+                        <Label text="使用说明:" style="-fx-font-weight: bold; -fx-text-fill: #F57C00;"/>
+                        <Label text="• 启用后，扫描条码时会自动查询商品信息" style="-fx-wrap-text: true;"/>
+                        <Label text="• 如果商品不存在，会自动保存到数据库" style="-fx-wrap-text: true;"/>
+                        <Label text="• 请确保已配置有效的 API 密钥" style="-fx-wrap-text: true;"/>
+                        <Label text="• 支持的条码格式：8位以上纯数字" style="-fx-wrap-text: true;"/>
+                    </VBox>
+
+                    <Separator/>
+
+                    <HBox spacing="10" alignment="CENTER_RIGHT">
+                        <Button text="测试连接"
+                                onAction="#handleTestApiConnection"
+                                prefWidth="120"
+                                styleClass="info-button"/>
+                        <Button text="保存设置"
+                                onAction="#handleSaveBarcodeApiSettings"
+                                prefWidth="120"
+                                styleClass="primary-button"/>
+                    </HBox>
+                </VBox>
+            </ScrollPane>
+        </Tab>
+
     </TabPane>
 
 </VBox>
