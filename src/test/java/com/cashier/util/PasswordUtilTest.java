@@ -96,13 +96,15 @@ public class PasswordUtilTest {
     }
 
     @Test
-    @DisplayName("测试向后兼容 - 非加密密码直接比较")
+    @DisplayName("测试向后兼容 - 非加密密码应该抛出异常")
     public void testBackwardCompatibility() {
         String plainPassword = "plainPassword123";
         String nonHashedPassword = "plainPassword123";
 
-        // 非加密格式的密码应该能直接比较
-        assertTrue(PasswordUtil.verifyPassword(plainPassword, nonHashedPassword));
+        // 非加密格式的密码应该抛出异常（已移除向后兼容）
+        assertThrows(IllegalArgumentException.class, () -> {
+            PasswordUtil.verifyPassword(plainPassword, nonHashedPassword);
+        });
     }
 
     @Test

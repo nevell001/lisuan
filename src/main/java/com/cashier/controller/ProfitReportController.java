@@ -150,7 +150,7 @@ public class ProfitReportController {
      * 初始化方法
      */
     @FXML
-    private void initialize() {
+    public void initialize() {
         // 初始化时间范围下拉框
         timeRangeComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
             "今天",

@@ -245,6 +245,7 @@ public class DatabaseManager {
                     spec VARCHAR(100),
                     min_stock INT DEFAULT 0,
                     cost DECIMAL(10,2),
+                    version INT DEFAULT 0 COMMENT '版本号（用于乐观锁）',
                     created_at BIGINT,
                     updated_at BIGINT,
                     INDEX idx_product_code (product_code),
@@ -787,6 +788,50 @@ public class DatabaseManager {
             System.err.println("检查数据库状态失败: " + e.getMessage());
         }
         return false;
+    }
+
+    /**
+     * 开始事务
+     * @param conn 数据库连接
+     * @throws SQLException 如果开始事务失败
+     */
+    public static void beginTransaction(Connection conn) throws SQLException {
+        if (conn != null && !conn.getAutoCommit()) {
+            throw new SQLException("事务已经在进行中");
+        }
+        if (conn != null) {
+            conn.setAutoCommit(false);
+            logger.debug("事务已开始");
+        }
+    }
+
+    /**
+     * 提交事务
+     * @param conn 数据库连接
+     * @throws SQLException 如果提交事务失败
+     */
+    public static void commitTransaction(Connection conn) throws SQLException {
+        if (conn != null && !conn.getAutoCommit()) {
+            conn.commit();
+            logger.debug("事务已提交");
+        }
+    }
+
+    /**
+     * 回滚事务
+     * @param conn 数据库连接
+     */
+    public static void rollbackTransaction(Connection conn) {
+        if (conn != null) {
+            try {
+                if (!conn.getAutoCommit()) {
+                    conn.rollback();
+                    logger.debug("事务已回滚");
+                }
+            } catch (SQLException e) {
+                logger.error("回滚事务失败", e);
+            }
+        }
     }
 
     /**

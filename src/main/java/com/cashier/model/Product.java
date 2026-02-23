@@ -15,10 +15,12 @@ public class Product {
     public String spec;           // 规格
     public int minStock;         // 最低库存预警
     public double cost;          // 成本价
+    public int version;          // 版本号（用于乐观锁）
 
     public Product() {
         this.id = 0;  // 默认ID为0，表示未保存到数据库
         this.productCode = "";  // 商品编号
+        this.version = 0;  // 默认版本号为0
     }
 
     public Product(String name, double price, int quantity) {

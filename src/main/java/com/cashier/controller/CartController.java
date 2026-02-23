@@ -29,6 +29,8 @@ import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
 import java.io.IOException;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -101,9 +103,6 @@ public class CartController {
 
     @FXML
     private Button clearButton;
-
-    @FXML
-    private Button checkoutButton;
 
     @FXML
     private TextField memberPhoneField;
@@ -193,6 +192,11 @@ public class CartController {
 
         // 检查并提示开班状态
         javafx.application.Platform.runLater(this::checkShiftStatus);
+
+        // 自动聚焦到搜索框，方便直接扫描商品
+        javafx.application.Platform.runLater(() -> {
+            searchField.requestFocus();
+        });
     }
 
     /**
@@ -399,9 +403,9 @@ public class CartController {
      */
     private void loadInventory() {
         logger.info("CartController: 开始加载库存数据...");
+        inventory = new HashMap<>();
         try {
             List<Product> products = ProductDAO.findAll();
-            inventory = new HashMap<>();
             for (Product product : products) {
                 inventory.put(product.name, product);
             }
@@ -432,7 +436,6 @@ public class CartController {
         removeButton.setDisable(!hasCartSelection);
         addButton.setDisable(!hasProductSelection);
         clearButton.setDisable(cartList.isEmpty());
-        checkoutButton.setDisable(cartList.isEmpty());
     }
 
     /**
@@ -461,6 +464,19 @@ public class CartController {
         if (quantity <= 0) {
             showError("添加数量必须大于0！");
             return;
+        }
+
+        // 从数据库获取最新库存数据，确保使用最新库存
+        Product latestProduct = null;
+        try {
+            latestProduct = ProductDAO.findById(product.id);
+            if (latestProduct != null) {
+                // 更新内存中的库存数据
+                inventory.put(product.name, latestProduct);
+                product = latestProduct;
+            }
+        } catch (SQLException e) {
+            logger.error("从数据库获取商品最新库存失败", e);
         }
 
         if (quantity > product.quantity) {
@@ -520,6 +536,8 @@ public class CartController {
             cartList.clear();
             updateStatistics();
             updateButtonStates();
+            // 清空购物车后，焦点回到搜索框，方便继续扫描
+            searchField.requestFocus();
         }
     }
 
@@ -529,6 +547,10 @@ public class CartController {
     @FXML
     private void handleSearch() {
         String searchText = searchField.getText().trim();
+
+        // 在搜索前刷新库存数据，确保使用最新数据
+        refreshLatestInventory();
+
         if (searchText.isEmpty()) {
             productList.setAll(inventory.values());
             updateCountLabel();
@@ -537,7 +559,7 @@ public class CartController {
 
         // 搜索匹配的商品（支持名称和条形码）
         List<Product> matchedProducts = inventory.values().stream()
-            .filter(p -> p.name.toLowerCase().contains(searchText.toLowerCase()) || 
+            .filter(p -> p.name.toLowerCase().contains(searchText.toLowerCase()) ||
                       p.barcode.toLowerCase().contains(searchText.toLowerCase()) ||
                       (p.productCode != null && p.productCode.toLowerCase().contains(searchText.toLowerCase())))
             .toList();
@@ -829,54 +851,107 @@ public class CartController {
      * @param changeAmount 找零金额（现金支付时使用）
      */
     private void executePayment(String paymentMethod, double receivedAmount, double changeAmount) {
-        // 扣减库存并保存到数据库
+        Connection conn = null;
         try {
+            // 获取数据库连接并开始事务
+            conn = com.cashier.util.DatabaseManager.getConnection();
+            com.cashier.util.DatabaseManager.beginTransaction(conn);
+
+            // 检查并扣减库存
             for (CartItem item : cartList) {
                 Product product = inventory.get(item.product.name);
-                if (product != null) {
-                    product.quantity -= item.quantity;
-                    ProductDAO.update(product);
+                if (product == null) {
+                    throw new SQLException("商品不存在: " + item.product.name);
+                }
+
+                // 从数据库获取最新库存
+                Product latestProduct = com.cashier.dao.ProductDAO.findById(product.id);
+                if (latestProduct == null) {
+                    throw new SQLException("商品不存在: " + item.product.name);
+                }
+
+                // 检查库存是否足够
+                if (latestProduct.quantity < item.quantity) {
+                    throw new SQLException("商品 " + item.product.name + " 库存不足！当前库存: " + latestProduct.quantity + ", 需要数量: " + item.quantity);
+                }
+
+                // 扣减库存
+                product.quantity = latestProduct.quantity - item.quantity;
+                product.version = latestProduct.version; // 用于乐观锁
+
+                // 更新数据库库存
+                if (!com.cashier.dao.ProductDAO.updateWithVersion(product)) {
+                    throw new SQLException("商品 " + item.product.name + " 库存更新失败，可能已被其他操作修改");
+                }
+
+                // 更新内存中的库存
+                inventory.put(item.product.name, product);
+            }
+
+            // 更新会员余额和积分
+            if (currentMember != null) {
+                double finalAmount = getFinalAmount();
+
+                // 从数据库获取最新会员信息
+                com.cashier.model.Member latestMember = com.cashier.dao.MemberDAO.findByPhone(currentMember.phone);
+                if (latestMember == null) {
+                    throw new SQLException("会员不存在: " + currentMember.phone);
+                }
+
+                // 检查余额是否足够
+                if (latestMember.balance < finalAmount) {
+                    throw new SQLException("会员余额不足！当前余额: " + latestMember.balance + ", 需要支付: " + finalAmount);
+                }
+
+                // 更新余额和积分
+                currentMember.balance = latestMember.balance - finalAmount;
+                currentMember.points = latestMember.points + (int)(finalAmount * 10);
+
+                // 更新数据库
+                if (!com.cashier.dao.MemberDAO.update(currentMember)) {
+                    throw new SQLException("更新会员信息失败");
                 }
             }
+
+            // 创建交易记录
+            Transaction transaction = createTransaction(paymentMethod, receivedAmount, changeAmount);
+            saveTransactionWithConnection(conn, transaction);
+
+            // 提交事务
+            com.cashier.util.DatabaseManager.commitTransaction(conn);
+            logger.info("交易成功完成，交易ID: {}", transaction.transactionId);
+
+            // 显示成功消息
+            showSuccess(paymentMethod, transaction, receivedAmount, changeAmount);
+
+            // 清空购物车
+            clear();
+
+        } catch (SQLException e) {
+            // 回滚事务
+            if (conn != null) {
+                com.cashier.util.DatabaseManager.rollbackTransaction(conn);
+            }
+            logger.error("交易失败: " + e.getMessage(), e);
+            showError("交易失败: " + e.getMessage());
         } catch (Exception e) {
-            logger.error("更新数据库库存失败", e);
-            // 更新内存中的库存数据
-            for (CartItem item : cartList) {
-                Product product = inventory.get(item.product.name);
-                if (product != null) {
-                    product.quantity -= item.quantity;
+            // 回滚事务
+            if (conn != null) {
+                com.cashier.util.DatabaseManager.rollbackTransaction(conn);
+            }
+            logger.error("交易失败: " + e.getMessage(), e);
+            showError("交易失败: " + e.getMessage());
+        } finally {
+            // 恢复自动提交
+            if (conn != null) {
+                try {
+                    conn.setAutoCommit(true);
+                    conn.close();
+                } catch (SQLException e) {
+                    logger.error("关闭数据库连接失败", e);
                 }
             }
-            DataService.saveInventory(inventory);
         }
-
-        // 更新会员余额和积分到数据库
-        if (currentMember != null) {
-            double finalAmount = getFinalAmount();
-            currentMember.balance -= finalAmount;
-            currentMember.points += (int)(finalAmount * 10); // 1元=10积分
-            try {
-                MemberDAO.update(currentMember);
-                MemberDAO.updateBalanceByPhone(currentMember.phone, -finalAmount);
-                MemberDAO.updatePointsByPhone(currentMember.phone, (int)(finalAmount * 10));
-            } catch (Exception e) {
-                logger.error("更新数据库会员信息失败", e);
-                // 使用 DataService 更新会员信息
-                Map<String, Member> members = DataService.loadMembers();
-                members.put(currentMember.phone, currentMember);
-                DataService.saveMembers(members);
-            }
-        }
-
-        // 创建交易记录
-        Transaction transaction = createTransaction(paymentMethod, receivedAmount, changeAmount);
-        saveTransaction(transaction);
-
-        // 显示成功消息
-        showSuccess(paymentMethod, transaction, receivedAmount, changeAmount);
-
-        // 清空购物车
-        clear();
     }
 
     /**
@@ -945,6 +1020,16 @@ public class CartController {
         transaction.operatorName = null;
         
         return transaction;
+    }
+
+    /**
+     * 保存交易记录（使用指定的数据库连接）
+     * @param conn 数据库连接
+     * @param transaction 交易记录
+     * @throws SQLException 如果保存失败
+     */
+    private void saveTransactionWithConnection(Connection conn, Transaction transaction) throws SQLException {
+        TransactionDAO.insertWithConnection(conn, transaction);
     }
 
     /**
@@ -1134,6 +1219,9 @@ public class CartController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+
+        // 支付成功后，焦点回到搜索框，方便继续扫描商品
+        searchField.requestFocus();
     }
 
     /**
@@ -1229,17 +1317,40 @@ public class CartController {
     public void clear() {
         cartMap.clear();
         cartList.clear();
-        
+
         // 重置已支付金额
         alreadyPaidAmount = 0.0;
-        
+
         // 清除会员信息
         currentMember = null;
         memberPhoneField.clear();
         memberInfoLabel.setText("");
-        
+
         updateStatistics();
         updateButtonStates();
+
+        // 清空后，焦点回到搜索框，方便继续扫描商品
+        searchField.requestFocus();
+    }
+
+    /**
+     * 刷新最新的库存数据
+     * 从数据库重新加载库存数据，确保使用最新数据
+     */
+    private void refreshLatestInventory() {
+        logger.info("CartController: 刷新库存数据...");
+        try {
+            List<Product> products = ProductDAO.findAll();
+            // 更新内存中的库存数据
+            for (Product product : products) {
+                inventory.put(product.name, product);
+            }
+            // 更新商品列表显示
+            productList.setAll(inventory.values());
+            logger.info("CartController: 库存数据刷新完成，共 {} 个商品", inventory.size());
+        } catch (SQLException e) {
+            logger.error("刷新库存数据失败", e);
+        }
     }
 
     /**

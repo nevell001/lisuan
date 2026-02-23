@@ -47,6 +47,12 @@ public class CashierSystemFXApplication extends Application {
         // 初始化数据管理器
         DataService.initialize();
 
+        // 初始化缓存管理器
+        com.cashier.util.CacheManager.initialize();
+
+        // 预热缓存
+        com.cashier.util.CacheManager.warmupCache();
+
         // 设置应用图标
         setupApplicationIcon();
 

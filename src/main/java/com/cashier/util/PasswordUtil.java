@@ -22,18 +22,16 @@ public class PasswordUtil {
      * @param plainPassword 明文密码
      * @param hashedPassword 加密后的密码
      * @return 是否匹配
+     * @throws IllegalArgumentException 如果密码格式不正确
      */
     public static boolean verifyPassword(String plainPassword, String hashedPassword) {
+        if (hashedPassword == null || !hashedPassword.startsWith("$2")) {
+            throw new IllegalArgumentException("密码格式不正确，必须使用BCrypt加密");
+        }
         try {
-            // 检查是否是 BCrypt 加密的密码（以 $2a$、$2b$、$2y$ 开头）
-            if (hashedPassword != null && hashedPassword.startsWith("$2")) {
-                return BCrypt.verifyer().verify(plainPassword.toCharArray(), hashedPassword).verified;
-            }
-            // 如果不是加密密码，直接比较（向后兼容旧数据）
-            return plainPassword.equals(hashedPassword);
+            return BCrypt.verifyer().verify(plainPassword.toCharArray(), hashedPassword).verified;
         } catch (Exception e) {
-            // 如果验证失败，尝试直接比较（向后兼容）
-            return plainPassword.equals(hashedPassword);
+            throw new IllegalArgumentException("密码验证失败", e);
         }
     }
 

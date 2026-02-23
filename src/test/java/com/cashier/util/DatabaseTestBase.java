@@ -114,14 +114,15 @@ public abstract class DatabaseTestBase {
                 price DECIMAL(10,2) NOT NULL,
                 quantity INT DEFAULT 0,
                 category VARCHAR(50),
-                barcode VARCHAR(50) UNIQUE,
+                barcode VARCHAR(50),
                 unit VARCHAR(20) DEFAULT '件',
                 description TEXT,
                 brand VARCHAR(100),
                 supplier VARCHAR(100),
                 spec VARCHAR(100),
                 min_stock INT DEFAULT 0,
-                cost DECIMAL(10,2)
+                cost DECIMAL(10,2),
+                version INT DEFAULT 0
             )
             """);
 

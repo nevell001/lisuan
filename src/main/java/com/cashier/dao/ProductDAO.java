@@ -18,7 +18,7 @@ public class ProductDAO {
     public static List<Product> findAll() throws SQLException {
         List<Product> products = new ArrayList<>();
         String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
-                     "brand, supplier, spec, min_stock, cost FROM products ORDER BY name";
+                     "brand, supplier, spec, min_stock, cost, version FROM products ORDER BY name";
 
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
@@ -53,7 +53,7 @@ public class ProductDAO {
      */
     public static Product findById(int id) throws SQLException {
         String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
-                     "brand, supplier, spec, min_stock, cost FROM products WHERE id = ?";
+                     "brand, supplier, spec, min_stock, cost, version FROM products WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -73,7 +73,7 @@ public class ProductDAO {
      */
     public static Product findByName(String name) throws SQLException {
         String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
-                     "brand, supplier, spec, min_stock, cost FROM products WHERE name = ?";
+                     "brand, supplier, spec, min_stock, cost, version FROM products WHERE name = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -93,7 +93,7 @@ public class ProductDAO {
      */
     public static Product findByProductCode(String productCode) throws SQLException {
         String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
-                     "brand, supplier, spec, min_stock, cost FROM products WHERE product_code = ?";
+                     "brand, supplier, spec, min_stock, cost, version FROM products WHERE product_code = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -113,7 +113,7 @@ public class ProductDAO {
      */
     public static Product findByBarcode(String barcode) throws SQLException {
         String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
-                     "brand, supplier, spec, min_stock, cost FROM products WHERE barcode = ?";
+                     "brand, supplier, spec, min_stock, cost, version FROM products WHERE barcode = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -223,6 +223,83 @@ public class ProductDAO {
             pstmt.setInt(14, product.id);
 
             return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * 使用乐观锁更新商品
+     * @param product 商品对象
+     * @return 如果更新成功返回true，否则返回false
+     * @throws SQLException 数据库操作异常
+     */
+    public static boolean updateWithVersion(Product product) throws SQLException {
+        String sql = "UPDATE products SET product_code = ?, name = ?, price = ?, quantity = ?, category = ?, barcode = ?, " +
+                     "unit = ?, description = ?, brand = ?, supplier = ?, spec = ?, " +
+                     "min_stock = ?, cost = ?, version = version + 1 WHERE id = ? AND version = ?";
+
+        try (Connection conn = DatabaseManager.getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setString(1, product.productCode);
+            pstmt.setString(2, product.name);
+            pstmt.setDouble(3, product.price);
+            pstmt.setInt(4, product.quantity);
+            pstmt.setString(5, product.category);
+            pstmt.setString(6, product.barcode);
+            pstmt.setString(7, product.unit);
+            pstmt.setString(8, product.description);
+            pstmt.setString(9, product.brand);
+            pstmt.setString(10, product.supplier);
+            pstmt.setString(11, product.spec);
+            pstmt.setInt(12, product.minStock);
+            pstmt.setDouble(13, product.cost);
+            pstmt.setInt(14, product.id);
+            pstmt.setInt(15, product.version);
+
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows > 0) {
+                product.version++; // 更新成功，增加版本号
+                return true;
+            }
+            return false; // 更新失败，版本号不匹配
+        }
+    }
+
+    /**
+     * 使用指定的数据库连接和乐观锁更新商品
+     * @param conn 数据库连接
+     * @param product 商品对象
+     * @return 如果更新成功返回true，否则返回false
+     * @throws SQLException 数据库操作异常
+     */
+    public static boolean updateWithVersionWithConnection(Connection conn, Product product) throws SQLException {
+        String sql = "UPDATE products SET product_code = ?, name = ?, price = ?, quantity = ?, category = ?, barcode = ?, " +
+                     "unit = ?, description = ?, brand = ?, supplier = ?, spec = ?, " +
+                     "min_stock = ?, cost = ?, version = version + 1 WHERE id = ? AND version = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, product.productCode);
+            pstmt.setString(2, product.name);
+            pstmt.setDouble(3, product.price);
+            pstmt.setInt(4, product.quantity);
+            pstmt.setString(5, product.category);
+            pstmt.setString(6, product.barcode);
+            pstmt.setString(7, product.unit);
+            pstmt.setString(8, product.description);
+            pstmt.setString(9, product.brand);
+            pstmt.setString(10, product.supplier);
+            pstmt.setString(11, product.spec);
+            pstmt.setInt(12, product.minStock);
+            pstmt.setDouble(13, product.cost);
+            pstmt.setInt(14, product.id);
+            pstmt.setInt(15, product.version);
+
+            int affectedRows = pstmt.executeUpdate();
+            if (affectedRows > 0) {
+                product.version++; // 更新成功，增加版本号
+                return true;
+            }
+            return false; // 更新失败，版本号不匹配
         }
     }
 
@@ -345,7 +422,7 @@ public class ProductDAO {
     public static List<Product> findLowStock() throws SQLException {
         List<Product> products = new ArrayList<>();
         String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
-                     "brand, supplier, spec, min_stock, cost FROM products " +
+                     "brand, supplier, spec, min_stock, cost, version FROM products " +
                      "WHERE quantity <= min_stock ORDER BY quantity";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -365,7 +442,7 @@ public class ProductDAO {
     public static List<Product> findByCategory(String category) throws SQLException {
         List<Product> products = new ArrayList<>();
         String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
-                     "brand, supplier, spec, min_stock, cost FROM products " +
+                     "brand, supplier, spec, min_stock, cost, version FROM products " +
                      "WHERE category = ? ORDER BY name";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -387,7 +464,7 @@ public class ProductDAO {
     public static List<Product> search(String keyword) throws SQLException {
         List<Product> products = new ArrayList<>();
         String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
-                     "brand, supplier, spec, min_stock, cost FROM products " +
+                     "brand, supplier, spec, min_stock, cost, version FROM products " +
                      "WHERE name LIKE ? OR product_code LIKE ? OR barcode LIKE ? OR description LIKE ? ORDER BY name";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -473,6 +550,7 @@ public class ProductDAO {
             rs.getInt("min_stock"),
             rs.getDouble("cost")
         );
+        product.version = rs.getInt("version");
         return product;
     }
 }

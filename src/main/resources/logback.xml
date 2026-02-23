@@ -1,5 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <configuration>
+    <!-- 开发环境配置 -->
+    <springProperty scope="context" name="APP_ENV" source="spring.profiles.active" defaultValue="dev"/>
+    
     <!-- 控制台输出 -->
     <appender name="CONSOLE" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
@@ -48,21 +51,54 @@
         <appender-ref ref="ERROR_FILE" />
     </appender>
 
-    <!-- 根日志记录器 -->
-    <root level="INFO">
-        <appender-ref ref="CONSOLE" />
-        <appender-ref ref="ASYNC_FILE" />
-        <appender-ref ref="ASYNC_ERROR_FILE" />
-    </root>
+    <!-- 开发环境配置 -->
+    <springProfile name="dev">
+        <root level="DEBUG">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_FILE" />
+            <appender-ref ref="ASYNC_ERROR_FILE" />
+        </root>
+        
+        <!-- 开发环境详细日志 -->
+        <logger name="com.cashier.dao" level="DEBUG" />
+        <logger name="com.cashier.util.DatabaseManager" level="DEBUG" />
+        <logger name="com.cashier.service" level="DEBUG" />
+        <logger name="com.cashier.controller" level="DEBUG" />
+        <logger name="com.cashier.util.CacheManager" level="DEBUG" />
+    </springProfile>
 
-    <!-- 数据库相关日志 -->
-    <logger name="com.cashier.dao" level="DEBUG" />
-    <logger name="com.cashier.util.DatabaseManager" level="DEBUG" />
+    <!-- 生产环境配置 -->
+    <springProfile name="prod">
+        <root level="INFO">
+            <appender-ref ref="ASYNC_FILE" />
+            <appender-ref ref="ASYNC_ERROR_FILE" />
+        </root>
+        
+        <!-- 生产环境简化日志 -->
+        <logger name="com.cashier.dao" level="WARN" />
+        <logger name="com.cashier.util.DatabaseManager" level="WARN" />
+        <logger name="com.cashier.service" level="INFO" />
+        <logger name="com.cashier.controller" level="INFO" />
+        <logger name="com.cashier.util.CacheManager" level="INFO" />
+        
+        <!-- 性能相关日志 -->
+        <logger name="com.cashier" level="INFO" />
+    </springProfile>
 
-    <!-- Service层日志 -->
-    <logger name="com.cashier.service" level="INFO" />
-
-    <!-- Controller层日志 -->
-    <logger name="com.cashier.controller" level="INFO" />
+    <!-- 默认配置（等同于开发环境） -->
+    <if condition='!isDefined("APP_ENV") || !("prod".equals("${APP_ENV}"))'>
+        <root level="DEBUG">
+            <appender-ref ref="CONSOLE" />
+            <appender-ref ref="ASYNC_FILE" />
+            <appender-ref ref="ASYNC_ERROR_FILE" />
+        </root>
+        
+        <!-- 默认环境详细日志 -->
+        <logger name="com.cashier.dao" level="DEBUG" />
+        <logger name="com.cashier.util.DatabaseManager" level="DEBUG" />
+        <logger name="com.cashier.service" level="DEBUG" />
+        <logger name="com.cashier.controller" level="DEBUG" />
+        <logger name="com.cashier.util.CacheManager" level="DEBUG" />
+    </if>
 
 </configuration>

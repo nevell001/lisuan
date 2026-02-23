@@ -180,6 +180,32 @@ public class MemberDAO {
     }
 
     /**
+     * 使用指定的数据库连接更新会员
+     * @param conn 数据库连接
+     * @param member 会员对象
+     * @return 如果更新成功返回true，否则返回false
+     * @throws SQLException 数据库操作异常
+     */
+    public static boolean updateWithConnection(Connection conn, Member member) throws SQLException {
+        String sql = "UPDATE members SET member_code = ?, phone = ?, name = ?, points = ?, level = ?, discount = ?, balance = ?, birthday = ? " +
+                     "WHERE id = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, member.memberCode);
+            pstmt.setString(2, member.phone);
+            pstmt.setString(3, member.name);
+            pstmt.setDouble(4, member.points);
+            pstmt.setString(5, member.level);
+            pstmt.setDouble(6, member.discount);
+            pstmt.setDouble(7, member.balance);
+            pstmt.setString(8, member.birthday);
+            pstmt.setInt(9, member.id);
+
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
      * 删除会员
      */
     public static boolean delete(int id) throws SQLException {

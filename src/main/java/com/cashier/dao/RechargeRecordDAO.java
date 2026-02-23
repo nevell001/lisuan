@@ -120,6 +120,30 @@ public class RechargeRecordDAO {
     }
 
     /**
+     * 使用指定的数据库连接插入充值记录
+     * @param conn 数据库连接
+     * @param record 充值记录
+     * @return 如果插入成功返回true，否则返回false
+     * @throws SQLException 数据库操作异常
+     */
+    public static boolean insertWithConnection(Connection conn, RechargeRecord record) throws SQLException {
+        String sql = "INSERT INTO recharges (member_phone, member_name, " +
+                     "amount, payment_method, timestamp, operator) " +
+                     "VALUES (?, ?, ?, ?, ?, ?)";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, record.memberPhone);
+            pstmt.setString(2, record.memberName);
+            pstmt.setDouble(3, record.amount);
+            pstmt.setString(4, record.paymentMethod);
+            pstmt.setTimestamp(5, new Timestamp(record.timestamp.getTime()));
+            pstmt.setString(6, record.operator);
+
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
      * 批量插入充值记录
      */
     public static void batchInsert(List<RechargeRecord> records) throws SQLException {
