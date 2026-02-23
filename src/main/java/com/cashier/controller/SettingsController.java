@@ -93,6 +93,22 @@ public class SettingsController {
     @FXML
     private Spinner<Integer> passwordMaxAttemptsSpinner;
 
+    // 条码查询 API 设置标签页
+    @FXML
+    private CheckBox enableBarcodeApiCheckBox;
+
+    @FXML
+    private ComboBox<String> apiProviderComboBox;
+
+    @FXML
+    private TextField apiKeyField;
+
+    @FXML
+    private CheckBox autoQueryBarcodeCheckBox;
+
+    @FXML
+    private CheckBox autoSaveNewProductCheckBox;
+
     /**
      * 初始化方法
      */
@@ -155,6 +171,14 @@ public class SettingsController {
             new SpinnerValueFactory.IntegerSpinnerValueFactory(3, 10, 5);
         passwordMaxAttemptsSpinner.setValueFactory(passwordMaxAttemptsFactory);
 
+        // 初始化 API 提供商下拉框
+        apiProviderComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
+            "探数API (免费)",
+            "聚合数据 (免费)",
+            "天聚数据 (免费试用)"
+        ));
+        apiProviderComboBox.getSelectionModel().select(0);
+
         // 加载设置
         loadSettings();
 
@@ -188,6 +212,13 @@ public class SettingsController {
         // 加载安全设置
         autoLogoutCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("autoLogout", "true")));
         passwordComplexityCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("passwordComplexity", "true")));
+        
+        // 加载条码查询 API 设置
+        enableBarcodeApiCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("enableBarcodeApi", "true")));
+        apiProviderComboBox.getSelectionModel().select(settings.getOrDefault("apiProvider", "探数API (免费)"));
+        apiKeyField.setText(settings.getOrDefault("apiKey", ""));
+        autoQueryBarcodeCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("autoQueryBarcode", "true")));
+        autoSaveNewProductCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("autoSaveNewProduct", "true")));
         
         // 加载主题偏好
         String savedThemeCode = DataService.loadThemePreference();
@@ -515,6 +546,13 @@ public class SettingsController {
         settings.put("passwordComplexity", String.valueOf(passwordComplexityCheckBox.isSelected()));
         settings.put("passwordMinLength", String.valueOf(passwordMinLengthSpinner.getValue()));
         settings.put("passwordMaxAttempts", String.valueOf(passwordMaxAttemptsSpinner.getValue()));
+        
+        // 条码查询 API 设置
+        settings.put("enableBarcodeApi", String.valueOf(enableBarcodeApiCheckBox.isSelected()));
+        settings.put("apiProvider", apiProviderComboBox.getSelectionModel().getSelectedItem());
+        settings.put("apiKey", apiKeyField.getText().trim());
+        settings.put("autoQueryBarcode", String.valueOf(autoQueryBarcodeCheckBox.isSelected()));
+        settings.put("autoSaveNewProduct", String.valueOf(autoSaveNewProductCheckBox.isSelected()));
         
         // 保存到文件
         DataService.saveSettings(

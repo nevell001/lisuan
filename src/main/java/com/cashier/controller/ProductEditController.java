@@ -8,6 +8,7 @@ import com.cashier.model.Category;
 import com.cashier.model.Product;
 import com.cashier.model.Supplier;
 import com.cashier.model.Unit;
+import com.cashier.service.BarcodeQueryService;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
@@ -50,6 +51,9 @@ public class ProductEditController {
     private TextField barcodeField;
 
     @FXML
+    private Button queryBarcodeButton;
+
+    @FXML
     private ComboBox<String> unitComboBox;
 
     @FXML
@@ -86,6 +90,7 @@ public class ProductEditController {
     private Product product;
     private boolean okClicked = false;
     private Map<String, Product> inventory;
+    private BarcodeQueryService barcodeQueryService;
 
     /**
      * 初始化方法
@@ -137,6 +142,12 @@ public class ProductEditController {
 
         // 强制设置 TextArea 样式，去除所有内部边框
         styleTextArea(descriptionField);
+
+        // 初始化条码查询服务
+        barcodeQueryService = new BarcodeQueryService();
+
+        // 设置查询按钮事件处理
+        queryBarcodeButton.setOnAction(event -> handleQueryBarcode());
     }
 
     /**
@@ -493,6 +504,88 @@ public class ProductEditController {
         } else {
             errorLabel.setText(errorMessage);
             return false;
+        }
+    }
+
+    /**
+     * 处理条码查询按钮点击
+     */
+    @FXML
+    private void handleQueryBarcode() {
+        String barcode = barcodeField.getText().trim();
+        if (barcode.isEmpty()) {
+            errorLabel.setText("请输入条码后再查询");
+            return;
+        }
+
+        // 先查询本地数据库
+        try {
+            Product existingProduct = ProductDAO.findByBarcode(barcode);
+            if (existingProduct != null) {
+                // 如果商品已存在，填充信息
+                fillProductInfo(existingProduct);
+                errorLabel.setText("商品已存在于数据库");
+                return;
+            }
+        } catch (SQLException e) {
+            logger.error("查询本地数据库失败", e);
+        }
+
+        // 本地不存在，调用 API 查询
+        errorLabel.setText("正在查询商品信息...");
+        new Thread(() -> {
+            try {
+                Product apiProduct = barcodeQueryService.queryBarcode(barcode);
+                javafx.application.Platform.runLater(() -> {
+                    if (apiProduct != null) {
+                        fillProductFromAPI(apiProduct);
+                        errorLabel.setText("查询成功");
+                    } else {
+                        errorLabel.setText("未找到该条码的商品信息");
+                    }
+                });
+            } catch (Exception e) {
+                logger.error("查询商品信息失败", e);
+                javafx.application.Platform.runLater(() -> {
+                    errorLabel.setText("查询失败: " + e.getMessage());
+                });
+            }
+        }).start();
+    }
+
+    /**
+     * 填充商品信息
+     */
+    private void fillProductInfo(Product product) {
+        nameField.setText(product.name);
+        priceField.setText(String.valueOf(product.price));
+        barcodeField.setText(product.barcode);
+        specField.setText(product.spec != null ? product.spec : "");
+        brandField.setText(product.brand != null ? product.brand : "");
+        descriptionField.setText(product.description != null ? product.description : "");
+        costField.setText(product.cost > 0 ? String.valueOf(product.cost) : "");
+        
+        if (product.category != null && !product.category.isEmpty()) {
+            categoryComboBox.getSelectionModel().select(product.category);
+        }
+        
+        if (product.unit != null && !product.unit.isEmpty()) {
+            unitComboBox.getSelectionModel().select(product.unit);
+        }
+    }
+
+    /**
+     * 从 API 返回的数据填充商品信息
+     */
+    private void fillProductFromAPI(Product apiProduct) {
+        nameField.setText(apiProduct.name != null ? apiProduct.name : "");
+        barcodeField.setText(apiProduct.barcode != null ? apiProduct.barcode : "");
+        brandField.setText(apiProduct.brand != null ? apiProduct.brand : "");
+        specField.setText(apiProduct.spec != null ? apiProduct.spec : "");
+        descriptionField.setText(apiProduct.description != null ? apiProduct.description : "");
+        
+        if (apiProduct.price > 0) {
+            priceField.setText(String.valueOf(apiProduct.price));
         }
     }
 }
