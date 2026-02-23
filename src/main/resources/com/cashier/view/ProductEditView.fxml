@@ -110,10 +110,17 @@
         <!-- 第一列：条形码 -->
         <Label text="条形码:" GridPane.columnIndex="0" GridPane.rowIndex="5"
                style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
-        <TextField fx:id="barcodeField"
-                   GridPane.columnIndex="1" GridPane.rowIndex="5"
-                   prefWidth="240" promptText="可选，扫描输入"
-                   style="-fx-font-size: 14px;"/>
+        <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="5" alignment="CENTER_LEFT">
+            <TextField fx:id="barcodeField"
+                       prefWidth="160" promptText="可选，扫描输入"
+                       style="-fx-font-size: 14px;"/>
+            <Button fx:id="queryBarcodeButton"
+                    text="查询"
+                    onAction="#handleQueryBarcode"
+                    prefWidth="70"
+                    prefHeight="35"
+                    styleClass="info-button"/>
+        </HBox>
 
         <!-- 第二列：供应商 -->
         <Label text="供应商:" GridPane.columnIndex="2" GridPane.rowIndex="5"
