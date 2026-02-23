@@ -234,15 +234,20 @@ cd hello
 
 **方式一：使用 Docker Compose（推荐）**
 ```bash
-# 启动 MySQL 8.0 和 phpMyAdmin
+# 启动 MySQL 8.0
 docker-compose up -d
 
 # 查看日志
 docker-compose logs -f mysql
 
-# 访问 phpMyAdmin 管理界面
-# http://localhost:8080
-# 用户名: root, 密码: RootPassword123!
+# 数据库管理工具推荐：DBeaver
+# 下载地址：https://dbeaver.io/download/
+# 连接配置：
+#   主机：localhost
+#   端口：3306
+#   数据库：cashier_system
+#   用户名：cashier
+#   密码：YourStrongPassword123!
 ```
 
 **方式二：使用本地 MySQL**

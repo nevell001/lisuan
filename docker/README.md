@@ -55,9 +55,14 @@ docker-compose restart
 ## 访问服务
 
 - **MySQL**: `localhost:3306`
-- **phpMyAdmin**: http://localhost:8080
-  - 用户名: `root`
-  - 密码: `RootPassword123!`
+- **数据库管理工具**: 推荐使用 DBeaver
+  - 下载地址: https://dbeaver.io/download/
+  - 连接配置:
+    - 主机: localhost
+    - 端口: 3306
+    - 数据库: cashier_system
+    - 用户名: cashier
+    - 密码: YourStrongPassword123!
 
 ## 数据持久化
 

@@ -92,7 +92,7 @@ if docker ps | grep -q "cashier-mysql"; then
     echo -e "  密码: ${GREEN}YourStrongPassword123!${NC}"
     echo ""
     echo "管理工具："
-    echo -e "  phpMyAdmin: ${GREEN}http://localhost:8080${NC}"
+    echo -e "  推荐: DBeaver (${GREEN}https://dbeaver.io/download/${NC})"
     echo ""
     echo "常用命令："
     echo "  查看日志: $DOCKER_COMPOSE logs -f mysql"

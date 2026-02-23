@@ -41,6 +41,9 @@ public class InventoryController {
     private TableView<Product> inventoryTable;
 
     @FXML
+    private TableColumn<Product, String> barcodeColumn;
+
+    @FXML
     private TableColumn<Product, String> nameColumn;
 
     @FXML
@@ -124,6 +127,7 @@ public class InventoryController {
      * 设置表格列
      */
     private void setupTableColumns() {
+        barcodeColumn.setCellValueFactory(new PropertyValueFactory<>("barcode"));
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         priceColumn.setCellValueFactory(cellData ->
             new SimpleStringProperty(String.format("%.2f", cellData.getValue().price)));

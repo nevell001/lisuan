@@ -5,7 +5,6 @@ import com.cashier.dao.ProductDAO;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.CartItem;
 import com.cashier.service.DataService;
-import com.cashier.service.BarcodeQueryService;
 import com.cashier.model.Member;
 import com.cashier.model.Product;
 import com.cashier.model.Transaction;
@@ -544,58 +543,8 @@ public class CartController {
             .toList();
 
         if (matchedProducts.isEmpty()) {
-            // 未找到商品，尝试通过 API 查询
+            // 未找到商品
             playScanNotFoundSound();
-            
-            // 检查是否是条码（纯数字且长度 >= 8）
-            if (searchText.matches("\\d{8,}")) {
-                showScanMessage("正在查询条码: " + searchText, true);
-                
-                // 异步查询 API
-                new Thread(() -> {
-                    try {
-                        BarcodeQueryService barcodeQueryService = new BarcodeQueryService();
-                        Product apiProduct = barcodeQueryService.queryBarcode(searchText);
-                        
-                        javafx.application.Platform.runLater(() -> {
-                            if (apiProduct != null) {
-                                // 创建新商品并自动保存
-                                try {
-                                    Product newProduct = createProductFromAPI(apiProduct, searchText);
-                                    if (newProduct != null) {
-                                        // 添加到购物车
-                                        addToCart(newProduct, 1);
-                                        playScanSuccessSound();
-                                        flashTable(cartTable);
-                                        showScanMessage("已添加（自动保存）: " + newProduct.name, true);
-                                        
-                                        // 更新库存列表
-                                        inventory.put(newProduct.name, newProduct);
-                                        productList.setAll(inventory.values());
-                                    }
-                                } catch (Exception e) {
-                                    logger.error("创建商品失败", e);
-                                    showScanMessage("查询成功但创建商品失败: " + e.getMessage(), false);
-                                }
-                            } else {
-                                showScanMessage("未找到商品: " + searchText, false);
-                            }
-                            searchField.clear();
-                            searchField.requestFocus();
-                        });
-                    } catch (Exception e) {
-                        logger.error("查询条码失败", e);
-                        javafx.application.Platform.runLater(() -> {
-                            showScanMessage("查询失败: " + e.getMessage(), false);
-                            searchField.clear();
-                            searchField.requestFocus();
-                        });
-                    }
-                }).start();
-                return;
-            }
-            
-            // 不是条码或查询失败
             showScanMessage("未找到商品: " + searchText, false);
             searchField.clear();
             searchField.requestFocus();
@@ -1306,29 +1255,4 @@ public class CartController {
         }
     }
 
-    /**
-     * 从 API 返回的数据创建商品
-     */
-    private Product createProductFromAPI(Product apiProduct, String barcode) throws SQLException {
-        Product product = new Product();
-        product.name = apiProduct.name != null && !apiProduct.name.isEmpty() ? apiProduct.name : "未知商品";
-        product.barcode = barcode;
-        product.price = apiProduct.price > 0 ? apiProduct.price : 0.0;
-        product.quantity = 100; // 默认库存
-        product.minStock = 10;
-        product.spec = apiProduct.spec != null ? apiProduct.spec : "";
-        product.brand = apiProduct.brand != null ? apiProduct.brand : "";
-        product.description = apiProduct.description != null ? apiProduct.description : "通过 API 自动添加";
-        product.category = "默认分类"; // 设置默认分类
-        product.unit = "个"; // 设置默认单位
-        
-        // 保存到数据库
-        boolean success = ProductDAO.insert(product);
-        if (!success) {
-            throw new SQLException("保存商品到数据库失败");
-        }
-        
-        logger.info("自动保存新商品: {} (条码: {})", product.name, barcode);
-        return product;
-    }
 }

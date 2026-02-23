@@ -27,26 +27,6 @@ services:
     networks:
       - cashier-network
 
-  # 可选：phpMyAdmin 管理界面
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
-    container_name: cashier-phpmyadmin
-    restart: unless-stopped
-    platform: linux/amd64
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: RootPassword123!
-      UPLOAD_LIMIT: 100M
-    ports:
-      - "8080:80"
-    depends_on:
-      mysql:
-        condition: service_healthy
-    networks:
-      - cashier-network
-
 volumes:
   cashier-mysql-data:
     driver: local

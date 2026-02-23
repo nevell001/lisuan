@@ -5,12 +5,14 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import java.io.File;
 import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -93,21 +95,38 @@ public class SettingsController {
     @FXML
     private Spinner<Integer> passwordMaxAttemptsSpinner;
 
-    // 条码查询 API 设置标签页
+    // 数据导入标签页
     @FXML
-    private CheckBox enableBarcodeApiCheckBox;
+    private ProgressBar importProgressBar;
 
     @FXML
-    private ComboBox<String> apiProviderComboBox;
+    private Label importStatusLabel;
 
     @FXML
-    private TextField apiKeyField;
+    private TextField csvFilePathField;
 
     @FXML
-    private CheckBox autoQueryBarcodeCheckBox;
+    private Button importFromCsvButton;
 
     @FXML
-    private CheckBox autoSaveNewProductCheckBox;
+    private CheckBox skipDuplicatesCheckBox;
+
+    @FXML
+    private Label totalProcessedLabel;
+
+    @FXML
+    private Label successCountLabel;
+
+    @FXML
+    private Label skippedCountLabel;
+
+    @FXML
+    private Label errorCountLabel;
+
+    @FXML
+    private VBox importMessagesArea;
+
+    private com.cashier.util.ProductDataImporter dataImporter;
 
     /**
      * 初始化方法
@@ -171,13 +190,8 @@ public class SettingsController {
             new SpinnerValueFactory.IntegerSpinnerValueFactory(3, 10, 5);
         passwordMaxAttemptsSpinner.setValueFactory(passwordMaxAttemptsFactory);
 
-        // 初始化 API 提供商下拉框
-        apiProviderComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
-            "探数API (免费)",
-            "聚合数据 (免费)",
-            "天聚数据 (免费试用)"
-        ));
-        apiProviderComboBox.getSelectionModel().select(0);
+        // 初始化数据导入工具
+        dataImporter = new com.cashier.util.ProductDataImporter();
 
         // 加载设置
         loadSettings();
@@ -212,13 +226,6 @@ public class SettingsController {
         // 加载安全设置
         autoLogoutCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("autoLogout", "true")));
         passwordComplexityCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("passwordComplexity", "true")));
-        
-        // 加载条码查询 API 设置
-        enableBarcodeApiCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("enableBarcodeApi", "true")));
-        apiProviderComboBox.getSelectionModel().select(settings.getOrDefault("apiProvider", "探数API (免费)"));
-        apiKeyField.setText(settings.getOrDefault("apiKey", ""));
-        autoQueryBarcodeCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("autoQueryBarcode", "true")));
-        autoSaveNewProductCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("autoSaveNewProduct", "true")));
         
         // 加载主题偏好
         String savedThemeCode = DataService.loadThemePreference();
@@ -547,13 +554,6 @@ public class SettingsController {
         settings.put("passwordMinLength", String.valueOf(passwordMinLengthSpinner.getValue()));
         settings.put("passwordMaxAttempts", String.valueOf(passwordMaxAttemptsSpinner.getValue()));
         
-        // 条码查询 API 设置
-        settings.put("enableBarcodeApi", String.valueOf(enableBarcodeApiCheckBox.isSelected()));
-        settings.put("apiProvider", apiProviderComboBox.getSelectionModel().getSelectedItem());
-        settings.put("apiKey", apiKeyField.getText().trim());
-        settings.put("autoQueryBarcode", String.valueOf(autoQueryBarcodeCheckBox.isSelected()));
-        settings.put("autoSaveNewProduct", String.valueOf(autoSaveNewProductCheckBox.isSelected()));
-        
         // 保存到文件
         DataService.saveSettings(
             Double.parseDouble(settings.getOrDefault("taxRate", "0.0")),
@@ -631,52 +631,128 @@ public class SettingsController {
     }
 
     /**
-     * 测试API连接
+     * 浏览 CSV 文件
      */
     @FXML
-    private void handleTestApiConnection() {
-        String provider = apiProviderComboBox.getSelectionModel().getSelectedItem();
-        String apiKey = apiKeyField.getText().trim();
+    private void handleBrowseCsvFile() {
+        javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
+        fileChooser.setTitle("选择 CSV 文件");
+        fileChooser.getExtensionFilters().add(
+            new javafx.stage.FileChooser.ExtensionFilter("CSV 文件", "*.csv")
+        );
+        fileChooser.getExtensionFilters().add(
+            new javafx.stage.FileChooser.ExtensionFilter("所有文件", "*.*")
+        );
         
-        if (apiKey.isEmpty()) {
-            showError("请输入 API 密钥");
+        File selectedFile = fileChooser.showOpenDialog(csvFilePathField.getScene().getWindow());
+        if (selectedFile != null) {
+            csvFilePathField.setText(selectedFile.getAbsolutePath());
+        }
+    }
+
+    /**
+     * 从 CSV 文件导入数据
+     */
+    @FXML
+    private void handleImportFromCSV() {
+        String filePath = csvFilePathField.getText().trim();
+        
+        if (filePath.isEmpty()) {
+            showError("请选择 CSV 文件");
             return;
         }
 
-        try {
-            com.cashier.service.BarcodeQueryService service = new com.cashier.service.BarcodeQueryService();
-            // 这里应该有方法来设置临时API密钥进行测试
-            // 暂时显示成功消息
-            showSuccess("API 配置保存成功！连接测试功能将在后续版本完善。");
-            logger.info("测试 API 连接 - 提供商: {}, 密钥: {}", provider, "****" + apiKey.substring(Math.max(0, apiKey.length() - 4)));
-        } catch (Exception e) {
-            logger.error("测试 API 连接失败", e);
-            showError("测试失败: " + e.getMessage());
+        if (dataImporter == null) {
+            dataImporter = new com.cashier.util.ProductDataImporter();
         }
-    }
 
-    /**
-     * 保存条码查询 API 设置
-     */
-    @FXML
-    private void handleSaveBarcodeApiSettings() {
-        if (validateBarcodeApiSettings()) {
-            saveSettings();
-            showSuccess("条码查询 API 设置保存成功！");
-        }
-    }
+        // 重置统计
+        dataImporter.resetStatistics();
+        updateImportStatistics();
+        clearImportMessages();
 
-    /**
-     * 验证条码查询 API 设置
-     */
-    private boolean validateBarcodeApiSettings() {
-        if (enableBarcodeApiCheckBox.isSelected()) {
-            String apiKey = apiKeyField.getText().trim();
-            if (apiKey.isEmpty()) {
-                showError("启用条码查询功能时必须配置 API 密钥");
-                return false;
+        // 显示进度条
+        importProgressBar.setVisible(true);
+        importProgressBar.setProgress(0);
+        importStatusLabel.setText("正在导入 CSV 文件...");
+
+        // 异步导入
+        new Thread(() -> {
+            try {
+                Map<String, Object> result = dataImporter.importFromCSV(filePath);
+                
+                javafx.application.Platform.runLater(() -> {
+                    updateImportStatistics();
+                    
+                    @SuppressWarnings("unchecked")
+                    List<String> messages = (List<String>) result.get("messages");
+                    
+                    if (messages != null) {
+                        for (String message : messages) {
+                            addImportMessage(message);
+                        }
+                    }
+                    
+                    if ((Boolean) result.get("success")) {
+                        importProgressBar.setProgress(1);
+                        importStatusLabel.setText("导入完成！");
+                        showSuccess("CSV 文件导入完成！");
+                    } else {
+                        importProgressBar.setProgress(1);
+                        importStatusLabel.setText("导入失败");
+                        showError("CSV 文件导入失败: " + result.get("error"));
+                    }
+                    
+                    // 延迟隐藏进度条
+                    javafx.application.Platform.runLater(() -> {
+                        try {
+                            Thread.sleep(2000);
+                        } catch (InterruptedException e) {
+                            Thread.currentThread().interrupt();
+                        }
+                        importProgressBar.setVisible(false);
+                    });
+                });
+            } catch (Exception e) {
+                logger.error("从 CSV 导入数据失败", e);
+                javafx.application.Platform.runLater(() -> {
+                    importProgressBar.setVisible(false);
+                    importStatusLabel.setText("导入失败");
+                    showError("从 CSV 导入数据失败: " + e.getMessage());
+                });
             }
-        }
-        return true;
+        }).start();
+    }
+
+    /**
+     * 更新导入统计
+     */
+    private void updateImportStatistics() {
+        if (dataImporter == null) return;
+        
+        Map<String, Integer> stats = dataImporter.getStatistics();
+        totalProcessedLabel.setText(String.valueOf(stats.get("totalProcessed")));
+        successCountLabel.setText(String.valueOf(stats.get("successCount")));
+        skippedCountLabel.setText(String.valueOf(stats.get("skippedCount")));
+        errorCountLabel.setText(String.valueOf(stats.get("errorCount")));
+    }
+
+    /**
+     * 添加导入消息
+     */
+    private void addImportMessage(String message) {
+        Label messageLabel = new Label(message);
+        messageLabel.setStyle("-fx-font-size: 12px; -fx-wrap-text: true;");
+        importMessagesArea.getChildren().add(messageLabel);
+    }
+
+    /**
+     * 清除导入消息
+     */
+    private void clearImportMessages() {
+        importMessagesArea.getChildren().clear();
+        Label logLabel = new Label("导入日志:");
+        logLabel.setStyle("-fx-font-weight: bold;");
+        importMessagesArea.getChildren().add(logLabel);
     }
 }

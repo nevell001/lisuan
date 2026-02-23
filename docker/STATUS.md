@@ -4,7 +4,7 @@
 
 ### 🎉 成功部分
 - ✅ MySQL 8.0 容器运行正常
-- ✅ phpMyAdmin 可访问 (http://localhost:8080)
+- ✅ DBeaver 可用于数据库管理 (https://dbeaver.io/download/)
 - ✅ root 用户已创建并设置密码
 - ✅ cashier 用户已创建并授权
 - ✅ 数据库 `cashier_system` 已创建
@@ -64,10 +64,15 @@ USE cashier_system;
 SHOW TABLES;
 ```
 
-**通过 phpMyAdmin**:
-1. 访问 http://localhost:8080
-2. 用户名: `root`
-3. 密码: `RootPassword123!`
+**通过 DBeaver**:
+1. 下载并安装 DBeaver: https://dbeaver.io/download/
+2. 创建新的 MySQL 连接
+3. 连接配置:
+   - 主机: localhost
+   - 端口: 3306
+   - 数据库: cashier_system
+   - 用户名: cashier
+   - 密码: YourStrongPassword123!
 
 ### 2. 启动收银系统
 
@@ -131,7 +136,7 @@ docker compose down -v
 
 ### 数据库管理
 ```sql
--- 在容器内或通过phpMyAdmin执行
+-- 在容器内执行或通过 DBeaver 查询
 
 -- 查看所有表
 SHOW TABLES;

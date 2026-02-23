@@ -254,81 +254,92 @@
             </ScrollPane>
         </Tab>
 
-        <!-- 条码查询 API 设置标签页 -->
-        <Tab text="条码查询 API">
+        
+
+        <!-- 数据导入标签页 -->
+        <Tab text="数据导入">
             <ScrollPane fitToWidth="true" fitToHeight="true">
                 <VBox spacing="20" styleClass="settings-content">
                     <padding>
                         <Insets top="20" right="20" bottom="20" left="20"/>
                     </padding>
 
-                    <CheckBox fx:id="enableBarcodeApiCheckBox" text="启用条码查询功能"/>
-
-                    <Separator/>
-
-                    <Label text="API 配置" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    <Label text="从本地 CSV 文件导入" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
                     
                     <GridPane hgap="10" vgap="10">
                         <padding>
                             <Insets top="10" right="0" bottom="0" left="0"/>
                         </padding>
 
-                        <Label text="API 提供商:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                        <ComboBox fx:id="apiProviderComboBox" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="200"/>
-
-                        <Label text="API 密钥:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                        <TextField fx:id="apiKeyField" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="300" promptText="请输入 API 密钥"/>
+                        <Label text="CSV 文件路径:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                            <TextField fx:id="csvFilePathField" 
+                                       prefWidth="250" 
+                                       promptText="选择 CSV 文件"/>
+                            <Button text="浏览" 
+                                    onAction="#handleBrowseCsvFile" 
+                                    prefWidth="80" 
+                                    styleClass="secondary-button"/>
+                        </HBox>
                     </GridPane>
 
-                    <VBox spacing="5">
-                        <padding>
-                            <Insets top="10" right="0" bottom="0" left="0"/>
-                        </padding>
-                        <Label text="获取 API 密钥:" style="-fx-font-weight: 600;"/>
-                        <HBox spacing="5">
-                            <Hyperlink text="探数API" onAction="#handleOpenTanshuApi"/>
-                            <Label text="|" style="-fx-text-fill: #BDBDBD;"/>
-                            <Hyperlink text="聚合数据" onAction="#handleOpenJuheApi"/>
-                            <Label text="|" style="-fx-text-fill: #BDBDBD;"/>
-                            <Hyperlink text="天聚数据" onAction="#handleOpenTianapiApi"/>
-                        </HBox>
-                    </VBox>
-
-                    <Separator/>
-
-                    <Label text="自动查询设置" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-                    
-                    <VBox spacing="10">
-                        <padding>
-                            <Insets top="10" right="0" bottom="0" left="0"/>
-                        </padding>
-
-                        <CheckBox fx:id="autoQueryBarcodeCheckBox" text="扫描条码时自动查询（仅8位以上纯数字）"/>
-                        <CheckBox fx:id="autoSaveNewProductCheckBox" text="查询到新商品时自动保存到数据库"/>
-                    </VBox>
-
-                    <Separator/>
-
                     <VBox spacing="10" style="-fx-background-color: #FFF3E0; -fx-padding: 15; -fx-background-radius: 5;">
-                        <Label text="使用说明:" style="-fx-font-weight: bold; -fx-text-fill: #F57C00;"/>
-                        <Label text="• 启用后，扫描条码时会自动查询商品信息" style="-fx-wrap-text: true;"/>
-                        <Label text="• 如果商品不存在，会自动保存到数据库" style="-fx-wrap-text: true;"/>
-                        <Label text="• 请确保已配置有效的 API 密钥" style="-fx-wrap-text: true;"/>
-                        <Label text="• 支持的条码格式：8位以上纯数字" style="-fx-wrap-text: true;"/>
+                        <Label text="CSV 文件格式（支持两种格式）:" style="-fx-font-weight: bold; -fx-text-fill: #F57C00;"/>
+                        <Label text="格式一：逗号分隔（标准 CSV）" style="-fx-font-weight: 600; -fx-text-fill: #F57C00;"/>
+                        <Label text="• 使用逗号(,)作为字段分隔符" style="-fx-wrap-text: true;"/>
+                        <Label text="• 字段顺序：id,barcode,name,spec,unit,price,brand,supplier,made_in,created_at,updated_at,deleted_at" style="-fx-wrap-text: true;"/>
+                        <Label text="• 示例：1,6901234567890,可口可乐500ml,500ml,瓶,3.5,可口可乐,可口可乐公司,中国,2024-01-01,2024-01-01,NULL" style="-fx-wrap-text: true;"/>
+                        <Label text="• 编码格式：UTF-8" style="-fx-wrap-text: true;"/>
+                        <Label text=""/>
+                        <Label text="格式二：管道符分隔" style="-fx-font-weight: 600; -fx-text-fill: #F57C00;"/>
+                        <Label text="• 使用管道符(|)作为字段分隔符" style="-fx-wrap-text: true;"/>
+                        <Label text="• 字段顺序：条码|商品名|价格|单位|分类|品牌|规格|厂商" style="-fx-wrap-text: true;"/>
+                        <Label text="• 示例：6901234567890|可口可乐500ml|3.5|瓶|饮料|可口可乐|500ml|可口可乐公司" style="-fx-wrap-text: true;"/>
+                        <Label text="• 编码格式：UTF-8" style="-fx-wrap-text: true;"/>
                     </VBox>
+
+                    <HBox spacing="10" alignment="CENTER_LEFT">
+                        <Button fx:id="importFromCsvButton"
+                                text="从 CSV 导入"
+                                onAction="#handleImportFromCSV"
+                                prefWidth="150"
+                                styleClass="primary-button"/>
+                        <ProgressBar fx:id="importProgressBar" 
+                                    prefWidth="300" 
+                                    progress="0" 
+                                    visible="false"/>
+                        <Label fx:id="importStatusLabel" text=""/>
+                        <CheckBox fx:id="skipDuplicatesCheckBox" text="跳过已存在的商品" selected="true"/>
+                    </HBox>
 
                     <Separator/>
 
-                    <HBox spacing="10" alignment="CENTER_RIGHT">
-                        <Button text="测试连接"
-                                onAction="#handleTestApiConnection"
-                                prefWidth="120"
-                                styleClass="info-button"/>
-                        <Button text="保存设置"
-                                onAction="#handleSaveBarcodeApiSettings"
-                                prefWidth="120"
-                                styleClass="primary-button"/>
-                    </HBox>
+                    <Label text="导入统计" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    
+                    <GridPane hgap="20" vgap="10">
+                        <padding>
+                            <Insets top="10" right="0" bottom="0" left="0"/>
+                        </padding>
+
+                        <Label text="总处理数:" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-weight: 600;"/>
+                        <Label fx:id="totalProcessedLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                        <Label text="成功导入:" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-weight: 600;"/>
+                        <Label fx:id="successCountLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-text-fill: #4CAF50;"/>
+
+                        <Label text="跳过:" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-font-weight: 600;"/>
+                        <Label fx:id="skippedCountLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-text-fill: #FF9800;"/>
+
+                        <Label text="错误:" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-font-weight: 600;"/>
+                        <Label fx:id="errorCountLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="3" style="-fx-text-fill: #F44336;"/>
+                    </GridPane>
+
+                    <VBox fx:id="importMessagesArea" spacing="5" style="-fx-background-color: #F5F5F5; -fx-padding: 10; -fx-background-radius: 5; -fx-pref-height: 150;">
+                        <padding>
+                            <Insets top="5" right="5" bottom="5" left="5"/>
+                        </padding>
+                        <Label text="导入日志:" style="-fx-font-weight: 600;"/>
+                    </VBox>
                 </VBox>
             </ScrollPane>
         </Tab>

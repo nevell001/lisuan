@@ -86,7 +86,7 @@ echo   Username: cashier
 echo   Password: YourStrongPassword123!
 echo.
 echo Management tools:
-echo   phpMyAdmin: http://localhost:8080
+echo   Recommended: DBeaver (https://dbeaver.io/download/)
 echo.
 echo Common commands:
 echo   View logs: docker-compose logs -f mysql

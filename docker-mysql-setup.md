@@ -702,23 +702,6 @@ services:
     networks:
       - cashier-network
 
-  # 可选：phpMyAdmin 管理界面
-  phpmyadmin:
-    image: phpmyadmin/phpmyadmin:latest
-    container_name: cashier-phpmyadmin
-    restart: unless-stopped
-    environment:
-      PMA_HOST: mysql
-      PMA_PORT: 3306
-      PMA_USER: root
-      PMA_PASSWORD: RootPassword123!
-    ports:
-      - "8080:80"
-    depends_on:
-      - mysql
-    networks:
-      - cashier-network
-
 volumes:
   cashier-mysql-data:
     driver: local
@@ -728,7 +711,153 @@ networks:
     driver: bridge
 ```
 
-访问 phpMyAdmin: http://localhost:8080
+### 数据库管理工具推荐
+
+我们推荐使用 **DBeaver** 作为数据库管理工具。DBeaver 是一款免费、开源、跨平台的通用数据库工具，支持 MySQL、PostgreSQL、Oracle 等多种数据库。
+
+#### 为什么选择 DBeaver？
+
+- ✅ 完全免费且开源（Apache 2.0 许可证）
+- ✅ 跨平台支持（Windows、macOS、Linux）
+- ✅ 现代化 UI，操作直观
+- ✅ 强大的 SQL 编辑器和代码补全
+- ✅ ER 图可视化数据库结构
+- ✅ 数据导入/导出功能
+- ✅ 支持多种数据库（MySQL、PostgreSQL、Oracle、SQL Server 等）
+- ✅ 安全性高，支持 SSH 隧道
+- ✅ 活跃的社区支持
+
+#### 下载 DBeaver
+
+根据您的操作系统下载对应版本：
+
+- **Windows**: https://dbeaver.io/download/
+- **macOS**: https://dbeaver.io/download/（支持 Intel 和 Apple Silicon）
+- **Linux**: https://dbeaver.io/download/（支持 .deb、.rpm、AppImage）
+
+#### 安装 DBeaver
+
+**Windows**:
+1. 下载 DBeaver 安装程序（.exe 或 .msi）
+2. 双击运行安装程序
+3. 按照安装向导完成安装
+4. 启动 DBeaver
+
+**macOS**:
+1. 下载 DBeaver DMG 文件
+2. 双击 DMG 文件打开
+3. 将 DBeaver 图标拖拽到 Applications 文件夹
+4. 从应用程序启动 DBeaver
+
+**Linux**:
+```bash
+# Ubuntu/Debian (.deb)
+sudo dpkg -i dbeaver-ce_latest_stable_deb_amd64.deb
+sudo apt-get install -f
+
+# Fedora/CentOS/RHEL (.rpm)
+sudo rpm -ivh dbeaver-ce_latest_stable_rpm_x86_64.rpm
+
+# AppImage（通用）
+chmod +x dbeaver-ce-latest-stable-linux.gtk.x86_64.noarch.rpm
+./dbeaver-ce-latest-stable-linux.gtk.x86_64.noarch.rpm
+```
+
+#### 配置 Docker MySQL 连接
+
+1. 启动 DBeaver
+2. 点击左上角的"新建数据库连接"按钮（或使用快捷键 `Ctrl+Shift+N` / `Cmd+Shift+N`）
+3. 在左侧选择 **MySQL**
+4. 点击"下一步"
+
+**连接配置**：
+- **主机**: `localhost`
+- **端口**: `3306`
+- **数据库**: `cashier_system`
+- **用户名**: `cashier`
+- **密码**: `YourStrongPassword123!`（请替换为您设置的密码）
+- **驱动**: 使用默认驱动（MySQL Connector/J）
+
+**高级配置（可选）**：
+- 点击"驱动设置"可以查看和修改驱动配置
+- 建议勾选"连接时自动创建数据库"（如果数据库不存在）
+- 可以设置连接池大小、超时时间等参数
+
+5. 点击"测试连接"验证配置是否正确
+6. 测试成功后，点击"完成"保存连接
+
+#### DBeaver 基本使用
+
+**浏览数据库结构**：
+1. 在左侧"数据库导航器"中找到您的连接
+2. 展开连接，查看所有数据库
+3. 展开 `cashier_system` 数据库，查看所有表
+4. 右键点击表，可以查看表结构、数据、索引等
+
+**执行 SQL 查询**：
+1. 右键点击连接或数据库，选择"SQL 编辑器"
+2. 在 SQL 编辑器中输入 SQL 语句
+3. 点击工具栏的"执行"按钮（或按 `F5`）执行查询
+4. 查询结果会显示在下方的结果面板中
+
+**编辑数据**：
+1. 在数据库导航器中右键点击表
+2. 选择"查看数据"
+3. 在结果面板中可以直接编辑数据
+4. 点击"保存"按钮提交更改
+
+**导入数据**：
+1. 右键点击表，选择"导入数据"
+2. 选择要导入的文件（支持 CSV、Excel 等格式）
+3. 配置字段映射和导入选项
+4. 点击"开始"导入数据
+
+**导出数据**：
+1. 右键点击表，选择"导出数据"
+2. 选择导出格式（CSV、Excel、SQL 等）
+3. 配置导出选项
+4. 点击"开始"导出数据
+
+**查看 ER 图**：
+1. 右键点击数据库或多个表
+2. 选择"创建 ER 图"
+3. 可视化查看表之间的关系
+
+#### 常用快捷键
+
+- `Ctrl+Shift+N` / `Cmd+Shift+N` - 新建数据库连接
+- `F5` - 执行 SQL 查询
+- `Ctrl+Space` - SQL 代码补全
+- `Ctrl+F` - 在 SQL 编辑器中查找
+- `Ctrl+H` - 在 SQL 编辑器中替换
+- `Ctrl+S` - 保存 SQL 脚本
+- `Ctrl+W` - 关闭当前标签页
+
+#### 故障排查
+
+**连接失败**：
+1. 确认 Docker MySQL 容器正在运行：`docker ps`
+2. 确认端口映射正确：`docker-compose ps`
+3. 检查防火墙设置
+4. 确认用户名和密码正确
+
+**驱动加载失败**：
+1. 点击"驱动设置"
+2. 点击"下载/更新"按钮
+3. 下载并安装最新驱动
+
+**字符编码问题**：
+1. 在连接设置中，点击"驱动设置"
+2. 在"连接参数"中添加：`useUnicode=true&characterEncoding=utf8mb4`
+
+#### 其他替代方案
+
+如果您需要其他数据库管理工具，也可以考虑：
+
+- **HeidiSQL**（仅 Windows）：轻量级，适合 MySQL 和 MariaDB
+- **MySQL Workbench**（官方工具）：功能全面，但仅支持 MySQL
+- **Navicat**（商业软件）：功能强大，但需要付费
+- **DataGrip**（JetBrains）：专业的 IDE 集成数据库工具，需要付费
 
 ### 常用 Docker 命令速查
 

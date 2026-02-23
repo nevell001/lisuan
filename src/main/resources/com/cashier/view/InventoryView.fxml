@@ -58,7 +58,7 @@
         <!-- 搜索和排序 -->
         <Label text="搜索:"/>
         <TextField fx:id="searchField"
-                  promptText="输入商品名称搜索"
+                  promptText="输入商品名称或条码搜索"
                   prefWidth="200"
                   onAction="#handleSearch"/>
 
@@ -86,12 +86,13 @@
               VBox.vgrow="ALWAYS"
               styleClass="inventory-table">
         <columns>
-            <TableColumn fx:id="nameColumn" text="商品名称" prefWidth="200"/>
-            <TableColumn fx:id="priceColumn" text="单价(元)" prefWidth="100"/>
-            <TableColumn fx:id="quantityColumn" text="库存" prefWidth="80"/>
-            <TableColumn fx:id="minStockColumn" text="最低库存" prefWidth="80"/>
-            <TableColumn fx:id="categoryColumn" text="分类" prefWidth="120"/>
-            <TableColumn fx:id="warningColumn" text="预警状态" prefWidth="100"/>
+            <TableColumn fx:id="barcodeColumn" text="条码" prefWidth="130"/>
+            <TableColumn fx:id="nameColumn" text="商品名称" prefWidth="220"/>
+            <TableColumn fx:id="priceColumn" text="单价(元)" prefWidth="90"/>
+            <TableColumn fx:id="quantityColumn" text="库存" prefWidth="70"/>
+            <TableColumn fx:id="minStockColumn" text="最低库存" prefWidth="70"/>
+            <TableColumn fx:id="categoryColumn" text="分类" prefWidth="100"/>
+            <TableColumn fx:id="warningColumn" text="预警状态" prefWidth="80"/>
         </columns>
         <placeholder>
             <Label text="暂无商品数据" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
