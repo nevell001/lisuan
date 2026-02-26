@@ -8,6 +8,11 @@
 -- 更新日期: 2026-02-13
 
 -- ============================================
+-- 确保使用正确的数据库
+-- ============================================
+USE cashier_system;
+
+-- ============================================
 -- 第一部分：创建专用用户
 -- ============================================
 
@@ -34,6 +39,7 @@ SELECT user, host FROM mysql.user WHERE user IN ('root', 'cashier');
 -- ============================================
 
 -- 创建默认管理员用户（如果不存在）
+-- 密码: admin123 (明文，首次登录时强制修改密码)
 INSERT INTO users (username, password, name, role, active, force_password_change, create_time, last_login_time)
 SELECT 'admin', 'admin123', '系统管理员', 'admin', 1, 1, UNIX_TIMESTAMP() * 1000, NULL
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');

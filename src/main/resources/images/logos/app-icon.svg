@@ -1,0 +1,34 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg width="256" height="256" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="256" height="256" rx="32" fill="#4A82BA"/>
+
+  <!-- Calculator/Cash Register Icon -->
+  <rect x="68" y="48" width="120" height="88" rx="8" fill="#FFFFFF"/>
+  <rect x="76" y="56" width="104" height="48" rx="4" fill="#E8F4F8"/>
+
+  <!-- Display screen -->
+  <text x="128" y="88" font-family="Arial, sans-serif" font-size="24" font-weight="bold" fill="#4A82BA" text-anchor="middle">¥</text>
+
+  <!-- Number pad buttons -->
+  <g fill="#FFFFFF">
+    <rect x="76" y="112" width="24" height="16" rx="2"/>
+    <rect x="104" y="112" width="24" height="16" rx="2"/>
+    <rect x="132" y="112" width="24" height="16" rx="2"/>
+    <rect x="76" y="132" width="24" height="16" rx="2"/>
+    <rect x="104" y="132" width="24" height="16" rx="2"/>
+    <rect x="132" y="132" width="24" height="16" rx="2"/>
+  </g>
+
+  <!-- Shopping Cart Icon -->
+  <g transform="translate(108, 152)">
+    <!-- Cart body -->
+    <path d="M 8 8 L 12 8 L 16 32 L 40 32 L 44 12 L 12 12 L 10 4 L 0 4" fill="none" stroke="#FFFFFF" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+    <!-- Wheels -->
+    <circle cx="16" cy="38" r="4" fill="#FFFFFF"/>
+    <circle cx="40" cy="38" r="4" fill="#FFFFFF"/>
+  </g>
+
+  <!-- Version text (optional, for development) -->
+  <text x="128" y="220" font-family="Arial, sans-serif" font-size="14" fill="#FFFFFF" text-anchor="middle" opacity="0.8">收银系统</text>
+</svg>

@@ -277,46 +277,6 @@ public class LoginController {
     }
 
     /**
-     * 处理忘记密码
-     */
-    @FXML
-    private void handleForgotPassword() {
-        try {
-            // 加载密码重置对话框
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/PasswordResetView.fxml"));
-            VBox root = loader.load();
-
-            // 获取控制器
-            PasswordResetController controller = loader.getController();
-
-            // 创建对话框
-            Stage dialogStage = new Stage();
-            dialogStage.setTitle("重置密码");
-            dialogStage.initModality(javafx.stage.Modality.WINDOW_MODAL);
-            dialogStage.initOwner(usernameField.getScene().getWindow());
-            dialogStage.setResizable(false);
-
-            // 设置场景
-            Scene scene = new Scene(root);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
-            scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
-
-            dialogStage.setScene(scene);
-
-            // 设置控制器引用
-            controller.setDialogStage(dialogStage);
-
-            // 显示对话框
-            dialogStage.showAndWait();
-
-        } catch (IOException e) {
-            showError("加载密码重置对话框失败：" + e.getMessage());
-            logger.error("加载密码重置对话框失败", e);
-        }
-    }
-
-    /**
      * 处理关于
      */
     @FXML

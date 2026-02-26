@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生成收银系统图标</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .container {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        h1 {
+            color: #4A82BA;
+            text-align: center;
+        }
+        .canvas-container {
+            text-align: center;
+            margin: 30px 0;
+            padding: 20px;
+            background: #f9f9f9;
+            border-radius: 8px;
+        }
+        canvas {
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+        }
+        .instructions {
+            background: #e8f4f8;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        .instructions h3 {
+            margin-top: 0;
+            color: #4A82BA;
+        }
+        .instructions ol {
+            margin: 10px 0;
+            padding-left: 20px;
+        }
+        .instructions li {
+            margin: 8px 0;
+        }
+        button {
+            background: #4A82BA;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            font-size: 16px;
+            border-radius: 5px;
+            cursor: pointer;
+            margin: 5px;
+        }
+        button:hover {
+            background: #3a6aa8;
+        }
+        .size-info {
+            text-align: center;
+            color: #666;
+            margin: 10px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🖼️ 收银系统图标生成器</h1>
+
+        <div class="instructions">
+            <h3>📝 使用说明</h3>
+            <ol>
+                <li>下方显示了自动生成的应用图标预览</li>
+                <li>点击 <strong>"下载 PNG 图标"</strong> 按钮保存为 app-icon.png</li>
+                <li>将下载的文件保存到项目目录：<br>
+                    <code>src/main/resources/images/logos/app-icon.png</code></li>
+                <li>重新编译项目：<code>mvn clean package</code></li>
+            </ol>
+        </div>
+
+        <div class="canvas-container">
+            <canvas id="iconCanvas" width="256" height="256"></canvas>
+            <div class="size-info">图标尺寸: 256 x 256 像素</div>
+        </div>
+
+        <div style="text-align: center; margin: 30px 0;">
+            <button onclick="downloadPNG()">📥 下载 PNG 图标 (app-icon.png)</button>
+            <button onclick="downloadICO()">📥 下载 ICO 图标 (app-icon.ico)</button>
+        </div>
+
+        <div class="instructions">
+            <h3>💡 图标说明</h3>
+            <p><strong>设计元素：</strong></p>
+            <ul>
+                <li><strong>背景色：</strong> #4A82BA（项目主色调蓝色）</li>
+                <li><strong>图标元素：</strong> 收银机/计算器 + 购物车</li>
+                <li><strong>文字：</strong> "收银系统" 或 "¥" 符号</li>
+                <li><strong>风格：</strong> 现代扁平化设计，圆角边框</li>
+            </ul>
+            <p style="margin-top: 15px;"><strong>如需自定义图标：</strong></p>
+            <ul>
+                <li>访问 <a href="https://www.favicon.cc/" target="_blank">favicon.cc</a> 在线编辑</li>
+                <li>使用 Figma、Sketch 或 Photoshop 设计</li>
+                <li>从 <a href="https://www.flaticon.com/" target="_blank">Flaticon</a> 下载免费图标</li>
+            </ul>
+        </div>
+    </div>
+
+    <script>
+        const canvas = document.getElementById('iconCanvas');
+        const ctx = canvas.getContext('2d');
+
+        function drawIcon() {
+            const size = 256;
+
+            // Background with rounded corners
+            ctx.fillStyle = '#4A82BA';
+            roundRect(ctx, 0, 0, size, size, 32);
+            ctx.fill();
+
+            // Calculator body
+            ctx.fillStyle = '#FFFFFF';
+            roundRect(ctx, 68, 48, 120, 88, 8);
+            ctx.fill();
+
+            // Display area
+            ctx.fillStyle = '#E8F4F8';
+            roundRect(ctx, 76, 56, 104, 48, 4);
+            ctx.fill();
+
+            // Currency symbol
+            ctx.fillStyle = '#4A82BA';
+            ctx.font = 'bold 36px Arial';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('¥', 128, 80);
+
+            // Calculator buttons
+            ctx.fillStyle = '#FFFFFF';
+            const buttonSize = 16;
+            const buttonGap = 4;
+            const startX = 76;
+            const startY = 112;
+
+            for (let row = 0; row < 2; row++) {
+                for (let col = 0; col < 5; col++) {
+                    const x = startX + col * (buttonSize + buttonGap);
+                    const y = startY + row * (buttonSize + buttonGap);
+                    roundRect(ctx, x, y, buttonSize, buttonSize, 2);
+                    ctx.fill();
+                }
+            }
+
+            // Shopping cart
+            ctx.strokeStyle = '#FFFFFF';
+            ctx.lineWidth = 3;
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            // Cart body
+            ctx.beginPath();
+            ctx.moveTo(108, 170);
+            ctx.lineTo(116, 170);
+            ctx.lineTo(120, 190);
+            ctx.lineTo(148, 190);
+            ctx.lineTo(152, 170);
+            ctx.stroke();
+
+            // Cart handle
+            ctx.beginPath();
+            ctx.arc(116, 165, 8, 0, Math.PI * 1.5);
+            ctx.stroke();
+
+            // Wheels
+            ctx.fillStyle = '#FFFFFF';
+            ctx.beginPath();
+            ctx.arc(122, 196, 4, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.arc(146, 196, 4, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function roundRect(ctx, x, y, width, height, radius) {
+            ctx.beginPath();
+            ctx.moveTo(x + radius, y);
+            ctx.lineTo(x + width - radius, y);
+            ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+            ctx.lineTo(x + width, y + height - radius);
+            ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+            ctx.lineTo(x + radius, y + height);
+            ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+            ctx.lineTo(x, y + radius);
+            ctx.quadraticCurveTo(x, y, x + radius, y);
+            ctx.closePath();
+        }
+
+        function downloadPNG() {
+            const link = document.createElement('a');
+            link.download = 'app-icon.png';
+            link.href = canvas.toDataURL('image/png');
+            link.click();
+        }
+
+        function downloadICO() {
+            // For ICO, we'll use a simpler approach - download as PNG and note the conversion
+            alert('ICO 格式提示：\n\n1. 先下载 PNG 文件\n2. 访问 https://www.icoconverter.com/ 将 PNG 转换为 ICO\n3. 或使用在线工具：https://convertio.co/png-ico/\n\n现在将下载 PNG 文件...');
+            downloadPNG();
+        }
+
+        // Draw icon on page load
+        drawIcon();
+    </script>
+</body>
+</html>

@@ -49,11 +49,10 @@
                           onAction="#handleLogin"/>
         </VBox>
 
-        <!-- 记住密码和忘记密码 -->
+        <!-- 记住密码 -->
         <HBox spacing="20" alignment="CENTER_LEFT" style="-fx-padding-top: 5;">
             <CheckBox fx:id="rememberMeCheckBox" text="记住密码" styleClass="remember-checkbox"/>
             <HBox HBox.hgrow="ALWAYS"/>
-            <Hyperlink text="忘记密码？" onAction="#handleForgotPassword" styleClass="forgot-password-link"/>
         </HBox>
 
         <!-- 错误提示 -->

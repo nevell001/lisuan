@@ -27,7 +27,7 @@ echo.
 
 REM Set application info
 set APP_NAME=Cashier System
-set APP_VERSION=2.3.0
+set APP_VERSION=2.3.1
 set MAIN_CLASS=com.cashier.CashierSystemFXApplication
 set CONFIG_FILE=config\jvm.config
 
@@ -83,14 +83,6 @@ echo.
 echo [4/6] Checking dependency files...
 if not exist "target\cashier-system-fx-%APP_VERSION%-jar-with-dependencies.jar" (
     echo [Warning] Compiled JAR file not found
-    echo [Tip] Please run install.bat for compilation
-    echo.
-    set /p REPLY="Compile now? (Y/n): "
-    if /i "!REPLY!"=="n" (
-        echo [Cancel] Startup cancelled
-        pause
-        exit /b 1
-    )
     echo [Compile] Starting project compilation...
     call mvn clean package -DskipTests
     if !errorlevel! neq 0 (
@@ -98,6 +90,7 @@ if not exist "target\cashier-system-fx-%APP_VERSION%-jar-with-dependencies.jar" 
         pause
         exit /b 1
     )
+    echo [Done] Compilation completed
 )
 
 echo [Done] Dependency files checked
@@ -137,8 +130,13 @@ echo.
 REM Set JAR file path (fat jar with all dependencies included)
 set JAR_FILE=target\cashier-system-fx-%APP_VERSION%-jar-with-dependencies.jar
 
-REM Start application using Maven JavaFX plugin (best for JavaFX apps)
-mvn javafx:run
+REM Check if CASHER_DB_PASSWORD environment variable is set
+if not "%CASHER_DB_PASSWORD%"=="" (
+    echo [Info] Using database password from environment variable
+)
+
+REM Start application using java -jar (faster than mvn javafx:run)
+java %JVM_OPTS% -jar "%JAR_FILE%"
 
 REM Check exit code
 if !errorlevel! neq 0 (

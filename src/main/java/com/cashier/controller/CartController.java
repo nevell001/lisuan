@@ -24,6 +24,8 @@ import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.animation.Timeline;
 import javafx.animation.KeyFrame;
+import javafx.scene.media.Media;
+import javafx.scene.media.MediaPlayer;
 import javafx.util.Duration;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
@@ -41,11 +43,11 @@ import java.util.*;
  */
 public class CartController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(CartController.class);
-    
-    // 音效文件路径
-    private static final String SCAN_SUCCESS_SOUND = "/sounds/scan_success.mp3";
-    private static final String SCAN_ERROR_SOUND = "/sounds/scan_error.mp3";
-    private static final String SCAN_NOT_FOUND_SOUND = "/sounds/scan_not_found.mp3";
+
+    // 音效文件路径（WAV 格式）
+    private static final String SCAN_SUCCESS_SOUND = "/sounds/scan_success.wav";
+    private static final String SCAN_ERROR_SOUND = "/sounds/scan_error.wav";
+    private static final String SCAN_NOT_FOUND_SOUND = "/sounds/scan_not_found.wav";
 
     @FXML
     private TableView<CartItem> cartTable;
@@ -127,6 +129,7 @@ public class CartController {
     private Map<String, Product> inventory;
     private Map<String, CartItem> cartMap = new HashMap<>();
     private Member currentMember;
+    private User currentUser;
     private String orderNumber;
     private double alreadyPaidAmount = 0.0; // 已支付金额
 
@@ -433,9 +436,20 @@ public class CartController {
         boolean hasCartSelection = !cartTable.getSelectionModel().getSelectedItems().isEmpty();
         boolean hasProductSelection = !productTable.getSelectionModel().getSelectedItems().isEmpty();
         
-        removeButton.setDisable(!hasCartSelection);
-        addButton.setDisable(!hasProductSelection);
-        clearButton.setDisable(cartList.isEmpty());
+        // 移除按钮（如果存在）
+        if (removeButton != null) {
+            removeButton.setDisable(!hasCartSelection);
+        }
+        
+        // 添加按钮（如果存在）
+        if (addButton != null) {
+            addButton.setDisable(!hasProductSelection);
+        }
+        
+        // 清空按钮
+        if (clearButton != null) {
+            clearButton.setDisable(cartList.isEmpty());
+        }
     }
 
     /**
@@ -1228,25 +1242,48 @@ public class CartController {
      * 播放扫描成功音效
      */
     private void playScanSuccessSound() {
-        // TODO: 实现音效播放功能
-        // 可以使用 JavaFX AudioClip 或 Java Sound API
-        logger.debug("播放扫描成功音效");
+        try {
+            javafx.scene.media.Media sound = new javafx.scene.media.Media(
+                getClass().getResource(SCAN_SUCCESS_SOUND).toString()
+            );
+            javafx.scene.media.MediaPlayer mediaPlayer = new javafx.scene.media.MediaPlayer(sound);
+            mediaPlayer.play();
+            logger.debug("播放扫描成功音效");
+        } catch (Exception e) {
+            logger.debug("播放扫描成功音效失败（音效文件可能不存在）: {}", e.getMessage());
+        }
     }
 
     /**
      * 播放扫描错误音效
      */
     private void playScanErrorSound() {
-        // TODO: 实现音效播放功能
-        logger.debug("播放扫描错误音效");
+        try {
+            javafx.scene.media.Media sound = new javafx.scene.media.Media(
+                getClass().getResource(SCAN_ERROR_SOUND).toString()
+            );
+            javafx.scene.media.MediaPlayer mediaPlayer = new javafx.scene.media.MediaPlayer(sound);
+            mediaPlayer.play();
+            logger.debug("播放扫描错误音效");
+        } catch (Exception e) {
+            logger.debug("播放扫描错误音效失败（音效文件可能不存在）: {}", e.getMessage());
+        }
     }
 
     /**
      * 播放扫描未找到音效
      */
     private void playScanNotFoundSound() {
-        // TODO: 实现音效播放功能
-        logger.debug("播放扫描未找到音效");
+        try {
+            javafx.scene.media.Media sound = new javafx.scene.media.Media(
+                getClass().getResource(SCAN_NOT_FOUND_SOUND).toString()
+            );
+            javafx.scene.media.MediaPlayer mediaPlayer = new javafx.scene.media.MediaPlayer(sound);
+            mediaPlayer.play();
+            logger.debug("播放扫描未找到音效");
+        } catch (Exception e) {
+            logger.debug("播放扫描未找到音效失败（音效文件可能不存在）: {}", e.getMessage());
+        }
     }
 
     /**
@@ -1271,16 +1308,14 @@ public class CartController {
     }
 
     /**
-     * 显示扫描提示消息
+     * 显示扫描提示消息（在状态栏显示，不弹出提示框）
      * @param message 消息内容
      * @param success 是否成功
      */
     private void showScanMessage(String message, boolean success) {
-        if (success) {
-            showInfo(message);
-        } else {
-            showError("扫描失败: " + message);
-        }
+        // 在状态栏显示消息，不弹出提示框
+        com.cashier.util.StatusBarManager.updateStatus(message);
+        logger.debug("扫描消息: {}", message);
     }
 
     /**
@@ -1366,4 +1401,50 @@ public class CartController {
         }
     }
 
-}
+    /**
+     * 检查购物车是否为空
+     * @return 如果购物车为空返回true，否则返回false
+     */
+    public boolean isCartEmpty() {
+        return cartList == null || cartList.isEmpty();
+    }
+
+    /**
+
+         * 设置当前用户
+
+         * @param user 当前登录用户
+
+         */
+
+        public void setCurrentUser(User user) {
+
+            this.currentUser = user;
+
+            logger.debug("已设置当前用户: {} ({})", user.name, user.getRoleDisplayName());
+
+        }
+
+    
+
+        /**
+
+         * 聚焦到搜索框
+
+         */
+
+        public void focusSearchField() {
+
+            if (searchField != null) {
+
+                searchField.requestFocus();
+
+                logger.debug("已聚焦到搜索框");
+
+            }
+
+        }
+
+    
+
+    }

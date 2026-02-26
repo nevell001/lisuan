@@ -74,11 +74,8 @@ if errorlevel 1 (
     echo   2. Run: mvn -version
     echo   3. Re-run this installer
     echo.
-    set /p CONTINUE="Do you want to continue anyway? (not recommended) [y/N]: "
-    if /i not "%CONTINUE%"=="y" (
-        pause
-        exit /b 1
-    )
+    echo [Warning] Continuing without Maven is not recommended
+    echo [Info] Installation will be limited
     set SKIP_MAVEN=1
 ) else (
     for /f "tokens=3" %%a in ('mvn -version 2^>^&1 ^| findstr /i "Apache Maven"') do set MAVEN_VERSION=%%a
@@ -107,13 +104,7 @@ echo ========================================
 echo.
 
 if %SKIP_MAVEN%==1 (
-    echo Maven is not available. Installation will be limited.
-    echo.
-    set /p CONTINUE="Continue with limited installation? [y/N]: "
-    if /i not "%CONTINUE%"=="y" (
-        pause
-        exit /b 1
-    )
+    echo [Warning] Maven is not available. Installation will be limited.
 )
 
 echo.

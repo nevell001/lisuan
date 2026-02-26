@@ -79,22 +79,13 @@ JAR_FILE="target/cashier-system-fx-${APP_VERSION}-jar-with-dependencies.jar"
 
 if [ ! -f "$JAR_FILE" ]; then
     echo "[Warning] Compiled JAR file not found"
-    echo "[Tip] Please run ./install.sh for compilation"
-    echo ""
-    read -p "Compile now? (Y/n): " REPLY
-    REPLY=${REPLY:-Y}
-
-    if [[ ! "$REPLY" =~ ^[Nn]$ ]]; then
-        echo "[Compile] Starting project compilation..."
-        mvn clean package -DskipTests
-        if [ $? -ne 0 ]; then
-            echo "[Error] Compilation failed"
-            exit 1
-        fi
-    else
-        echo "[Cancel] Startup cancelled"
+    echo "[Compile] Starting project compilation..."
+    mvn clean package -DskipTests
+    if [ $? -ne 0 ]; then
+        echo "[Error] Compilation failed"
         exit 1
     fi
+    echo "[Done] Compilation completed"
 fi
 
 echo "[Done] Dependency files checked"

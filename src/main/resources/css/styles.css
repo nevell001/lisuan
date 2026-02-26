@@ -1144,3 +1144,70 @@
     -fx-border-radius: 8px;
     -fx-effect: dropshadow(three-pass-box, rgba(63, 81, 181, 0.08), 2, 0, 0, 1);
 }
+
+/* ========== POS 收银台界面样式 ========== */
+
+/* POS 模式视图 */
+.pos-mode-view {
+    -fx-background-color: #F5F5F5;
+}
+
+/* POS 顶部工具栏 */
+.pos-toolbar {
+    -fx-background-color: linear-gradient(to right, #667eea, #764ba2);
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.15), 4, 0, 0, 2);
+}
+
+/* POS 主内容区域 */
+.pos-content {
+    -fx-background-color: #F5F5F5;
+}
+
+/* POS 底部状态栏 */
+.pos-status-bar {
+    -fx-background-color: #424242;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.2), 3, 0, 0, 1);
+}
+
+/* 购物车视图 */
+.cart-view {
+    -fx-background-color: #F5F5F5;
+}
+
+/* 购物车分割面板 */
+.cart-split-pane {
+    -fx-background-color: #F5F5F5;
+    -fx-divider-color: #E0E0E0;
+}
+
+/* 购物车工具栏 */
+.cart-view .toolbar {
+    -fx-background-color: #FFFFFF;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 0 0 1px 0;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 2, 0, 0, 1);
+}
+
+/* 购物车结算信息 */
+.checkout-info {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 8px;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 3, 0, 0, 2);
+}
+
+/* 会员信息框 */
+.member-info-box {
+    -fx-background-color: #F5F5F5;
+    -fx-background-radius: 6px;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1px;
+    -fx-border-radius: 6px;
+}
+}

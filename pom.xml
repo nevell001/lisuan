@@ -79,6 +79,13 @@
             <classifier>win</classifier>
         </dependency>
 
+        <!-- JavaFX Media - 音频视频支持 -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-media</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+
         <!-- ControlsFX - 增强的 UI 控件库 -->
         <dependency>
             <groupId>org.controlsfx</groupId>

@@ -1,0 +1,76 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.shape.Circle?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.PosModeController"
+      spacing="0"
+      styleClass="pos-mode-view">
+
+    <!-- 顶部工具栏 -->
+    <HBox spacing="20" styleClass="pos-toolbar" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="15" right="20" bottom="15" left="20"/>
+        </padding>
+
+        <!-- 系统标题 -->
+        <Label text="🛒 收银台" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #FFFFFF;"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <!-- 当前用户信息 -->
+        <VBox spacing="2" alignment="CENTER_LEFT">
+            <Label fx:id="userNameLabel" text="用户" style="-fx-text-fill: #FFFFFF; -fx-font-size: 16px; -fx-font-weight: bold;"/>
+            <Label fx:id="userRoleLabel" text="收银员" style="-fx-text-fill: #E0E0E0; -fx-font-size: 13px;"/>
+        </VBox>
+
+        <!-- 用户头像（显示首字母） -->
+        <StackPane fx:id="avatarContainer" prefWidth="40" prefHeight="40">
+            <Circle fx:id="avatarCircle" radius="20" style="-fx-fill: #FFC107; -fx-stroke: #FFFFFF; -fx-stroke-width: 2;"/>
+            <Label fx:id="avatarText" text="U" style="-fx-text-fill: #FFFFFF; -fx-font-size: 18px; -fx-font-weight: bold;"/>
+        </StackPane>
+
+        <!-- 退出按钮 -->
+        <Button fx:id="exitButton"
+                text="退出 (ESC)"
+                onAction="#handleExit"
+                prefWidth="90"
+                prefHeight="40"
+                style="-fx-font-size: 15px; -fx-font-weight: bold;"
+                styleClass="danger-button"/>
+    </HBox>
+
+    <!-- 主内容区域 - 直接显示收银台 -->
+    <StackPane VBox.vgrow="ALWAYS" styleClass="pos-content">
+        <!-- 这里的内容会通过PosModeController动态加载CartView -->
+        <VBox fx:id="cartContainer" VBox.vgrow="ALWAYS"/>
+    </StackPane>
+
+    <!-- 底部状态栏 -->
+    <HBox spacing="15" styleClass="pos-status-bar" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="10" right="20" bottom="10" left="20"/>
+        </padding>
+
+        <Label fx:id="dateLabel" text="2026-02-23" style="-fx-text-fill: #E0E0E0; -fx-font-size: 14px; -fx-font-weight: bold;"/>
+        <Label fx:id="timeLabel" text="18:00:00" style="-fx-text-fill: #E0E0E0; -fx-font-size: 14px; -fx-font-weight: bold;"/>
+
+        <Region HBox.hgrow="ALWAYS"/>
+
+        <!-- 交接班按钮 -->
+        <Button fx:id="shiftButton"
+                text="交接班 (F6)"
+                onAction="#handleShift"
+                prefWidth="140"
+                prefHeight="40"
+                style="-fx-font-size: 15px; -fx-font-weight: bold;"
+                styleClass="primary-button"/>
+
+        <Label fx:id="statusLabel" text="就绪" style="-fx-text-fill: #FFFFFF; -fx-font-size: 14px; -fx-font-weight: bold;"/>
+    </HBox>
+
+</VBox>

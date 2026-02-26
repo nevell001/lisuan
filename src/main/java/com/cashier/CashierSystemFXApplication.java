@@ -2,6 +2,7 @@ package com.cashier;
 
 import com.cashier.controller.LoginController;
 import com.cashier.controller.MainController;
+import com.cashier.controller.PosModeController;
 import com.cashier.constant.FXConstants;
 import com.cashier.constant.SpacingConstants;
 import com.cashier.service.DataService;
@@ -228,11 +229,62 @@ public class CashierSystemFXApplication extends Application {
 
     /**
      * 切换到主界面（登录成功后）
+     * 根据用户角色选择进入主界面或POS模式
      * @param user 当前登录用户
      */
     public void switchToMainView(User user) {
         this.currentUser = user;
 
+        // 根据角色决定进入哪个界面
+        if ("cashier".equals(user.role)) {
+            // 收银员进入POS模式（简化界面）
+            switchToPosModeView(user);
+        } else {
+            // 管理员和财务进入完整主界面
+            loadFullMainView(user);
+        }
+    }
+
+    /**
+     * 加载POS模式界面（专为收银员设计）
+     * @param user 当前登录用户
+     */
+    private void switchToPosModeView(User user) {
+        try {
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/PosModeView.fxml"));
+            Parent root = loader.load();
+
+            // 获取控制器并设置应用程序引用
+            PosModeController controller = loader.getController();
+            controller.setApplication(this);
+            controller.setCurrentUser(user);
+
+            // 创建场景
+            Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
+
+            // 应用主题
+            String currentTheme = DataService.loadThemePreference();
+            applyTheme(scene, currentTheme);
+
+            // 设置场景
+            primaryStage.setScene(scene);
+
+            // 更新窗口标题
+            primaryStage.setTitle(APP_TITLE + " - 收银台 - " + user.name);
+
+            logger.info("用户 {} ({}) 进入POS模式", user.name, user.getRoleDisplayName());
+
+        } catch (IOException e) {
+            logger.error("加载POS模式界面失败", e);
+        }
+    }
+
+    /**
+     * 加载完整主界面（管理员和财务）
+     * @param user 当前登录用户
+     */
+    private void loadFullMainView(User user) {
         try {
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(getClass().getResource("/com/cashier/view/MainView.fxml"));
@@ -255,6 +307,8 @@ public class CashierSystemFXApplication extends Application {
 
             // 更新窗口标题
             primaryStage.setTitle(APP_TITLE + " - " + user.name + " (" + user.getRoleDisplayName() + ")");
+
+            logger.info("用户 {} ({}) 进入完整主界面", user.name, user.getRoleDisplayName());
 
         } catch (IOException e) {
             logger.error("加载主界面失败", e);

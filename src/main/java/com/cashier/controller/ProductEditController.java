@@ -371,6 +371,18 @@ public class ProductEditController {
                                 errorLabel.setText("添加商品失败，请重试");
                                 return;
                             }
+
+                            // 添加成功，显示提示
+                            StatusBarManager.updateStatus("商品添加成功: " + product.name);
+                            logger.info("商品添加成功: {} ({})", product.name, product.productCode);
+
+                            // 显示成功提示
+                            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                            alert.setTitle("成功");
+                            alert.setHeaderText(null);
+                            alert.setContentText("商品添加成功！");
+                            alert.showAndWait();
+
                         } else {
                             // 编辑现有商品（不修改库存数量）
                             product.name = nameField.getText().trim();
@@ -404,7 +416,19 @@ public class ProductEditController {
                                 errorLabel.setText("更新商品失败，请重试");
                                 return;
                             }
+
+                            // 更新成功，显示提示
+                            StatusBarManager.updateStatus("商品更新成功: " + product.name);
+                            logger.info("商品更新成功: {} ({})", product.name, product.productCode);
+
+                            // 显示成功提示
+                            javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                            alert.setTitle("成功");
+                            alert.setHeaderText(null);
+                            alert.setContentText("商品更新成功！");
+                            alert.showAndWait();
                         }
+
                 // 操作成功，关闭对话框
                 okClicked = true;
                 dialogStage.close();

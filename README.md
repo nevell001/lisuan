@@ -24,12 +24,22 @@
   - 微信支付
   - 支付宝支付
   - 银行卡支付
+  - 扫描枪自动扫码
+  - 扫描音效反馈
+  - POS 模式专用界面
 - **商品管理** - 商品添加、编辑、删除、快速入库、搜索
   - 商品编号自动生成
   - 库存通过进销存流程管理（采购入库、快速入库、库存盘点）
   - 商品分类和单位管理
   - 库存预警显示
+  - 条形码重复支持
+  - 商品数据导入（CSV/GitHub）
 - **会员管理** - 会员注册、积分、等级、折扣、余额充值
+  - 会员编号自动生成
+  - 等级自动升级（普通→银卡→金卡→钻石）
+  - 积分累计和折扣优惠
+  - 余额充值功能
+  - 生日特权检测
 - **促销管理** - 满减、折扣、优惠券等多种促销类型
 - **交易记录** - 完整的交易历史记录和查询
 - **数据统计** - 销售额、交易量、平均客单价等统计
@@ -53,11 +63,26 @@
 - **库存报表** - 库存周转率分析、滞销商品分析、库存积压分析、库存不足提醒
 - **利润分析** - 采购成本统计、销售收入统计、毛利润和毛利率分析、净利润计算
 
+### 🔧 数据管理
+- **数据导入** - 支持 CSV 文件导入商品数据
+- **GitHub 集成** - 支持 GitHub 商品条码库导入
+- **缓存管理** - 商品数据缓存（5分钟过期）
+- **数据备份** - 自动和手动数据备份
+
+### 🖨️ 硬件支持
+- **打印机管理** - 支持多种打印机设备（热敏、针式、喷墨）
+- **打印预览** - 打印预览功能
+- **打印模板** - 打印模板定制
+- **扫描枪管理** - 支持 USB HID 扫描枪
+- **自动检测** - 自动检测扫描设备
+- **智能焦点** - 智能焦点管理
+
 ### 🔒 安全与权限
 - 三种角色权限管理（管理员、收银员、财务）
 - 操作日志完整记录
 - 数据自动备份和恢复
 - 密码复杂度检查
+- 密码 BCrypt 加密存储
 
 ## 🎯 最近更新
 
@@ -78,6 +103,40 @@
   - 自动检测并添加 `member_code` 字段
   - 为现有会员自动生成会员编号
   - 优化数据库迁移逻辑
+
+**硬件支持增强**
+- 🖨️ 打印机管理模块
+  - 支持多种打印机设备（热敏、针式、喷墨）
+  - 打印任务队列管理
+  - 打印预览功能
+  - 打印模板定制
+- 🔫 扫描枪管理模块
+  - 支持 USB HID 扫描枪
+  - 自动检测扫描设备
+  - 智能焦点管理
+  - 扫描音效反馈（成功、失败、未找到）
+
+**数据管理增强**
+- 📥 数据导入功能
+  - 支持 CSV 文件导入商品数据
+  - 支持 GitHub 商品条码库导入
+  - 自动分类和单位标准化
+  - 自动创建缺失的分类和单位
+- 💾 缓存管理
+  - 商品数据缓存（5分钟过期）
+  - 多维度缓存（ID、名称、条形码）
+  - 自动缓存刷新
+  - 缓存预热功能
+
+**架构优化**
+- 🏗️ Service 层封装
+  - InventoryService - 库存相关业务逻辑
+  - MemberService - 会员相关业务逻辑
+  - TransactionService - 交易相关业务逻辑
+- 🎵 音效支持
+  - 扫描成功音效
+  - 扫描失败音效
+  - 扫描未找到音效
 
 ### v2.3.0 (2026-02-07)
 
@@ -246,8 +305,8 @@ docker-compose logs -f mysql
 #   主机：localhost
 #   端口：3306
 #   数据库：cashier_system
-#   用户名：cashier
-#   密码：YourStrongPassword123!
+#   用户名：root
+#   密码：RootPassword123!
 ```
 
 **方式二：使用本地 MySQL**
@@ -294,7 +353,7 @@ mvn javafx:run
 **打包后运行**：
 ```bash
 mvn clean package
-java -jar target/cashier-system-fx-2.2.1.jar
+java -jar target/cashier-system-fx-2.3.1.jar
 ```
 
 ### 默认账户
@@ -320,6 +379,8 @@ java -jar target/cashier-system-fx-2.2.1.jar
    - 多种支付方式选择
    - 现金找零自动计算
    - 结算后自动清除会员信息
+   - 扫描枪自动扫码
+   - 扫描音效反馈
 
 2. **商品管理**
    - 商品添加、编辑、删除
@@ -328,9 +389,12 @@ java -jar target/cashier-system-fx-2.2.1.jar
    - 商品搜索和筛选
    - 库存预警显示
    - 商品分类和单位管理
+   - 条形码重复支持
+   - 商品数据导入（CSV/GitHub）
 
 3. **会员管理**
    - 会员注册
+   - 会员编号自动生成
    - 积分查询和累计
    - 等级自动升级（普通→银卡→金卡→钻石）
    - 余额充值
@@ -429,6 +493,25 @@ java -jar target/cashier-system-fx-2.2.1.jar
     - 分类利润分析
     - 每日利润趋势
 
+18. **打印机管理**
+    - 打印设备管理
+    - 打印任务队列
+    - 打印预览
+    - 打印模板定制
+    - 打印历史记录
+
+19. **扫描枪管理**
+    - USB HID 扫描枪支持
+    - 自动设备检测
+    - 智能焦点管理
+    - 扫描事件监听
+
+20. **数据导入**
+    - CSV 文件导入
+    - GitHub 商品条码库导入
+    - 自动分类和单位标准化
+    - 导入统计和进度显示
+
 ### 快捷键
 
 #### 主界面快捷键
@@ -489,6 +572,12 @@ java -jar target/cashier-system-fx-2.2.1.jar
 **帮助**
 - **Ctrl+/** - 显示快捷键帮助对话框
 
+#### 扫描枪快捷操作
+
+- **扫描商品条形码** - 自动添加到购物车
+- **扫描会员二维码** - 自动绑定会员
+- **扫描商品码** - 自动聚焦到搜索框并查询商品
+
 ## 📁 项目结构
 
 ```
@@ -501,7 +590,7 @@ hello/
 │       │   ├── constant/
 │       │   │   ├── FXConstants.java             # JavaFX 常量
 │       │   │   └── SpacingConstants.java        # 间距常量
-│       │   ├── dao/                            # 数据访问层
+│       │   ├── dao/                            # 数据访问层 (20个)
 │       │   │   ├── UserDAO.java                # 用户 DAO
 │       │   │   ├── ProductDAO.java             # 商品 DAO
 │       │   │   ├── MemberDAO.java              # 会员 DAO
@@ -522,7 +611,7 @@ hello/
 │       │   │   ├── PurchaseInboundItemDAO.java # 采购入库明细 DAO
 │       │   │   ├── InventoryCheckDAO.java      # 库存盘点 DAO
 │       │   │   └── InventoryCheckItemDAO.java  # 库存盘点明细 DAO
-│       │   ├── controller/
+│       │   ├── controller/                     # 控制器层 (26个)
 │       │   │   ├── CartController.java          # 购物车控制器
 │       │   │   ├── CheckoutController.java      # 结账控制器
 │       │   │   ├── InventoryController.java     # 商品管理控制器
@@ -547,8 +636,9 @@ hello/
 │       │   │   ├── InventoryCheckController.java # 库存盘点控制器
 │       │   │   ├── PurchaseReportController.java # 采购报表控制器
 │       │   │   ├── InventoryReportController.java # 库存报表控制器
-│       │   │   └── ProfitReportController.java # 利润分析控制器
-│       │   ├── model/
+│       │   │   ├── ProfitReportController.java # 利润分析控制器
+│       │   │   └── PosModeController.java      # POS模式控制器 (v2.3.1 新增)
+│       │   ├── model/                          # 实体类 (20个)
 │       │   │   ├── Product.java                 # 商品实体类
 │       │   │   ├── Member.java                  # 会员实体类
 │       │   │   ├── User.java                    # 用户实体类
@@ -568,56 +658,97 @@ hello/
 │       │   │   ├── PurchaseInboundItem.java     # 采购入库明细类
 │       │   │   ├── InventoryCheck.java          # 库存盘点实体类
 │       │   │   └── InventoryCheckItem.java      # 库存盘点明细类
-│       │   └── util/
-│       │       ├── DatabaseManager.java          # 数据库管理器
-│       │       ├── PasswordUtil.java             # 密码工具
-│       │       ├── FXUtils.java                 # JavaFX 工具类
-│       │       ├── FXMLUtils.java               # FXML 工具类
-│       │       └── StatusBarManager.java         # 状态栏管理器
+│       │   ├── service/                        # 服务层 (4个)
+│       │   │   ├── DataService.java            # 数据服务
+│       │   │   ├── InventoryService.java       # 库存服务 (v2.3.1 新增)
+│       │   │   ├── MemberService.java          # 会员服务 (v2.3.1 新增)
+│       │   │   └── TransactionService.java     # 交易服务 (v2.3.1 新增)
+│       │   ├── printer/                        # 打印机管理模块 (10个类)
+│       │   │   ├── PrinterManager.java         # 打印机管理器
+│       │   │   ├── PrinterDevice.java          # 打印设备
+│       │   │   ├── PrinterStatus.java          # 打印机状态
+│       │   │   ├── PrinterDeviceStatus.java    # 设备状态枚举
+│       │   │   ├── PrinterDeviceType.java      # 设备类型枚举
+│       │   │   ├── PrintTask.java              # 打印任务
+│       │   │   ├── PrintTaskType.java          # 任务类型枚举
+│       │   │   ├── PrintTemplate.java          # 打印模板
+│       │   │   ├── PrintUtil.java              # 打印工具类
+│       │   │   └── PrintPreviewDialog.java     # 打印预览对话框
+│       │   ├── scanner/                        # 扫描枪管理模块 (11个类)
+│       │   │   ├── ScannerManager.java         # 扫描枪管理器
+│       │   │   ├── ScannerDevice.java          # 扫描设备
+│       │   │   ├── ScannerDeviceStatus.java    # 设备状态枚举
+│       │   │   ├── ScannerDeviceType.java      # 设备类型枚举
+│       │   │   ├── USBHIDScannerDevice.java    # USB HID 扫描设备实现
+│       │   │   ├── ScanEvent.java              # 扫描事件
+│       │   │   ├── ScanListener.java           # 扫描监听器接口
+│       │   │   ├── ScanDataType.java           # 扫描数据类型枚举
+│       │   │   ├── FocusManager.java           # 焦点管理器
+│       │   │   └── FocusTarget.java            # 焦点目标接口
+│       │   └── util/                           # 工具类 (9个)
+│       │       ├── DatabaseManager.java        # 数据库管理器
+│       │       ├── PasswordUtil.java           # 密码工具
+│       │       ├── FXUtils.java               # JavaFX 工具类
+│       │       ├── FXMLUtils.java             # FXML 工具类
+│       │       ├── LoggerFactoryUtil.java      # 日志工厂工具
+│       │       ├── StatusBarManager.java       # 状态栏管理器
+│       │       ├── ReceiptPrinter.java         # 收据打印机
+│       │       ├── CacheManager.java           # 缓存管理器 (v2.3.1 新增)
+│       │       └── ProductDataImporter.java    # 商品数据导入工具 (v2.3.1 新增)
 │       └── resources/
-│           ├── com/cashier/view/
-│           │   ├── MainView.fxml                # 主界面
-│           │   ├── LoginView.fxml               # 登录界面
-│           │   ├── CartView.fxml                # 购物车界面
-│           │   ├── CheckoutView.fxml            # 结账界面
-│           │   ├── InventoryView.fxml           # 商品管理界面
-│           │   ├── MemberView.fxml              # 会员管理界面
-│           │   ├── PromotionView.fxml           # 促销管理界面
-│           │   ├── TransactionView.fxml         # 交易记录界面
-│           │   ├── StatisticsView.fxml          # 数据统计界面
-│           │   ├── ShiftView.fxml               # 交接班界面
-│           │   ├── UserView.fxml                # 用户管理界面
-│           │   ├── SettingsView.fxml            # 系统设置界面
-│           │   ├── MemberEditView.fxml          # 会员编辑界面
-│           │   ├── ProductEditView.fxml         # 商品编辑界面
-│           │   ├── RechargeView.fxml            # 充值界面
-│           │   ├── RestockView.fxml             # 补货界面
-│           │   ├── PasswordResetView.fxml       # 密码重置界面
-│           │   ├── SupplierView.fxml           # 供应商管理界面
-│           │   ├── PurchaseOrderView.fxml      # 采购订单界面
-│           │   ├── PurchaseApprovalView.fxml   # 采购审批界面
-│           │   ├── PurchaseInboundView.fxml    # 采购入库界面
-│           │   ├── InventoryCheckView.fxml     # 库存盘点界面
-│           │   ├── PurchaseReportView.fxml     # 采购报表界面
-│           │   ├── InventoryReportView.fxml    # 库存报表界面
-│           │   └── ProfitReportView.fxml       # 利润分析界面
-│           └── css/
-│               ├── styles.css                    # 主样式文件
-│               ├── light-theme.css               # 浅色主题
-│               ├── dark-theme.css                # 深色主题
-│               └── intellij-theme.css            # IntelliJ主题
+│           ├── com/cashier/view/               # FXML 视图文件 (26个)
+│           │   ├── MainView.fxml              # 主界面
+│           │   ├── LoginView.fxml             # 登录界面
+│           │   ├── CartView.fxml              # 购物车界面
+│           │   ├── CheckoutView.fxml          # 结账界面
+│           │   ├── InventoryView.fxml         # 商品管理界面
+│           │   ├── MemberView.fxml            # 会员管理界面
+│           │   ├── PromotionView.fxml         # 促销管理界面
+│           │   ├── TransactionView.fxml       # 交易记录界面
+│           │   ├── StatisticsView.fxml        # 数据统计界面
+│           │   ├── ShiftView.fxml             # 交接班界面
+│           │   ├── UserView.fxml              # 用户管理界面
+│           │   ├── SettingsView.fxml          # 系统设置界面
+│           │   ├── MemberEditView.fxml        # 会员编辑界面
+│           │   ├── ProductEditView.fxml       # 商品编辑界面
+│           │   ├── RechargeView.fxml          # 充值界面
+│           │   ├── RestockView.fxml           # 补货界面
+│           │   ├── PasswordResetView.fxml     # 密码重置界面
+│           │   ├── SupplierView.fxml          # 供应商管理界面
+│           │   ├── PurchaseOrderView.fxml     # 采购订单界面
+│           │   ├── PurchaseApprovalView.fxml  # 采购审批界面
+│           │   ├── PurchaseInboundView.fxml   # 采购入库界面
+│           │   ├── InventoryCheckView.fxml    # 库存盘点界面
+│           │   ├── PurchaseReportView.fxml    # 采购报表界面
+│           │   ├── InventoryReportView.fxml   # 库存报表界面
+│           │   ├── ProfitReportView.fxml      # 利润分析界面
+│           │   └── PosModeView.fxml          # POS模式界面 (v2.3.1 新增)
+│           ├── css/                            # 样式文件
+│           │   ├── styles.css                 # 主样式文件
+│           │   ├── light-theme.css            # 浅色主题
+│           │   ├── dark-theme.css             # 深色主题
+│           │   └── intellij-theme.css         # IntelliJ主题
+│           ├── sounds/                         # 音效文件 (v2.3.1 新增)
+│           │   ├── scan_error.wav             # 扫描错误音效
+│           │   ├── scan_not_found.wav         # 扫描未找到音效
+│           │   └── scan_success.wav           # 扫描成功音效
+│           └── images/                         # 图片资源 (v2.3.1 新增)
+│               └── logos/                      # Logo 目录
 ├── config/                          # 配置目录
 │   ├── database.properties            # 数据库配置
 │   └── database.properties.example  # 数据库配置示例
 ├── docker/                          # Docker 配置
 │   └── mysql-init/                   # MySQL 初始化脚本
+│       ├── 00-init-complete.sql      # 完整初始化脚本
 │       ├── 01-create-user.sql       # 创建数据库用户
 │       ├── 02-alter-tables.sql      # 表结构升级脚本
-│       └── 03-sample-data.sql       # 示例数据脚本
+│       ├── 03-sample-data.sql       # 示例数据脚本
+│       └── 04-v2.3.1-updates.sql    # v2.3.1 升级脚本
 ├── docker-compose.yml               # Docker Compose 配置
 ├── README.md                        # 项目说明（本文件）
 ├── LICENSE                          # 木兰宽松许可证 v2
 └── docs/
+    ├── DATABASE_CHANGES_v2.3.1.md  # v2.3.1 数据库变更文档
     ├── DATABASE_INIT.md             # 数据库初始化文档
     ├── MYSQL_SETUP.md               # MySQL 部署指南
     ├── PURCHASE_TABLE_DESIGN.md     # 采购表结构设计
@@ -650,19 +781,24 @@ mvn javafx:run
 mvn clean package
 
 # 运行打包后的 JAR
-java -jar target/cashier-system-fx-2.2.1.jar
+java -jar target/cashier-system-fx-2.3.1.jar
+
+# 运行测试
+mvn test
 ```
 
 ### Maven 依赖
 
 项目主要依赖：
 - JavaFX 17.0.8 - 图形界面框架
-- MySQL Connector J 8.0.33 - MySQL JDBC 驱动
+- MySQL Connector J 8.3.0 - MySQL JDBC 驱动
 - HikariCP 5.1.0 - 高性能 JDBC 连接池
 - ControlsFX 11.2.1 - 增强的 UI 控件
 - FontAwesomeFX 4.7.0-9.1.2 - 图标库
-- JUnit 5 - 单元测试框架
-- TestFX - JavaFX UI 测试框架
+- JUnit 5.10.0 - 单元测试框架
+- TestFX 4.0.18 - JavaFX UI 测试框架
+- H2 Database 2.2.224 - 测试用内存数据库
+- BCrypt 0.10.2 - 密码加密库
 
 ### 开发工具配置
 
@@ -720,13 +856,14 @@ java -jar target/cashier-system-fx-2.2.1.jar
 - 事务支持，确保数据一致性
 - 自动创建表结构和索引
 - 支持数据备份和恢复功能
+- 内置缓存管理器，减少数据库查询
 
 ### 数据库表结构
 
 **核心表**：
 - `users` - 用户账户（管理员、收银员、财务）
-- `products` - 商品库存信息
-- `members` - 会员账户和积分
+- `products` - 商品库存信息（支持重复条形码）
+- `members` - 会员账户和积分（自动生成会员编号）
 - `transactions` - 交易记录主表
 - `transaction_items` - 交易明细（商品列表）
 - `shifts` - 交接班记录
@@ -751,9 +888,6 @@ java -jar target/cashier-system-fx-2.2.1.jar
 **库存管理表**：
 - `inventory_check` - 库存盘点
 - `inventory_check_items` - 库存盘点明细
-
-
-4. 显示迁移统计信息
 
 ### 数据备份
 
@@ -796,6 +930,7 @@ mysql -u root -p cashier_system < backup.sql
   - 钻石会员：10000+积分（8.5折）
 - 积分累计和折扣优惠
 - 会员余额充值功能
+- 会员编号自动生成
 - 生日特权检测（生日当天可能享受额外优惠）
 
 ### 促销管理
@@ -827,6 +962,45 @@ mysql -u root -p cashier_system < backup.sql
 - 数据恢复支持
   - 从备份目录选择恢复
   - 按时间排序显示备份列表
+- 密码 BCrypt 加密存储
+
+### 硬件支持
+- **打印机管理**
+  - 支持多种打印机类型
+  - 打印任务队列
+  - 打印预览功能
+  - 打印模板定制
+- **扫描枪管理**
+  - USB HID 扫描枪支持
+  - 自动设备检测
+  - 智能焦点管理
+  - 扫描音效反馈
+
+### 数据导入
+- **CSV 文件导入**
+  - 支持逗号分隔和 | 分隔
+  - 自动检测文件格式
+  - 自动标准化单位和分类
+- **GitHub 集成**
+  - 支持 GitHub 商品条码库
+  - 一键导入大量商品数据
+- **智能处理**
+  - 自动创建缺失的分类和单位
+  - 跳过已存在的商品
+  - 实时显示导入进度
+
+### 缓存管理
+- **商品数据缓存**
+  - 5分钟过期时间
+  - 多维度缓存（ID、名称、条形码）
+  - 自动缓存刷新
+  - 批量更新后自动清除
+- **缓存预热**
+  - 应用启动时预热缓存
+  - 减少首次加载时间
+- **性能优化**
+  - 减少数据库查询次数
+  - 提升系统响应速度
 
 ## 🔧 Windows 故障排除
 
@@ -862,6 +1036,17 @@ mysql -u root -p cashier_system < backup.sql
 3. 检查 `config/database.properties` 配置是否正确
 4. 详见 [Windows MySQL 安装指南](docs/WINDOWS_MYSQL_SETUP.md)
 
+### 扫描枪无法工作
+
+**问题**: 扫描枪扫描后没有反应
+
+**解决方案**:
+1. 确认扫描枪已正确连接（USB 接口）
+2. 确认扫描枪处于 HID 模式
+3. 检查应用是否启动扫描枪管理器
+4. 确认焦点在正确的输入框
+5. 查看应用日志获取详细错误信息
+
 ### 打印机无法打印小票
 
 **问题**: 小票打印功能无法正常工作
@@ -870,7 +1055,8 @@ mysql -u root -p cashier_system < backup.sql
 1. 检查打印机是否正确安装
 2. 配置 `config/printer.properties` 文件
 3. 检查打印机驱动是否正常
-4. 尝试使用不同的打印命令
+4. 使用打印预览功能测试
+5. 尝试使用不同的打印命令
 
 ### 界面模糊或显示异常
 
@@ -934,9 +1120,15 @@ JavaFX 官网: https://openjfx.io/
 
 ## 📚 相关文档
 
+- [AGENTS.md](AGENTS.md) - 项目开发指南
+- [CLAUDE.md](CLAUDE.md) - 给 AI 助手的代码库指南
 - [MySQL 数据库部署指南](docs/MYSQL_SETUP.md) - 详细的 MySQL 安装和配置说明
 - [Docker MySQL 快速部署](docker-mysql-setup.md) - 使用 Docker 快速启动 MySQL
-- [CLAUDE.md](CLAUDE.md) - 给 AI 助手的代码库指南
+- [数据库初始化文档](docs/DATABASE_INIT.md) - 数据库表结构和初始化流程
+- [采购表结构设计](docs/PURCHASE_TABLE_DESIGN.md) - 采购管理表结构设计
+- [Windows MySQL 安装指南](docs/WINDOWS_MYSQL_SETUP.md) - Windows 平台 MySQL 安装
+- [v2.3.1 数据库变更](docs/DATABASE_CHANGES_v2.3.1.md) - 数据库变更说明
+- [应用图标指南](docs/ICON_GUIDE.md) - 应用图标使用指南
 
 ## 📊 技术栈
 
@@ -947,13 +1139,14 @@ JavaFX 官网: https://openjfx.io/
 - **数据库**: MySQL 8.0
 - **连接池**: HikariCP 5.1.0
 - **ORM**: 自定义 DAO 层
-- **测试框架**: JUnit 5 + TestFX
+- **缓存**: 内置缓存管理器
+- **测试框架**: JUnit 5 + TestFX + H2 Database
 
 ## 🔮 未来计划
 
 - [ ] 云端数据同步
 - [ ] 移动端应用
-- [ ] 二维码扫描支持
+- [ ] 二维码生成和打印
 - [x] 小票打印功能（已实现）
 - [ ] 更多统计图表
 - [ ] 多语言支持
@@ -975,10 +1168,22 @@ JavaFX 官网: https://openjfx.io/
 - [x] 采购管理功能（v2.3.0 已实现）
 - [x] 库存盘点功能（v2.3.0 已实现）
 - [x] 报表统计功能（v2.3.0 已实现）
+- [x] 打印机管理功能（v2.3.1 已实现）
+- [x] 扫描枪管理功能（v2.3.1 已实现）
+- [x] 缓存管理功能（v2.3.1 已实现）
+- [x] 数据导入功能（v2.3.1 已实现）
+- [x] Service 层封装（v2.3.1 已实现）
+- [x] 单元测试支持（v2.3.1 已实现）
 - [ ] 退货管理功能
 - [ ] 数据导出功能（Excel/PDF）
 - [ ] 多仓库管理
 - [ ] 操作日志功能增强
+- [ ] 消息通知功能
+- [ ] 性能优化
+- [ ] 支持更多打印机型号
+- [ ] 支持蓝牙扫描枪
+- [ ] 支持云打印服务
+- [ ] 支持多语言界面
 
 ---
 
