@@ -5,11 +5,13 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
+import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.awt.Color;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -257,7 +259,7 @@ public class ExportUtil {
     }
 
     /**
-     * 导出为 PDF（支持中文）
+     * 导出为 PDF（支持中文，带表格边框）
      */
     private static String exportToPDF(String title, List<String> headers, List<String[]> data,
                                       String exportPath, String fileName) throws IOException {
@@ -267,87 +269,109 @@ public class ExportUtil {
             // 加载中文字体
             PDFont font = loadChineseFont(document);
 
-            PDPage page = new PDPage();
+            // PDF 页面设置
+            PDPage page = new PDPage(PDRectangle.A4);
             document.addPage(page);
+            
+            float pageWidth = page.getMediaBox().getWidth();
+            float pageHeight = page.getMediaBox().getHeight();
+            
+            // 布局参数 - 优化排版
+            float margin = 25;  // 减小页边距，增加表格宽度
+            float rowHeight = 35;  // 增加行高，让文字更清晰
+            float titleFontSize = 18;
+            float headerFontSize = 12;  // 增加表头字体大小
+            float dataFontSize = 11;  // 增加数据字体大小
+            
+            // 计算列宽 - 根据内容自动调整
+            int columnCount = headers.size();
+            float tableWidth = pageWidth - 2 * margin;
+            float[] columnWidths = calculateColumnWidths(headers, data, font, dataFontSize, tableWidth);
 
-            float margin = 50;
-            float yPosition = 750;
-            float lineHeight = 20;
-            float titleFontSize = 16;
-            float normalFontSize = 10;
-            float columnWidth = 120;
+            // 当前 Y 位置
+            float yPosition = pageHeight - margin;
 
-            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
-                // 写入标题
-                contentStream.setFont(font, titleFontSize);
+            PDPageContentStream contentStream = new PDPageContentStream(document, page);
+
+            // 写入标题
+            contentStream.setFont(font, titleFontSize);
+            float titleWidth = font.getStringWidth(title) / 1000 * titleFontSize;
+            float titleX = (pageWidth - titleWidth) / 2;
+            contentStream.beginText();
+            contentStream.newLineAtOffset(titleX, yPosition);
+            contentStream.showText(title);
+            contentStream.endText();
+            yPosition -= rowHeight * 1.5f;
+
+            // 绘制表格
+            float tableTop = yPosition;
+            
+            // 绘制表头背景
+            contentStream.setNonStrokingColor(Color.LIGHT_GRAY);
+            contentStream.addRect(margin, yPosition - rowHeight, tableWidth, rowHeight);
+            contentStream.fill();
+            
+            // 绘制表头文字
+            contentStream.setNonStrokingColor(Color.BLACK);
+            contentStream.setFont(font, headerFontSize);
+            float xPosition = margin + 5;
+            for (int i = 0; i < headers.size(); i++) {
                 contentStream.beginText();
-                contentStream.newLineAtOffset(margin, yPosition);
-                contentStream.showText(title);
+                contentStream.newLineAtOffset(xPosition, yPosition - rowHeight + 7);
+                String header = truncateText(headers.get(i), font, headerFontSize, columnWidths[i] - 5);
+                contentStream.showText(header);
                 contentStream.endText();
+                xPosition += columnWidths[i];
+            }
+            yPosition -= rowHeight;
 
-                yPosition -= 30;
-
-                // 计算列宽
-                int columnCount = headers.size();
-                float totalWidth = page.getMediaBox().getWidth() - 2 * margin;
-                columnWidth = totalWidth / Math.max(columnCount, 1);
-
-                // 写入表头
-                contentStream.setFont(font, normalFontSize);
-                float xPosition = margin;
-                for (String header : headers) {
-                    contentStream.beginText();
-                    contentStream.newLineAtOffset(xPosition, yPosition);
-                    contentStream.showText(header != null ? header : "");
-                    contentStream.endText();
-                    xPosition += columnWidth;
+            // 绘制数据行
+            contentStream.setFont(font, dataFontSize);
+            for (int rowIndex = 0; rowIndex < data.size(); rowIndex++) {
+                // 检查是否需要新页面
+                if (yPosition < margin + rowHeight) {
+                    // 绘制当前页面的表格边框
+                    drawTableBorder(contentStream, margin, yPosition, tableWidth, tableTop - yPosition + rowHeight, columnWidths);
+                    contentStream.close();
+                    
+                    // 创建新页面
+                    page = new PDPage(PDRectangle.A4);
+                    document.addPage(page);
+                    yPosition = pageHeight - margin;
+                    tableTop = yPosition;
+                    contentStream = new PDPageContentStream(document, page);
+                    contentStream.setFont(font, dataFontSize);
                 }
 
-                yPosition -= lineHeight;
+                String[] rowData = data.get(rowIndex);
+                
+                // 交替行背景色
+                if (rowIndex % 2 == 1) {
+                    contentStream.setNonStrokingColor(new Color(245, 245, 245));
+                    contentStream.addRect(margin, yPosition - rowHeight, tableWidth, rowHeight);
+                    contentStream.fill();
+                    contentStream.setNonStrokingColor(Color.BLACK);
+                }
 
                 // 写入数据
-                for (String[] rowData : data) {
-                    if (yPosition < margin + lineHeight) {
-                        // 页面已满，创建新页
-                        contentStream.close();
-
-                        page = new PDPage();
-                        document.addPage(page);
-                        yPosition = 750;
-
-                        // 需要重新创建 contentStream
-                        PDPageContentStream newStream = new PDPageContentStream(document, page);
-                        newStream.setFont(font, normalFontSize);
-
-                        // 继续写入数据
-                        xPosition = margin;
-                        for (int i = 0; i < rowData.length; i++) {
-                            String cell = rowData[i];
-                            newStream.beginText();
-                            newStream.newLineAtOffset(xPosition, yPosition);
-                            String text = cell != null && cell.length() > 30 ? cell.substring(0, 27) + "..." : cell;
-                            newStream.showText(text != null ? text : "");
-                            newStream.endText();
-                            xPosition += columnWidth;
-                        }
-                        yPosition -= lineHeight;
-                        newStream.close();
-                        continue;
-                    }
-
-                    xPosition = margin;
-                    for (String cell : rowData) {
-                        contentStream.beginText();
-                        contentStream.newLineAtOffset(xPosition, yPosition);
-                        // 截断过长的文字
-                        String text = cell != null && cell.length() > 30 ? cell.substring(0, 27) + "..." : cell;
-                        contentStream.showText(text != null ? text : "");
-                        contentStream.endText();
-                        xPosition += columnWidth;
-                    }
-                    yPosition -= lineHeight;
+                xPosition = margin + 5;
+                for (int i = 0; i < columnCount && i < rowData.length; i++) {
+                    contentStream.beginText();
+                    contentStream.newLineAtOffset(xPosition, yPosition - rowHeight + 7);
+                    String cellText = rowData[i] != null ? rowData[i] : "";
+                    String text = truncateText(cellText, font, dataFontSize, columnWidths[i] - 5);
+                    contentStream.showText(text);
+                    contentStream.endText();
+                    xPosition += columnWidths[i];
                 }
+                yPosition -= rowHeight;
             }
+
+            // 绘制最终表格边框
+            float tableHeight = tableTop - yPosition;
+            drawTableBorder(contentStream, margin, yPosition, tableWidth, tableHeight, columnWidths);
+
+            contentStream.close();
 
             // 保存文件
             document.save(filePath);
@@ -355,5 +379,143 @@ public class ExportUtil {
             logger.info("PDF 导出成功: {}", filePath);
             return filePath;
         }
+    }
+
+    /**
+     * 计算列宽 - 优化列宽分配
+     */
+    private static float[] calculateColumnWidths(List<String> headers, List<String[]> data, 
+                                                  PDFont font, float fontSize, float totalWidth) {
+        int columnCount = headers.size();
+        float[] maxWidths = new float[columnCount];
+        float minColumnWidth = 60;  // 最小列宽
+        
+        try {
+            // 计算每列的最大宽度
+            for (int i = 0; i < columnCount; i++) {
+                float headerWidth = font.getStringWidth(headers.get(i)) / 1000 * fontSize;
+                maxWidths[i] = headerWidth;
+            }
+            
+            for (String[] row : data) {
+                for (int i = 0; i < columnCount && i < row.length; i++) {
+                    String cell = row[i] != null ? row[i] : "";
+                    float cellWidth = font.getStringWidth(cell) / 1000 * fontSize;
+                    maxWidths[i] = Math.max(maxWidths[i], cellWidth);
+                }
+            }
+        } catch (IOException e) {
+            // 如果无法计算，使用平均宽度
+            float avgWidth = totalWidth / columnCount;
+            float[] widths = new float[columnCount];
+            for (int i = 0; i < columnCount; i++) {
+                widths[i] = avgWidth;
+            }
+            return widths;
+        }
+        
+        // 添加一些内边距（减少到5）
+        float totalMaxWidth = 0;
+        for (float w : maxWidths) {
+            totalMaxWidth += w;
+        }
+        totalMaxWidth += columnCount * 5;  // 内边距从10减少到5
+        
+        float[] widths = new float[columnCount];
+        
+        if (totalMaxWidth <= totalWidth) {
+            // 内容不多，按比例分配剩余空间
+            float scale = totalWidth / totalMaxWidth;
+            for (int i = 0; i < columnCount; i++) {
+                widths[i] = (maxWidths[i] + 5) * scale;
+            }
+        } else {
+            // 内容太多，按比例压缩（而不是平均分配）
+            float scale = totalWidth / totalMaxWidth;
+            for (int i = 0; i < columnCount; i++) {
+                widths[i] = (maxWidths[i] + 5) * scale;
+            }
+            
+            // 确保每列至少有最小宽度
+            for (int i = 0; i < columnCount; i++) {
+                widths[i] = Math.max(widths[i], minColumnWidth);
+            }
+            
+            // 如果总宽度超出，重新按比例调整
+            float actualTotal = 0;
+            for (float w : widths) {
+                actualTotal += w;
+            }
+            if (actualTotal > totalWidth) {
+                float adjustScale = totalWidth / actualTotal;
+                for (int i = 0; i < columnCount; i++) {
+                    widths[i] *= adjustScale;
+                }
+            }
+        }
+        
+        return widths;
+    }
+
+    /**
+     * 截断文本以适应列宽 - 减少省略号空间
+     */
+    private static String truncateText(String text, PDFont font, float fontSize, float maxWidth) {
+        if (text == null || text.isEmpty()) {
+            return "";
+        }
+        
+        try {
+            float textWidth = font.getStringWidth(text) / 1000 * fontSize;
+            if (textWidth <= maxWidth) {
+                return text;
+            }
+            
+            // 逐个字符截断
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < text.length(); i++) {
+                String testStr = sb.toString() + text.charAt(i);
+                float testWidth = font.getStringWidth(testStr) / 1000 * fontSize;
+                if (testWidth > maxWidth - 10) { // 减少省略号空间从15到10
+                    return sb.toString() + "...";
+                }
+                sb.append(text.charAt(i));
+            }
+            return sb.toString();
+        } catch (IOException e) {
+            // 无法计算宽度，简单截断
+            int maxChars = (int) (maxWidth / (fontSize * 0.5));
+            if (text.length() > maxChars) {
+                return text.substring(0, maxChars - 3) + "...";
+            }
+            return text;
+        }
+    }
+
+    /**
+     * 绘制表格边框
+     */
+    private static void drawTableBorder(PDPageContentStream contentStream, float x, float y, 
+                                         float width, float height, float[] columnWidths) throws IOException {
+        // 绘制外边框
+        contentStream.setStrokingColor(Color.BLACK);
+        contentStream.setLineWidth(1);
+        contentStream.addRect(x, y, width, height);
+        contentStream.stroke();
+        
+        // 绘制垂直分隔线
+        float xPos = x;
+        for (int i = 0; i < columnWidths.length - 1; i++) {
+            xPos += columnWidths[i];
+            contentStream.moveTo(xPos, y);
+            contentStream.lineTo(xPos, y + height);
+            contentStream.stroke();
+        }
+        
+        // 绘制水平分隔线（表头下方）
+        float rowHeight = 25;
+        contentStream.moveTo(x, y + height - rowHeight);
+        contentStream.lineTo(x + width, y + height - rowHeight);
+        contentStream.stroke();
     }
 }
