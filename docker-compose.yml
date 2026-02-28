@@ -14,7 +14,10 @@ services:
     volumes:
       - cashier-mysql-data:/var/lib/mysql
       - ./docker/my.cnf:/etc/mysql/conf.d/custom.cnf:ro
-      - ./docker/mysql-init/00-init-complete.sql:/docker-entrypoint-initdb.d/00-init-complete.sql:ro
+      - ./docker/mysql-init/00-grant-root-permissions.sql:/docker-entrypoint-initdb.d/00-grant-root-permissions.sql:ro
+      - ./docker/mysql-init/01-create-user.sql:/docker-entrypoint-initdb.d/01-create-user.sql:ro
+      - ./docker/mysql-init/02-alter-tables.sql:/docker-entrypoint-initdb.d/02-alter-tables.sql:ro
+      - ./docker/mysql-init/03-sample-data.sql:/docker-entrypoint-initdb.d/03-sample-data.sql:ro
       - ./docker/mysql-backup:/backup
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
