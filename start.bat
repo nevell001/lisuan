@@ -315,8 +315,8 @@ echo.
 echo Starting, please wait...
 echo.
 
-REM Start application
-java %JVM_OPTS% -jar "%JAR_FILE%"
+REM Start application using Maven JavaFX plugin
+call mvn javafx:run
 
 REM Check exit code
 if errorlevel 1 (
