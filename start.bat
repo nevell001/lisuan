@@ -83,7 +83,7 @@ if errorlevel 1 (
         echo [OK] Maven is available
     ) else (
         echo       Version: Unknown
-        echo [OK] Maven is available (version could not be detected)
+        echo [OK] Maven is available ^<version could not be detected^>
     )
 )
 echo.
@@ -135,7 +135,7 @@ if %DOCKER_AVAILABLE%==1 (
         echo.
         echo Starting Docker Desktop...
         start "" "C:\Program Files\Docker\Docker\Docker Desktop.exe"
-        echo Waiting for Docker to start (15 seconds)...
+        echo Waiting for Docker to start ^<15 seconds^>...
         timeout /t 15 /nobreak >nul
 
         REM Check again
@@ -209,7 +209,7 @@ if not exist "%JAR_FILE%" (
         echo [ERROR] Compilation failed
         echo.
         echo Please check:
-        echo   - Java version (need 17+)
+        echo   - Java version ^<need 17+^>
         echo   - Maven installation
         echo   - Network connectivity
         echo.
@@ -254,7 +254,7 @@ if %DOCKER_AVAILABLE%==1 (
             set "MYSQL_CONTAINER_RUNNING=1"
         )
         echo.
-        echo [INFO] Waiting for MySQL to be ready (10 seconds)...
+        echo [INFO] Waiting for MySQL to be ready ^<10 seconds^>...
         timeout /t 10 /nobreak >nul
     ) else (
         echo [OK] MySQL container is already running
