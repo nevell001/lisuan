@@ -9,8 +9,6 @@ services:
       TZ: Asia/Shanghai
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_unicode_ci
-    ports:
-      - "3306:3306"
     command: --default-authentication-plugin=mysql_native_password --bind-address=0.0.0.0 --skip-name-resolve
     volumes:
       - cashier-mysql-data:/var/lib/mysql
@@ -25,10 +23,7 @@ services:
       timeout: 10s
       retries: 10
       start_period: 60s
-    extra_hosts:
-      - "host.docker.internal:host-gateway"
-    networks:
-      - cashier-network
+    network_mode: host
 
 volumes:
   cashier-mysql-data:
