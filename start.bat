@@ -47,7 +47,7 @@ if errorlevel 1 (
 )
 
 REM Get Java version
-for /f "tokens=3" %%a in ('java -version 2^>^&1 ^| findstr /i "version"') do set "JAVA_VERSION=%%a"
+for /f "usebackq tokens=3" %%a in (`java -version 2^>^&1 ^| findstr /i "version"`) do set "JAVA_VERSION=%%a"
 set "JAVA_VERSION=%JAVA_VERSION:"=%"
 echo       Version: %JAVA_VERSION%
 echo [OK] Java environment check passed
@@ -77,9 +77,14 @@ if errorlevel 1 (
         exit /b 1
     )
 ) else (
-    for /f "tokens=3" %%a in ('mvn -version 2^>^&1 ^| findstr /i "Apache Maven"') do set "MAVEN_VERSION=%%a"
-    echo       Version: %MAVEN_VERSION%
-    echo [OK] Maven is available
+    for /f "usebackq tokens=3" %%a in (`mvn -version 2^>^&1 ^| findstr /i "Apache Maven"`) do set "MAVEN_VERSION=%%a"
+    if not "%MAVEN_VERSION%"=="" (
+        echo       Version: %MAVEN_VERSION%
+        echo [OK] Maven is available
+    ) else (
+        echo       Version: Unknown
+        echo [OK] Maven is available (version could not be detected)
+    )
 )
 echo.
 
@@ -107,10 +112,16 @@ if errorlevel 1 (
     )
     set "DOCKER_ERROR=1"
 ) else (
-    for /f "tokens=*" %%i in ('docker --version 2^>^&1') do set "DOCKER_VERSION=%%i"
-    echo       Version: %DOCKER_VERSION%
-    set "DOCKER_AVAILABLE=1"
-    echo [OK] Docker is available
+    for /f "usebackq tokens=*" %%i in (`docker --version 2^>^&1`) do set "DOCKER_VERSION=%%i"
+    if not "%DOCKER_VERSION%"=="" (
+        echo       Version: %DOCKER_VERSION%
+        set "DOCKER_AVAILABLE=1"
+        echo [OK] Docker is available
+    ) else (
+        echo       Version: Unknown
+        set "DOCKER_AVAILABLE=1"
+        echo [WARNING] Docker version could not be detected, but it is available
+    )
 )
 echo.
 
