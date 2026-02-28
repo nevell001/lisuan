@@ -631,11 +631,226 @@ public class ProfitReportController {
      */
     @FXML
     private void handleExport() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("导出");
-        alert.setHeaderText(null);
-        alert.setContentText("导出功能正在开发中...");
-        alert.showAndWait();
+        // 显示导出选项对话框
+        ChoiceDialog<String> exportDialog = new ChoiceDialog<>(
+            "商品利润", "商品利润", "分类利润", "每日利润"
+        );
+        exportDialog.setTitle("选择导出内容");
+        exportDialog.setHeaderText("请选择要导出的内容");
+        exportDialog.setContentText("导出内容:");
+
+        exportDialog.showAndWait().ifPresent(exportType -> {
+            if (exportType.equals("商品利润")) {
+                exportProductProfit();
+            } else if (exportType.equals("分类利润")) {
+                exportCategoryProfit();
+            } else if (exportType.equals("每日利润")) {
+                exportDailyProfit();
+            }
+        });
+    }
+
+    /**
+     * 导出商品利润
+     */
+    private void exportProductProfit() {
+        if (productProfitTable.getItems().isEmpty()) {
+            showError("没有可导出的商品利润数据");
+            return;
+        }
+
+        // 显示导出格式选择对话框
+        ChoiceDialog<String> formatDialog = new ChoiceDialog<>(
+            "Excel", "Excel", "PDF"
+        );
+        formatDialog.setTitle("选择导出格式");
+        formatDialog.setHeaderText("请选择导出格式");
+        formatDialog.setContentText("格式:");
+
+        formatDialog.showAndWait().ifPresent(format -> {
+            com.cashier.util.ExportUtil.ExportFormat exportFormat =
+                "Excel".equals(format) ? com.cashier.util.ExportUtil.ExportFormat.EXCEL
+                                      : com.cashier.util.ExportUtil.ExportFormat.PDF;
+
+            try {
+                // 准备表头
+                java.util.List<String> headers = java.util.Arrays.asList(
+                    "商品名称", "商品分类", "销售收入", "销售成本", "毛利润", "毛利率(%)"
+                );
+
+                // 准备数据
+                java.util.List<String[]> data = new java.util.ArrayList<>();
+                for (ProfitReportRecord record : productProfitTable.getItems()) {
+                    double profitMargin = record.revenue > 0 ? (record.profit / record.revenue) * 100 : 0;
+                    data.add(new String[]{
+                        record.productName != null ? record.productName : "",
+                        record.category != null ? record.category : "",
+                        String.format("¥%.2f", record.revenue),
+                        String.format("¥%.2f", record.cost),
+                        String.format("¥%.2f", record.profit),
+                        String.format("%.2f", profitMargin)
+                    });
+                }
+
+                // 导出数据
+                String filePath = com.cashier.util.ExportUtil.export(
+                    "商品利润分析报表",
+                    headers,
+                    data,
+                    exportFormat,
+                    "商品利润"
+                );
+
+                if (filePath != null) {
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    successAlert.setTitle("导出成功");
+                    successAlert.setHeaderText(null);
+                    successAlert.setContentText("文件已成功导出到:\n" + filePath);
+                    successAlert.showAndWait();
+                    logger.info("商品利润分析报表导出成功: {}", filePath);
+                } else {
+                    showError("导出失败，请查看日志获取详细信息");
+                }
+            } catch (Exception e) {
+                logger.error("导出商品利润分析报表失败", e);
+                showError("导出失败: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * 导出分类利润
+     */
+    private void exportCategoryProfit() {
+        if (categoryProfitTable.getItems().isEmpty()) {
+            showError("没有可导出的分类利润数据");
+            return;
+        }
+
+        // 显示导出格式选择对话框
+        ChoiceDialog<String> formatDialog = new ChoiceDialog<>(
+            "Excel", "Excel", "PDF"
+        );
+        formatDialog.setTitle("选择导出格式");
+        formatDialog.setHeaderText("请选择导出格式");
+        formatDialog.setContentText("格式:");
+
+        formatDialog.showAndWait().ifPresent(format -> {
+            com.cashier.util.ExportUtil.ExportFormat exportFormat =
+                "Excel".equals(format) ? com.cashier.util.ExportUtil.ExportFormat.EXCEL
+                                      : com.cashier.util.ExportUtil.ExportFormat.PDF;
+
+            try {
+                // 准备表头
+                java.util.List<String> headers = java.util.Arrays.asList(
+                    "商品分类", "销售收入", "销售成本", "毛利润", "毛利率(%)"
+                );
+
+                // 准备数据
+                java.util.List<String[]> data = new java.util.ArrayList<>();
+                for (ProfitReportRecord record : categoryProfitTable.getItems()) {
+                    double profitMargin = record.revenue > 0 ? (record.profit / record.revenue) * 100 : 0;
+                    data.add(new String[]{
+                        record.category != null ? record.category : "",
+                        String.format("¥%.2f", record.revenue),
+                        String.format("¥%.2f", record.cost),
+                        String.format("¥%.2f", record.profit),
+                        String.format("%.2f", profitMargin)
+                    });
+                }
+
+                // 导出数据
+                String filePath = com.cashier.util.ExportUtil.export(
+                    "分类利润分析报表",
+                    headers,
+                    data,
+                    exportFormat,
+                    "分类利润"
+                );
+
+                if (filePath != null) {
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    successAlert.setTitle("导出成功");
+                    successAlert.setHeaderText(null);
+                    successAlert.setContentText("文件已成功导出到:\n" + filePath);
+                    successAlert.showAndWait();
+                    logger.info("分类利润分析报表导出成功: {}", filePath);
+                } else {
+                    showError("导出失败，请查看日志获取详细信息");
+                }
+            } catch (Exception e) {
+                logger.error("导出分类利润分析报表失败", e);
+                showError("导出失败: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * 导出每日利润
+     */
+    private void exportDailyProfit() {
+        if (dailyProfitTable.getItems().isEmpty()) {
+            showError("没有可导出的每日利润数据");
+            return;
+        }
+
+        // 显示导出格式选择对话框
+        ChoiceDialog<String> formatDialog = new ChoiceDialog<>(
+            "Excel", "Excel", "PDF"
+        );
+        formatDialog.setTitle("选择导出格式");
+        formatDialog.setHeaderText("请选择导出格式");
+        formatDialog.setContentText("格式:");
+
+        formatDialog.showAndWait().ifPresent(format -> {
+            com.cashier.util.ExportUtil.ExportFormat exportFormat =
+                "Excel".equals(format) ? com.cashier.util.ExportUtil.ExportFormat.EXCEL
+                                      : com.cashier.util.ExportUtil.ExportFormat.PDF;
+
+            try {
+                // 准备表头
+                java.util.List<String> headers = java.util.Arrays.asList(
+                    "日期", "销售收入", "销售成本", "毛利润", "毛利率(%)", "净利润"
+                );
+
+                // 准备数据
+                java.util.List<String[]> data = new java.util.ArrayList<>();
+                for (ProfitReportRecord record : dailyProfitTable.getItems()) {
+                    double profitMargin = record.revenue > 0 ? (record.profit / record.revenue) * 100 : 0;
+                    data.add(new String[]{
+                        record.date != null ? record.date : "",
+                        String.format("¥%.2f", record.revenue),
+                        String.format("¥%.2f", record.cost),
+                        String.format("¥%.2f", record.profit),
+                        String.format("%.2f", profitMargin),
+                        String.format("¥%.2f", record.profit * 0.95) // 假设净利润为毛利润的95%
+                    });
+                }
+
+                // 导出数据
+                String filePath = com.cashier.util.ExportUtil.export(
+                    "每日利润分析报表",
+                    headers,
+                    data,
+                    exportFormat,
+                    "每日利润"
+                );
+
+                if (filePath != null) {
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    successAlert.setTitle("导出成功");
+                    successAlert.setHeaderText(null);
+                    successAlert.setContentText("文件已成功导出到:\n" + filePath);
+                    successAlert.showAndWait();
+                    logger.info("每日利润分析报表导出成功: {}", filePath);
+                } else {
+                    showError("导出失败，请查看日志获取详细信息");
+                }
+            } catch (Exception e) {
+                logger.error("导出每日利润分析报表失败", e);
+                showError("导出失败: " + e.getMessage());
+            }
+        });
     }
 
     /**

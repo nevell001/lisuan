@@ -318,11 +318,83 @@ public class ShiftController {
      */
     @FXML
     private void handleExport() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("导出");
-        alert.setHeaderText(null);
-        alert.setContentText("导出功能正在开发中...");
-        alert.showAndWait();
+        if (shiftList.isEmpty()) {
+            showError("没有可导出的交接班记录");
+            return;
+        }
+
+        // 显示导出格式选择对话框
+        ChoiceDialog<String> formatDialog = new ChoiceDialog<>(
+            "Excel", "Excel", "PDF"
+        );
+        formatDialog.setTitle("选择导出格式");
+        formatDialog.setHeaderText("请选择导出格式");
+        formatDialog.setContentText("格式:");
+
+        formatDialog.showAndWait().ifPresent(format -> {
+            com.cashier.util.ExportUtil.ExportFormat exportFormat =
+                "Excel".equals(format) ? com.cashier.util.ExportUtil.ExportFormat.EXCEL
+                                      : com.cashier.util.ExportUtil.ExportFormat.PDF;
+
+            exportShifts(exportFormat);
+        });
+    }
+
+    /**
+     * 导出交接班记录
+     */
+    private void exportShifts(com.cashier.util.ExportUtil.ExportFormat format) {
+        try {
+            // 准备表头
+            java.util.List<String> headers = java.util.Arrays.asList(
+                "班次编号", "操作员", "开始时间", "结束时间", "班次时长", "交易数量",
+                "总收入", "现金收入", "微信收入", "支付宝收入", "银行卡收入", "备注"
+            );
+
+            // 准备数据
+            java.util.List<String[]> data = new java.util.ArrayList<>();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+            for (Shift s : shiftList) {
+                data.add(new String[]{
+                    s.shiftId,
+                    s.operatorName,
+                    sdf.format(s.startTime),
+                    sdf.format(s.endTime),
+                    s.getDurationText(),
+                    String.valueOf(s.shiftTransactionCount),
+                    String.format("¥%.2f", s.shiftRevenue),
+                    String.format("¥%.2f", s.cashRevenue),
+                    String.format("¥%.2f", s.wechatRevenue),
+                    String.format("¥%.2f", s.alipayRevenue),
+                    String.format("¥%.2f", s.cardRevenue),
+                    s.notes == null || s.notes.isEmpty() ? "无" : s.notes
+                });
+            }
+
+            // 导出数据
+            String filePath = com.cashier.util.ExportUtil.export(
+                "交接班报表",
+                headers,
+                data,
+                format,
+                "交接班记录"
+            );
+
+            if (filePath != null) {
+                Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                successAlert.setTitle("导出成功");
+                successAlert.setHeaderText(null);
+                successAlert.setContentText("文件已成功导出到:\n" + filePath);
+                successAlert.showAndWait();
+                updateStatus("导出成功");
+            } else {
+                showError("导出失败，请查看日志获取详细信息");
+            }
+        } catch (Exception e) {
+            logger.error("导出交接班记录失败", e);
+            showError("导出失败: " + e.getMessage());
+        }
     }
 
     /**

@@ -124,7 +124,7 @@ public class LoginController {
                     return;
                 }
 
-                if (!PasswordUtil.verifyPassword(password, user.password)) {
+                if (!PasswordUtil.verifyPassword(password, user.password, username)) {
                     loginAttempts++;
                     showError("密码错误！剩余尝试次数：" + (MAX_LOGIN_ATTEMPTS - loginAttempts));
                     shakeTextField(passwordField);

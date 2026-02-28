@@ -486,11 +486,219 @@ public class PurchaseReportController {
      */
     @FXML
     private void handleExport() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("导出");
-        alert.setHeaderText(null);
-        alert.setContentText("导出功能正在开发中...");
-        alert.showAndWait();
+        // 显示导出选项对话框
+        ChoiceDialog<String> exportDialog = new ChoiceDialog<>(
+            "订单统计", "订单统计", "供应商排名", "分类采购"
+        );
+        exportDialog.setTitle("选择导出内容");
+        exportDialog.setHeaderText("请选择要导出的内容");
+        exportDialog.setContentText("导出内容:");
+
+        exportDialog.showAndWait().ifPresent(exportType -> {
+            if (exportType.equals("订单统计")) {
+                exportOrderReport();
+            } else if (exportType.equals("供应商排名")) {
+                exportSupplierRanking();
+            } else if (exportType.equals("分类采购")) {
+                exportCategoryReport();
+            }
+        });
+    }
+
+    /**
+     * 导出订单报表
+     */
+    private void exportOrderReport() {
+        if (orderTable.getItems().isEmpty()) {
+            showError("没有可导出的订单数据");
+            return;
+        }
+
+        // 显示导出格式选择对话框
+        ChoiceDialog<String> formatDialog = new ChoiceDialog<>(
+            "Excel", "Excel", "PDF"
+        );
+        formatDialog.setTitle("选择导出格式");
+        formatDialog.setHeaderText("请选择导出格式");
+        formatDialog.setContentText("格式:");
+
+        formatDialog.showAndWait().ifPresent(format -> {
+            com.cashier.util.ExportUtil.ExportFormat exportFormat =
+                "Excel".equals(format) ? com.cashier.util.ExportUtil.ExportFormat.EXCEL
+                                      : com.cashier.util.ExportUtil.ExportFormat.PDF;
+
+            try {
+                // 准备表头
+                java.util.List<String> headers = java.util.Arrays.asList(
+                    "订单编号", "供应商名称", "采购日期", "订单金额", "商品数量", "订单状态"
+                );
+
+                // 准备数据
+                java.util.List<String[]> data = new java.util.ArrayList<>();
+                for (PurchaseReportRecord record : orderTable.getItems()) {
+                    data.add(new String[]{
+                        record.orderNo,
+                        record.supplierName,
+                        record.date,
+                        String.format("¥%.2f", record.amount),
+                        String.valueOf(record.quantity),
+                        record.status
+                    });
+                }
+
+                // 导出数据
+                String filePath = com.cashier.util.ExportUtil.export(
+                    "采购订单报表",
+                    headers,
+                    data,
+                    exportFormat,
+                    "采购订单"
+                );
+
+                if (filePath != null) {
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    successAlert.setTitle("导出成功");
+                    successAlert.setHeaderText(null);
+                    successAlert.setContentText("文件已成功导出到:\n" + filePath);
+                    successAlert.showAndWait();
+                    logger.info("采购订单报表导出成功: {}", filePath);
+                } else {
+                    showError("导出失败，请查看日志获取详细信息");
+                }
+            } catch (Exception e) {
+                logger.error("导出采购订单报表失败", e);
+                showError("导出失败: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * 导出供应商排名
+     */
+    private void exportSupplierRanking() {
+        if (supplierRankTable.getItems().isEmpty()) {
+            showError("没有可导出的供应商数据");
+            return;
+        }
+
+        // 显示导出格式选择对话框
+        ChoiceDialog<String> formatDialog = new ChoiceDialog<>(
+            "Excel", "Excel", "PDF"
+        );
+        formatDialog.setTitle("选择导出格式");
+        formatDialog.setHeaderText("请选择导出格式");
+        formatDialog.setContentText("格式:");
+
+        formatDialog.showAndWait().ifPresent(format -> {
+            com.cashier.util.ExportUtil.ExportFormat exportFormat =
+                "Excel".equals(format) ? com.cashier.util.ExportUtil.ExportFormat.EXCEL
+                                      : com.cashier.util.ExportUtil.ExportFormat.PDF;
+
+            try {
+                // 准备表头
+                java.util.List<String> headers = java.util.Arrays.asList(
+                    "排名", "供应商名称", "订单数量", "采购总金额"
+                );
+
+                // 准备数据
+                java.util.List<String[]> data = new java.util.ArrayList<>();
+                for (PurchaseReportRecord record : supplierRankTable.getItems()) {
+                    data.add(new String[]{
+                        String.valueOf(record.rank),
+                        record.supplierName,
+                        String.valueOf(record.orderCount),
+                        String.format("¥%.2f", record.amount)
+                    });
+                }
+
+                // 导出数据
+                String filePath = com.cashier.util.ExportUtil.export(
+                    "供应商采购排名",
+                    headers,
+                    data,
+                    exportFormat,
+                    "供应商排名"
+                );
+
+                if (filePath != null) {
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    successAlert.setTitle("导出成功");
+                    successAlert.setHeaderText(null);
+                    successAlert.setContentText("文件已成功导出到:\n" + filePath);
+                    successAlert.showAndWait();
+                    logger.info("供应商排名导出成功: {}", filePath);
+                } else {
+                    showError("导出失败，请查看日志获取详细信息");
+                }
+            } catch (Exception e) {
+                logger.error("导出供应商排名失败", e);
+                showError("导出失败: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * 导出分类采购报表
+     */
+    private void exportCategoryReport() {
+        if (categoryTable.getItems().isEmpty()) {
+            showError("没有可导出的分类数据");
+            return;
+        }
+
+        // 显示导出格式选择对话框
+        ChoiceDialog<String> formatDialog = new ChoiceDialog<>(
+            "Excel", "Excel", "PDF"
+        );
+        formatDialog.setTitle("选择导出格式");
+        formatDialog.setHeaderText("请选择导出格式");
+        formatDialog.setContentText("格式:");
+
+        formatDialog.showAndWait().ifPresent(format -> {
+            com.cashier.util.ExportUtil.ExportFormat exportFormat =
+                "Excel".equals(format) ? com.cashier.util.ExportUtil.ExportFormat.EXCEL
+                                      : com.cashier.util.ExportUtil.ExportFormat.PDF;
+
+            try {
+                // 准备表头
+                java.util.List<String> headers = java.util.Arrays.asList(
+                    "商品分类", "采购数量", "采购金额"
+                );
+
+                // 准备数据
+                java.util.List<String[]> data = new java.util.ArrayList<>();
+                for (PurchaseReportRecord record : categoryTable.getItems()) {
+                    data.add(new String[]{
+                        record.category,
+                        String.valueOf(record.quantity),
+                        String.format("¥%.2f", record.amount)
+                    });
+                }
+
+                // 导出数据
+                String filePath = com.cashier.util.ExportUtil.export(
+                    "分类采购报表",
+                    headers,
+                    data,
+                    exportFormat,
+                    "分类采购"
+                );
+
+                if (filePath != null) {
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    successAlert.setTitle("导出成功");
+                    successAlert.setHeaderText(null);
+                    successAlert.setContentText("文件已成功导出到:\n" + filePath);
+                    successAlert.showAndWait();
+                    logger.info("分类采购报表导出成功: {}", filePath);
+                } else {
+                    showError("导出失败，请查看日志获取详细信息");
+                }
+            } catch (Exception e) {
+                logger.error("导出分类采购报表失败", e);
+                showError("导出失败: " + e.getMessage());
+            }
+        });
     }
 
     /**

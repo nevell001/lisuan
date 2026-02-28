@@ -315,11 +315,92 @@ public class TransactionController {
      */
     @FXML
     private void handleExport() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("导出");
-        alert.setHeaderText(null);
-        alert.setContentText("导出功能正在开发中...");
-        alert.showAndWait();
+        if (transactionList.isEmpty()) {
+            showError("没有可导出的交易记录");
+            return;
+        }
+
+        // 显示导出格式选择对话框
+        ChoiceDialog<String> formatDialog = new ChoiceDialog<>(
+            "Excel", "Excel", "PDF"
+        );
+        formatDialog.setTitle("选择导出格式");
+        formatDialog.setHeaderText("请选择导出格式");
+        formatDialog.setContentText("格式:");
+
+        formatDialog.showAndWait().ifPresent(format -> {
+            com.cashier.util.ExportUtil.ExportFormat exportFormat =
+                "Excel".equals(format) ? com.cashier.util.ExportUtil.ExportFormat.EXCEL
+                                      : com.cashier.util.ExportUtil.ExportFormat.PDF;
+
+            exportTransactions(exportFormat);
+        });
+    }
+
+    /**
+     * 导出交易记录
+     */
+    private void exportTransactions(com.cashier.util.ExportUtil.ExportFormat format) {
+        try {
+            // 准备表头
+            java.util.List<String> headers = java.util.Arrays.asList(
+                "交易编号", "交易时间", "商品列表", "总金额", "税额", "最终金额", "支付方式", "会员手机号"
+            );
+
+            // 准备数据
+            java.util.List<String[]> data = new java.util.ArrayList<>();
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+
+            for (Transaction t : transactionList) {
+                // 构建商品列表字符串
+                String itemsStr;
+                if (t.items == null || t.items.isEmpty()) {
+                    itemsStr = "无商品";
+                } else {
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < t.items.size(); i++) {
+                        if (i > 0) sb.append("; ");
+                        com.cashier.model.Product product = t.items.get(i);
+                        sb.append(product.name).append(" x ").append(product.quantity);
+                    }
+                    itemsStr = sb.toString();
+                }
+
+                data.add(new String[]{
+                    t.transactionId,
+                    sdf.format(t.timestamp),
+                    itemsStr,
+                    String.format("¥%.2f", t.totalAmount),
+                    String.format("¥%.2f", t.tax),
+                    String.format("¥%.2f", t.finalAmount),
+                    t.paymentMethod,
+                    t.memberPhone == null || t.memberPhone.isEmpty() ? "非会员" : t.memberPhone
+                });
+            }
+
+            // 导出数据
+            String filePath = com.cashier.util.ExportUtil.export(
+                "交易记录报表",
+                headers,
+                data,
+                format,
+                "交易记录"
+            );
+
+            if (filePath != null) {
+                Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                successAlert.setTitle("导出成功");
+                successAlert.setHeaderText(null);
+                successAlert.setContentText("文件已成功导出到:\n" + filePath);
+                successAlert.showAndWait();
+                updateStatus("导出成功");
+            } else {
+                showError("导出失败，请查看日志获取详细信息");
+            }
+        } catch (Exception e) {
+            logger.error("导出交易记录失败", e);
+            showError("导出失败: " + e.getMessage());
+        }
     }
 
     /**

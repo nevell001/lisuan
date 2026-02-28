@@ -574,11 +574,229 @@ public class InventoryReportController {
      */
     @FXML
     private void handleExport() {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("导出");
-        alert.setHeaderText(null);
-        alert.setContentText("导出功能正在开发中...");
-        alert.showAndWait();
+        // 显示导出选项对话框
+        ChoiceDialog<String> exportDialog = new ChoiceDialog<>(
+            "商品统计", "商品统计", "滞销商品", "库存积压"
+        );
+        exportDialog.setTitle("选择导出内容");
+        exportDialog.setHeaderText("请选择要导出的内容");
+        exportDialog.setContentText("导出内容:");
+
+        exportDialog.showAndWait().ifPresent(exportType -> {
+            if (exportType.equals("商品统计")) {
+                exportProductStatistics();
+            } else if (exportType.equals("滞销商品")) {
+                exportSlowMovingProducts();
+            } else if (exportType.equals("库存积压")) {
+                exportOverstockProducts();
+            }
+        });
+    }
+
+    /**
+     * 导出商品统计
+     */
+    private void exportProductStatistics() {
+        if (productTable.getItems().isEmpty()) {
+            showError("没有可导出的商品数据");
+            return;
+        }
+
+        // 显示导出格式选择对话框
+        ChoiceDialog<String> formatDialog = new ChoiceDialog<>(
+            "Excel", "Excel", "PDF"
+        );
+        formatDialog.setTitle("选择导出格式");
+        formatDialog.setHeaderText("请选择导出格式");
+        formatDialog.setContentText("格式:");
+
+        formatDialog.showAndWait().ifPresent(format -> {
+            com.cashier.util.ExportUtil.ExportFormat exportFormat =
+                "Excel".equals(format) ? com.cashier.util.ExportUtil.ExportFormat.EXCEL
+                                      : com.cashier.util.ExportUtil.ExportFormat.PDF;
+
+            try {
+                // 准备表头
+                java.util.List<String> headers = java.util.Arrays.asList(
+                    "商品名称", "商品分类", "当前库存", "库存金额", "销售数量", "周转率(%)", "库存天数", "状态"
+                );
+
+                // 准备数据
+                java.util.List<String[]> data = new java.util.ArrayList<>();
+                for (InventoryReportRecord record : productTable.getItems()) {
+                    data.add(new String[]{
+                        record.productName,
+                        record.category,
+                        String.valueOf(record.currentStock),
+                        String.format("¥%.2f", record.stockValue),
+                        String.valueOf(record.salesQuantity),
+                        String.format("%.2f", record.turnoverRate),
+                        String.format("%.1f", record.inventoryDays),
+                        record.status
+                    });
+                }
+
+                // 导出数据
+                String filePath = com.cashier.util.ExportUtil.export(
+                    "库存商品统计报表",
+                    headers,
+                    data,
+                    exportFormat,
+                    "库存商品统计"
+                );
+
+                if (filePath != null) {
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    successAlert.setTitle("导出成功");
+                    successAlert.setHeaderText(null);
+                    successAlert.setContentText("文件已成功导出到:\n" + filePath);
+                    successAlert.showAndWait();
+                    logger.info("库存商品统计报表导出成功: {}", filePath);
+                } else {
+                    showError("导出失败，请查看日志获取详细信息");
+                }
+            } catch (Exception e) {
+                logger.error("导出库存商品统计报表失败", e);
+                showError("导出失败: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * 导出滞销商品
+     */
+    private void exportSlowMovingProducts() {
+        if (slowSalesTable.getItems().isEmpty()) {
+            showError("没有可导出的滞销商品数据");
+            return;
+        }
+
+        // 显示导出格式选择对话框
+        ChoiceDialog<String> formatDialog = new ChoiceDialog<>(
+            "Excel", "Excel", "PDF"
+        );
+        formatDialog.setTitle("选择导出格式");
+        formatDialog.setHeaderText("请选择导出格式");
+        formatDialog.setContentText("格式:");
+
+        formatDialog.showAndWait().ifPresent(format -> {
+            com.cashier.util.ExportUtil.ExportFormat exportFormat =
+                "Excel".equals(format) ? com.cashier.util.ExportUtil.ExportFormat.EXCEL
+                                      : com.cashier.util.ExportUtil.ExportFormat.PDF;
+
+            try {
+                // 准备表头
+                java.util.List<String> headers = java.util.Arrays.asList(
+                    "商品名称", "商品分类", "当前库存", "库存金额", "最后销售日期", "滞销天数"
+                );
+
+                // 准备数据
+                java.util.List<String[]> data = new java.util.ArrayList<>();
+                for (InventoryReportRecord record : slowSalesTable.getItems()) {
+                    data.add(new String[]{
+                        record.productName,
+                        record.category,
+                        String.valueOf(record.currentStock),
+                        String.format("¥%.2f", record.stockValue),
+                        record.lastSaleDate != null ? record.lastSaleDate : "从未销售",
+                        String.format("%.1f", record.inventoryDays)
+                    });
+                }
+
+                // 导出数据
+                String filePath = com.cashier.util.ExportUtil.export(
+                    "滞销商品报表",
+                    headers,
+                    data,
+                    exportFormat,
+                    "滞销商品"
+                );
+
+                if (filePath != null) {
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    successAlert.setTitle("导出成功");
+                    successAlert.setHeaderText(null);
+                    successAlert.setContentText("文件已成功导出到:\n" + filePath);
+                    successAlert.showAndWait();
+                    logger.info("滞销商品报表导出成功: {}", filePath);
+                } else {
+                    showError("导出失败，请查看日志获取详细信息");
+                }
+            } catch (Exception e) {
+                logger.error("导出滞销商品报表失败", e);
+                showError("导出失败: " + e.getMessage());
+            }
+        });
+    }
+
+    /**
+     * 导出库存积压
+     */
+    private void exportOverstockProducts() {
+        if (overstockTable.getItems().isEmpty()) {
+            showError("没有可导出的库存积压数据");
+            return;
+        }
+
+        // 显示导出格式选择对话框
+        ChoiceDialog<String> formatDialog = new ChoiceDialog<>(
+            "Excel", "Excel", "PDF"
+        );
+        formatDialog.setTitle("选择导出格式");
+        formatDialog.setHeaderText("请选择导出格式");
+        formatDialog.setContentText("格式:");
+
+        formatDialog.showAndWait().ifPresent(format -> {
+            com.cashier.util.ExportUtil.ExportFormat exportFormat =
+                "Excel".equals(format) ? com.cashier.util.ExportUtil.ExportFormat.EXCEL
+                                      : com.cashier.util.ExportUtil.ExportFormat.PDF;
+
+            try {
+                // 准备表头
+                java.util.List<String> headers = java.util.Arrays.asList(
+                    "商品名称", "商品分类", "当前库存", "最低库存", "库存金额", "超储数量", "超储金额"
+                );
+
+                // 准备数据
+                java.util.List<String[]> data = new java.util.ArrayList<>();
+                for (InventoryReportRecord record : overstockTable.getItems()) {
+                    int overstockQuantity = record.currentStock - (int)(record.stockValue / 100); // 简化计算
+                    double overstockAmount = overstockQuantity * (record.stockValue / record.currentStock);
+                    data.add(new String[]{
+                        record.productName,
+                        record.category,
+                        String.valueOf(record.currentStock),
+                        "10", // 默认最低库存
+                        String.format("¥%.2f", record.stockValue),
+                        String.valueOf(overstockQuantity),
+                        String.format("¥%.2f", overstockAmount)
+                    });
+                }
+
+                // 导出数据
+                String filePath = com.cashier.util.ExportUtil.export(
+                    "库存积压报表",
+                    headers,
+                    data,
+                    exportFormat,
+                    "库存积压"
+                );
+
+                if (filePath != null) {
+                    Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+                    successAlert.setTitle("导出成功");
+                    successAlert.setHeaderText(null);
+                    successAlert.setContentText("文件已成功导出到:\n" + filePath);
+                    successAlert.showAndWait();
+                    logger.info("库存积压报表导出成功: {}", filePath);
+                } else {
+                    showError("导出失败，请查看日志获取详细信息");
+                }
+            } catch (Exception e) {
+                logger.error("导出库存积压报表失败", e);
+                showError("导出失败: " + e.getMessage());
+            }
+        });
     }
 
     /**
