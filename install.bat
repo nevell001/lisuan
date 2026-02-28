@@ -1,5 +1,4 @@
 @echo off
-setlocal enabledelayedexpansion
 
 echo ========================================
 echo   Cashier System Installation
@@ -13,6 +12,8 @@ set DB_PORT=3306
 set DB_NAME=cashier_system
 set DB_USERNAME=root
 set DB_PASSWORD=RootPassword123!
+
+setlocal enabledelayedexpansion
 
 set JAR_PATH=target\cashier-system-fx-%APP_VERSION%-jar-with-dependencies.jar
 if exist %JAR_PATH% goto :ask_recompile
@@ -463,10 +464,13 @@ pause
 exit /b 0
 
 :write_docker_config
+endlocal
+setlocal
 set DB_HOST=localhost
 set DB_PORT=3306
 set DB_USERNAME=root
 set DB_PASSWORD=RootPassword123!
+setlocal enabledelayedexpansion
 echo [Config] Updating database.properties for Docker MySQL...
 goto :write_config
 
@@ -475,6 +479,8 @@ echo [Config] Updating database.properties for Local MySQL...
 goto :write_config
 
 :write_config
+endlocal
+setlocal
 (
     echo # Database Configuration
     echo db.url=jdbc:mysql://%DB_HOST%:%DB_PORT%/%DB_NAME%?useSSL=false^&serverTimezone=Asia/Shanghai^&allowPublicKeyRetrieval=true^&characterEncoding=UTF-8
@@ -485,6 +491,8 @@ goto :write_config
     echo db.idle.timeout=600000
     echo db.max.lifetime=1800000
 ) > config\database.properties
+endlocal
+setlocal enabledelayedexpansion
 echo [Done] Database configuration updated
 echo.
 goto :create_shortcut
