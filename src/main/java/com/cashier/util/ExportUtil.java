@@ -28,9 +28,6 @@ import java.util.List;
 public class ExportUtil {
     private static final Logger logger = LoggerFactory.getLogger(ExportUtil.class);
     private static final String EXPORT_DIR = System.getProperty("user.home") + File.separator + "cashier-exports";
-    
-    // 中文字体缓存
-    private static PDFont chineseFont = null;
 
     /**
      * 导出格式枚举
@@ -158,47 +155,105 @@ public class ExportUtil {
 
     /**
      * 加载中文字体
+     * 优先级：项目资源 > 系统字体
      */
     private static PDFont loadChineseFont(PDDocument document) throws IOException {
-        if (chineseFont != null) {
-            return chineseFont;
-        }
-        
-        // 尝试从资源文件加载中文字体
-        String[] fontPaths = {
+        // 1. 尝试从项目资源加载中文字体
+        String[] resourcePaths = {
             "/fonts/NotoSansSC-Regular.ttf",
             "/com/cashier/fonts/NotoSansSC-Regular.ttf"
         };
-        
-        for (String fontPath : fontPaths) {
+
+        for (String fontPath : resourcePaths) {
             try (InputStream is = ExportUtil.class.getResourceAsStream(fontPath)) {
                 if (is != null) {
-                    chineseFont = PDType0Font.load(document, is);
-                    logger.info("成功加载中文字体: {}", fontPath);
-                    return chineseFont;
+                    // 检查流是否有效（至少大于 1KB）
+                    byte[] buffer = new byte[1024];
+                    int bytesRead = is.read(buffer);
+                    if (bytesRead > 100) {
+                        // 重新获取流
+                        try (InputStream is2 = ExportUtil.class.getResourceAsStream(fontPath)) {
+                            if (is2 != null) {
+                                PDFont font = PDType0Font.load(document, is2);
+                                logger.info("成功加载项目字体: {}", fontPath);
+                                return font;
+                            }
+                        }
+                    }
                 }
             } catch (IOException e) {
-                logger.warn("加载字体失败 {}: {}", fontPath, e.getMessage());
+                logger.debug("项目字体加载失败 {}: {}", fontPath, e.getMessage());
             }
         }
-        
-        // 尝试从文件系统加载
+
+        // 2. 尝试从文件系统加载
         String[] fsPaths = {
-            "src/main/resources/fonts/NotoSansSC-Regular.ttf",
-            System.getProperty("user.home") + "/.cashier/fonts/NotoSansSC-Regular.ttf"
+            "src/main/resources/fonts/NotoSansSC-Regular.ttf"
         };
-        
+
         for (String fsPath : fsPaths) {
             File fontFile = new File(fsPath);
-            if (fontFile.exists()) {
-                chineseFont = PDType0Font.load(document, fontFile);
-                logger.info("成功从文件系统加载中文字体: {}", fsPath);
-                return chineseFont;
+            if (fontFile.exists() && fontFile.length() > 1000) {
+                try {
+                    PDFont font = PDType0Font.load(document, fontFile);
+                    logger.info("成功从文件系统加载字体: {}", fsPath);
+                    return font;
+                } catch (IOException e) {
+                    logger.debug("文件系统字体加载失败 {}: {}", fsPath, e.getMessage());
+                }
             }
         }
-        
-        logger.warn("未能加载中文字体，PDF 导出可能无法正确显示中文");
-        return null;
+
+        // 3. 尝试加载系统字体
+        String os = System.getProperty("os.name", "").toLowerCase();
+        String[] systemFontPaths;
+
+        if (os.contains("mac")) {
+            // macOS 系统字体路径
+            systemFontPaths = new String[]{
+                "/System/Library/Fonts/PingFang.ttc",           // 苹方字体
+                "/System/Library/Fonts/STHeiti Light.ttc",      // 黑体
+                "/System/Library/Fonts/Hiragino Sans GB.ttc",   // 冬青黑体
+                "/Library/Fonts/Arial Unicode.ttf",             // Arial Unicode
+                "/System/Library/Fonts/Supplemental/Arial Unicode.ttf"
+            };
+        } else if (os.contains("win")) {
+            // Windows 系统字体路径
+            String windir = System.getenv("WINDIR");
+            if (windir == null) {
+                windir = "C:\\Windows";
+            }
+            systemFontPaths = new String[]{
+                windir + "\\Fonts\\msyh.ttc",      // 微软雅黑
+                windir + "\\Fonts\\simhei.ttf",    // 黑体
+                windir + "\\Fonts\\simsun.ttc",    // 宋体
+                windir + "\\Fonts\\simkai.ttf"     // 楷体
+            };
+        } else {
+            // Linux 系统字体路径
+            systemFontPaths = new String[]{
+                "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
+                "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
+                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+            };
+        }
+
+        for (String fontPath : systemFontPaths) {
+            File fontFile = new File(fontPath);
+            if (fontFile.exists()) {
+                try {
+                    PDFont font = PDType0Font.load(document, fontFile);
+                    logger.info("成功加载系统字体: {}", fontPath);
+                    return font;
+                } catch (IOException e) {
+                    logger.debug("系统字体加载失败 {}: {}", fontPath, e.getMessage());
+                }
+            }
+        }
+
+        logger.error("未能加载任何中文字体，PDF 导出将无法正确显示中文");
+        throw new IOException("无法加载中文字体，请安装中文字体或检查字体文件");
     }
 
     /**
@@ -211,7 +266,7 @@ public class ExportUtil {
         try (PDDocument document = new PDDocument()) {
             // 加载中文字体
             PDFont font = loadChineseFont(document);
-            
+
             PDPage page = new PDPage();
             document.addPage(page);
 
@@ -255,15 +310,15 @@ public class ExportUtil {
                     if (yPosition < margin + lineHeight) {
                         // 页面已满，创建新页
                         contentStream.close();
-                        
+
                         page = new PDPage();
                         document.addPage(page);
                         yPosition = 750;
-                        
+
                         // 需要重新创建 contentStream
                         PDPageContentStream newStream = new PDPageContentStream(document, page);
                         newStream.setFont(font, normalFontSize);
-                        
+
                         // 继续写入数据
                         xPosition = margin;
                         for (int i = 0; i < rowData.length; i++) {
@@ -279,7 +334,7 @@ public class ExportUtil {
                         newStream.close();
                         continue;
                     }
-                    
+
                     xPosition = margin;
                     for (String cell : rowData) {
                         contentStream.beginText();
