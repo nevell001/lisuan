@@ -5,13 +5,15 @@ import org.apache.poi.xssf.usermodel.XSSFWorkbook;
 import org.apache.pdfbox.pdmodel.PDDocument;
 import org.apache.pdfbox.pdmodel.PDPage;
 import org.apache.pdfbox.pdmodel.PDPageContentStream;
-import org.apache.pdfbox.pdmodel.font.PDType1Font;
+import org.apache.pdfbox.pdmodel.font.PDFont;
+import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.InputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -26,6 +28,9 @@ import java.util.List;
 public class ExportUtil {
     private static final Logger logger = LoggerFactory.getLogger(ExportUtil.class);
     private static final String EXPORT_DIR = System.getProperty("user.home") + File.separator + "cashier-exports";
+    
+    // 中文字体缓存
+    private static PDFont chineseFont = null;
 
     /**
      * 导出格式枚举
@@ -152,23 +157,74 @@ public class ExportUtil {
     }
 
     /**
-     * 导出为 PDF
+     * 加载中文字体
+     */
+    private static PDFont loadChineseFont(PDDocument document) throws IOException {
+        if (chineseFont != null) {
+            return chineseFont;
+        }
+        
+        // 尝试从资源文件加载中文字体
+        String[] fontPaths = {
+            "/fonts/NotoSansSC-Regular.ttf",
+            "/com/cashier/fonts/NotoSansSC-Regular.ttf"
+        };
+        
+        for (String fontPath : fontPaths) {
+            try (InputStream is = ExportUtil.class.getResourceAsStream(fontPath)) {
+                if (is != null) {
+                    chineseFont = PDType0Font.load(document, is);
+                    logger.info("成功加载中文字体: {}", fontPath);
+                    return chineseFont;
+                }
+            } catch (IOException e) {
+                logger.warn("加载字体失败 {}: {}", fontPath, e.getMessage());
+            }
+        }
+        
+        // 尝试从文件系统加载
+        String[] fsPaths = {
+            "src/main/resources/fonts/NotoSansSC-Regular.ttf",
+            System.getProperty("user.home") + "/.cashier/fonts/NotoSansSC-Regular.ttf"
+        };
+        
+        for (String fsPath : fsPaths) {
+            File fontFile = new File(fsPath);
+            if (fontFile.exists()) {
+                chineseFont = PDType0Font.load(document, fontFile);
+                logger.info("成功从文件系统加载中文字体: {}", fsPath);
+                return chineseFont;
+            }
+        }
+        
+        logger.warn("未能加载中文字体，PDF 导出可能无法正确显示中文");
+        return null;
+    }
+
+    /**
+     * 导出为 PDF（支持中文）
      */
     private static String exportToPDF(String title, List<String> headers, List<String[]> data,
                                       String exportPath, String fileName) throws IOException {
         String filePath = exportPath + File.separator + fileName + ".pdf";
 
         try (PDDocument document = new PDDocument()) {
+            // 加载中文字体
+            PDFont font = loadChineseFont(document);
+            
             PDPage page = new PDPage();
             document.addPage(page);
 
-            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
-                float margin = 50;
-                float yPosition = 750;
-                float lineHeight = 20;
+            float margin = 50;
+            float yPosition = 750;
+            float lineHeight = 20;
+            float titleFontSize = 16;
+            float normalFontSize = 10;
+            float columnWidth = 120;
 
+            try (PDPageContentStream contentStream = new PDPageContentStream(document, page)) {
                 // 写入标题
-                contentStream.setFont(PDType1Font.HELVETICA_BOLD, 16);
+                contentStream.setFont(font, titleFontSize);
                 contentStream.beginText();
                 contentStream.newLineAtOffset(margin, yPosition);
                 contentStream.showText(title);
@@ -176,34 +232,63 @@ public class ExportUtil {
 
                 yPosition -= 30;
 
+                // 计算列宽
+                int columnCount = headers.size();
+                float totalWidth = page.getMediaBox().getWidth() - 2 * margin;
+                columnWidth = totalWidth / Math.max(columnCount, 1);
+
                 // 写入表头
-                contentStream.setFont(PDType1Font.HELVETICA_BOLD, 10);
+                contentStream.setFont(font, normalFontSize);
                 float xPosition = margin;
                 for (String header : headers) {
                     contentStream.beginText();
                     contentStream.newLineAtOffset(xPosition, yPosition);
-                    contentStream.showText(header);
+                    contentStream.showText(header != null ? header : "");
                     contentStream.endText();
-                    xPosition += 150;
+                    xPosition += columnWidth;
                 }
 
                 yPosition -= lineHeight;
 
                 // 写入数据
-                contentStream.setFont(PDType1Font.HELVETICA, 10);
                 for (String[] rowData : data) {
-                    if (yPosition < margin) {
-                        break; // 防止超出页面
+                    if (yPosition < margin + lineHeight) {
+                        // 页面已满，创建新页
+                        contentStream.close();
+                        
+                        page = new PDPage();
+                        document.addPage(page);
+                        yPosition = 750;
+                        
+                        // 需要重新创建 contentStream
+                        PDPageContentStream newStream = new PDPageContentStream(document, page);
+                        newStream.setFont(font, normalFontSize);
+                        
+                        // 继续写入数据
+                        xPosition = margin;
+                        for (int i = 0; i < rowData.length; i++) {
+                            String cell = rowData[i];
+                            newStream.beginText();
+                            newStream.newLineAtOffset(xPosition, yPosition);
+                            String text = cell != null && cell.length() > 30 ? cell.substring(0, 27) + "..." : cell;
+                            newStream.showText(text != null ? text : "");
+                            newStream.endText();
+                            xPosition += columnWidth;
+                        }
+                        yPosition -= lineHeight;
+                        newStream.close();
+                        continue;
                     }
+                    
                     xPosition = margin;
                     for (String cell : rowData) {
                         contentStream.beginText();
                         contentStream.newLineAtOffset(xPosition, yPosition);
                         // 截断过长的文字
-                        String text = cell != null && cell.length() > 20 ? cell.substring(0, 17) + "..." : cell;
+                        String text = cell != null && cell.length() > 30 ? cell.substring(0, 27) + "..." : cell;
                         contentStream.showText(text != null ? text : "");
                         contentStream.endText();
-                        xPosition += 150;
+                        xPosition += columnWidth;
                     }
                     yPosition -= lineHeight;
                 }
