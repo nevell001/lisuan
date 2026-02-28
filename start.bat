@@ -315,8 +315,8 @@ echo.
 echo Starting, please wait...
 echo.
 
-REM Start application using Maven JavaFX plugin
-call mvn javafx:run
+REM Start application using Maven JavaFX plugin with forced dependency update
+call mvn javafx:run -U
 
 REM Check exit code
 if errorlevel 1 (
@@ -332,11 +332,16 @@ if errorlevel 1 (
     echo   - Missing required files
     echo   - JavaFX runtime issues
     echo   - Insufficient memory
+    echo   - Maven dependency download failed
     echo.
     echo Please check:
     echo   1. Application log: logs\app.log
     echo   2. Database config: config\database.properties
     echo   3. JVM config: config\jvm.config
+    echo.
+    echo If Maven plugin download failed, try:
+    echo   mvn dependency:purge-local-repository -DmanualInclude=org.openjfx:javafx-maven-plugin
+    echo   start.bat
     echo.
     echo Opening log file...
     if exist "logs\app.log" (
