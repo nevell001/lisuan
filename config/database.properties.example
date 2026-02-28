@@ -14,7 +14,7 @@ db.username=root
 
 # MySQL 密码
 # 请修改为您的 MySQL 密码
-db.password=root
+db.password=RootPassword123!
 
 # 数据库连接池大小
 # 根据同时使用的收银机数量调整:

@@ -3,15 +3,15 @@ setlocal enabledelayedexpansion
 
 REM ============================================
 REM   Cashier System Start Script (Enhanced)
-REM   Version 2.3.2
+REM   Version 2.3.1
 REM ============================================
 
 set "APP_NAME=Cashier System"
-set "APP_VERSION=2.3.2"
+set "APP_VERSION=2.3.1"
 set "APP_DIR=%~dp0"
 set "MAIN_CLASS=com.cashier.CashierSystemFXApplication"
 set "CONFIG_FILE=%APP_DIR%\config\jvm.config"
-set "JAR_FILE=target\cashier-system-fx-%APP_VERSION%.jar"
+set "JAR_FILE=target\cashier-system-fx-%APP_VERSION%-jar-with-dependencies.jar"
 
 set "DOCKER_AVAILABLE=0"
 set "MYSQL_CONTAINER_RUNNING=0"
