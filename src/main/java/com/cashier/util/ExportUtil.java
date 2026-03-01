@@ -431,7 +431,7 @@ public class ExportUtil {
             // 时间相关列需要更宽，优先保证
             if (header.contains("时间") || header.contains("time") || header.contains("date") ||
                 header.contains("开始") || header.contains("结束")) {
-                minWidths[i] = 108;  // 减小时间列最小宽度，但确保能显示两行
+                minWidths[i] = 115;  // 增加时间列最小宽度，确保日期和时间都能显示
                 isDateTimeColumn[i] = true;  // 标记为时间列
             } 
             // 金额相关列需要适中宽度（确保能显示 ¥XXX.XX）
@@ -459,7 +459,7 @@ public class ExportUtil {
             }
             // 默认宽度（班次编号等）
             else {
-                minWidths[i] = 55;
+                minWidths[i] = 65;  // 增加默认宽度，确保班次编号完整显示
             }
         }
         
@@ -656,6 +656,11 @@ public class ExportUtil {
     private static int calculateLineCount(String text, PDFont font, float fontSize, float maxWidth) {
         if (text == null || text.isEmpty()) {
             return 1;
+        }
+        
+        // 如果是日期时间格式，返回 2 行（日期和时间）
+        if (isDateTimeFormat(text)) {
+            return 2;
         }
         
         try {
