@@ -369,17 +369,17 @@ public class ExportUtil {
                 // 绘制行的边框
                 contentStream.setStrokingColor(Color.BLACK);
                 contentStream.setLineWidth(1);
-                // 绘制外边框（只绘制底部和垂直线，顶部由上一行绘制）
-                contentStream.moveTo(margin, rowBottomY);
-                contentStream.lineTo(margin + tableWidth, rowBottomY);
+                
+                // 绘制外边框矩形（完整的边框，包括顶部、底部和左右）
+                contentStream.addRect(margin, rowBottomY, tableWidth, actualRowHeight);
                 contentStream.stroke();
                 
                 // 绘制垂直分隔线
                 float xPos = margin;
                 for (int i = 0; i < columnWidths.length - 1; i++) {
                     xPos += columnWidths[i];
-                    contentStream.moveTo(xPos, rowTopY);
-                    contentStream.lineTo(xPos, rowBottomY);
+                    contentStream.moveTo(xPos, rowBottomY);
+                    contentStream.lineTo(xPos, rowTopY);
                     contentStream.stroke();
                 }
 
@@ -404,13 +404,7 @@ public class ExportUtil {
                 yPosition -= actualRowHeight;
             }
 
-            // 绘制最终表格边框（顶部外边框）
-            float dataHeight = dataStartY - yPosition;
-            contentStream.setStrokingColor(Color.BLACK);
-            contentStream.setLineWidth(1);
-            contentStream.addRect(margin, yPosition, tableWidth, dataHeight);
-            contentStream.stroke();
-
+            // 关闭内容流
             contentStream.close();
 
             // 保存文件
@@ -582,16 +576,21 @@ public class ExportUtil {
         contentStream.addRect(margin, yPosition - rowHeight, tableWidth, rowHeight);
         contentStream.fill();
         
-        // 绘制表头边框和横线
+        // 绘制表头边框（包括竖线）
         contentStream.setStrokingColor(Color.BLACK);
         contentStream.setLineWidth(1);
         // 绘制表头矩形边框
         contentStream.addRect(margin, yPosition - rowHeight, tableWidth, rowHeight);
         contentStream.stroke();
-        // 绘制表头下方的横线
-        contentStream.moveTo(margin, yPosition);
-        contentStream.lineTo(margin + tableWidth, yPosition);
-        contentStream.stroke();
+        
+        // 绘制表头的竖线分隔
+        float xPos = margin;
+        for (int i = 0; i < columnWidths.length - 1; i++) {
+            xPos += columnWidths[i];
+            contentStream.moveTo(xPos, yPosition - rowHeight);
+            contentStream.lineTo(xPos, yPosition);
+            contentStream.stroke();
+        }
         
         // 绘制表头文字
         contentStream.setNonStrokingColor(Color.BLACK);
