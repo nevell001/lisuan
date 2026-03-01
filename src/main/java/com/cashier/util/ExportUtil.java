@@ -315,11 +315,11 @@ public class ExportUtil {
             // 绘制表头文字
             contentStream.setNonStrokingColor(Color.BLACK);
             contentStream.setFont(font, headerFontSize);
-            float xPosition = margin + 5;
+            float xPosition = margin + 3;
             for (int i = 0; i < headers.size(); i++) {
                 contentStream.beginText();
                 contentStream.newLineAtOffset(xPosition, yPosition - rowHeight + 15);
-                String header = truncateText(headers.get(i), font, headerFontSize, columnWidths[i] - 5);
+                String header = truncateText(headers.get(i), font, headerFontSize, columnWidths[i] - 3);
                 contentStream.showText(header);
                 contentStream.endText();
                 xPosition += columnWidths[i];
@@ -356,12 +356,12 @@ public class ExportUtil {
                 }
 
                 // 写入数据
-                xPosition = margin + 5;
+                xPosition = margin + 3;
                 for (int i = 0; i < columnCount && i < rowData.length; i++) {
                     contentStream.beginText();
                     contentStream.newLineAtOffset(xPosition, yPosition - rowHeight + 15);
                     String cellText = rowData[i] != null ? rowData[i] : "";
-                    String text = truncateText(cellText, font, dataFontSize, columnWidths[i] - 5);
+                    String text = truncateText(cellText, font, dataFontSize, columnWidths[i] - 3);
                     contentStream.showText(text);
                     contentStream.endText();
                     xPosition += columnWidths[i];
@@ -399,26 +399,26 @@ public class ExportUtil {
             if (header.contains("时间") || header.contains("时间") || 
                 header.contains("time") || header.contains("date") ||
                 header.contains("开始") || header.contains("结束")) {
-                minWidths[i] = 130;  // 时间列最小宽度
+                minWidths[i] = 150;  // 时间列最小宽度
             } 
             // 金额相关列需要适中宽度
             else if (header.contains("金额") || header.contains("收入") || 
                      header.contains("revenue") || header.contains("amount") ||
                      header.contains("¥") || header.contains("元")) {
-                minWidths[i] = 90;
+                minWidths[i] = 100;
             }
             // 备注列需要更宽
             else if (header.contains("备注") || header.contains("说明") || 
                      header.contains("note") || header.contains("remark")) {
-                minWidths[i] = 180;
+                minWidths[i] = 200;
             }
             // 操作员等姓名列
             else if (header.contains("操作员") || header.contains("姓名") || header.contains("name")) {
-                minWidths[i] = 100;
+                minWidths[i] = 110;
             }
             // 默认宽度
             else {
-                minWidths[i] = 80;
+                minWidths[i] = 90;
             }
         }
         
@@ -453,7 +453,7 @@ public class ExportUtil {
         for (float w : maxWidths) {
             totalMaxWidth += w;
         }
-        totalMaxWidth += columnCount * 5;
+        totalMaxWidth += columnCount * 3; // 减少内边距从5到3
         
         float[] widths = new float[columnCount];
         
@@ -461,7 +461,7 @@ public class ExportUtil {
             // 内容不多，按比例分配剩余空间
             float scale = totalWidth / totalMaxWidth;
             for (int i = 0; i < columnCount; i++) {
-                widths[i] = (maxWidths[i] + 5) * scale;
+                widths[i] = (maxWidths[i] + 3) * scale; // 减少内边距从5到3
                 // 确保不低于最小宽度
                 widths[i] = Math.max(widths[i], minWidths[i]);
             }
@@ -469,7 +469,7 @@ public class ExportUtil {
             // 内容太多，按比例压缩
             float scale = totalWidth / totalMaxWidth;
             for (int i = 0; i < columnCount; i++) {
-                widths[i] = (maxWidths[i] + 5) * scale;
+                widths[i] = (maxWidths[i] + 3) * scale; // 减少内边距从5到3
                 widths[i] = Math.max(widths[i], minWidths[i]);
             }
             
@@ -509,7 +509,7 @@ public class ExportUtil {
             for (int i = 0; i < text.length(); i++) {
                 String testStr = sb.toString() + text.charAt(i);
                 float testWidth = font.getStringWidth(testStr) / 1000 * fontSize;
-                if (testWidth > maxWidth - 10) { // 减少省略号空间从15到10
+                if (testWidth > maxWidth - 5) { // 减少省略号空间到5
                     return sb.toString() + "...";
                 }
                 sb.append(text.charAt(i));
