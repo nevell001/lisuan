@@ -232,6 +232,24 @@
                         </graphic>
                     </Button>
 
+                    <Button fx:id="returnOrderBtn"
+                            text="退货订单"
+                            onAction="#handleReturnOrder"
+                            styleClass="nav-button">
+                        <graphic>
+                            <Label text="↩" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
+                        </graphic>
+                    </Button>
+
+                    <Button fx:id="returnApprovalBtn"
+                            text="退货审批"
+                            onAction="#handleReturnApproval"
+                            styleClass="nav-button">
+                        <graphic>
+                            <Label text="✓" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
+                        </graphic>
+                    </Button>
+
                     <Button fx:id="settingsBtn"
                             text="系统设置"
                             onAction="#handleSettings"

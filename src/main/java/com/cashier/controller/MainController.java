@@ -118,6 +118,12 @@ public class MainController {
     @FXML
     private Button settingsBtn;
 
+    @FXML
+    private Button returnOrderBtn;
+
+    @FXML
+    private Button returnApprovalBtn;
+
     private CashierSystemFXApplication application;
     private User currentUser;
     private Timeline timeTimeline;
@@ -938,6 +944,44 @@ public class MainController {
             
         } catch (IOException e) {
             showError("加载设置界面失败: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleReturnOrder() {
+        updateStatus("退货订单");
+        setActiveButton(returnOrderBtn);
+
+        try {
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/ReturnOrderView.fxml"));
+            VBox root = loader.load();
+
+            ReturnOrderController controller = loader.getController();
+
+            createContentTab("退货订单", root);
+
+        } catch (IOException e) {
+            showError("加载退货订单界面失败: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleReturnApproval() {
+        updateStatus("退货审批");
+        setActiveButton(returnApprovalBtn);
+
+        try {
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/ReturnApprovalView.fxml"));
+            VBox root = loader.load();
+
+            ReturnApprovalController controller = loader.getController();
+
+            createContentTab("退货审批", root);
+
+        } catch (IOException e) {
+            showError("加载退货审批界面失败: " + e.getMessage());
         }
     }
 
