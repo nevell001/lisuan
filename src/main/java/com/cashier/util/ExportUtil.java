@@ -382,19 +382,45 @@ public class ExportUtil {
     }
 
     /**
-     * 计算列宽 - 优化列宽分配
+     * 计算列宽 - 优化列宽分配，根据列类型设置不同最小宽度
      */
     private static float[] calculateColumnWidths(List<String> headers, List<String[]> data, 
                                                   PDFont font, float fontSize, float totalWidth) {
         int columnCount = headers.size();
         float[] maxWidths = new float[columnCount];
-        float minColumnWidth = 60;  // 最小列宽
+        
+        // 根据表头名称识别列类型并设置不同的最小宽度
+        float[] minWidths = new float[columnCount];
+        for (int i = 0; i < columnCount; i++) {
+            String header = headers.get(i).toLowerCase();
+            // 时间相关列需要更宽
+            if (header.contains("时间") || header.contains("时间") || 
+                header.contains("time") || header.contains("date") ||
+                header.contains("开始") || header.contains("结束")) {
+                minWidths[i] = 110;  // 时间列最小宽度
+            } 
+            // 金额相关列需要适中宽度
+            else if (header.contains("金额") || header.contains("收入") || 
+                     header.contains("revenue") || header.contains("amount") ||
+                     header.contains("¥") || header.contains("元")) {
+                minWidths[i] = 80;
+            }
+            // 备注列需要更宽
+            else if (header.contains("备注") || header.contains("说明") || 
+                     header.contains("note") || header.contains("remark")) {
+                minWidths[i] = 150;
+            }
+            // 默认宽度
+            else {
+                minWidths[i] = 70;
+            }
+        }
         
         try {
             // 计算每列的最大宽度
             for (int i = 0; i < columnCount; i++) {
                 float headerWidth = font.getStringWidth(headers.get(i)) / 1000 * fontSize;
-                maxWidths[i] = headerWidth;
+                maxWidths[i] = Math.max(headerWidth, minWidths[i]);
             }
             
             for (String[] row : data) {
@@ -402,6 +428,8 @@ public class ExportUtil {
                     String cell = row[i] != null ? row[i] : "";
                     float cellWidth = font.getStringWidth(cell) / 1000 * fontSize;
                     maxWidths[i] = Math.max(maxWidths[i], cellWidth);
+                    // 确保至少达到最小宽度
+                    maxWidths[i] = Math.max(maxWidths[i], minWidths[i]);
                 }
             }
         } catch (IOException e) {
@@ -409,17 +437,17 @@ public class ExportUtil {
             float avgWidth = totalWidth / columnCount;
             float[] widths = new float[columnCount];
             for (int i = 0; i < columnCount; i++) {
-                widths[i] = avgWidth;
+                widths[i] = Math.max(avgWidth, minWidths[i]);
             }
             return widths;
         }
         
-        // 添加一些内边距（减少到5）
+        // 添加一些内边距
         float totalMaxWidth = 0;
         for (float w : maxWidths) {
             totalMaxWidth += w;
         }
-        totalMaxWidth += columnCount * 5;  // 内边距从10减少到5
+        totalMaxWidth += columnCount * 5;
         
         float[] widths = new float[columnCount];
         
@@ -428,17 +456,15 @@ public class ExportUtil {
             float scale = totalWidth / totalMaxWidth;
             for (int i = 0; i < columnCount; i++) {
                 widths[i] = (maxWidths[i] + 5) * scale;
+                // 确保不低于最小宽度
+                widths[i] = Math.max(widths[i], minWidths[i]);
             }
         } else {
-            // 内容太多，按比例压缩（而不是平均分配）
+            // 内容太多，按比例压缩
             float scale = totalWidth / totalMaxWidth;
             for (int i = 0; i < columnCount; i++) {
                 widths[i] = (maxWidths[i] + 5) * scale;
-            }
-            
-            // 确保每列至少有最小宽度
-            for (int i = 0; i < columnCount; i++) {
-                widths[i] = Math.max(widths[i], minColumnWidth);
+                widths[i] = Math.max(widths[i], minWidths[i]);
             }
             
             // 如果总宽度超出，重新按比例调整
@@ -450,6 +476,7 @@ public class ExportUtil {
                 float adjustScale = totalWidth / actualTotal;
                 for (int i = 0; i < columnCount; i++) {
                     widths[i] *= adjustScale;
+                    widths[i] = Math.max(widths[i], minWidths[i] * 0.8f);  // 允许最小缩小到80%
                 }
             }
         }
