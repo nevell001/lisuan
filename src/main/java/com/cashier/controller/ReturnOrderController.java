@@ -307,6 +307,17 @@ public class ReturnOrderController {
     }
 
     @FXML
+    private void handleCreateReturn() {
+        // 显示一个简单的对话框提示用户使用交易记录创建退货
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("创建退货订单");
+        alert.setHeaderText("功能说明");
+        alert.setContentText("请在交易记录页面选择需要退货的交易，然后点击创建退货按钮。\n\n" +
+                           "创建退货订单后，系统会自动生成退货申请，需要经过审批才能完成退货。");
+        alert.showAndWait();
+    }
+
+    @FXML
     private void handleExport() {
         if (returnOrderList.isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "提示", "没有可导出的数据");

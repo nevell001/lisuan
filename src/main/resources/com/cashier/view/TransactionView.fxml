@@ -54,6 +54,12 @@
                 prefWidth="80"
                 styleClass="primary-button"/>
 
+        <Button fx:id="createReturnButton"
+                text="创建退货"
+                onAction="#handleCreateReturn"
+                prefWidth="80"
+                styleClass="warning-button"/>
+
         <Button fx:id="exportButton"
                 text="导出"
                 onAction="#handleExport"

@@ -15,6 +15,7 @@
 
     <!-- 顶部工具栏 -->
     <HBox spacing="10" alignment="CENTER_LEFT">
+        <Button text="创建退货" onAction="#handleCreateReturn" styleClass="primary-button" prefWidth="100"/>
         <TextField fx:id="searchField" prefWidth="200" promptText="搜索退货单号或会员名"/>
         <ComboBox fx:id="statusFilter" prefWidth="120"/>
         <DatePicker fx:id="startDatePicker" prefWidth="150" promptText="开始日期"/>

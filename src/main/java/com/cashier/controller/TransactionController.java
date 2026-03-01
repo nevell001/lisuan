@@ -68,6 +68,9 @@ public class TransactionController {
     private Button viewDetailButton;
 
     @FXML
+    private Button createReturnButton;
+
+    @FXML
     private Button exportButton;
 
     @FXML
@@ -239,6 +242,29 @@ public class TransactionController {
         alert.setHeaderText(null);
         alert.setContentText(detail.toString());
         alert.getDialogPane().setPrefWidth(500);
+        alert.showAndWait();
+    }
+
+    /**
+     * 处理创建退货
+     */
+    @FXML
+    private void handleCreateReturn() {
+        Transaction selected = transactionTable.getSelectionModel().getSelectedItem();
+        if (selected == null) {
+            showAlert(Alert.AlertType.WARNING, "提示", "请先选择要退货的交易记录");
+            return;
+        }
+
+        // 显示简单的提示
+        Alert alert = new Alert(Alert.AlertType.INFORMATION);
+        alert.setTitle("创建退货订单");
+        alert.setHeaderText("功能说明");
+        alert.setContentText("创建退货订单功能正在开发中。\n\n" +
+                           "交易ID: " + selected.transactionId + "\n" +
+                           "交易金额: ¥" + String.format("%.2f", selected.finalAmount) + "\n" +
+                           "支付方式: " + selected.paymentMethod + "\n" +
+                           "商品数量: " + (selected.items != null ? selected.items.size() : 0));
         alert.showAndWait();
     }
 
@@ -434,6 +460,20 @@ public class TransactionController {
      */
     private void updateStatus(String status) {
         StatusBarManager.updateStatus(status);
+    }
+
+    /**
+     * 显示提示信息
+     * @param type 提示类型
+     * @param title 标题
+     * @param message 消息内容
+     */
+    private void showAlert(Alert.AlertType type, String title, String message) {
+        Alert alert = new Alert(type);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     /**
