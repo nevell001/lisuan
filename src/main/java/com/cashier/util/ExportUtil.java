@@ -312,6 +312,17 @@ public class ExportUtil {
             contentStream.addRect(margin, yPosition - rowHeight, tableWidth, rowHeight);
             contentStream.fill();
             
+            // 绘制表头边框和横线
+            contentStream.setStrokingColor(Color.BLACK);
+            contentStream.setLineWidth(1);
+            // 绘制表头矩形边框
+            contentStream.addRect(margin, yPosition - rowHeight, tableWidth, rowHeight);
+            contentStream.stroke();
+            // 绘制表头下方的横线
+            contentStream.moveTo(margin, yPosition);
+            contentStream.lineTo(margin + tableWidth, yPosition);
+            contentStream.stroke();
+            
             // 绘制表头文字
             contentStream.setNonStrokingColor(Color.BLACK);
             contentStream.setFont(font, headerFontSize);
@@ -325,14 +336,15 @@ public class ExportUtil {
                 xPosition += columnWidths[i];
             }
             yPosition -= rowHeight;
+            yPosition -= rowHeight;
 
             // 绘制数据行
             contentStream.setFont(font, dataFontSize);
             for (int rowIndex = 0; rowIndex < data.size(); rowIndex++) {
                 // 检查是否需要新页面
                 if (yPosition < margin + rowHeight) {
-                    // 绘制当前页面的表格边框
-                    drawTableBorder(contentStream, margin, yPosition, tableWidth, tableTop - yPosition + rowHeight, columnWidths);
+                    // 绘制当前页面的表格边框（数据部分）
+                    drawDataBorder(contentStream, margin, yPosition, tableWidth, tableTop - yPosition, columnWidths);
                     contentStream.close();
                     
                     // 创建新页面 - 保持横版
@@ -369,9 +381,9 @@ public class ExportUtil {
                 yPosition -= rowHeight;
             }
 
-            // 绘制最终表格边框
-            float tableHeight = tableTop - yPosition;
-            drawTableBorder(contentStream, margin, yPosition, tableWidth, tableHeight, columnWidths);
+            // 绘制最终表格边框（不包括表头，因为已经绘制过了）
+            float dataHeight = tableTop - yPosition - rowHeight;
+            drawDataBorder(contentStream, margin, yPosition, tableWidth, dataHeight, columnWidths);
 
             contentStream.close();
 
@@ -526,9 +538,9 @@ public class ExportUtil {
     }
 
     /**
-     * 绘制表格边框
+     * 绘制数据行边框（不包括表头）
      */
-    private static void drawTableBorder(PDPageContentStream contentStream, float x, float y, 
+    private static void drawDataBorder(PDPageContentStream contentStream, float x, float y, 
                                          float width, float height, float[] columnWidths) throws IOException {
         // 绘制外边框
         contentStream.setStrokingColor(Color.BLACK);
@@ -544,11 +556,5 @@ public class ExportUtil {
             contentStream.lineTo(xPos, y + height);
             contentStream.stroke();
         }
-        
-        // 绘制水平分隔线（表头下方）
-        float rowHeight = 25;
-        contentStream.moveTo(x, y + height - rowHeight);
-        contentStream.lineTo(x + width, y + height - rowHeight);
-        contentStream.stroke();
     }
 }
