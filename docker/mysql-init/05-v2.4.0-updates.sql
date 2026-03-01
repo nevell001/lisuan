@@ -45,7 +45,7 @@ CREATE TABLE IF NOT EXISTS return_order_items (
     unit_price DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '单价',
     return_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT '退货金额',
     reason VARCHAR(500) COMMENT '退货原因',
-    condition VARCHAR(20) NOT NULL DEFAULT 'GOOD' COMMENT '商品状态：GOOD、DAMAGED、OPENED',
+    `condition` VARCHAR(20) NOT NULL DEFAULT 'GOOD' COMMENT '商品状态：GOOD、DAMAGED、OPENED',
     INDEX idx_return_order_id (return_order_id),
     INDEX idx_product_id (product_id),
     FOREIGN KEY (return_order_id) REFERENCES return_orders(return_order_id) ON DELETE CASCADE,

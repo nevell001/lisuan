@@ -331,7 +331,10 @@ public class ProductEditController {
      */
     @FXML
     private void handleSave() {
+        logger.info("开始处理保存操作，product是否为null: {}", (product == null));
+        
         if (isInputValid()) {
+            logger.info("输入验证通过");
             try {
                         if (product == null) {
                             // 添加新商品
@@ -385,6 +388,8 @@ public class ProductEditController {
 
                         } else {
                             // 编辑现有商品（不修改库存数量）
+                            logger.info("编辑现有商品，商品ID: {}, 原名称: {}", product.id, product.name);
+                            
                             product.name = nameField.getText().trim();
                             product.price = Double.parseDouble(priceField.getText().trim());
             
@@ -410,10 +415,15 @@ public class ProductEditController {
                             product.spec = specField.getText().trim();
                             product.cost = costField.getText().trim().isEmpty() ? product.price * 0.7 : Double.parseDouble(costField.getText().trim());
             
+                            logger.info("准备更新商品到数据库: id={}, name={}, price={}", product.id, product.name, product.price);
+                            
                             // 更新数据库
                             boolean success = ProductDAO.update(product);
+                            logger.info("数据库更新结果: {}", success);
+                            
                             if (!success) {
                                 errorLabel.setText("更新商品失败，请重试");
+                                logger.error("更新商品失败");
                                 return;
                             }
 
@@ -453,6 +463,8 @@ public class ProductEditController {
      * @return 如果输入有效返回true，否则返回false
      */
     private boolean isInputValid() {
+        logger.info("开始验证输入，product是否为null: {}", (product == null));
+        
         String errorMessage = "";
 
         // 验证商品编号（仅当手动输入时才验证）
@@ -468,6 +480,7 @@ public class ProductEditController {
                     }
                 } catch (SQLException e) {
                     logger.error("验证商品编号失败", e);
+                    errorMessage += "验证商品编号失败，请重试！\n";
                 }
             }
         }
@@ -513,9 +526,11 @@ public class ProductEditController {
 
         if (errorMessage.isEmpty()) {
             errorLabel.setText("");
+            logger.info("输入验证通过");
             return true;
         } else {
             errorLabel.setText(errorMessage);
+            logger.info("输入验证失败: {}", errorMessage);
             return false;
         }
     }

@@ -4,8 +4,8 @@
 -- 此脚本整合了用户创建、表结构初始化和示例数据
 -- 使用方法: docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < 00-init-complete.sql
 -- 
--- 版本: v2.3.1
--- 更新日期: 2026-02-13
+-- 版本: v2.4.1
+-- 更新日期: 2026-03-01
 
 -- ============================================
 -- 确保使用正确的数据库
@@ -78,6 +78,41 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- 移除 products 表 barcode 字段的 UNIQUE 约束（如果存在）
+SET @constraint_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'products'
+    AND CONSTRAINT_TYPE = 'UNIQUE'
+    AND CONSTRAINT_NAME = 'barcode'
+);
+
+SET @sql = IF(@constraint_exists > 0,
+    'ALTER TABLE products DROP INDEX barcode',
+    'SELECT "products.barcode UNIQUE constraint does not exist" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 确保 barcode 索引存在（普通索引，用于快速查询）
+SET @index_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'products'
+    AND INDEX_NAME = 'idx_barcode'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE products ADD INDEX idx_barcode (barcode)',
+    'SELECT "products.idx_barcode index already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 -- 为 members 表添加 id 字段（如果不存在）
 SET @column_exists = (
     SELECT COUNT(*)
@@ -107,6 +142,23 @@ SET @column_exists = (
 SET @sql = IF(@column_exists = 0,
     'ALTER TABLE members ADD COLUMN member_code VARCHAR(50) UNIQUE COMMENT ''会员编号'' AFTER id',
     'SELECT "members.member_code column already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 添加 member_code 索引（如果不存在）
+SET @index_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'members'
+    AND INDEX_NAME = 'idx_member_code'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE members ADD INDEX idx_member_code (member_code)',
+    'SELECT "members.idx_member_code index already exists" AS message'
 );
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
@@ -420,13 +472,231 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- ============================================
+-- v2.4.0 新增表：退货管理模块
+-- ============================================
+
+-- 创建退货订单表
+SET @table_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'return_orders'
+);
+
+SET @sql = IF(@table_exists = 0,
+    'CREATE TABLE IF NOT EXISTS return_orders (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        return_order_id VARCHAR(50) UNIQUE NOT NULL COMMENT ''退货单号'',
+        original_transaction_id VARCHAR(50) COMMENT ''原交易ID'',
+        member_id INT COMMENT ''会员ID'',
+        member_name VARCHAR(100) COMMENT ''会员名称'',
+        return_date DATETIME NOT NULL COMMENT ''退货日期'',
+        return_reason VARCHAR(500) COMMENT ''退货原因'',
+        total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT ''退货总金额'',
+        status VARCHAR(20) NOT NULL DEFAULT ''PENDING'' COMMENT ''状态：PENDING、APPROVED、REJECTED、COMPLETED'',
+        payment_method VARCHAR(20) COMMENT ''退款方式：CASH、WECHAT、ALIPAY、CARD'',
+        operator_name VARCHAR(50) NOT NULL COMMENT ''操作员'',
+        approver_name VARCHAR(50) COMMENT ''审批人'',
+        approval_date DATETIME COMMENT ''审批日期'',
+        approval_comment VARCHAR(500) COMMENT ''审批意见'',
+        completed_date DATETIME COMMENT ''完成日期'',
+        notes TEXT COMMENT ''备注'',
+        create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT ''创建时间'',
+        update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT ''更新时间'',
+        INDEX idx_return_order_id (return_order_id),
+        INDEX idx_status (status),
+        INDEX idx_member_id (member_id),
+        INDEX idx_return_date (return_date),
+        FOREIGN KEY (member_id) REFERENCES members(id) ON DELETE SET NULL
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT=''退货订单表''',
+    'SELECT "return_orders table already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 创建退货订单明细表
+SET @table_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'return_order_items'
+);
+
+SET @sql = IF(@table_exists = 0,
+    'CREATE TABLE IF NOT EXISTS return_order_items (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        return_order_id VARCHAR(50) NOT NULL COMMENT ''退货单号'',
+        product_id INT NOT NULL COMMENT ''商品ID'',
+        product_code VARCHAR(50) COMMENT ''商品编号'',
+        product_name VARCHAR(200) NOT NULL COMMENT ''商品名称'',
+        barcode VARCHAR(100) COMMENT ''条形码'',
+        category VARCHAR(100) COMMENT ''分类'',
+        return_quantity INT NOT NULL DEFAULT 0 COMMENT ''退货数量'',
+        unit_price DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT ''单价'',
+        return_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT ''退货金额'',
+        reason VARCHAR(500) COMMENT ''退货原因'',
+        `condition` VARCHAR(20) NOT NULL DEFAULT ''GOOD'' COMMENT ''商品状态：GOOD、DAMAGED、OPENED'',
+        INDEX idx_return_order_id (return_order_id),
+        INDEX idx_product_id (product_id),
+        FOREIGN KEY (return_order_id) REFERENCES return_orders(return_order_id) ON DELETE CASCADE,
+        FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT=''退货订单明细表''',
+    'SELECT "return_order_items table already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- ============================================
+-- v2.4.0 新增表：导出历史和模板
+-- ============================================
+
+-- 创建导出历史表
+SET @table_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'export_history'
+);
+
+SET @sql = IF(@table_exists = 0,
+    'CREATE TABLE IF NOT EXISTS export_history (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        export_type VARCHAR(50) NOT NULL COMMENT ''导出类型'',
+        file_name VARCHAR(255) NOT NULL COMMENT ''文件名'',
+        file_path VARCHAR(500) COMMENT ''文件路径'',
+        file_size BIGINT COMMENT ''文件大小（字节）'',
+        export_format VARCHAR(20) NOT NULL COMMENT ''导出格式：PDF、EXCEL、CSV'',
+        record_count INT DEFAULT 0 COMMENT ''导出记录数'',
+        user_id VARCHAR(50) COMMENT ''用户ID'',
+        username VARCHAR(100) COMMENT ''用户名'',
+        export_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT ''导出时间'',
+        export_status VARCHAR(20) DEFAULT ''SUCCESS'' COMMENT ''导出状态：SUCCESS、FAILED'',
+        error_message TEXT COMMENT ''错误信息'',
+        export_params TEXT COMMENT ''导出参数（JSON）'',
+        INDEX idx_export_type (export_type),
+        INDEX idx_export_time (export_time),
+        INDEX idx_user_id (user_id)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT=''导出历史表''',
+    'SELECT "export_history table already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 创建导出模板表
+SET @table_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'export_templates'
+);
+
+SET @sql = IF(@table_exists = 0,
+    'CREATE TABLE IF NOT EXISTS export_templates (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        template_name VARCHAR(100) NOT NULL COMMENT ''模板名称'',
+        template_type VARCHAR(50) NOT NULL COMMENT ''模板类型：TRANSACTION、INVENTORY、MEMBER等'',
+        template_format VARCHAR(20) NOT NULL COMMENT ''模板格式：PDF、EXCEL、CSV'',
+        template_config TEXT NOT NULL COMMENT ''模板配置（JSON）'',
+        is_default BOOLEAN DEFAULT FALSE COMMENT ''是否默认模板'',
+        created_by VARCHAR(50) COMMENT ''创建人'',
+        create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT ''创建时间'',
+        update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT ''更新时间'',
+        UNIQUE KEY uk_template_name (template_name),
+        INDEX idx_template_type (template_type)
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT=''导出模板表''',
+    'SELECT "export_templates table already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- ============================================
+-- v2.4.1 更新：transaction_items 表添加字段
+-- ============================================
+
+-- 为 transaction_items 表添加 product_id 字段（如果不存在）
+SET @column_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'transaction_items'
+    AND COLUMN_NAME = 'product_id'
+);
+
+SET @sql = IF(@column_exists = 0,
+    'ALTER TABLE transaction_items ADD COLUMN product_id INT COMMENT ''商品ID'',
+    'SELECT "transaction_items.product_id column already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 添加 product_id 索引（如果不存在）
+SET @index_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'transaction_items'
+    AND INDEX_NAME = 'idx_product_id'
+);
+
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE transaction_items ADD INDEX idx_product_id (product_id)',
+    'SELECT "transaction_items.idx_product_id index already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 为 transaction_items 表添加 product_code 字段（如果不存在）
+SET @column_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'transaction_items'
+    AND COLUMN_NAME = 'product_code'
+);
+
+SET @sql = IF(@column_exists = 0,
+    'ALTER TABLE transaction_items ADD COLUMN product_code VARCHAR(50) COMMENT ''商品编号''',
+    'SELECT "transaction_items.product_code column already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- 为 transaction_items 表添加 barcode 字段（如果不存在）
+SET @column_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.COLUMNS
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'transaction_items'
+    AND COLUMN_NAME = 'barcode'
+);
+
+SET @sql = IF(@column_exists = 0,
+    'ALTER TABLE transaction_items ADD COLUMN barcode VARCHAR(100) COMMENT ''条形码''',
+    'SELECT "transaction_items.barcode column already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 SELECT '=== 表结构升级完成 ===' AS status;
 
 -- ============================================
 -- 第三部分：示例数据
 -- ============================================
 
--- 清除旧数据（仅清理新增的v2.3.0-v2.3.1表，避免影响原有数据）
+-- 清除旧数据（仅清理新增的表，避免影响原有数据）
+DELETE FROM return_order_items;
+DELETE FROM return_orders;
+DELETE FROM export_templates;
+DELETE FROM export_history;
 DELETE FROM inventory_check_items;
 DELETE FROM inventory_check;
 DELETE FROM purchase_inbound_items;
@@ -486,6 +756,20 @@ INSERT INTO inventory_check_items (check_id, product_id, product_name, book_quan
 (1, 4, '巧克力棒', 60, 62, 2, '账实不符'),
 (2, 1, '可口可乐 330ml', 100, 99, -1, '销售未及时更新');
 
+-- v2.4.0 导出模板示例数据
+
+INSERT INTO export_templates (template_name, template_type, template_format, template_config, is_default, created_by) VALUES
+('交易记录默认模板', 'TRANSACTION', 'EXCEL', 
+ '{"headers":["交易ID","日期","金额","支付方式","会员"],"fields":["transactionId","transactionTime","totalAmount","paymentMethod","memberName"]}', 
+ TRUE, 'system'),
+('库存报表默认模板', 'INVENTORY', 'EXCEL', 
+ '{"headers":["商品编号","商品名称","分类","库存数量","单价"],"fields":["productCode","productName","category","stock","price"]}', 
+ TRUE, 'system'),
+('会员列表默认模板', 'MEMBER', 'EXCEL', 
+ '{"headers":["会员编号","姓名","手机号","积分","余额"],"fields":["memberCode","name","phone","points","balance"]}', 
+ TRUE, 'system')
+ON DUPLICATE KEY UPDATE update_time = CURRENT_TIMESTAMP;
+
 -- 原有示例数据（仅在表为空时插入）
 -- 注意：这里使用 INSERT IGNORE 避免重复插入
 
@@ -531,3 +815,5 @@ SELECT COUNT(*) as 供应商数量 FROM suppliers;
 SELECT COUNT(*) as 采购订单数量 FROM purchase_orders;
 SELECT COUNT(*) as 采购入库数量 FROM purchase_inbound;
 SELECT COUNT(*) as 库存盘点数量 FROM inventory_check;
+SELECT COUNT(*) as 退货订单数量 FROM return_orders;
+SELECT COUNT(*) as 导出模板数量 FROM export_templates;
