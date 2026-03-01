@@ -422,6 +422,16 @@ public class InventoryController {
     }
 
     /**
+     * 处理刷新
+     */
+    @FXML
+    private void handleRefresh() {
+        refreshInventory();
+        updateStatus("商品列表已刷新");
+        showInfo("商品列表已刷新");
+    }
+
+    /**
      * 排序库存
      */
     private void sortInventory() {

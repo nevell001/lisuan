@@ -72,6 +72,11 @@
                 prefWidth="60"
                 styleClass="secondary-button"/>
 
+        <Button text="刷新"
+                onAction="#handleRefresh"
+                prefWidth="60"
+                styleClass="success-button"/>
+
         <Label text="排序:"/>
         <ComboBox fx:id="sortComboBox" prefWidth="150"/>
 
