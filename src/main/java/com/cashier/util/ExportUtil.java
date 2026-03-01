@@ -259,7 +259,7 @@ public class ExportUtil {
     }
 
     /**
-     * 导出为 PDF（支持中文，带表格边框）
+     * 导出为 PDF（支持中文，带表格边框，横版布局）
      */
     private static String exportToPDF(String title, List<String> headers, List<String[]> data,
                                       String exportPath, String fileName) throws IOException {
@@ -269,16 +269,17 @@ public class ExportUtil {
             // 加载中文字体
             PDFont font = loadChineseFont(document);
 
-            // PDF 页面设置
-            PDPage page = new PDPage(PDRectangle.A4);
+            // PDF 页面设置 - 使用横版（交换宽度和高度）
+            PDRectangle landscape = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
+            PDPage page = new PDPage(landscape);
             document.addPage(page);
             
             float pageWidth = page.getMediaBox().getWidth();
             float pageHeight = page.getMediaBox().getHeight();
             
-            // 布局参数 - 优化排版
-            float margin = 25;  // 减小页边距，增加表格宽度
-            float rowHeight = 35;  // 增加行高，让文字更清晰
+            // 布局参数 - 横版优化
+            float margin = 20;  // 减小页边距，最大化表格宽度
+            float rowHeight = 45;  // 增加行高，让文字更清晰
             float titleFontSize = 18;
             float headerFontSize = 12;  // 增加表头字体大小
             float dataFontSize = 11;  // 增加数据字体大小
@@ -317,7 +318,7 @@ public class ExportUtil {
             float xPosition = margin + 5;
             for (int i = 0; i < headers.size(); i++) {
                 contentStream.beginText();
-                contentStream.newLineAtOffset(xPosition, yPosition - rowHeight + 7);
+                contentStream.newLineAtOffset(xPosition, yPosition - rowHeight + 15);
                 String header = truncateText(headers.get(i), font, headerFontSize, columnWidths[i] - 5);
                 contentStream.showText(header);
                 contentStream.endText();
@@ -334,8 +335,9 @@ public class ExportUtil {
                     drawTableBorder(contentStream, margin, yPosition, tableWidth, tableTop - yPosition + rowHeight, columnWidths);
                     contentStream.close();
                     
-                    // 创建新页面
-                    page = new PDPage(PDRectangle.A4);
+                    // 创建新页面 - 保持横版
+                    PDRectangle newLandscape = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
+                    page = new PDPage(newLandscape);
                     document.addPage(page);
                     yPosition = pageHeight - margin;
                     tableTop = yPosition;
@@ -357,7 +359,7 @@ public class ExportUtil {
                 xPosition = margin + 5;
                 for (int i = 0; i < columnCount && i < rowData.length; i++) {
                     contentStream.beginText();
-                    contentStream.newLineAtOffset(xPosition, yPosition - rowHeight + 7);
+                    contentStream.newLineAtOffset(xPosition, yPosition - rowHeight + 15);
                     String cellText = rowData[i] != null ? rowData[i] : "";
                     String text = truncateText(cellText, font, dataFontSize, columnWidths[i] - 5);
                     contentStream.showText(text);
@@ -397,22 +399,26 @@ public class ExportUtil {
             if (header.contains("时间") || header.contains("时间") || 
                 header.contains("time") || header.contains("date") ||
                 header.contains("开始") || header.contains("结束")) {
-                minWidths[i] = 110;  // 时间列最小宽度
+                minWidths[i] = 130;  // 时间列最小宽度
             } 
             // 金额相关列需要适中宽度
             else if (header.contains("金额") || header.contains("收入") || 
                      header.contains("revenue") || header.contains("amount") ||
                      header.contains("¥") || header.contains("元")) {
-                minWidths[i] = 80;
+                minWidths[i] = 90;
             }
             // 备注列需要更宽
             else if (header.contains("备注") || header.contains("说明") || 
                      header.contains("note") || header.contains("remark")) {
-                minWidths[i] = 150;
+                minWidths[i] = 180;
+            }
+            // 操作员等姓名列
+            else if (header.contains("操作员") || header.contains("姓名") || header.contains("name")) {
+                minWidths[i] = 100;
             }
             // 默认宽度
             else {
-                minWidths[i] = 70;
+                minWidths[i] = 80;
             }
         }
         
