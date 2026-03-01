@@ -335,6 +335,13 @@ public class ExportUtil {
                 
                 // 检查是否需要新页面
                 if (yPosition < margin + actualRowHeight) {
+                    // 关闭旧页面的 contentStream
+                    try {
+                        contentStream.close();
+                    } catch (IOException e) {
+                        logger.warn("关闭页面内容流失败: " + e.getMessage());
+                    }
+                    
                     // 创建新页面 - 保持横版
                     PDRectangle newLandscape = new PDRectangle(PDRectangle.A4.getHeight(), PDRectangle.A4.getWidth());
                     page = new PDPage(newLandscape);
