@@ -10,7 +10,9 @@ public class Transaction {
     public double tax;
     public double finalAmount;
     public String paymentMethod;  // 支付方式：现金、微信支付、支付宝、银行卡、组合支付
+    public int memberId;         // 会员ID
     public String memberPhone;    // 会员手机号
+    public String memberName;     // 会员姓名
     public String operatorUsername; // 操作员用户名
     public String operatorName;    // 操作员姓名
 
@@ -80,5 +82,24 @@ public class Transaction {
 
     public String getMemberPhone() {
         return memberPhone;
+    }
+
+    public String getMemberName() {
+        return memberName;
+    }
+
+    public String getPaymentMethodText() {
+        switch (paymentMethod) {
+            case "CASH":
+                return "现金";
+            case "WECHAT":
+                return "微信";
+            case "ALIPAY":
+                return "支付宝";
+            case "CARD":
+                return "银行卡";
+            default:
+                return paymentMethod;
+        }
     }
 }

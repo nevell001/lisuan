@@ -103,10 +103,8 @@ public class MainController {
     @FXML
     private Button inventoryReportBtn;
 
-    @FXML
-    private Button profitReportBtn;
-
-    @FXML
+private Button profitReportBtn;
+    private Button returnReportBtn;
     private Button promotionsBtn;
 
     @FXML
@@ -877,6 +875,28 @@ public class MainController {
 
         } catch (IOException e) {
             showError("加载利润分析界面失败: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleReturnReport() {
+        updateStatus("退货报表");
+        setActiveButton(returnReportBtn);
+
+        try {
+            // 加载退货报表界面
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/ReturnReportView.fxml"));
+            VBox root = loader.load();
+
+            // 获取控制器
+            ReturnReportController controller = loader.getController();
+
+            // 创建内容标签页
+            createContentTab("退货报表", root);
+
+        } catch (IOException e) {
+            showError("加载退货报表界面失败: " + e.getMessage());
         }
     }
 

@@ -1,0 +1,94 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.CreateReturnOrderDialogController"
+      spacing="15"
+      styleClass="dialog-container">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <!-- 标题 -->
+    <Label text="创建退货订单" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+
+    <!-- 原交易信息 -->
+    <VBox spacing="5" style="-fx-background-color: #f5f5f5; -fx-padding: 10;">
+        <Label text="原交易信息" style="-fx-font-weight: bold;"/>
+        <GridPane hgap="10" vgap="5">
+            <Label text="交易ID:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <Label fx:id="transactionIdLabel" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-text-fill: blue;"/>
+
+            <Label text="交易金额:" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+            <Label fx:id="transactionAmountLabel" GridPane.columnIndex="3" GridPane.rowIndex="0" 
+                   style="-fx-text-fill: red; -fx-font-weight: bold;"/>
+
+            <Label text="交易日期:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <Label fx:id="transactionDateLabel" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+            <Label text="支付方式:" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+            <Label fx:id="paymentMethodLabel" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+
+            <Label text="会员:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+            <Label fx:id="memberNameLabel" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+        </GridPane>
+    </VBox>
+
+    <!-- 退货商品列表 -->
+    <VBox spacing="5" VBox.vgrow="ALWAYS">
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <Label text="退货商品" style="-fx-font-weight: bold;"/>
+            <CheckBox fx:id="selectAllCheckBox" text="全选" onAction="#handleSelectAll"/>
+        </HBox>
+        <TableView fx:id="returnItemTable" VBox.vgrow="ALWAYS" prefHeight="250">
+            <columns>
+                <TableColumn fx:id="selectColumn" text="选择" prefWidth="60" editable="true"/>
+                <TableColumn fx:id="productCodeColumn" text="商品编号" prefWidth="100"/>
+                <TableColumn fx:id="productNameColumn" text="商品名称" prefWidth="150"/>
+                <TableColumn fx:id="originalQuantityColumn" text="原数量" prefWidth="80"/>
+                <TableColumn fx:id="returnQuantityColumn" text="退货数量" prefWidth="100" editable="true"/>
+                <TableColumn fx:id="unitPriceColumn" text="单价" prefWidth="80"/>
+                <TableColumn fx:id="returnAmountColumn" text="退货金额" prefWidth="100"/>
+                <TableColumn fx:id="conditionColumn" text="商品状态" prefWidth="100" editable="true"/>
+                <TableColumn fx:id="reasonColumn" text="退货原因" prefWidth="150" editable="true"/>
+            </columns>
+        </TableView>
+    </VBox>
+
+    <!-- 退货信息 -->
+    <VBox spacing="10">
+        <Label text="退货信息" style="-fx-font-weight: bold;"/>
+        <GridPane hgap="10" vgap="5">
+            <Label text="退货原因:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+            <TextField fx:id="returnReasonField" GridPane.columnIndex="1" GridPane.rowIndex="0" 
+                      prefWidth="300" promptText="请输入退货原因"/>
+
+            <Label text="退款方式:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+            <ComboBox fx:id="refundMethodComboBox" GridPane.columnIndex="1" GridPane.rowIndex="1" 
+                     prefWidth="150"/>
+        </GridPane>
+
+        <VBox spacing="5">
+            <Label text="备注:"/>
+            <TextArea fx:id="notesArea" prefRowCount="2" promptText="请输入备注信息" wrapText="true"/>
+        </VBox>
+    </VBox>
+
+    <!-- 退货金额汇总 -->
+    <HBox spacing="20" alignment="CENTER_RIGHT" style="-fx-background-color: #f0f0f0; -fx-padding: 10;">
+        <Label text="退货总金额:" style="-fx-font-size: 14px; -fx-font-weight: bold;"/>
+        <Label fx:id="totalReturnAmountLabel" text="¥0.00" 
+              style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: red;"/>
+    </HBox>
+
+    <!-- 按钮区域 -->
+    <HBox spacing="10" alignment="CENTER_RIGHT">
+        <Button text="取消" onAction="#handleCancel" prefWidth="100"/>
+        <Button text="提交" onAction="#handleSubmit" styleClass="primary-button" prefWidth="100"/>
+    </HBox>
+</VBox>

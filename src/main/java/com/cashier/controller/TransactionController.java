@@ -1,7 +1,9 @@
 package com.cashier.controller;
 
+import com.cashier.controller.CreateReturnOrderDialogController;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Transaction;
+import com.cashier.model.Product;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
@@ -10,9 +12,14 @@ import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
+import javafx.fxml.FXMLLoader;
 import javafx.fxml.FXML;
+import javafx.scene.Parent;
+import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 
 import java.text.SimpleDateFormat;
 import java.util.List;
@@ -256,16 +263,43 @@ public class TransactionController {
             return;
         }
 
-        // 显示简单的提示
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("创建退货订单");
-        alert.setHeaderText("功能说明");
-        alert.setContentText("创建退货订单功能正在开发中。\n\n" +
-                           "交易ID: " + selected.transactionId + "\n" +
-                           "交易金额: ¥" + String.format("%.2f", selected.finalAmount) + "\n" +
-                           "支付方式: " + selected.paymentMethod + "\n" +
-                           "商品数量: " + (selected.items != null ? selected.items.size() : 0));
-        alert.showAndWait();
+        try {
+            // 获取交易明细
+            List<Product> items = selected.getItems();
+            if (items == null || items.isEmpty()) {
+                showAlert(Alert.AlertType.WARNING, "提示", "未找到交易明细信息");
+                return;
+            }
+
+            // 加载FXML
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/CreateReturnOrderDialog.fxml"));
+            Parent root = loader.load();
+
+            // 获取控制器并设置数据
+            CreateReturnOrderDialogController controller = loader.getController();
+            controller.setOriginalTransaction(selected, items);
+
+            // 创建对话框
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle("创建退货订单 - " + selected.transactionId);
+            dialogStage.initModality(Modality.APPLICATION_MODAL);
+            dialogStage.setScene(new Scene(root));
+            controller.setDialogStage(dialogStage);
+
+            // 显示对话框并等待关闭
+            dialogStage.showAndWait();
+
+            // 如果提交成功，刷新交易列表
+            if (controller.isSubmitted()) {
+                showAlert(Alert.AlertType.INFORMATION, "成功", "退货订单创建成功！");
+                loadTransactions();
+            }
+
+        } catch (Exception e) {
+            logger.error("打开退货订单对话框失败", e);
+            showAlert(Alert.AlertType.ERROR, "错误", "打开退货订单对话框失败: " + e.getMessage());
+        }
     }
 
     /**

@@ -82,6 +82,7 @@
                 <HBox spacing="10" alignment="CENTER_LEFT">
                     <Label text="退货明细" style="-fx-font-weight: bold;"/>
                     <Button text="查看原交易" onAction="#handleViewOriginalTransaction" prefWidth="120"/>
+                    <Button text="完成退货" onAction="#handleCompleteReturn" styleClass="success-button" prefWidth="120"/>
                 </HBox>
                 <TableView fx:id="itemTable" VBox.vgrow="ALWAYS">
                     <columns>

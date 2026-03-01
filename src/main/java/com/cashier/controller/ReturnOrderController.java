@@ -370,6 +370,56 @@ public class ReturnOrderController {
         showAlert(Alert.AlertType.INFORMATION, "提示", "查看原交易: " + selectedReturnOrder.originalTransactionId);
     }
 
+    @FXML
+    private void handleCompleteReturn() {
+        if (selectedReturnOrder == null) {
+            showAlert(Alert.AlertType.WARNING, "提示", "请先选择退货订单");
+            return;
+        }
+
+        // 只有已批准的退货单才能完成
+        if (!"APPROVED".equals(selectedReturnOrder.status)) {
+            showAlert(Alert.AlertType.WARNING, "提示", "只有已批准的退货订单才能完成");
+            return;
+        }
+
+        // 确认完成
+        Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
+        confirmAlert.setTitle("确认完成退货");
+        confirmAlert.setHeaderText(null);
+        confirmAlert.setContentText(String.format(
+            "确认完成此退货订单吗？\n\n" +
+            "退货单号: %s\n" +
+            "退货金额: ¥%.2f\n" +
+            "会员: %s\n\n" +
+            "完成后将恢复商品库存并退款到会员账户。",
+            selectedReturnOrder.returnOrderId,
+            selectedReturnOrder.totalAmount,
+            selectedReturnOrder.memberName != null ? selectedReturnOrder.memberName : "无"
+        ));
+
+        if (confirmAlert.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
+            return;
+        }
+
+        // 完成退货订单
+        boolean result = ReturnService.completeReturnOrder(selectedReturnOrder.returnOrderId);
+
+        if (result) {
+            showAlert(Alert.AlertType.INFORMATION, "成功", 
+                "退货订单已完成！\n\n" +
+                "退货单号: " + selectedReturnOrder.returnOrderId + "\n" +
+                "退货金额: ¥" + String.format("%.2f", selectedReturnOrder.totalAmount));
+            
+            // 刷新列表
+            loadReturnOrders();
+            clearDetail();
+            logger.info("退货订单完成: {}", selectedReturnOrder.returnOrderId);
+        } else {
+            showAlert(Alert.AlertType.ERROR, "失败", "完成退货订单失败，请查看日志");
+        }
+    }
+
     private void showAlert(Alert.AlertType type, String title, String message) {
         Alert alert = new Alert(type);
         alert.setTitle(title);
