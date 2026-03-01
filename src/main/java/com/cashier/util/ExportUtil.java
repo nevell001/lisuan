@@ -427,16 +427,15 @@ public class ExportUtil {
         for (int i = 0; i < columnCount; i++) {
             String header = headers.get(i).toLowerCase();
             // 时间相关列需要更宽
-            if (header.contains("时间") || header.contains("时间") || 
-                header.contains("time") || header.contains("date") ||
+            if (header.contains("时间") || header.contains("time") || header.contains("date") ||
                 header.contains("开始") || header.contains("结束")) {
                 minWidths[i] = 150;  // 时间列最小宽度
             } 
-            // 金额相关列需要适中宽度
+            // 金额相关列需要适中宽度（确保能显示 ¥XXX.XX）
             else if (header.contains("金额") || header.contains("收入") || 
                      header.contains("revenue") || header.contains("amount") ||
                      header.contains("¥") || header.contains("元")) {
-                minWidths[i] = 100;
+                minWidths[i] = 110;  // 增加10像素确保金额完整显示
             }
             // 备注列需要更宽
             else if (header.contains("备注") || header.contains("说明") || 
@@ -449,12 +448,12 @@ public class ExportUtil {
             }
             // 默认宽度
             else {
-                minWidths[i] = 90;
+                minWidths[i] = 95;
             }
         }
         
         try {
-            // 计算每列的最大宽度
+            // 计算每列的最大宽度（逐个字符测试）
             for (int i = 0; i < columnCount; i++) {
                 float headerWidth = font.getStringWidth(headers.get(i)) / 1000 * fontSize;
                 maxWidths[i] = Math.max(headerWidth, minWidths[i]);
@@ -497,23 +496,32 @@ public class ExportUtil {
                 widths[i] = Math.max(widths[i], minWidths[i]);
             }
         } else {
-            // 内容太多，按比例压缩
-            float scale = totalWidth / totalMaxWidth;
-            for (int i = 0; i < columnCount; i++) {
-                widths[i] = (maxWidths[i] + 3) * scale; // 减少内边距从5到3
-                widths[i] = Math.max(widths[i], minWidths[i]);
+            // 内容太多，按比例压缩，但确保不低于最小宽度
+            float totalMinWidth = 0;
+            for (float mw : minWidths) {
+                totalMinWidth += mw;
             }
             
-            // 如果总宽度超出，重新按比例调整
-            float actualTotal = 0;
-            for (float w : widths) {
-                actualTotal += w;
-            }
-            if (actualTotal > totalWidth) {
-                float adjustScale = totalWidth / actualTotal;
+            if (totalMinWidth > totalWidth) {
+                // 即使最小宽度也超出总宽度，按比例缩小
+                float scale = totalWidth / totalMinWidth;
                 for (int i = 0; i < columnCount; i++) {
-                    widths[i] *= adjustScale;
-                    widths[i] = Math.max(widths[i], minWidths[i] * 0.8f);  // 允许最小缩小到80%
+                    widths[i] = minWidths[i] * scale;
+                }
+            } else {
+                // 内容超出，优先满足最小宽度，剩余空间按比例分配
+                float remainingWidth = totalWidth - totalMinWidth;
+                float extraWidth = 0;
+                for (int i = 0; i < columnCount; i++) {
+                    widths[i] = minWidths[i];
+                    extraWidth += (maxWidths[i] - minWidths[i]);
+                }
+                
+                if (extraWidth > 0) {
+                    float scale = remainingWidth / extraWidth;
+                    for (int i = 0; i < columnCount; i++) {
+                        widths[i] += (maxWidths[i] - minWidths[i]) * scale;
+                    }
                 }
             }
         }
@@ -614,7 +622,7 @@ public class ExportUtil {
     }
 
     /**
-     * 计算文本需要的行数
+     * 计算文本需要的行数（逐个字符测试宽度）
      */
     private static int calculateLineCount(String text, PDFont font, float fontSize, float maxWidth) {
         if (text == null || text.isEmpty()) {
@@ -627,24 +635,31 @@ public class ExportUtil {
                 return 1;
             }
             
-            // 估算每行可以容纳的字符数
-            float avgCharWidth = textWidth / text.length();
-            int charsPerLine = (int) (maxWidth / avgCharWidth);
+            // 逐个字符测试，计算实际需要的行数
+            int lineCount = 1;
+            float currentWidth = 0;
             
-            if (charsPerLine < 1) {
-                charsPerLine = 1;
+            for (int i = 0; i < text.length(); i++) {
+                char c = text.charAt(i);
+                String cStr = String.valueOf(c);
+                float charWidth = font.getStringWidth(cStr) / 1000 * fontSize;
+                
+                if (currentWidth + charWidth > maxWidth) {
+                    lineCount++;
+                    currentWidth = charWidth;
+                } else {
+                    currentWidth += charWidth;
+                }
             }
             
-            // 计算需要的行数
-            int lineCount = (int) Math.ceil((double) text.length() / charsPerLine);
-            return Math.max(1, lineCount);
+            return lineCount;
         } catch (IOException e) {
             return 1;
         }
     }
 
     /**
-     * 将文本分割成多行
+     * 将文本分割成多行（逐个字符测试宽度）
      */
     private static String[] splitTextIntoLines(String text, PDFont font, float fontSize, float maxWidth) {
         if (text == null || text.isEmpty()) {
@@ -657,21 +672,35 @@ public class ExportUtil {
                 return new String[]{text};
             }
             
-            // 估算每行可以容纳的字符数
-            float avgCharWidth = textWidth / text.length();
-            int charsPerLine = (int) (maxWidth / avgCharWidth);
+            // 逐个字符测试，按实际宽度分割
+            List<String> lines = new ArrayList<>();
+            StringBuilder currentLine = new StringBuilder();
+            float currentWidth = 0;
             
-            if (charsPerLine < 1) {
-                charsPerLine = 1;
+            for (int i = 0; i < text.length(); i++) {
+                char c = text.charAt(i);
+                String cStr = String.valueOf(c);
+                float charWidth = font.getStringWidth(cStr) / 1000 * fontSize;
+                
+                // 如果加上这个字符超过最大宽度，则开始新的一行
+                if (currentWidth + charWidth > maxWidth) {
+                    if (currentLine.length() > 0) {
+                        lines.add(currentLine.toString());
+                        currentLine = new StringBuilder();
+                        currentWidth = 0;
+                    }
+                    // 单个字符就超过宽度，只能添加它
+                    currentLine.append(c);
+                    currentWidth = charWidth;
+                } else {
+                    currentLine.append(c);
+                    currentWidth += charWidth;
+                }
             }
             
-            // 按字符数分割
-            List<String> lines = new ArrayList<>();
-            int startIndex = 0;
-            while (startIndex < text.length()) {
-                int endIndex = Math.min(startIndex + charsPerLine, text.length());
-                lines.add(text.substring(startIndex, endIndex));
-                startIndex = endIndex;
+            // 添加最后一行
+            if (currentLine.length() > 0) {
+                lines.add(currentLine.toString());
             }
             
             return lines.toArray(new String[0]);
