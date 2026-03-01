@@ -11,67 +11,72 @@
       styleClass="transaction-view">
 
     <!-- 顶部工具栏 -->
-    <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
-        <padding>
-            <Insets top="10" right="10" bottom="10" left="10"/>
-        </padding>
+    <VBox spacing="5" styleClass="toolbar">
+        <!-- 第一行：筛选条件 -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="10" right="10" bottom="5" left="10"/>
+            </padding>
 
-        <!-- 筛选条件 -->
-        <Label text="开始日期:"/>
-        <DatePicker fx:id="startDatePicker" prefWidth="150"/>
+            <Label text="开始日期:"/>
+            <DatePicker fx:id="startDatePicker" prefWidth="150"/>
 
-        <Label text="结束日期:"/>
-        <DatePicker fx:id="endDatePicker" prefWidth="150"/>
+            <Label text="结束日期:"/>
+            <DatePicker fx:id="endDatePicker" prefWidth="150"/>
 
-        <Label text="支付方式:"/>
-        <ComboBox fx:id="paymentMethodComboBox" prefWidth="100"/>
+            <Label text="支付方式:"/>
+            <ComboBox fx:id="paymentMethodComboBox" prefWidth="100"/>
+        </HBox>
 
-        <Separator orientation="VERTICAL"/>
+        <!-- 第二行：搜索和操作按钮 -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="5" right="10" bottom="10" left="10"/>
+            </padding>
 
-        <!-- 搜索 -->
-        <Label text="搜索:"/>
-        <TextField fx:id="searchField"
-                  promptText="订单号或会员手机号"
-                  prefWidth="200"
-                  onAction="#handleSearch"/>
+            <Label text="搜索:"/>
+            <TextField fx:id="searchField"
+                      promptText="订单号或会员手机号"
+                      prefWidth="200"
+                      onAction="#handleSearch"/>
 
-        <Button text="搜索"
-                onAction="#handleSearch"
-                prefWidth="60"
-                styleClass="secondary-button"/>
+            <Button text="搜索"
+                    onAction="#handleSearch"
+                    prefWidth="60"
+                    styleClass="secondary-button"/>
 
-        <Button text="清除"
-                onAction="#handleClearSearch"
-                prefWidth="60"
-                styleClass="secondary-button"/>
+            <Button text="清除"
+                    onAction="#handleClearSearch"
+                    prefWidth="60"
+                    styleClass="secondary-button"/>
 
-        <Region HBox.hgrow="ALWAYS"/>
+            <Region HBox.hgrow="ALWAYS"/>
 
-        <!-- 操作按钮 -->
-        <Button fx:id="viewDetailButton"
-                text="查看详情"
-                onAction="#handleViewDetail"
-                prefWidth="80"
-                styleClass="primary-button"/>
+            <Button fx:id="viewDetailButton"
+                    text="查看详情"
+                    onAction="#handleViewDetail"
+                    prefWidth="80"
+                    styleClass="primary-button"/>
 
-        <Button fx:id="createReturnButton"
-                text="创建退货"
-                onAction="#handleCreateReturn"
-                prefWidth="80"
-                styleClass="warning-button"/>
+            <Button fx:id="createReturnButton"
+                    text="创建退货"
+                    onAction="#handleCreateReturn"
+                    prefWidth="80"
+                    styleClass="warning-button"/>
 
-        <Button fx:id="exportButton"
-                text="导出"
-                onAction="#handleExport"
-                prefWidth="60"
-                styleClass="secondary-button"/>
+            <Button fx:id="exportButton"
+                    text="导出"
+                    onAction="#handleExport"
+                    prefWidth="60"
+                    styleClass="secondary-button"/>
 
-        <Button fx:id="refreshButton"
-                text="刷新"
-                onAction="#handleRefresh"
-                prefWidth="60"
-                styleClass="secondary-button"/>
-    </HBox>
+            <Button fx:id="refreshButton"
+                    text="刷新"
+                    onAction="#handleRefresh"
+                    prefWidth="60"
+                    styleClass="secondary-button"/>
+        </HBox>
+    </VBox>
 
     <!-- 统计信息栏 -->
     <HBox spacing="20" styleClass="status-bar" alignment="CENTER_LEFT">
