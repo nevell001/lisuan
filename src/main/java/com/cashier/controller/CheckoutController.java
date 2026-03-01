@@ -383,9 +383,33 @@ public class CheckoutController {
         transaction.timestamp = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date());
         transaction.items = new ArrayList<>();
         
+        // 合并相同商品的记录
+        Map<Integer, Product> productMap = new java.util.LinkedHashMap<>();
+        
         for (CartItem item : cartList) {
-            transaction.items.add(item.product);
+            Product product = item.product;
+            if (productMap.containsKey(product.id)) {
+                // 商品已存在，累加数量
+                Product existing = productMap.get(product.id);
+                existing.quantity += item.quantity;
+            } else {
+                // 商品不存在，添加新记录
+                Product newProduct = new Product();
+                newProduct.id = product.id;
+                newProduct.productCode = product.productCode;
+                newProduct.barcode = product.barcode;
+                newProduct.name = product.name;
+                newProduct.price = product.price;
+                newProduct.quantity = item.quantity;
+                newProduct.category = product.category;
+                newProduct.unit = product.unit;
+                newProduct.cost = product.cost;
+                productMap.put(product.id, newProduct);
+            }
         }
+        
+        // 将合并后的商品列表添加到交易中
+        transaction.items.addAll(productMap.values());
         
         transaction.totalAmount = getTotalAmount();
         // 实现税费计算：从系统设置中读取税率
