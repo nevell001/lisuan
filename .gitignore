@@ -43,6 +43,9 @@ config/*.config
 *.bak
 *.backup
 
+# 导出文件
+exports/
+
 # 备份文件
 backup_*/
 data_backup_*/

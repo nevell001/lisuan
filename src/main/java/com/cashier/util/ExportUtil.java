@@ -29,8 +29,8 @@ import java.util.List;
  * 支持导出数据为 Excel 或 PDF 格式
  */
 public class ExportUtil {
-    private static final Logger logger = LoggerFactory.getLogger(ExportUtil.class);
-    private static final String EXPORT_DIR = System.getProperty("user.home") + File.separator + "cashier-exports";
+    private static final Logger logger = LoggerFactoryUtil.getLogger(ExportUtil.class);
+    private static final String EXPORT_DIR = System.getProperty("user.dir") + File.separator + "exports";
 
     /**
      * 导出格式枚举
