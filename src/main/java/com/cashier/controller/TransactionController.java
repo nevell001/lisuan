@@ -366,9 +366,25 @@ public class TransactionController {
                     itemsStr = sb.toString();
                 }
 
+                // 处理时间格式
+                String timestampStr;
+                try {
+                    // 尝试将时间戳转换为 Date
+                    if (t.timestamp != null && !t.timestamp.isEmpty()) {
+                        long time = Long.parseLong(t.timestamp);
+                        java.util.Date date = new java.util.Date(time);
+                        timestampStr = sdf.format(date);
+                    } else {
+                        timestampStr = "";
+                    }
+                } catch (Exception e) {
+                    // 如果转换失败，直接使用原始值
+                    timestampStr = t.timestamp != null ? t.timestamp : "";
+                }
+
                 data.add(new String[]{
                     t.transactionId,
-                    sdf.format(t.timestamp),
+                    timestampStr,
                     itemsStr,
                     String.format("¥%.2f", t.totalAmount),
                     String.format("¥%.2f", t.tax),
