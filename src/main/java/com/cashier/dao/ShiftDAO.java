@@ -237,11 +237,20 @@ public class ShiftDAO {
         shift.username = rs.getString("operator_username");
         shift.operatorName = rs.getString("operator_name");
 
+        // 正确处理 NULL 值
         long startTime = rs.getLong("start_time");
-        shift.startTime = new java.util.Date(startTime);
+        if (rs.wasNull()) {
+            shift.startTime = null;
+        } else {
+            shift.startTime = new java.util.Date(startTime);
+        }
 
         long endTime = rs.getLong("end_time");
-        shift.endTime = new java.util.Date(endTime);
+        if (rs.wasNull()) {
+            shift.endTime = null;
+        } else {
+            shift.endTime = new java.util.Date(endTime);
+        }
 
         shift.openingRevenue = rs.getDouble("opening_revenue");
         shift.closingRevenue = rs.getDouble("closing_revenue");

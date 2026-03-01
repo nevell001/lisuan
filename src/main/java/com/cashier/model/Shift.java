@@ -88,11 +88,17 @@ public class Shift {
 
     // 计算班次时长（分钟）
     public long getShiftDuration() {
+        if (startTime == null || endTime == null) {
+            return 0;
+        }
         return (endTime.getTime() - startTime.getTime()) / (1000 * 60);
     }
 
     // 获取班次时长显示文本
     public String getDurationText() {
+        if (startTime == null || endTime == null) {
+            return "未完成";
+        }
         long minutes = getShiftDuration();
         long hours = minutes / 60;
         long mins = minutes % 60;

@@ -227,8 +227,8 @@ public class ShiftController {
         detail.append("交接班详情\n\n");
         detail.append("班次ID: ").append(shift.shiftId).append("\n");
         detail.append("操作员: ").append(shift.operatorName).append("\n");
-        detail.append("开始时间: ").append(sdf.format(shift.startTime)).append("\n");
-        detail.append("结束时间: ").append(sdf.format(shift.endTime)).append("\n");
+        detail.append("开始时间: ").append(shift.startTime != null ? sdf.format(shift.startTime) : "未开始").append("\n");
+        detail.append("结束时间: ").append(shift.endTime != null ? sdf.format(shift.endTime) : "未结束").append("\n");
         detail.append("班次时长: ").append(shift.getDurationText()).append("\n\n");
 
         detail.append("营业额统计:\n");
@@ -356,12 +356,22 @@ public class ShiftController {
             SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
             for (Shift s : shiftList) {
+                // 格式化时间，处理 NULL 值
+                String startTimeStr = (s.startTime != null) ? sdf.format(s.startTime) : "未开始";
+                String endTimeStr = (s.endTime != null) ? sdf.format(s.endTime) : "未结束";
+                
+                // 计算班次时长，处理 NULL 值
+                String durationText = "未完成";
+                if (s.startTime != null && s.endTime != null) {
+                    durationText = s.getDurationText();
+                }
+
                 data.add(new String[]{
                     s.shiftId,
                     s.operatorName,
-                    sdf.format(s.startTime),
-                    sdf.format(s.endTime),
-                    s.getDurationText(),
+                    startTimeStr,
+                    endTimeStr,
+                    durationText,
                     String.valueOf(s.shiftTransactionCount),
                     String.format("¥%.2f", s.shiftRevenue),
                     String.format("¥%.2f", s.cashRevenue),
