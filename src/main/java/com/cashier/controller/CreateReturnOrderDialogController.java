@@ -279,7 +279,7 @@ public class CreateReturnOrderDialogController {
         // 显示原交易信息
         transactionIdLabel.setText(transaction.transactionId);
         transactionAmountLabel.setText(String.format("¥%.2f", transaction.finalAmount));
-        transactionDateLabel.setText(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(transaction.timestamp));
+        transactionDateLabel.setText(transaction.timestamp);  // timestamp已经是格式化的字符串
         paymentMethodLabel.setText(transaction.getPaymentMethodText());
         memberNameLabel.setText(transaction.memberName != null ? transaction.memberName : "无");
 
