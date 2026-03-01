@@ -341,24 +341,18 @@ public class SupplierController {
         String dateStr = sdf.format(new Date());
         String prefix = "S" + dateStr;
 
-        int maxSeq = 0;
+        int count = 0;
         try {
-            for (Supplier supplier : suppliers.values()) {
+            List<Supplier> allSuppliers = com.cashier.dao.SupplierDAO.findAll();
+            for (Supplier supplier : allSuppliers) {
                 if (supplier.supplierCode != null && supplier.supplierCode.startsWith(prefix)) {
-                    String seqStr = supplier.supplierCode.substring(prefix.length());
-                    try {
-                        int seq = Integer.parseInt(seqStr);
-                        if (seq > maxSeq) {
-                            maxSeq = seq;
-                        }
-                    } catch (NumberFormatException ignored) {
-                    }
+                    count++;
                 }
             }
         } catch (Exception ignored) {
         }
 
-        return prefix + String.format("%03d", maxSeq + 1);
+        return prefix + String.format("%04d", count + 1);
     }
 
     /**
