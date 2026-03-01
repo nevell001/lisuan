@@ -391,11 +391,11 @@ public class ExportUtil {
                     
                     // 垂直居中绘制多行文本
                     float lineSpacing = (actualRowHeight / lines.length);
-                    float startY = rowTopY - actualRowHeight + lineSpacing / 2 + 3;
+                    float startY = rowTopY - actualRowHeight / 2 - (lines.length - 1) * lineSpacing / 2;
                     
                     for (int lineIdx = 0; lineIdx < lines.length; lineIdx++) {
                         contentStream.beginText();
-                        contentStream.newLineAtOffset(xPosition, startY - lineIdx * lineSpacing);
+                        contentStream.newLineAtOffset(xPosition, startY + lineIdx * lineSpacing);
                         contentStream.showText(lines[lineIdx]);
                         contentStream.endText();
                     }
@@ -457,9 +457,13 @@ public class ExportUtil {
             else if (header.contains("数量") || header.contains("count")) {
                 minWidths[i] = 40;
             }
-            // 默认宽度（班次编号等）
+            // 班次编号列
+            else if (header.contains("编号") || header.contains("id") || header.contains("no")) {
+                minWidths[i] = 85;  // 增加班次编号列宽度
+            }
+            // 默认宽度
             else {
-                minWidths[i] = 65;  // 增加默认宽度，确保班次编号完整显示
+                minWidths[i] = 65;
             }
         }
         
@@ -474,7 +478,7 @@ public class ExportUtil {
                 for (int i = 0; i < columnCount && i < row.length; i++) {
                     String cell = row[i] != null ? row[i] : "";
                     
-                    // 如果是时间列且包含日期时间格式，按两行计算宽度（取日期和时间中的最大宽度）
+                    // 如果是时间列且包含日期时间格式，按两行计算宽度（确保两行都能显示）
                     if (isDateTimeColumn[i] && isDateTimeFormat(cell)) {
                         String[] parts = splitDateTimeToLines(cell);
                         float maxPartWidth = 0;
@@ -483,6 +487,8 @@ public class ExportUtil {
                             maxPartWidth = Math.max(maxPartWidth, partWidth);
                         }
                         maxWidths[i] = Math.max(maxWidths[i], maxPartWidth);
+                        // 时间列需要额外空间，因为有两行
+                        maxWidths[i] += 5; // 增加额外空间确保两行都能显示
                     } else {
                         // 普通列，按整行文本计算
                         float cellWidth = font.getStringWidth(cell) / 1000 * fontSize;
