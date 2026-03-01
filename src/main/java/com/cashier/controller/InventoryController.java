@@ -405,7 +405,8 @@ public class InventoryController {
             inventoryList.setAll(inventory.values());
         } else {
             inventoryList.setAll(inventory.values().stream()
-                .filter(p -> p.name.toLowerCase().contains(searchText))
+                .filter(p -> p.name.toLowerCase().contains(searchText) || 
+                         (p.barcode != null && p.barcode.toLowerCase().contains(searchText)))
                 .toList());
         }
         updateCountLabel();
