@@ -42,16 +42,18 @@ public class TransactionDAO {
             }
 
             // 插入交易明细
-            String detailSql = "INSERT INTO transaction_items (transaction_id, product_name, price, quantity, subtotal) " +
-                              "VALUES (?, ?, ?, ?, ?)";
+            String detailSql = "INSERT INTO transaction_items (transaction_id, product_id, product_code, product_name, price, quantity, subtotal) " +
+                              "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
             try (PreparedStatement pstmt = conn.prepareStatement(detailSql)) {
                 for (Product item : transaction.items) {
                     pstmt.setString(1, transaction.transactionId);
-                    pstmt.setString(2, item.name);
-                    pstmt.setDouble(3, item.price);
-                    pstmt.setInt(4, item.quantity);
-                    pstmt.setDouble(5, item.price * item.quantity);
+                    pstmt.setInt(2, item.id);
+                    pstmt.setString(3, item.productCode);
+                    pstmt.setString(4, item.name);
+                    pstmt.setDouble(5, item.price);
+                    pstmt.setInt(6, item.quantity);
+                    pstmt.setDouble(7, item.price * item.quantity);
                     pstmt.addBatch();
                 }
                 pstmt.executeBatch();
@@ -93,16 +95,18 @@ public class TransactionDAO {
         }
 
         // 插入交易明细
-        String detailSql = "INSERT INTO transaction_items (transaction_id, product_name, price, quantity, subtotal) " +
-                          "VALUES (?, ?, ?, ?, ?)";
+        String detailSql = "INSERT INTO transaction_items (transaction_id, product_id, product_code, product_name, price, quantity, subtotal) " +
+                          "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement pstmt = conn.prepareStatement(detailSql)) {
             for (Product item : transaction.items) {
                 pstmt.setString(1, transaction.transactionId);
-                pstmt.setString(2, item.name);
-                pstmt.setDouble(3, item.price);
-                pstmt.setInt(4, item.quantity);
-                pstmt.setDouble(5, item.price * item.quantity);
+                pstmt.setInt(2, item.id);
+                pstmt.setString(3, item.productCode);
+                pstmt.setString(4, item.name);
+                pstmt.setDouble(5, item.price);
+                pstmt.setInt(6, item.quantity);
+                pstmt.setDouble(7, item.price * item.quantity);
                 pstmt.addBatch();
             }
             pstmt.executeBatch();
@@ -150,7 +154,7 @@ public class TransactionDAO {
      */
     private static List<Product> loadItems(String transactionId) throws SQLException {
         List<Product> items = new ArrayList<>();
-        String sql = "SELECT product_name, price, quantity FROM transaction_items WHERE transaction_id = ?";
+        String sql = "SELECT product_id, product_code, barcode, product_name, price, quantity FROM transaction_items WHERE transaction_id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -159,11 +163,13 @@ public class TransactionDAO {
             ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
-                Product product = new Product(
-                    rs.getString("product_name"),
-                    rs.getDouble("price"),
-                    rs.getInt("quantity")
-                );
+                Product product = new Product();
+                product.id = rs.getInt("product_id");
+                product.productCode = rs.getString("product_code");
+                product.barcode = rs.getString("barcode");
+                product.name = rs.getString("product_name");
+                product.price = rs.getDouble("price");
+                product.quantity = rs.getInt("quantity");
                 items.add(product);
             }
         }
@@ -179,7 +185,7 @@ public class TransactionDAO {
         // 使用 JOIN 查询一次性获取所有交易和明细
         String sql = "SELECT t.transaction_id, t.timestamp, t.total_amount, t.tax, t.final_amount, t.payment_method, " +
                      "t.member_phone, t.operator_username, t.operator_name, " +
-                     "ti.id as item_id, ti.product_name, ti.price, ti.quantity, ti.subtotal " +
+                     "ti.id as item_id, ti.product_id, ti.product_code, ti.barcode, ti.product_name, ti.price, ti.quantity, ti.subtotal " +
                      "FROM transactions t " +
                      "LEFT JOIN transaction_items ti ON t.transaction_id = ti.transaction_id " +
                      "ORDER BY t.timestamp DESC";
@@ -211,11 +217,13 @@ public class TransactionDAO {
                 // 添加交易明细
                 String productName = rs.getString("product_name");
                 if (productName != null) {
-                    Product product = new Product(
-                        productName,
-                        rs.getDouble("price"),
-                        rs.getInt("quantity")
-                    );
+                    Product product = new Product();
+                    product.id = rs.getInt("product_id");
+                    product.productCode = rs.getString("product_code");
+                    product.barcode = rs.getString("barcode");
+                    product.name = rs.getString("product_name");
+                    product.price = rs.getDouble("price");
+                    product.quantity = rs.getInt("quantity");
                     transactionMap.get(transactionId).items.add(product);
                 }
             }
@@ -231,7 +239,7 @@ public class TransactionDAO {
 
         String sql = "SELECT t.transaction_id, t.timestamp, t.total_amount, t.tax, t.final_amount, t.payment_method, " +
                      "t.member_phone, t.operator_username, t.operator_name, " +
-                     "ti.id as item_id, ti.product_name, ti.price, ti.quantity, ti.subtotal " +
+                     "ti.id as item_id, ti.product_id, ti.product_code, ti.barcode, ti.product_name, ti.price, ti.quantity, ti.subtotal " +
                      "FROM transactions t " +
                      "LEFT JOIN transaction_items ti ON t.transaction_id = ti.transaction_id " +
                      "WHERE t.timestamp BETWEEN ? AND ? " +
@@ -267,11 +275,13 @@ public class TransactionDAO {
                 // 添加交易明细
                 String productName = rs.getString("product_name");
                 if (productName != null) {
-                    Product product = new Product(
-                        productName,
-                        rs.getDouble("price"),
-                        rs.getInt("quantity")
-                    );
+                    Product product = new Product();
+                    product.id = rs.getInt("product_id");
+                    product.productCode = rs.getString("product_code");
+                    product.barcode = rs.getString("barcode");
+                    product.name = rs.getString("product_name");
+                    product.price = rs.getDouble("price");
+                    product.quantity = rs.getInt("quantity");
                     transactionMap.get(transactionId).items.add(product);
                 }
             }
