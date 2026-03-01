@@ -212,6 +212,15 @@
                         </graphic>
                     </Button>
 
+                    <Button fx:id="returnReportBtn"
+                            text="退货报表"
+                            onAction="#handleReturnReport"
+                            styleClass="nav-button">
+                        <graphic>
+                            <Label text="📈" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
+                        </graphic>
+                    </Button>
+
                     <Separator/>
 
                     <Button fx:id="shiftBtn"
