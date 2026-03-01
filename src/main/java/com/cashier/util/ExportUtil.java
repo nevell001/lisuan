@@ -389,13 +389,13 @@ public class ExportUtil {
                     String cellText = rowData[i] != null ? rowData[i] : "";
                     String[] lines = splitTextIntoLines(cellText, font, dataFontSize, columnWidths[i] - 3);
                     
-                    // 垂直居中绘制多行文本
+                    // 垂直居中绘制多行文本，第一行在上面
                     float lineSpacing = (actualRowHeight / lines.length);
-                    float startY = rowTopY - actualRowHeight / 2 - (lines.length - 1) * lineSpacing / 2;
+                    float startY = rowTopY - lineSpacing / 2; // 从顶部开始，第一行在上
                     
                     for (int lineIdx = 0; lineIdx < lines.length; lineIdx++) {
                         contentStream.beginText();
-                        contentStream.newLineAtOffset(xPosition, startY + lineIdx * lineSpacing);
+                        contentStream.newLineAtOffset(xPosition, startY - lineIdx * lineSpacing);
                         contentStream.showText(lines[lineIdx]);
                         contentStream.endText();
                     }
