@@ -55,13 +55,13 @@
             <Button fx:id="viewDetailButton"
                     text="查看详情"
                     onAction="#handleViewDetail"
-                    prefWidth="80"
+                    prefWidth="100"
                     styleClass="primary-button"/>
 
             <Button fx:id="createReturnButton"
                     text="创建退货"
                     onAction="#handleCreateReturn"
-                    prefWidth="80"
+                    prefWidth="100"
                     styleClass="warning-button"/>
 
             <Button fx:id="exportButton"
