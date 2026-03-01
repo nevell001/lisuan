@@ -1,0 +1,98 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx"
+      xmlns:fx="http://javafx.com/fxml"
+      fx:controller="com.cashier.controller.ReturnOrderController"
+      spacing="10" styleClass="main-container">
+
+    <padding>
+        <Insets top="20" right="20" bottom="20" left="20"/>
+    </padding>
+
+    <!-- 顶部工具栏 -->
+    <HBox spacing="10" alignment="CENTER_LEFT">
+        <TextField fx:id="searchField" prefWidth="200" promptText="搜索退货单号或会员名"/>
+        <ComboBox fx:id="statusFilter" prefWidth="120"/>
+        <DatePicker fx:id="startDatePicker" prefWidth="150" promptText="开始日期"/>
+        <DatePicker fx:id="endDatePicker" prefWidth="150" promptText="结束日期"/>
+        <Button text="搜索" onAction="#handleSearch" styleClass="primary-button"/>
+        <Button text="刷新" onAction="#handleRefresh"/>
+        <Button text="导出" onAction="#handleExport" styleClass="success-button"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label text="退货订单管理" styleClass="title-label" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+    </HBox>
+
+    <SplitPane dividerPositions="0.6" VBox.vgrow="ALWAYS">
+        <!-- 左侧：退货订单列表 -->
+        <TableView fx:id="returnOrderTable" VBox.vgrow="ALWAYS">
+            <columns>
+                <TableColumn fx:id="returnOrderIdColumn" text="退货单号" prefWidth="150"/>
+                <TableColumn fx:id="memberNameColumn" text="会员名称" prefWidth="100"/>
+                <TableColumn fx:id="returnDateColumn" text="退货日期" prefWidth="150"/>
+                <TableColumn fx:id="totalAmountColumn" text="退货金额" prefWidth="100"/>
+                <TableColumn fx:id="statusColumn" text="状态" prefWidth="80"/>
+                <TableColumn fx:id="operatorNameColumn" text="操作员" prefWidth="80"/>
+            </columns>
+        </TableView>
+
+        <!-- 右侧：退货订单详情 -->
+        <VBox spacing="10">
+            <Label text="退货订单详情" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+            
+            <!-- 订单基本信息 -->
+            <GridPane hgap="10" vgap="5">
+                <Label text="退货单号:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                <Label fx:id="returnOrderIdLabel" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+                
+                <Label text="会员名称:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                <Label fx:id="memberNameLabel" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                
+                <Label text="退货金额:" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                <Label fx:id="totalAmountLabel" GridPane.columnIndex="3" GridPane.rowIndex="0" style="-fx-text-fill: red; -fx-font-weight: bold;"/>
+                
+                <Label text="状态:" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                <Label fx:id="statusLabel" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                
+                <Label text="操作员:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                <Label fx:id="operatorNameLabel" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+                
+                <Label text="退货日期:" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                <Label fx:id="returnDateLabel" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+            </GridPane>
+
+            <!-- 退货原因 -->
+            <VBox spacing="5">
+                <Label text="退货原因:"/>
+                <TextArea fx:id="returnReasonTextArea" prefRowCount="2" editable="false" wrapText="true"/>
+            </VBox>
+
+            <!-- 备注 -->
+            <VBox spacing="5">
+                <Label text="备注:"/>
+                <TextArea fx:id="notesTextArea" prefRowCount="2" editable="false" wrapText="true"/>
+            </VBox>
+
+            <!-- 退货明细 -->
+            <VBox spacing="5" VBox.vgrow="ALWAYS">
+                <HBox spacing="10" alignment="CENTER_LEFT">
+                    <Label text="退货明细" style="-fx-font-weight: bold;"/>
+                    <Button text="查看原交易" onAction="#handleViewOriginalTransaction" prefWidth="120"/>
+                </HBox>
+                <TableView fx:id="itemTable" VBox.vgrow="ALWAYS">
+                    <columns>
+                        <TableColumn fx:id="productCodeColumn" text="商品编号" prefWidth="100"/>
+                        <TableColumn fx:id="productNameColumn" text="商品名称" prefWidth="150"/>
+                        <TableColumn fx:id="returnQuantityColumn" text="退货数量" prefWidth="80"/>
+                        <TableColumn fx:id="unitPriceColumn" text="单价" prefWidth="80"/>
+                        <TableColumn fx:id="returnAmountColumn" text="退货金额" prefWidth="100"/>
+                        <TableColumn fx:id="conditionColumn" text="商品状态" prefWidth="80"/>
+                    </columns>
+                </TableView>
+            </VBox>
+        </VBox>
+    </SplitPane>
+</VBox>
