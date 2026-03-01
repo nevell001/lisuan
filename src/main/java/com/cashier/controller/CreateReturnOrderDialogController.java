@@ -89,6 +89,39 @@ public class CreateReturnOrderDialogController {
             this.selected.set(selected);
         }
 
+        // Getter方法供PropertyValueFactory使用
+        public int getProductId() {
+            return productId;
+        }
+
+        public String getProductCode() {
+            return productCode;
+        }
+
+        public String getProductName() {
+            return productName;
+        }
+
+        public int getOriginalQuantity() {
+            return originalQuantity;
+        }
+
+        public int getReturnQuantity() {
+            return returnQuantity;
+        }
+
+        public double getUnitPrice() {
+            return unitPrice;
+        }
+
+        public String getCondition() {
+            return condition;
+        }
+
+        public String getReason() {
+            return reason;
+        }
+
         public double getReturnAmount() {
             return returnQuantity * unitPrice;
         }
