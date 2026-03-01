@@ -128,6 +128,6 @@ if (isDateTimeColumn[i] && isDateTimeFormat(cell)) {
 
 ## 版本信息
 
-- 优化版本：v2.3.2（建议）
+- 优化版本：v2.3.2
 - 优化日期：2026-03-01
 - 影响文件：`src/main/java/com/cashier/util/ExportUtil.java`

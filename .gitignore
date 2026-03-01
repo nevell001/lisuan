@@ -31,11 +31,6 @@ config/*.config
 !FLATLAF_UPGRADE_SUMMARY.md
 !ICON_FIX_SUMMARY.md
 
-# 项目文档
-IFLOW.md
-CLAUDE.md
-AGENTS.md
-
 # Claude/iFlow 配置
 .iflow/
 .claude/
