@@ -279,7 +279,7 @@ public class ExportUtil {
             float pageHeight = page.getMediaBox().getHeight();
             
             // 布局参数 - 横版优化
-            float margin = 20;  // 减小页边距，最大化表格宽度
+            float margin = 12;  // 进一步减小页边距，最大化表格宽度
             float rowHeight = 45;  // 增加行高，让文字更清晰
             float titleFontSize = 18;
             float headerFontSize = 12;  // 增加表头字体大小
@@ -422,34 +422,44 @@ public class ExportUtil {
                                                   PDFont font, float fontSize, float totalWidth) {
         int columnCount = headers.size();
         float[] maxWidths = new float[columnCount];
+        boolean[] isDateTimeColumn = new boolean[columnCount];  // 标记是否为时间列
         
         // 根据表头名称识别列类型并设置不同的最小宽度
         float[] minWidths = new float[columnCount];
         for (int i = 0; i < columnCount; i++) {
             String header = headers.get(i).toLowerCase();
-            // 时间相关列需要更宽
+            // 时间相关列需要更宽，优先保证
             if (header.contains("时间") || header.contains("time") || header.contains("date") ||
                 header.contains("开始") || header.contains("结束")) {
-                minWidths[i] = 150;  // 时间列最小宽度
+                minWidths[i] = 108;  // 减小时间列最小宽度，但确保能显示两行
+                isDateTimeColumn[i] = true;  // 标记为时间列
             } 
             // 金额相关列需要适中宽度（确保能显示 ¥XXX.XX）
             else if (header.contains("金额") || header.contains("收入") || 
                      header.contains("revenue") || header.contains("amount") ||
                      header.contains("¥") || header.contains("元")) {
-                minWidths[i] = 110;  // 增加10像素确保金额完整显示
+                minWidths[i] = 65;  // 进一步减小金额列最小宽度
             }
-            // 备注列需要更宽
+            // 备注列需要更宽，但可以适当压缩
             else if (header.contains("备注") || header.contains("说明") || 
                      header.contains("note") || header.contains("remark")) {
-                minWidths[i] = 200;
+                minWidths[i] = 65;
             }
             // 操作员等姓名列
             else if (header.contains("操作员") || header.contains("姓名") || header.contains("name")) {
-                minWidths[i] = 110;
+                minWidths[i] = 55;
             }
-            // 默认宽度
+            // 班次时长等短文本列
+            else if (header.contains("时长") || header.contains("duration")) {
+                minWidths[i] = 55;
+            }
+            // 交易数量等短文本列
+            else if (header.contains("数量") || header.contains("count")) {
+                minWidths[i] = 40;
+            }
+            // 默认宽度（班次编号等）
             else {
-                minWidths[i] = 95;
+                minWidths[i] = 55;
             }
         }
         
@@ -463,8 +473,21 @@ public class ExportUtil {
             for (String[] row : data) {
                 for (int i = 0; i < columnCount && i < row.length; i++) {
                     String cell = row[i] != null ? row[i] : "";
-                    float cellWidth = font.getStringWidth(cell) / 1000 * fontSize;
-                    maxWidths[i] = Math.max(maxWidths[i], cellWidth);
+                    
+                    // 如果是时间列且包含日期时间格式，按两行计算宽度（取日期和时间中的最大宽度）
+                    if (isDateTimeColumn[i] && isDateTimeFormat(cell)) {
+                        String[] parts = splitDateTimeToLines(cell);
+                        float maxPartWidth = 0;
+                        for (String part : parts) {
+                            float partWidth = font.getStringWidth(part) / 1000 * fontSize;
+                            maxPartWidth = Math.max(maxPartWidth, partWidth);
+                        }
+                        maxWidths[i] = Math.max(maxWidths[i], maxPartWidth);
+                    } else {
+                        // 普通列，按整行文本计算
+                        float cellWidth = font.getStringWidth(cell) / 1000 * fontSize;
+                        maxWidths[i] = Math.max(maxWidths[i], cellWidth);
+                    }
                     // 确保至少达到最小宽度
                     maxWidths[i] = Math.max(maxWidths[i], minWidths[i]);
                 }
@@ -665,11 +688,65 @@ public class ExportUtil {
     }
 
     /**
+     * 检测是否是日期时间格式（如：2026-02-23 22:13:43）
+     */
+    private static boolean isDateTimeFormat(String text) {
+        if (text == null || text.isEmpty()) {
+            return false;
+        }
+        // 匹配格式：YYYY-MM-DD HH:MM:SS 或类似格式
+        return text.matches("\\d{4}[-/]\\d{1,2}[-/]\\d{1,2}\\s+\\d{1,2}:\\d{2}(:\\d{2})?");
+    }
+
+    /**
+     * 将日期时间格式分割成两行（日期和时间）
+     */
+    private static String[] splitDateTimeToLines(String text) {
+        if (text == null || text.isEmpty()) {
+            return new String[]{""};
+        }
+
+        // 按空格分割日期和时间
+        String[] parts = text.split("\\s+", 2);
+        if (parts.length == 2) {
+            return new String[]{parts[0], parts[1]};
+        }
+        return new String[]{text};
+    }
+
+    /**
      * 将文本分割成多行（逐个字符测试宽度）
+     * 支持日期时间格式自动分行显示
      */
     private static String[] splitTextIntoLines(String text, PDFont font, float fontSize, float maxWidth) {
         if (text == null || text.isEmpty()) {
             return new String[]{""};
+        }
+
+        // 如果是日期时间格式，总是优先按日期和时间分行
+        if (isDateTimeFormat(text)) {
+            String[] dateTimeLines = splitDateTimeToLines(text);
+            // 检查两行是否都适合宽度
+            try {
+                boolean bothFit = true;
+                for (String line : dateTimeLines) {
+                    float lineWidth = font.getStringWidth(line) / 1000 * fontSize;
+                    if (lineWidth > maxWidth) {
+                        bothFit = false;
+                        break;
+                    }
+                }
+                // 如果两行都适合，直接返回分行结果
+                if (bothFit) {
+                    return dateTimeLines;
+                }
+                // 如果不适合，仍然按日期时间分行，但可能超出单元格宽度
+                // 这是可接受的，因为优先保证日期时间的可读性
+                return dateTimeLines;
+            } catch (IOException e) {
+                // 忽略异常，返回日期时间分行结果
+                return splitDateTimeToLines(text);
+            }
         }
         
         try {
