@@ -152,21 +152,25 @@ public class CreateReturnOrderDialogController {
 
     private void initializeTableColumns() {
         // 选择列（复选框）
-        selectColumn.setCellValueFactory(new PropertyValueFactory<>("selected"));
+        selectColumn.setCellValueFactory(cellData -> cellData.getValue().selectedProperty());
         selectColumn.setCellFactory(CheckBoxTableCell.forTableColumn(selectColumn));
         selectColumn.setEditable(true);
 
         // 商品编号
-        productCodeColumn.setCellValueFactory(new PropertyValueFactory<>("productCode"));
+        productCodeColumn.setCellValueFactory(cellData -> 
+            new javafx.beans.property.SimpleStringProperty(cellData.getValue().getProductCode()));
 
         // 商品名称
-        productNameColumn.setCellValueFactory(new PropertyValueFactory<>("productName"));
+        productNameColumn.setCellValueFactory(cellData -> 
+            new javafx.beans.property.SimpleStringProperty(cellData.getValue().getProductName()));
 
         // 原数量
-        originalQuantityColumn.setCellValueFactory(new PropertyValueFactory<>("originalQuantity"));
+        originalQuantityColumn.setCellValueFactory(cellData -> 
+            new javafx.beans.property.ReadOnlyObjectWrapper<>(cellData.getValue().getOriginalQuantity()));
 
         // 退货数量（可编辑）
-        returnQuantityColumn.setCellValueFactory(new PropertyValueFactory<>("returnQuantity"));
+        returnQuantityColumn.setCellValueFactory(cellData -> 
+            new javafx.beans.property.ReadOnlyObjectWrapper<>(cellData.getValue().getReturnQuantity()));
         returnQuantityColumn.setCellFactory(column -> new TableCell<ReturnItem, Integer>() {
             private Spinner<Integer> spinner;
 
@@ -210,7 +214,8 @@ public class CreateReturnOrderDialogController {
         });
 
         // 单价
-        unitPriceColumn.setCellValueFactory(new PropertyValueFactory<>("unitPrice"));
+        unitPriceColumn.setCellValueFactory(cellData -> 
+            new javafx.beans.property.ReadOnlyObjectWrapper<>(cellData.getValue().getUnitPrice()));
         unitPriceColumn.setCellFactory(column -> new TableCell<ReturnItem, Double>() {
             @Override
             protected void updateItem(Double item, boolean empty) {
@@ -224,7 +229,8 @@ public class CreateReturnOrderDialogController {
         });
 
         // 退货金额
-        returnAmountColumn.setCellValueFactory(new PropertyValueFactory<>("returnAmount"));
+        returnAmountColumn.setCellValueFactory(cellData -> 
+            new javafx.beans.property.ReadOnlyObjectWrapper<>(cellData.getValue().getReturnAmount()));
         returnAmountColumn.setCellFactory(column -> new TableCell<ReturnItem, Double>() {
             @Override
             protected void updateItem(Double item, boolean empty) {
@@ -238,7 +244,8 @@ public class CreateReturnOrderDialogController {
         });
 
         // 商品状态（可编辑）
-        conditionColumn.setCellValueFactory(new PropertyValueFactory<>("condition"));
+        conditionColumn.setCellValueFactory(cellData -> 
+            new javafx.beans.property.ReadOnlyObjectWrapper<>(cellData.getValue().getCondition()));
         conditionColumn.setCellFactory(column -> new TableCell<ReturnItem, String>() {
             private ComboBox<String> comboBox;
 
@@ -270,7 +277,8 @@ public class CreateReturnOrderDialogController {
         });
 
         // 退货原因（可编辑）
-        reasonColumn.setCellValueFactory(new PropertyValueFactory<>("reason"));
+        reasonColumn.setCellValueFactory(cellData -> 
+            new javafx.beans.property.ReadOnlyObjectWrapper<>(cellData.getValue().getReason()));
         reasonColumn.setCellFactory(column -> new TableCell<ReturnItem, String>() {
             private TextField textField;
 
