@@ -155,6 +155,62 @@
         </HBox>
     </ScrollPane>
 
+    <!-- 图表区域 -->
+    <ScrollPane fitToWidth="true" VBox.vgrow="NEVER" prefHeight="350">
+        <HBox spacing="15" styleClass="charts-container">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <!-- 利润构成饼图 -->
+            <VBox spacing="5" styleClass="chart-card" prefWidth="350">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="利润构成" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                <PieChart fx:id="profitCompositionPieChart" prefWidth="330" prefHeight="280" legendSide="RIGHT"/>
+            </VBox>
+
+            <!-- 每日利润趋势折线图 -->
+            <VBox spacing="5" styleClass="chart-card" HBox.hgrow="ALWAYS">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="每日利润趋势" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
+                <LineChart fx:id="dailyProfitTrendLineChart" prefHeight="280">
+                    <xAxis>
+                        <CategoryAxis label="日期"/>
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis label="利润（元）"/>
+                    </yAxis>
+                </LineChart>
+            </VBox>
+
+            <!-- 分类利润对比柱状图 -->
+            <VBox spacing="5" styleClass="chart-card" prefWidth="350">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="分类利润对比" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #FF9800;"/>
+                <BarChart fx:id="categoryProfitBarChart" prefWidth="330" prefHeight="280">
+                    <xAxis>
+                        <CategoryAxis label="分类"/>
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis label="利润（元）"/>
+                    </yAxis>
+                </BarChart>
+            </VBox>
+        </HBox>
+    </ScrollPane>
+                        <Label fx:id="worstMarginValueLabel" text="0.00%" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #F44336;"/>
+                    </VBox>
+                </HBox>
+            </VBox>
+        </HBox>
+    </ScrollPane>
+
     <!-- 详细统计区域 -->
     <TabPane VBox.vgrow="ALWAYS" styleClass="profit-tab-pane" tabClosingPolicy="UNAVAILABLE">
         <!-- 商品利润分析 -->

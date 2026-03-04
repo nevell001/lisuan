@@ -122,6 +122,56 @@
         </HBox>
     </ScrollPane>
 
+    <!-- 图表区域 -->
+    <ScrollPane fitToWidth="true" VBox.vgrow="NEVER" prefHeight="350">
+        <HBox spacing="15" styleClass="charts-container">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <!-- 库存状态分布饼图 -->
+            <VBox spacing="5" styleClass="chart-card" prefWidth="350">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="库存状态分布" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                <PieChart fx:id="stockStatusPieChart" prefWidth="330" prefHeight="280" legendSide="RIGHT"/>
+            </VBox>
+
+            <!-- 库存周转率分析柱状图 -->
+            <VBox spacing="5" styleClass="chart-card" HBox.hgrow="ALWAYS">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="库存周转率分析" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
+                <BarChart fx:id="turnoverRateBarChart" prefHeight="280">
+                    <xAxis>
+                        <CategoryAxis label="商品"/>
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis label="周转率"/>
+                    </yAxis>
+                </BarChart>
+            </VBox>
+
+            <!-- 分类库存价值对比柱状图 -->
+            <VBox spacing="5" styleClass="chart-card" prefWidth="350">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="分类库存价值对比" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #FF9800;"/>
+                <BarChart fx:id="categoryStockValueBarChart" prefWidth="330" prefHeight="280">
+                    <xAxis>
+                        <CategoryAxis label="分类"/>
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis label="库存价值（元）"/>
+                    </yAxis>
+                </BarChart>
+            </VBox>
+        </HBox>
+    </ScrollPane>
+
     <!-- 详细统计区域 -->
     <TabPane VBox.vgrow="ALWAYS" styleClass="inventory-tab-pane" tabClosingPolicy="UNAVAILABLE">
         <!-- 商品周转分析 -->

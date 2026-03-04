@@ -89,6 +89,40 @@
         <Label fx:id="totalTransactionLabel" text="总交易数: 0" style="-fx-font-size: 13px; -fx-text-fill: #FF9800; -fx-font-weight: bold;"/>
     </HBox>
 
+    <!-- 图表区域 -->
+    <ScrollPane fitToWidth="true" VBox.vgrow="NEVER" prefHeight="300">
+        <HBox spacing="15" styleClass="charts-container">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <!-- 班次收入对比柱状图 -->
+            <VBox spacing="5" styleClass="chart-card" HBox.hgrow="ALWAYS">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="班次收入对比" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                <BarChart fx:id="shiftRevenueBarChart" prefHeight="250">
+                    <xAxis>
+                        <CategoryAxis label="班次"/>
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis label="营业额（元）"/>
+                    </yAxis>
+                </BarChart>
+            </VBox>
+
+            <!-- 支付方式分布饼图 -->
+            <VBox spacing="5" styleClass="chart-card" prefWidth="400">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="支付方式分布" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
+                <PieChart fx:id="paymentMethodPieChart" prefWidth="380" prefHeight="250" legendSide="RIGHT"/>
+            </VBox>
+        </HBox>
+    </ScrollPane>
+
     <!-- 交接班记录表格 -->
     <TableView fx:id="shiftTable"
               VBox.vgrow="ALWAYS"

@@ -13,11 +13,12 @@ import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.chart.*;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 
 import java.text.SimpleDateFormat;
-import java.util.List;
+import java.util.*;
 
 /**
  * 交接班控制器
@@ -69,6 +70,12 @@ public class ShiftController {
     private Label totalTransactionLabel;
 
     @FXML
+    private BarChart<String, Number> shiftRevenueBarChart;
+
+    @FXML
+    private PieChart paymentMethodPieChart;
+
+    @FXML
     private Button viewDetailButton;
 
     @FXML
@@ -99,6 +106,9 @@ public class ShiftController {
 
         // 设置表格列
         setupTableColumns();
+
+        // 初始化图表
+        initializeCharts();
 
         // 加载交接班数据
         loadShifts();
@@ -157,6 +167,21 @@ public class ShiftController {
     }
 
     /**
+     * 初始化图表
+     */
+    private void initializeCharts() {
+        // 班次收入对比柱状图
+        shiftRevenueBarChart.setTitle("班次收入对比");
+        shiftRevenueBarChart.getXAxis().setLabel("班次");
+        shiftRevenueBarChart.getYAxis().setLabel("营业额（元）");
+        shiftRevenueBarChart.setLegendVisible(false);
+
+        // 支付方式分布饼图
+        paymentMethodPieChart.setTitle("支付方式分布");
+        paymentMethodPieChart.setLegendSide(javafx.geometry.Side.RIGHT);
+    }
+
+    /**
      * 加载交接班数据
      */
     private void loadShifts() {
@@ -195,6 +220,73 @@ public class ShiftController {
 
         totalRevenueLabel.setText(String.format("总营业额: ¥%.2f", totalRevenue));
         totalTransactionLabel.setText(String.format("总交易数: %d", totalTransaction));
+
+        // 更新图表
+        updateCharts(shiftList);
+    }
+
+    /**
+     * 更新图表
+     */
+    private void updateCharts(ObservableList<Shift> shifts) {
+        // 更新班次收入柱状图
+        updateShiftRevenueChart(shifts);
+
+        // 更新支付方式饼图
+        updatePaymentMethodPieChart(shifts);
+    }
+
+    /**
+     * 更新班次收入柱状图
+     */
+    private void updateShiftRevenueChart(ObservableList<Shift> shifts) {
+        javafx.scene.chart.XYChart.Series<String, Number> series = new javafx.scene.chart.XYChart.Series<>();
+
+        // 限制显示最近的10个班次
+        int limit = Math.min(10, shifts.size());
+        for (int i = 0; i < limit; i++) {
+            Shift shift = shifts.get(i);
+            String label = "班次" + (i + 1);
+            series.getData().add(new javafx.scene.chart.XYChart.Data<>(label, shift.shiftRevenue));
+        }
+
+        shiftRevenueBarChart.getData().clear();
+        shiftRevenueBarChart.getData().add(series);
+    }
+
+    /**
+     * 更新支付方式饼图
+     */
+    private void updatePaymentMethodPieChart(ObservableList<Shift> shifts) {
+        double totalCash = 0.0;
+        double totalWechat = 0.0;
+        double totalAlipay = 0.0;
+        double totalCard = 0.0;
+
+        for (Shift shift : shifts) {
+            totalCash += shift.cashRevenue > 0 ? shift.cashRevenue : 0;
+            totalWechat += shift.wechatRevenue > 0 ? shift.wechatRevenue : 0;
+            totalAlipay += shift.alipayRevenue > 0 ? shift.alipayRevenue : 0;
+            totalCard += shift.cardRevenue > 0 ? shift.cardRevenue : 0;
+        }
+
+        javafx.collections.ObservableList<javafx.scene.chart.PieChart.Data> pieChartData =
+            javafx.collections.FXCollections.observableArrayList();
+
+        if (totalCash > 0) {
+            pieChartData.add(new javafx.scene.chart.PieChart.Data("现金", totalCash));
+        }
+        if (totalWechat > 0) {
+            pieChartData.add(new javafx.scene.chart.PieChart.Data("微信", totalWechat));
+        }
+        if (totalAlipay > 0) {
+            pieChartData.add(new javafx.scene.chart.PieChart.Data("支付宝", totalAlipay));
+        }
+        if (totalCard > 0) {
+            pieChartData.add(new javafx.scene.chart.PieChart.Data("银行卡", totalCard));
+        }
+
+        paymentMethodPieChart.setData(pieChartData);
     }
 
     /**

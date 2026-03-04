@@ -8,7 +8,7 @@
 
 **项目类型**: JavaFX 桌面应用程序
 
-**项目描述**: 一个功能完整的现代化收银系统，使用 JavaFX 17 开发，提供完整的 POS（销售点）管理、库存管理、会员管理、采购管理、报表统计、打印机管理、扫描枪管理等功能。
+**项目描述**: 一个功能完整的现代化收银系统，使用 JavaFX 17 开发，提供完整的 POS（销售点）管理、库存管理、会员管理、采购管理、退货管理、报表统计、打印机管理、扫描枪管理、数据导出等功能。
 
 **技术栈**:
 - **前端框架**: JavaFX 17.0.8
@@ -53,7 +53,7 @@ mvn javafx:run
 mvn clean package
 
 # 运行打包后的 JAR
-java -jar target/cashier-system-fx-2.3.1.jar
+java -jar target/cashier-system-fx-2.4.0.jar
 
 # 运行所有测试
 mvn test
@@ -95,11 +95,15 @@ docker-compose logs -f mysql
 
 **手动初始化数据库**:
 ```bash
-# 使用初始化脚本（包含所有 v2.3.1 变更）
+# 使用完整初始化脚本（包含所有功能）
 docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/00-init-complete.sql
 
-# 或使用独立升级脚本（从 v2.3.0 升级）
-docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/04-v2.3.1-updates.sql
+# 从 v2.3.1 升级到 v2.4.0
+docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
+docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
+
+# 检查和修复交易明细重复记录（可选）
+docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/07-fix-transaction-items.sql
 ```
 
 ### 配置文件
@@ -121,7 +125,7 @@ hello/
 │   ├── constant/
 │   │   ├── FXConstants.java               # JavaFX 常量
 │   │   └── SpacingConstants.java          # 间距常量
-│   ├── controller/                        # 控制器层 (26 个)
+│   ├── controller/                        # 控制器层 (30 个)
 │   │   ├── CartController.java            # 购物车控制器
 │   │   ├── CheckoutController.java        # 结账控制器
 │   │   ├── InventoryController.java       # 库存管理控制器
@@ -147,8 +151,12 @@ hello/
 │   │   ├── PurchaseInboundController.java # 采购入库控制器
 │   │   ├── PurchaseReportController.java  # 采购报表控制器
 │   │   ├── ProfitReportController.java    # 利润分析控制器
-│   │   └── PosModeController.java         # POS模式控制器 (v2.3.1 新增)
-│   ├── dao/                               # 数据访问层 (20 个)
+│   │   ├── PosModeController.java         # POS模式控制器 (v2.3.1 新增)
+│   │   ├── ReturnOrderController.java     # 退货订单控制器 (v2.4.0 新增)
+│   │   ├── ReturnApprovalController.java  # 退货审批控制器 (v2.4.0 新增)
+│   │   ├── ReturnReportController.java    # 退货报表控制器 (v2.4.0 新增)
+│   │   └── CreateReturnOrderDialogController.java # 创建退货订单对话框控制器 (v2.4.0 新增)
+│   ├── dao/                               # 数据访问层 (22 个)
 │   │   ├── UserDAO.java                   # 用户 DAO
 │   │   ├── ProductDAO.java                # 商品 DAO
 │   │   ├── MemberDAO.java                 # 会员 DAO
@@ -168,8 +176,10 @@ hello/
 │   │   ├── PurchaseInboundDAO.java        # 采购入库 DAO
 │   │   ├── PurchaseInboundItemDAO.java    # 采购入库明细 DAO
 │   │   ├── InventoryCheckDAO.java         # 库存盘点 DAO
-│   │   └── InventoryCheckItemDAO.java     # 库存盘点明细 DAO
-│   ├── model/                             # 实体类 (20 个)
+│   │   ├── InventoryCheckItemDAO.java     # 库存盘点明细 DAO
+│   │   ├── ReturnOrderDAO.java            # 退货订单 DAO (v2.4.0 新增)
+│   │   └── ReturnOrderItemDAO.java        # 退货订单明细 DAO (v2.4.0 新增)
+│   ├── model/                             # 实体类 (21 个)
 │   │   ├── Product.java                   # 商品实体类
 │   │   ├── Member.java                    # 会员实体类
 │   │   ├── User.java                      # 用户实体类
@@ -188,7 +198,9 @@ hello/
 │   │   ├── PurchaseInbound.java           # 采购入库记录类
 │   │   ├── PurchaseInboundItem.java       # 采购入库明细类
 │   │   ├── InventoryCheck.java            # 库存盘点实体类
-│   │   └── InventoryCheckItem.java        # 库存盘点明细类
+│   │   ├── InventoryCheckItem.java        # 库存盘点明细类
+│   │   ├── ReturnOrder.java               # 退货订单实体类 (v2.4.0 新增)
+│   │   └── ReturnOrderItem.java           # 退货订单明细类 (v2.4.0 新增)
 │   ├── printer/                           # 打印机管理模块 (10 个类，v2.3.1 新增)
 │   │   ├── PrinterManager.java            # 打印机管理器
 │   │   ├── PrinterDevice.java             # 打印设备
@@ -234,7 +246,7 @@ hello/
 │   │   └── UserDAOTest.java               # 用户 DAO 测试
 │   └── service/                           # 服务层测试 (v2.3.1 新增)
 ├── src/main/resources/
-│   ├── com/cashier/view/                  # FXML 视图文件 (26 个)
+│   ├── com/cashier/view/                  # FXML 视图文件 (30 个)
 │   │   ├── CartView.fxml
 │   │   ├── CheckoutView.fxml
 │   │   ├── InventoryCheckView.fxml
@@ -260,7 +272,11 @@ hello/
 │   │   ├── StatisticsView.fxml
 │   │   ├── SupplierView.fxml
 │   │   ├── TransactionView.fxml
-│   │   └── UserView.fxml
+│   │   ├── UserView.fxml
+│   │   ├── ReturnOrderView.fxml           # 退货订单视图 (v2.4.0 新增)
+│   │   ├── ReturnApprovalView.fxml        # 退货审批视图 (v2.4.0 新增)
+│   │   ├── ReturnReportView.fxml          # 退货报表视图 (v2.4.0 新增)
+│   │   └── CreateReturnOrderDialog.fxml   # 创建退货订单对话框 (v2.4.0 新增)
 │   ├── css/                               # 样式文件
 │   │   ├── styles.css                     # 主样式文件
 │   │   ├── light-theme.css                # 浅色主题
@@ -276,11 +292,15 @@ hello/
 ├── config/                                # 配置目录
 ├── docker/                                # Docker 配置
 │   ├── mysql-init/                        # 数据库初始化脚本
-│   │   ├── 00-init-complete.sql           # 完整初始化脚本（包含 v2.3.1 变更）
+│   │   ├── 00-init-complete.sql           # 完整初始化脚本（包含所有功能）
 │   │   ├── 01-create-user.sql             # 创建数据库用户
 │   │   ├── 02-alter-tables.sql            # 表结构变更（v2.3.0 + v2.3.1）
 │   │   ├── 03-sample-data.sql             # 示例数据
-│   │   └── 04-v2.3.1-updates.sql          # v2.3.1 独立升级脚本
+│   │   ├── 04-v2.3.1-updates.sql          # v2.3.1 独立升级脚本
+│   │   ├── 05-v2.4.0-updates.sql          # v2.4.0 独立升级脚本（退货管理、数据导出）
+│   │   ├── 06-v2.4.1-updates.sql          # v2.4.0 补充升级脚本（交易明细优化）
+│   │   ├── 07-fix-transaction-items.sql   # 修复交易明细重复记录
+│   │   └── DATABASE_VERSIONS.md           # 数据库版本管理文档
 │   └── mysql-backup/                      # 数据库备份目录
 ├── docs/                                  # 文档目录
 │   ├── DATABASE_CHANGES_v2.3.1.md         # v2.3.1 数据库变更文档
@@ -288,7 +308,8 @@ hello/
 │   ├── MYSQL_SETUP.md                     # MySQL 部署指南
 │   ├── PURCHASE_TABLE_DESIGN.md           # 采购表结构设计
 │   ├── ICON_GUIDE.md                      # 应用图标指南
-│   └── WINDOWS_MYSQL_SETUP.md             # Windows MySQL 安装指南
+│   ├── WINDOWS_MYSQL_SETUP.md             # Windows MySQL 安装指南
+│   └── PDF_TIME_FORMAT_OPTIMIZATION.md    # PDF 时间格式优化文档 (v2.3.2 新增)
 └── pom.xml                                # Maven 配置文件
 ```
 
@@ -381,7 +402,15 @@ hello/
 - 库存报表（周转率、滞销商品、积压分析）
 - 利润分析（采购成本、销售收入、毛利率、净利润）
 
-### 13. 打印机管理 (v2.3.1 新增)
+### 13. 退货管理 (v2.4.0 新增)
+- 创建退货订单（基于原交易）
+- 退货商品明细管理
+- 退货审批流程（待审批、已审批、已拒绝、已完成）
+- 退款方式管理（现金、微信、支付宝、银行卡）
+- 退货历史记录查询
+- 退货报表统计
+
+### 14. 打印机管理 (v2.3.1 新增)
 - 支持多种打印机设备（热敏打印机、针式打印机、喷墨打印机）
 - 打印任务队列管理
 - 打印预览功能
@@ -389,7 +418,7 @@ hello/
 - 打印历史记录
 - 打印状态监控
 
-### 14. 扫描枪管理 (v2.3.1 新增)
+### 15. 扫描枪管理 (v2.3.1 新增)
 - 支持 USB HID 扫描枪
 - 自动检测扫描设备
 - 智能焦点管理（自动定位到商品搜索框）
@@ -397,14 +426,22 @@ hello/
 - 支持多种扫描数据类型（条形码、二维码）
 - 扫描音效反馈
 
-### 15. 数据导入 (v2.3.1 新增)
+### 16. 数据导出 (v2.4.0 新增)
+- 支持多种导出格式（PDF、Excel、CSV）
+- 导出历史记录管理
+- 自定义导出模板
+- 批量导出功能
+- 导出进度显示
+- 导出参数配置（JSON）
+
+### 17. 数据导入 (v2.3.1 新增)
 - 支持 CSV 文件导入商品数据
 - 支持 GitHub 商品条码库导入
 - 自动分类和单位标准化
 - 自动创建缺失的分类和单位
 - 导入统计和进度显示
 
-### 16. 缓存管理 (v2.3.1 新增)
+### 18. 缓存管理 (v2.3.1 新增)
 - 商品数据缓存（5分钟过期）
 - 多维度缓存（ID、名称、条形码）
 - 自动缓存刷新
@@ -500,12 +537,37 @@ hello/
 - `inventory_check` - 库存盘点
 - `inventory_check_items` - 库存盘点明细
 
+### 退货管理表 (v2.4.0 新增)
+
+- `return_orders` - 退货订单
+- `return_order_items` - 退货订单明细
+
+### 数据导出表 (v2.4.0 新增)
+
+- `export_history` - 导出历史记录
+- `export_templates` - 导出模板
+
 ### 数据库变更 (v2.3.1)
 
 - **products 表**: 移除 barcode 字段的 UNIQUE 约束，改为普通索引，允许多个商品使用相同条形码
 - **members 表**: 新增 member_code 字段（VARCHAR(50) UNIQUE），自动生成会员编号（格式：M000001）
 
-详细变更说明请参考：[docs/DATABASE_CHANGES_v2.3.1.md](docs/DATABASE_CHANGES_v2.3.1.md)
+### 数据库变更 (v2.4.0)
+
+- **新增 return_orders 表**: 退货订单主表
+- **新增 return_order_items 表**: 退货订单明细表
+- **operation_logs 表**: 扩展字段（log_level、log_category、operation_result、affected_records、request_data、response_data）
+- **新增 export_history 表**: 导出历史记录
+- **新增 export_templates 表**: 导出模板配置
+- **添加默认导出模板**: 交易记录、库存报表、会员列表
+- **transaction_items 表**: 新增 product_id 字段（商品ID）
+- **transaction_items 表**: 新增 product_code 字段（商品编号）
+- **transaction_items 表**: 新增 barcode 字段（条形码）
+- **添加索引**: idx_product_id
+
+详细变更说明请参考：
+- [docs/DATABASE_CHANGES_v2.3.1.md](docs/DATABASE_CHANGES_v2.3.1.md) - v2.3.1 数据库变更
+- [docker/mysql-init/DATABASE_VERSIONS.md](docker/mysql-init/DATABASE_VERSIONS.md) - 完整版本管理
 
 ---
 
@@ -863,15 +925,49 @@ cat target/surefire-reports/*.txt
 
 - [README.md](README.md) - 项目说明
 - [docs/DATABASE_CHANGES_v2.3.1.md](docs/DATABASE_CHANGES_v2.3.1.md) - v2.3.1 数据库变更文档
+- [docs/DATABASE_INIT.md](docs/DATABASE_INIT.md) - 数据库初始化文档
 - [docs/MYSQL_SETUP.md](docs/MYSQL_SETUP.md) - MySQL 部署指南
 - [docs/WINDOWS_MYSQL_SETUP.md](docs/WINDOWS_MYSQL_SETUP.md) - Windows MySQL 安装指南
-- [docs/DATABASE_INIT.md](docs/DATABASE_INIT.md) - 数据库初始化文档
 - [docs/PURCHASE_TABLE_DESIGN.md](docs/PURCHASE_TABLE_DESIGN.md) - 采购表结构设计
 - [docs/ICON_GUIDE.md](docs/ICON_GUIDE.md) - 应用图标指南
+- [docs/PDF_TIME_FORMAT_OPTIMIZATION.md](docs/PDF_TIME_FORMAT_OPTIMIZATION.md) - PDF 时间格式优化文档
+- [docker/mysql-init/DATABASE_VERSIONS.md](docker/mysql-init/DATABASE_VERSIONS.md) - 数据库版本管理文档
 
 ---
 
 ## 版本历史
+
+### v2.4.0 (2026-03-01)
+- ✨ 新增退货管理功能
+  - 创建退货订单（基于原交易）
+  - 退货审批流程
+  - 退款方式管理
+  - 退货历史记录和报表
+- ✨ 数据导出功能增强
+  - 支持多种导出格式（PDF、Excel、CSV）
+  - 导出历史记录管理
+  - 自定义导出模板
+  - 默认模板配置
+- 🔧 操作日志增强
+  - 新增日志级别（DEBUG、INFO、WARN、ERROR）
+  - 新增日志分类（USER、SYSTEM、EXCEPTION）
+  - 新增操作结果字段
+  - 新增请求/响应数据记录
+- 🗄️ 新增退货管理相关数据表（return_orders、return_order_items）
+- 🗄️ 新增数据导出相关数据表（export_history、export_templates）
+- 🗄️ 交易明细表结构优化
+  - transaction_items 表新增 product_id 字段
+  - transaction_items 表新增 product_code 字段
+  - transaction_items 表新增 barcode 字段
+  - 添加索引 idx_product_id
+- 🐛 修复交易记录中商品重复显示的问题
+- 📝 添加数据库版本管理文档
+- 📝 添加交易明细重复记录检查脚本
+- 🔄 优化数据库初始化和升级流程
+- 🎨 新增 4 个退货管理界面
+- 🎨 新增 4 个退货管理控制器
+- 🎨 新增 2 个退货管理 DAO
+- 🎨 新增 2 个退货管理模型
 
 ### v2.3.2 (2026-03-01)
 - ✨ 优化 PDF 导出时间格式显示
@@ -942,8 +1038,8 @@ cat target/surefire-reports/*.txt
 - [ ] 更多统计图表
 - [ ] 多语言支持
 - [ ] 短信通知功能
-- [ ] 退货管理功能
-- [ ] 数据导出功能（Excel/PDF）
+- [x] 退货管理功能（v2.4.0 已实现）
+- [x] 数据导出功能（Excel/PDF）（v2.4.0 已实现）
 - [ ] 多仓库管理
 - [x] 单元测试覆盖
 - [ ] 集成测试

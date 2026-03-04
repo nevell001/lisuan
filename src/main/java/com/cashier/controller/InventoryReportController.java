@@ -6,7 +6,10 @@ import com.cashier.model.Product;
 import com.cashier.model.Transaction;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.chart.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
@@ -61,6 +64,15 @@ public class InventoryReportController {
 
     @FXML
     private Label overstockCountLabel;
+
+    @FXML
+    private PieChart stockStatusPieChart;
+
+    @FXML
+    private BarChart<String, Number> turnoverRateBarChart;
+
+    @FXML
+    private BarChart<String, Number> categoryStockValueBarChart;
 
     @FXML
     private TableView<InventoryReportRecord> productTable;
@@ -173,6 +185,9 @@ public class InventoryReportController {
         setupSlowSalesTableColumns();
         setupOverstockTableColumns();
 
+        // 初始化图表
+        initializeCharts();
+
         // 加载数据
         loadData();
 
@@ -235,6 +250,27 @@ public class InventoryReportController {
             new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().stockValue)));
         overstockDaysColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.format("%.0f", cellData.getValue().inventoryDays)));
+    }
+
+    /**
+     * 初始化图表
+     */
+    private void initializeCharts() {
+        // 库存状态分布饼图
+        stockStatusPieChart.setTitle("库存状态分布");
+        stockStatusPieChart.setLegendSide(javafx.geometry.Side.RIGHT);
+
+        // 库存周转率分析柱状图
+        turnoverRateBarChart.setTitle("库存周转率分析");
+        turnoverRateBarChart.getXAxis().setLabel("商品");
+        turnoverRateBarChart.getYAxis().setLabel("周转率");
+        turnoverRateBarChart.setLegendVisible(false);
+
+        // 分类库存价值对比柱状图
+        categoryStockValueBarChart.setTitle("分类库存价值对比");
+        categoryStockValueBarChart.getXAxis().setLabel("分类");
+        categoryStockValueBarChart.getYAxis().setLabel("库存价值（元）");
+        categoryStockValueBarChart.setLegendVisible(false);
     }
 
     /**
@@ -373,6 +409,10 @@ public class InventoryReportController {
         List<InventoryReportRecord> slowSalesRecords = new ArrayList<>();
         List<InventoryReportRecord> overstockRecords = new ArrayList<>();
 
+        // 分类统计
+        Map<String, Integer> categoryQuantityMap = new HashMap<>();
+        Map<String, Double> categoryAmountMap = new HashMap<>();
+
         // 计算天数
         long daysBetween = java.time.temporal.ChronoUnit.DAYS.between(startDate, endDate) + 1;
 
@@ -433,6 +473,11 @@ public class InventoryReportController {
                 status
             ));
 
+            // 更新分类统计
+            String category = product.category != null ? product.category : "未分类";
+            categoryQuantityMap.put(category, categoryQuantityMap.getOrDefault(category, 0) + product.quantity);
+            categoryAmountMap.put(category, categoryAmountMap.getOrDefault(category, 0.0) + stockValue);
+
             // 滞销商品记录
             if (salesQuantity < slowSalesThreshold) {
                 slowSalesRecords.add(new InventoryReportRecord(
@@ -471,6 +516,9 @@ public class InventoryReportController {
         updateProductTable(productRecords);
         updateSlowSalesTable(slowSalesRecords);
         updateOverstockTable(overstockRecords);
+
+        // 更新图表
+        updateCharts(productRecords, categoryQuantityMap, categoryAmountMap);
     }
 
     /**
@@ -567,6 +615,102 @@ public class InventoryReportController {
         // 按库存天数排序
         list.sort((a, b) -> Double.compare(b.inventoryDays, a.inventoryDays));
         overstockTable.setItems(list);
+    }
+
+    /**
+     * 更新图表
+     */
+    private void updateCharts(List<InventoryReportRecord> productRecords,
+                               Map<String, Integer> categoryQuantityMap,
+                               Map<String, Double> categoryAmountMap) {
+        // 计算库存状态统计
+        int normalCount = 0;
+        int lowStockCount = 0;
+        int slowSalesCount = 0;
+        int overstockCount = 0;
+
+        for (InventoryReportRecord record : productRecords) {
+            if (record.status.equals("库存不足")) {
+                lowStockCount++;
+            } else if (record.status.equals("滞销")) {
+                slowSalesCount++;
+            } else if (record.status.equals("积压")) {
+                overstockCount++;
+            } else {
+                normalCount++;
+            }
+        }
+
+        // 更新状态饼图
+        updateStockStatusPieChart(normalCount, lowStockCount, slowSalesCount, overstockCount);
+
+        // 更新周转率柱状图
+        updateTurnoverRateBarChart(productRecords);
+
+        // 更新分类库存价值柱状图
+        updateCategoryStockValueBarChart(categoryAmountMap);
+    }
+
+    /**
+     * 更新库存状态饼图
+     */
+    private void updateStockStatusPieChart(int normalCount, int lowStockCount,
+                                           int slowSalesCount, int overstockCount) {
+        ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList();
+
+        if (normalCount > 0) {
+            pieChartData.add(new PieChart.Data("正常", normalCount));
+        }
+        if (lowStockCount > 0) {
+            pieChartData.add(new PieChart.Data("库存不足", lowStockCount));
+        }
+        if (slowSalesCount > 0) {
+            pieChartData.add(new PieChart.Data("滞销", slowSalesCount));
+        }
+        if (overstockCount > 0) {
+            pieChartData.add(new PieChart.Data("积压", overstockCount));
+        }
+
+        stockStatusPieChart.setData(pieChartData);
+    }
+
+    /**
+     * 更新周转率柱状图
+     */
+    private void updateTurnoverRateBarChart(List<InventoryReportRecord> records) {
+        // 按周转率排序，只显示前15名
+        List<InventoryReportRecord> sortedRecords = new ArrayList<>(records);
+        sortedRecords.sort((a, b) -> Double.compare(b.turnoverRate, a.turnoverRate));
+        sortedRecords = sortedRecords.subList(0, Math.min(15, sortedRecords.size()));
+
+        // 创建柱状图数据
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("周转率");
+        for (InventoryReportRecord record : sortedRecords) {
+            series.getData().add(new XYChart.Data<>(record.productName, record.turnoverRate));
+        }
+
+        turnoverRateBarChart.getData().clear();
+        turnoverRateBarChart.getData().add(series);
+    }
+
+    /**
+     * 更新分类库存价值柱状图
+     */
+    private void updateCategoryStockValueBarChart(Map<String, Double> categoryAmountMap) {
+        // 按金额排序
+        List<Map.Entry<String, Double>> sortedEntries = new ArrayList<>(categoryAmountMap.entrySet());
+        sortedEntries.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
+
+        // 创建柱状图数据
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("库存价值");
+        for (Map.Entry<String, Double> entry : sortedEntries) {
+            series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
+        }
+
+        categoryStockValueBarChart.getData().clear();
+        categoryStockValueBarChart.getData().add(series);
     }
 
     /**

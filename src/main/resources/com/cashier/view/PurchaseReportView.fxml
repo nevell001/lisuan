@@ -119,6 +119,56 @@
         </HBox>
     </ScrollPane>
 
+    <!-- 图表区域 -->
+    <ScrollPane fitToWidth="true" VBox.vgrow="NEVER" prefHeight="350">
+        <HBox spacing="15" styleClass="charts-container">
+            <padding>
+                <Insets top="10" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <!-- 订单状态分布饼图 -->
+            <VBox spacing="5" styleClass="chart-card" prefWidth="350">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="订单状态分布" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                <PieChart fx:id="statusPieChart" prefWidth="330" prefHeight="280" legendSide="RIGHT"/>
+            </VBox>
+
+            <!-- 采购金额趋势折线图 -->
+            <VBox spacing="5" styleClass="chart-card" HBox.hgrow="ALWAYS">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="采购金额趋势" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
+                <LineChart fx:id="amountTrendLineChart" prefHeight="280">
+                    <xAxis>
+                        <CategoryAxis label="日期"/>
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis label="金额（元）"/>
+                    </yAxis>
+                </LineChart>
+            </VBox>
+
+            <!-- 供应商采购对比柱状图 -->
+            <VBox spacing="5" styleClass="chart-card" prefWidth="350">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="供应商采购对比" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #FF9800;"/>
+                <BarChart fx:id="supplierComparisonBarChart" prefWidth="330" prefHeight="280">
+                    <xAxis>
+                        <CategoryAxis label="供应商"/>
+                    </xAxis>
+                    <yAxis>
+                        <NumberAxis label="金额（元）"/>
+                    </yAxis>
+                </BarChart>
+            </VBox>
+        </HBox>
+    </ScrollPane>
+
     <!-- 详细统计区域 -->
     <SplitPane VBox.vgrow="ALWAYS" styleClass="statistics-split-pane">
         <!-- 左侧：采购订单列表 -->

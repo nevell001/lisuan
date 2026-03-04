@@ -8,7 +8,10 @@ import com.cashier.model.PurchaseOrderItem;
 import com.cashier.model.Supplier;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.chart.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
@@ -55,6 +58,15 @@ public class PurchaseReportController {
 
     @FXML
     private Label completedOrdersLabel;
+
+    @FXML
+    private PieChart statusPieChart;
+
+    @FXML
+    private LineChart<String, Number> amountTrendLineChart;
+
+    @FXML
+    private BarChart<String, Number> supplierComparisonBarChart;
 
     @FXML
     private TableView<PurchaseReportRecord> orderTable;
@@ -142,6 +154,9 @@ public class PurchaseReportController {
         setupSupplierRankTableColumns();
         setupCategoryTableColumns();
 
+        // 初始化图表
+        initializeCharts();
+
         // 加载数据
         loadData();
 
@@ -194,6 +209,28 @@ public class PurchaseReportController {
             new javafx.beans.property.SimpleStringProperty(String.valueOf(cellData.getValue().quantity)));
         categoryAmountColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().amount)));
+    }
+
+    /**
+     * 初始化图表
+     */
+    private void initializeCharts() {
+        // 订单状态分布饼图
+        statusPieChart.setTitle("订单状态分布");
+        statusPieChart.setLegendSide(javafx.geometry.Side.RIGHT);
+
+        // 采购金额趋势折线图
+        amountTrendLineChart.setTitle("采购金额趋势");
+        amountTrendLineChart.getXAxis().setLabel("日期");
+        amountTrendLineChart.getYAxis().setLabel("金额（元）");
+        amountTrendLineChart.setCreateSymbols(false); // 不显示数据点
+        amountTrendLineChart.setLegendVisible(false);
+
+        // 供应商采购对比柱状图
+        supplierComparisonBarChart.setTitle("供应商采购对比");
+        supplierComparisonBarChart.getXAxis().setLabel("供应商");
+        supplierComparisonBarChart.getYAxis().setLabel("金额（元）");
+        supplierComparisonBarChart.setLegendVisible(false);
     }
 
     /**
@@ -409,6 +446,9 @@ public class PurchaseReportController {
 
         // 更新分类表格
         updateCategoryTable(categoryQuantityMap, categoryAmountMap);
+
+        // 更新图表
+        updateCharts(pendingOrders, approvedOrders, completedOrders, supplierAmountMap, orders);
     }
 
     /**
@@ -479,6 +519,92 @@ public class PurchaseReportController {
         // 按金额排序
         list.sort((a, b) -> Double.compare(b.amount, a.amount));
         categoryTable.setItems(list);
+    }
+
+    /**
+     * 更新图表
+     */
+    private void updateCharts(int pendingOrders, int approvedOrders, int completedOrders,
+                               Map<String, Double> supplierAmountMap, List<PurchaseOrder> filteredOrders) {
+        // 更新状态饼图
+        updateStatusPieChart(pendingOrders, approvedOrders, completedOrders);
+
+        // 更新采购金额趋势折线图
+        updateAmountTrendChart(filteredOrders);
+
+        // 更新供应商采购对比柱状图
+        updateSupplierComparisonBarChart(supplierAmountMap);
+    }
+
+    /**
+     * 更新状态饼图
+     */
+    private void updateStatusPieChart(int pendingOrders, int approvedOrders, int completedOrders) {
+        ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList();
+
+        if (pendingOrders > 0) {
+            pieChartData.add(new PieChart.Data("待审批", pendingOrders));
+        }
+        if (approvedOrders > 0) {
+            pieChartData.add(new PieChart.Data("已审批", approvedOrders));
+        }
+        if (completedOrders > 0) {
+            pieChartData.add(new PieChart.Data("已完成", completedOrders));
+        }
+
+        statusPieChart.setData(pieChartData);
+    }
+
+    /**
+     * 更新采购金额趋势折线图
+     */
+    private void updateAmountTrendChart(List<PurchaseOrder> orders) {
+        Map<String, Double> dailyAmounts = new LinkedHashMap<>();
+
+        // 初始化所有日期的数据
+        LocalDate start = startDatePicker.getValue();
+        LocalDate end = endDatePicker.getValue();
+        LocalDate date = start;
+        while (!date.isAfter(end)) {
+            dailyAmounts.put(date.toString(), 0.0);
+            date = date.plusDays(1);
+        }
+
+        // 汇总每日采购金额
+        for (PurchaseOrder order : orders) {
+            String dateKey = order.purchaseDate;
+            dailyAmounts.put(dateKey, dailyAmounts.getOrDefault(dateKey, 0.0) + order.totalAmount.doubleValue());
+        }
+
+        // 创建折线图数据
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("采购金额");
+        for (Map.Entry<String, Double> entry : dailyAmounts.entrySet()) {
+            series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
+        }
+
+        amountTrendLineChart.getData().clear();
+        amountTrendLineChart.getData().add(series);
+    }
+
+    /**
+     * 更新供应商采购对比柱状图
+     */
+    private void updateSupplierComparisonBarChart(Map<String, Double> supplierAmountMap) {
+        // 按金额排序，只显示前10名
+        List<Map.Entry<String, Double>> sortedEntries = new ArrayList<>(supplierAmountMap.entrySet());
+        sortedEntries.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
+        sortedEntries = sortedEntries.subList(0, Math.min(10, sortedEntries.size()));
+
+        // 创建柱状图数据
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("采购金额");
+        for (Map.Entry<String, Double> entry : sortedEntries) {
+            series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
+        }
+
+        supplierComparisonBarChart.getData().clear();
+        supplierComparisonBarChart.getData().add(series);
     }
 
     /**

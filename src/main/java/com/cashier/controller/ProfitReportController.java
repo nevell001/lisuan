@@ -12,7 +12,10 @@ import com.cashier.model.PurchaseOrder;
 import com.cashier.model.Transaction;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
+import javafx.scene.chart.*;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
@@ -74,6 +77,15 @@ public class ProfitReportController {
 
     @FXML
     private Label worstMarginValueLabel;
+
+    @FXML
+    private PieChart profitCompositionPieChart;
+
+    @FXML
+    private LineChart<String, Number> dailyProfitTrendLineChart;
+
+    @FXML
+    private BarChart<String, Number> categoryProfitBarChart;
 
     @FXML
     private TableView<ProfitReportRecord> productProfitTable;
@@ -174,6 +186,9 @@ public class ProfitReportController {
         setupCategoryProfitTableColumns();
         setupDailyProfitTableColumns();
 
+        // 初始化图表
+        initializeCharts();
+
         // 加载数据
         loadData();
 
@@ -232,6 +247,28 @@ public class ProfitReportController {
             new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().profit)));
         dailyMarginColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.format("%.2f%%", cellData.getValue().margin * 100)));
+    }
+
+    /**
+     * 初始化图表
+     */
+    private void initializeCharts() {
+        // 利润构成饼图
+        profitCompositionPieChart.setTitle("利润构成");
+        profitCompositionPieChart.setLegendSide(javafx.geometry.Side.RIGHT);
+
+        // 每日利润趋势折线图
+        dailyProfitTrendLineChart.setTitle("每日利润趋势");
+        dailyProfitTrendLineChart.getXAxis().setLabel("日期");
+        dailyProfitTrendLineChart.getYAxis().setLabel("利润（元）");
+        dailyProfitTrendLineChart.setCreateSymbols(false);
+        dailyProfitTrendLineChart.setLegendVisible(true);
+
+        // 分类利润对比柱状图
+        categoryProfitBarChart.setTitle("分类利润对比");
+        categoryProfitBarChart.getXAxis().setLabel("分类");
+        categoryProfitBarChart.getYAxis().setLabel("利润（元）");
+        categoryProfitBarChart.setLegendVisible(false);
     }
 
     /**
@@ -552,6 +589,9 @@ public class ProfitReportController {
         updateProductProfitTable(productProfitMap);
         updateCategoryProfitTable(categoryProfitMap);
         updateDailyProfitTable(dailyProfitMap);
+
+        // 更新图表
+        updateCharts(totalRevenue, totalCost, grossProfit, operatingCost, netProfit, categoryProfitMap, dailyProfitMap);
     }
 
     /**
@@ -624,6 +664,80 @@ public class ProfitReportController {
         }
 
         dailyProfitTable.setItems(list);
+    }
+
+    /**
+     * 更新图表
+     */
+    private void updateCharts(double totalRevenue, double totalCost, double grossProfit,
+                               double operatingCost, double netProfit,
+                               Map<String, CategoryProfit> categoryProfitMap,
+                               Map<String, DailyProfit> dailyProfitMap) {
+        // 更新利润构成饼图
+        updateProfitCompositionPieChart(grossProfit, operatingCost, netProfit);
+
+        // 更新每日利润趋势折线图
+        updateDailyProfitTrendChart(dailyProfitMap);
+
+        // 更新分类利润对比柱状图
+        updateCategoryProfitBarChart(categoryProfitMap);
+    }
+
+    /**
+     * 更新利润构成饼图
+     */
+    private void updateProfitCompositionPieChart(double grossProfit, double operatingCost, double netProfit) {
+        ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList();
+
+        if (grossProfit > 0) {
+            pieChartData.add(new PieChart.Data("毛利润", grossProfit));
+        }
+        if (operatingCost > 0) {
+            pieChartData.add(new PieChart.Data("运营成本", operatingCost));
+        }
+        if (netProfit > 0) {
+            pieChartData.add(new PieChart.Data("净利润", netProfit));
+        }
+
+        profitCompositionPieChart.setData(pieChartData);
+    }
+
+    /**
+     * 更新每日利润趋势折线图
+     */
+    private void updateDailyProfitTrendChart(Map<String, DailyProfit> dailyProfitMap) {
+        XYChart.Series<String, Number> grossProfitSeries = new XYChart.Series<>();
+        XYChart.Series<String, Number> netProfitSeries = new XYChart.Series<>();
+
+        grossProfitSeries.setName("毛利润");
+        netProfitSeries.setName("净利润");
+
+        for (Map.Entry<String, DailyProfit> entry : dailyProfitMap.entrySet()) {
+            DailyProfit dp = entry.getValue();
+            grossProfitSeries.getData().add(new XYChart.Data<>(entry.getKey(), dp.profit));
+            // 净利润 = 毛利润 - 运营成本（假设运营成本为收入的5%）
+            double operatingCost = dp.revenue * DEFAULT_OPERATING_COST_RATIO;
+            netProfitSeries.getData().add(new XYChart.Data<>(entry.getKey(), dp.profit - operatingCost));
+        }
+
+        dailyProfitTrendLineChart.getData().clear();
+        dailyProfitTrendLineChart.getData().add(grossProfitSeries);
+        dailyProfitTrendLineChart.getData().add(netProfitSeries);
+    }
+
+    /**
+     * 更新分类利润对比柱状图
+     */
+    private void updateCategoryProfitBarChart(Map<String, CategoryProfit> categoryProfitMap) {
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("利润");
+
+        for (Map.Entry<String, CategoryProfit> entry : categoryProfitMap.entrySet()) {
+            series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue().profit));
+        }
+
+        categoryProfitBarChart.getData().clear();
+        categoryProfitBarChart.getData().add(series);
     }
 
     /**
