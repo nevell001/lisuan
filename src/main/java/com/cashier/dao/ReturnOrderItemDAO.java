@@ -19,9 +19,9 @@ public class ReturnOrderItemDAO {
      */
     public static boolean insert(ReturnOrderItem item) {
         String sql = "INSERT INTO return_order_items (return_order_id, product_id, product_code, product_name, " +
-                "barcode, category, return_quantity, unit_price, return_amount, reason, condition) " +
+                "barcode, category, return_quantity, unit_price, return_amount, reason, `condition`) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
+
         try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
@@ -49,9 +49,9 @@ public class ReturnOrderItemDAO {
      */
     public static boolean batchInsert(List<ReturnOrderItem> items) {
         String sql = "INSERT INTO return_order_items (return_order_id, product_id, product_code, product_name, " +
-                "barcode, category, return_quantity, unit_price, return_amount, reason, condition) " +
+                "barcode, category, return_quantity, unit_price, return_amount, reason, `condition`) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-        
+
         try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
@@ -84,8 +84,8 @@ public class ReturnOrderItemDAO {
     public static boolean update(ReturnOrderItem item) {
         String sql = "UPDATE return_order_items SET product_id = ?, product_code = ?, product_name = ?, " +
                 "barcode = ?, category = ?, return_quantity = ?, unit_price = ?, return_amount = ?, " +
-                "reason = ?, condition = ? WHERE id = ?";
-        
+                "reason = ?, `condition` = ? WHERE id = ?";
+
         try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
