@@ -173,7 +173,7 @@ public class FXConstants {
     public static final String APP_TITLE = "收银系统";
 
     /** 应用版本 */
-    public static final String APP_VERSION = "2.2.1";
+    public static final String APP_VERSION = "2.4.1";
 
     /** 数据目录名称 */
     public static final String DATA_DIR_NAME = "data";

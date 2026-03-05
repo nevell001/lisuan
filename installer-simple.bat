@@ -3,10 +3,10 @@ setlocal enabledelayedexpansion
 
 REM ============================================
 REM   Cashier System Installer (Enhanced)
-REM   Version 2.3.2 - with Docker Support
+REM   Version 2.4.1 - with Docker Support
 REM ============================================
 
-set "INSTALLER_VERSION=2.3.2"
+set "INSTALLER_VERSION=2.4.1"
 set "ERROR_OCCURRED=0"
 
 cls

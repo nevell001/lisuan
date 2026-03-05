@@ -8,7 +8,7 @@ A modern POS (Point of Sale) system built with JavaFX 17, using MySQL for data p
 
 **Key Technologies**: Java 17, JavaFX 17.0.8, MySQL 8.0, Maven, HikariCP connection pooling, SLF4J + Logback
 
-**Current Version**: v2.3.2
+**Current Version**: v2.4.1
 
 ## Development Commands
 
@@ -27,7 +27,7 @@ mvn clean compile
 mvn clean package
 
 # Run packaged JAR
-java -jar target/cashier-system-fx-2.3.1.jar
+java -jar target/cashier-system-fx-2.4.1.jar
 ```
 
 ### Testing

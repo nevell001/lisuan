@@ -20,7 +20,7 @@
 # ============================================
 
 APP_NAME="Cashier System"
-APP_VERSION="2.3.0"
+APP_VERSION="2.4.1"
 MAIN_CLASS="com.cashier.CashierSystemFXApplication"
 CONFIG_FILE="config/jvm.config"
 
