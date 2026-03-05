@@ -108,6 +108,13 @@
             <version>${javafx.version}</version>
         </dependency>
 
+        <!-- JavaFX Chart - 图表支持 -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-chart</artifactId>
+            <version>${javafx.version}</version>
+        </dependency>
+
         <!-- Apache POI - Excel 导出 -->
         <dependency>
             <groupId>org.apache.poi</groupId>
@@ -268,6 +275,7 @@
                                 <module>javafx.graphics</module>
                                 <module>javafx.base</module>
                                 <module>javafx.media</module>
+                                <module>javafx.chart</module>
                             </modules>
                             <jmods>
                                 <jmod>
