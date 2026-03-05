@@ -47,83 +47,89 @@
 
     <!-- 统计卡片区域 -->
     <ScrollPane fitToWidth="true" VBox.vgrow="NEVER">
-        <HBox spacing="15" styleClass="cards-container">
+        <VBox spacing="10" styleClass="cards-container">
             <padding>
                 <Insets top="15" right="15" bottom="15" left="15"/>
             </padding>
 
-            <!-- 总销售额 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="180">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="总销售额" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="totalSalesLabel" text="¥0.00" style="-fx-text-fill: #3F51B5; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
+            <!-- 第一行：主要指标 -->
+            <HBox spacing="15" alignment="CENTER_LEFT">
+                <!-- 总销售额 -->
+                <VBox spacing="5" styleClass="stat-card" prefWidth="220" HBox.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="15" right="15" bottom="15" left="15"/>
+                    </padding>
+                    <Label text="总销售额" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                    <Label fx:id="totalSalesLabel" text="¥0.00" style="-fx-text-fill: #3F51B5; -fx-font-size: 28px; -fx-font-weight: bold;"/>
+                </VBox>
 
-            <!-- 交易笔数 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="180">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="交易笔数" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="transactionCountLabel" text="0" style="-fx-text-fill: #4CAF50; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
+                <!-- 交易笔数 -->
+                <VBox spacing="5" styleClass="stat-card" prefWidth="180" HBox.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="15" right="15" bottom="15" left="15"/>
+                    </padding>
+                    <Label text="交易笔数" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                    <Label fx:id="transactionCountLabel" text="0" style="-fx-text-fill: #4CAF50; -fx-font-size: 28px; -fx-font-weight: bold;"/>
+                </VBox>
 
-            <!-- 平均交易额 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="180">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="平均交易额" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="avgTransactionLabel" text="¥0.00" style="-fx-text-fill: #FF9800; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
+                <!-- 平均交易额 -->
+                <VBox spacing="5" styleClass="stat-card" prefWidth="200" HBox.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="15" right="15" bottom="15" left="15"/>
+                    </padding>
+                    <Label text="平均交易额" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                    <Label fx:id="avgTransactionLabel" text="¥0.00" style="-fx-text-fill: #FF9800; -fx-font-size: 28px; -fx-font-weight: bold;"/>
+                </VBox>
 
-            <!-- 会员消费 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="180">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="会员消费" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="memberSalesLabel" text="¥0.00" style="-fx-text-fill: #9C27B0; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
+                <!-- 会员消费 -->
+                <VBox spacing="5" styleClass="stat-card" prefWidth="200" HBox.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="15" right="15" bottom="15" left="15"/>
+                    </padding>
+                    <Label text="会员消费" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                    <Label fx:id="memberSalesLabel" text="¥0.00" style="-fx-text-fill: #9C27B0; -fx-font-size: 28px; -fx-font-weight: bold;"/>
+                </VBox>
+            </HBox>
 
-            <!-- 现金支付 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="180">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="现金支付" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="cashSalesLabel" text="¥0.00" style="-fx-text-fill: #607D8B; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
+            <!-- 第二行：支付方式 -->
+            <HBox spacing="15" alignment="CENTER_LEFT">
+                <!-- 现金支付 -->
+                <VBox spacing="5" styleClass="stat-card" prefWidth="180" HBox.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="15" right="15" bottom="15" left="15"/>
+                    </padding>
+                    <Label text="现金支付" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                    <Label fx:id="cashSalesLabel" text="¥0.00" style="-fx-text-fill: #607D8B; -fx-font-size: 26px; -fx-font-weight: bold;"/>
+                </VBox>
 
-            <!-- 微信支付 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="180">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="微信支付" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="wechatSalesLabel" text="¥0.00" style="-fx-text-fill: #2196F3; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
+                <!-- 微信支付 -->
+                <VBox spacing="5" styleClass="stat-card" prefWidth="180" HBox.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="15" right="15" bottom="15" left="15"/>
+                    </padding>
+                    <Label text="微信支付" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                    <Label fx:id="wechatSalesLabel" text="¥0.00" style="-fx-text-fill: #2196F3; -fx-font-size: 26px; -fx-font-weight: bold;"/>
+                </VBox>
 
-            <!-- 支付宝支付 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="180">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="支付宝支付" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="alipaySalesLabel" text="¥0.00" style="-fx-text-fill: #03A9F4; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
+                <!-- 支付宝支付 -->
+                <VBox spacing="5" styleClass="stat-card" prefWidth="180" HBox.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="15" right="15" bottom="15" left="15"/>
+                    </padding>
+                    <Label text="支付宝支付" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                    <Label fx:id="alipaySalesLabel" text="¥0.00" style="-fx-text-fill: #03A9F4; -fx-font-size: 26px; -fx-font-weight: bold;"/>
+                </VBox>
 
-            <!-- 银行卡支付 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="180">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="银行卡支付" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="cardSalesLabel" text="¥0.00" style="-fx-text-fill: #00BCD4; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
-        </HBox>
+                <!-- 银行卡支付 -->
+                <VBox spacing="5" styleClass="stat-card" prefWidth="180" HBox.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="15" right="15" bottom="15" left="15"/>
+                    </padding>
+                    <Label text="银行卡支付" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
+                    <Label fx:id="cardSalesLabel" text="¥0.00" style="-fx-text-fill: #00BCD4; -fx-font-size: 26px; -fx-font-weight: bold;"/>
+                </VBox>
+            </HBox>
+        </VBox>
     </ScrollPane>
 
     <!-- 图表区域 -->
