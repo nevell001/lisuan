@@ -205,12 +205,6 @@
             </VBox>
         </HBox>
     </ScrollPane>
-                        <Label fx:id="worstMarginValueLabel" text="0.00%" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #F44336;"/>
-                    </VBox>
-                </HBox>
-            </VBox>
-        </HBox>
-    </ScrollPane>
 
     <!-- 详细统计区域 -->
     <TabPane VBox.vgrow="ALWAYS" styleClass="profit-tab-pane" tabClosingPolicy="UNAVAILABLE">
