@@ -103,12 +103,17 @@ public class MainController {
     @FXML
     private Button inventoryReportBtn;
 
+@FXML
 private Button profitReportBtn;
-    private Button returnReportBtn;
-    private Button promotionsBtn;
 
-    @FXML
-    private Button shiftBtn;
+@FXML
+private Button returnReportBtn;
+
+@FXML
+private Button promotionsBtn;
+
+@FXML
+private Button shiftBtn;
 
     @FXML
     private Button userManagementBtn;
