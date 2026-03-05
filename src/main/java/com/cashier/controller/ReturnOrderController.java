@@ -84,8 +84,8 @@ public class ReturnOrderController {
     private void initializeReturnOrderTable() {
         returnOrderIdColumn.setCellValueFactory(new PropertyValueFactory<>("returnOrderId"));
         memberNameColumn.setCellValueFactory(new PropertyValueFactory<>("memberName"));
-        returnDateColumn.setCellValueFactory(new PropertyValueFactory<>("returnDate"));
-        totalAmountColumn.setCellValueFactory(new PropertyValueFactory<>("totalAmount"));
+        returnDateColumn.setCellValueFactory(new PropertyValueFactory<>("returnDateFormatted"));
+        totalAmountColumn.setCellValueFactory(new PropertyValueFactory<>("totalAmountFormatted"));
         statusColumn.setCellValueFactory(new PropertyValueFactory<>("status"));
         operatorNameColumn.setCellValueFactory(new PropertyValueFactory<>("operatorName"));
 

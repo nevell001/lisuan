@@ -18,6 +18,7 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 import org.slf4j.Logger;
 
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
@@ -385,6 +386,52 @@ public class CreateReturnOrderDialogController {
     }
 
     /**
+     * 验证退货商品 - 防止重复退货
+     */
+    private String validateReturnItems() {
+        try {
+            // 查询该交易的所有已存在退货订单（不包括已拒绝的）
+            List<ReturnOrder> existingReturns = ReturnOrderDAO.findByOriginalTransactionId(
+                originalTransaction.transactionId
+            );
+
+            if (existingReturns.isEmpty()) {
+                return null;  // 没有退货记录，允许创建
+            }
+
+            // 统计所有已退货的商品和数量
+            java.util.Map<Integer, Integer> returnedQuantities = new java.util.HashMap<>();
+            for (ReturnOrder returnOrder : existingReturns) {
+                List<ReturnOrderItem> items = ReturnOrderItemDAO.findByReturnOrderId(returnOrder.returnOrderId);
+                for (ReturnOrderItem item : items) {
+                    returnedQuantities.put(item.productId,
+                        returnedQuantities.getOrDefault(item.productId, 0) + item.returnQuantity);
+                }
+            }
+
+            // 检查当前要退货的商品是否会超过原交易数量
+            for (ReturnItem item : returnItems) {
+                if (item.isSelected() && item.returnQuantity > 0) {
+                    int returnedQty = returnedQuantities.getOrDefault(item.productId, 0);
+                    int totalReturnQty = returnedQty + item.returnQuantity;
+
+                    if (totalReturnQty > item.originalQuantity) {
+                        return String.format("商品【%s】退货数量超限。\n" +
+                            "原交易数量: %d，已退货数量: %d，本次退货数量: %d",
+                            item.productName, item.originalQuantity, returnedQty, item.returnQuantity);
+                    }
+                }
+            }
+
+            return null;  // 验证通过
+
+        } catch (Exception e) {
+            logger.error("验证退货商品失败", e);
+            return "验证退货商品失败: " + e.getMessage();
+        }
+    }
+
+    /**
      * 处理提交
      */
     @FXML
@@ -410,10 +457,30 @@ public class CreateReturnOrderDialogController {
             return;
         }
 
+        // 验证退货订单 - 防止重复退货
+        String validationResult = validateReturnItems();
+        if (validationResult != null) {
+            showAlert(Alert.AlertType.WARNING, "退货验证失败", validationResult);
+            return;
+        }
+
+        // 获取会员ID（根据手机号查询）
+        Integer memberId = null;
+        if (originalTransaction.memberPhone != null && !originalTransaction.memberPhone.trim().isEmpty()) {
+            try {
+                Member member = MemberDAO.findByPhone(originalTransaction.memberPhone);
+                if (member != null) {
+                    memberId = member.id;
+                }
+            } catch (SQLException e) {
+                logger.error("查询会员信息失败: {}", e.getMessage());
+            }
+        }
+
         // 创建退货订单
         ReturnOrder returnOrder = new ReturnOrder();
         returnOrder.originalTransactionId = originalTransaction.transactionId;
-        returnOrder.memberId = originalTransaction.memberId;
+        returnOrder.memberId = memberId;  // 可以为null
         returnOrder.memberName = originalTransaction.memberName;
         returnOrder.returnReason = returnReason;
         returnOrder.paymentMethod = getPaymentMethodCode(refundMethodComboBox.getValue());

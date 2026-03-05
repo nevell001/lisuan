@@ -4,11 +4,11 @@
 
 **项目名称**: 收银系统 (Cashier System)
 
-**当前版本**: v2.4.1
+**当前版本**: v2.4.2
 
 **项目类型**: JavaFX 桌面应用程序
 
-**项目描述**: 一个功能完整的现代化收银系统，使用 JavaFX 17 开发，提供完整的 POS（销售点）管理、库存管理、会员管理、采购管理、退货管理、报表统计、打印机管理、扫描枪管理、数据导出等功能。
+**项目描述**: 一个功能完整的现代化收银系统，使用 JavaFX 17 开发，提供完整的 POS（销售点）管理、库存管理、会员管理、采购管理、退货管理、报表统计、打印机管理、扫描枪管理、数据导出、通知管理等功能。
 
 **技术栈**:
 - **前端框架**: JavaFX 17.0.8
@@ -17,13 +17,15 @@
 - **数据库**: MySQL 8.0（唯一存储方式）
 - **连接池**: HikariCP 5.1.0
 - **ORM**: 自定义 DAO 层
-- **日志**: SLF4J + Logback
-- **测试**: JUnit 5.10.0 + TestFX 4.0.18 + H2 Database
+- **日志**: SLF4J 2.0.9 + Logback 1.4.11
+- **测试**: JUnit 5.10.0 + TestFX 4.0.18 + H2 Database 2.2.224
 - **UI 增强**: ControlsFX 11.2.1, FontAwesomeFX 4.7.0-9.1.2
 - **密码加密**: BCrypt 0.10.2
+- **数据导出**: Apache POI 5.2.5 (Excel), Apache PDFBox 2.0.31 (PDF)
 - **硬件支持**: USB HID 扫描枪、打印机
 - **缓存管理**: 内置缓存管理器（5分钟过期）
 - **数据导入**: 支持从 CSV 文件和 GitHub 导入商品数据
+- **性能优化**: UI 渲染优化、查询优化、批量操作优化
 
 **主入口**: `com.cashier.CashierSystemFXApplication`
 
@@ -53,7 +55,7 @@ mvn javafx:run
 mvn clean package
 
 # 运行打包后的 JAR
-java -jar target/cashier-system-fx-2.4.0.jar
+java -jar target/cashier-system-fx-2.4.2-jar-with-dependencies.jar
 
 # 运行所有测试
 mvn test
@@ -63,34 +65,64 @@ mvn test -Dtest=PasswordUtilTest
 mvn test -Dtest=ProductDAOTest
 mvn test -Dtest=UserDAOTest
 
+# 运行特定测试方法
+mvn test -Dtest=PasswordUtilTest#testHashPassword
+
 # 跳过测试打包
 mvn clean package -DskipTests
 ```
 
 ### Windows 快速启动
 
-```bash
-# 一键安装脚本
+```batch
+REM 一键安装脚本（图形化安装程序）
 install.bat
 
-# 启动应用
+REM 简单命令行安装
+installer-simple.bat
+
+REM 启动应用
 start.bat
 
-# 创建桌面快捷方式
+REM 创建桌面快捷方式
 create-shortcut.bat
 
-# 打包为 Windows 安装程序
+REM 打包为 Windows 安装程序
 package-windows.bat
+
+REM 无控制台启动
+start-silent.bat
+```
+
+### Linux/macOS 快速启动
+
+```bash
+# 智能安装脚本（自动检测 Docker 和本地 MySQL）
+./install.sh
+
+# 启动应用
+./start.sh
+
+# 设置数据库密码环境变量（安全方式）
+export CASHER_DB_PASSWORD="YourPassword"
+./start.sh
 ```
 
 ### 数据库启动
 
 **使用 Docker Compose（推荐）**:
 ```bash
+# 启动 MySQL 8.0
 docker-compose up -d mysql
 
 # 查看日志
 docker-compose logs -f mysql
+
+# 停止 MySQL
+docker-compose down
+
+# 重启 MySQL
+docker-compose restart mysql
 ```
 
 **手动初始化数据库**:
@@ -98,12 +130,26 @@ docker-compose logs -f mysql
 # 使用完整初始化脚本（包含所有功能）
 docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/00-init-complete.sql
 
-# 从 v2.3.1 升级到 v2.4.0
+# 从 v2.3.1 升级到 v2.4.1
 docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
 docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
 
 # 检查和修复交易明细重复记录（可选）
 docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/07-fix-transaction-items.sql
+```
+
+**使用本地 MySQL**:
+```bash
+# 创建数据库和用户
+mysql -u root -p
+
+CREATE DATABASE cashier_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'cashier'@'%' IDENTIFIED BY 'YourStrongPassword123!';
+GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'%';
+FLUSH PRIVILEGES;
+
+# 初始化数据库
+mysql -u root -p cashier_system < docker/mysql-init/00-init-complete.sql
 ```
 
 ### 配置文件
@@ -122,7 +168,7 @@ docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-se
 hello/
 ├── src/main/java/com/cashier/
 │   ├── CashierSystemFXApplication.java    # 主程序入口
-│   ├── constant/
+│   ├── constant/                           # 常量定义
 │   │   ├── FXConstants.java               # JavaFX 常量
 │   │   └── SpacingConstants.java          # 间距常量
 │   ├── controller/                        # 控制器层 (30 个)
@@ -223,12 +269,21 @@ hello/
 │   │   ├── ScanDataType.java              # 扫描数据类型枚举
 │   │   ├── FocusManager.java              # 焦点管理器
 │   │   └── FocusTarget.java               # 焦点目标接口
-│   ├── service/                           # 服务层 (4 个)
+│   ├── notification/                      # 通知管理模块 (5 个类，v2.4.1 新增)
+│   │   ├── NotificationManager.java       # 通知管理器
+│   │   ├── Notification.java              # 通知实体类
+│   │   ├── NotificationType.java          # 通知类型枚举
+│   │   ├── NotificationListener.java      # 通知监听器接口
+│   │   └── NotificationIntegration.java   # 通知集成类
+│   ├── installer/                         # 安装程序模块 (1 个类，v2.4.1 新增)
+│   │   └── Installer.java                 # 图形化安装程序
+│   ├── service/                           # 服务层 (5 个)
 │   │   ├── DataService.java               # 数据服务
 │   │   ├── InventoryService.java          # 库存服务 (v2.3.1 新增)
 │   │   ├── MemberService.java             # 会员服务 (v2.3.1 新增)
-│   │   └── TransactionService.java        # 交易服务 (v2.3.1 新增)
-│   └── util/                              # 工具类 (9 个)
+│   │   ├── TransactionService.java        # 交易服务 (v2.3.1 新增)
+│   │   └── ReturnService.java             # 退货服务 (v2.4.0 新增)
+│   └── util/                              # 工具类 (13 个)
 │       ├── DatabaseManager.java           # 数据库管理器
 │       ├── PasswordUtil.java              # 密码工具
 │       ├── FXUtils.java                   # JavaFX 工具类
@@ -237,10 +292,15 @@ hello/
 │       ├── StatusBarManager.java          # 状态栏管理器
 │       ├── ReceiptPrinter.java            # 收据打印机
 │       ├── CacheManager.java              # 缓存管理器 (v2.3.1 新增)
-│       └── ProductDataImporter.java       # 商品数据导入工具 (v2.3.1 新增)
+│       ├── ProductDataImporter.java       # 商品数据导入工具 (v2.3.1 新增)
+│       ├── ExportUtil.java                # 数据导出工具 (v2.4.0 新增)
+│       ├── UIOptimizer.java               # UI 渲染优化工具 (v2.4.0 新增)
+│       ├── QueryOptimizer.java            # 查询优化工具 (v2.4.0 新增)
+│       └── BatchOperationUtil.java        # 批量操作工具 (v2.4.0 新增)
 ├── src/test/java/com/cashier/             # 测试代码
 │   ├── util/
-│   │   └── PasswordUtilTest.java          # 密码工具测试
+│   │   ├── PasswordUtilTest.java          # 密码工具测试
+│   │   └── DatabaseTestBase.java          # 测试基类 (v2.4.1 新增)
 │   ├── dao/
 │   │   ├── ProductDAOTest.java            # 商品 DAO 测试
 │   │   └── UserDAOTest.java               # 用户 DAO 测试
@@ -288,19 +348,22 @@ hello/
 │   │   └── scan_success.wav               # 扫描成功音效
 │   ├── images/                            # 图片资源 (v2.3.1 新增)
 │   │   └── logos/                         # Logo 目录
+│   ├── fonts/                             # 字体文件 (PDF 导出中文支持)
+│   │   └── NotoSansSC-Regular.ttf         # 思源黑体
 │   └── logback.xml                        # 日志配置
 ├── config/                                # 配置目录
+│   ├── database.properties.example        # 数据库配置示例
+│   ├── jvm.config.example                 # JVM 配置示例
+│   └── printer.properties.example         # 打印机配置示例
 ├── docker/                                # Docker 配置
 │   ├── mysql-init/                        # 数据库初始化脚本
-│   │   ├── 00-init-complete.sql           # 完整初始化脚本（包含所有功能）
-│   │   ├── 01-create-user.sql             # 创建数据库用户
-│   │   ├── 02-alter-tables.sql            # 表结构变更（v2.3.0 + v2.3.1）
-│   │   ├── 03-sample-data.sql             # 示例数据
+│   │   ├── 00-grant-root-permissions.sql  # Root 权限配置 (v2.4.1 新增)
+│   │   ├── 00-init-complete.sql           # 完整初始化脚本（整合所有功能）
 │   │   ├── 04-v2.3.1-updates.sql          # v2.3.1 独立升级脚本
 │   │   ├── 05-v2.4.0-updates.sql          # v2.4.0 独立升级脚本（退货管理、数据导出）
-│   │   ├── 06-v2.4.1-updates.sql          # v2.4.0 补充升级脚本（交易明细优化）
+│   │   ├── 06-v2.4.1-updates.sql          # v2.4.1 独立升级脚本（交易明细优化）
 │   │   ├── 07-fix-transaction-items.sql   # 修复交易明细重复记录
-│   │   └── DATABASE_VERSIONS.md           # 数据库版本管理文档
+│   │   └── DATABASE_VERSIONS.md           # 数据库版本管理文档 (v2.4.1 新增)
 │   └── mysql-backup/                      # 数据库备份目录
 ├── docs/                                  # 文档目录
 │   ├── DATABASE_CHANGES_v2.3.1.md         # v2.3.1 数据库变更文档
@@ -309,8 +372,26 @@ hello/
 │   ├── PURCHASE_TABLE_DESIGN.md           # 采购表结构设计
 │   ├── ICON_GUIDE.md                      # 应用图标指南
 │   ├── WINDOWS_MYSQL_SETUP.md             # Windows MySQL 安装指南
-│   └── PDF_TIME_FORMAT_OPTIMIZATION.md    # PDF 时间格式优化文档 (v2.3.2 新增)
-└── pom.xml                                # Maven 配置文件
+│   ├── PDF_TIME_FORMAT_OPTIMIZATION.md    # PDF 时间格式优化文档 (v2.3.2 新增)
+│   └── INSTALLER.md                       # 安装程序使用指南 (v2.4.1 新增)
+├── exports/                               # 导出文件目录
+│   ├── 交易记录/                          # 交易记录导出
+│   └── 数据统计/                          # 数据统计导出
+├── data/                                  # 数据目录
+├── logs/                                  # 日志目录
+├── install.sh                             # Linux/macOS 智能安装脚本 (v2.4.1 优化)
+├── install.bat                            # Windows 图形化安装程序 (v2.4.1 新增)
+├── installer-simple.bat                   # Windows 命令行安装脚本 (v2.4.1 新增)
+├── start.sh                               # Linux/macOS 启动脚本
+├── start.bat                              # Windows 启动脚本
+├── start-silent.bat                       # Windows 无控制台启动 (v2.4.1 新增)
+├── create-shortcut.bat                    # 创建桌面快捷方式
+├── package-windows.bat                    # 打包为 Windows 安装程序
+├── docker-compose.yml                     # Docker Compose 配置
+├── pom.xml                                # Maven 配置文件
+├── AGENTS.md                              # 项目指南
+├── README.md                              # 项目说明
+└── CLAUDE.md                              # Claude Code 指南
 ```
 
 ---
@@ -427,12 +508,36 @@ hello/
 - 扫描音效反馈
 
 ### 16. 数据导出 (v2.4.0 新增)
-- 支持多种导出格式（PDF、Excel、CSV）
-- 导出历史记录管理
-- 自定义导出模板
-- 批量导出功能
-- 导出进度显示
-- 导出参数配置（JSON）
+- 支持多种导出格式（PDF、Excel）
+- Excel 导出功能（Apache POI 5.2.5）
+  - 支持多 Sheet 导出
+  - 支持单元格样式自定义
+  - 支持数据格式化
+  - 支持大数据量导出
+- PDF 导出功能（Apache PDFBox 2.0.31）
+  - 支持表格绘制
+  - 支持自定义字体（中文字体支持）
+  - 支持分页导出
+  - 支持水印和页眉页脚
+  - 优化时间格式显示（日期和时间分行显示，v2.3.2 优化）
+- 导出类型
+  - 交易记录导出
+  - 库存报表导出
+  - 数据统计导出
+  - 交接班记录导出
+  - 采购报表导出
+  - 利润分析导出
+  - 会员列表导出
+  - 退货报表导出
+- 导出历史记录
+  - 自动记录每次导出操作
+  - 记录导出文件信息（文件名、路径、大小）
+  - 记录导出参数和结果
+  - 支持导出记录查询和统计
+- 导出参数配置
+  - 支持自定义导出模板
+  - 支持日期范围筛选
+  - 支持列配置和排序
 
 ### 17. 数据导入 (v2.3.1 新增)
 - 支持 CSV 文件导入商品数据
@@ -447,6 +552,22 @@ hello/
 - 自动缓存刷新
 - 缓存预热功能
 - 减少数据库查询次数
+
+### 19. 通知管理 (v2.4.1 新增)
+- 系统通知管理
+- 支持多种通知类型（信息、警告、错误、成功）
+- 通知监听器接口
+- 通知集成功能
+- 实时通知推送
+
+### 20. 图形化安装程序 (v2.4.1 新增)
+- 基于 JavaFX 的图形化安装向导
+- 自动环境检测（Java、Maven、Docker）
+- 智能数据库配置（Docker MySQL / 本地 MySQL）
+- 端口冲突检测和解决
+- 自动创建配置文件
+- 桌面快捷方式生成
+- 多平台支持（Windows、Linux、macOS）
 
 ---
 
@@ -510,7 +631,7 @@ hello/
 - `products` - 商品库存信息（barcode 字段移除 UNIQUE 约束，允许重复）
 - `members` - 会员账户和积分（新增 member_code 字段，格式：M000001）
 - `transactions` - 交易记录主表
-- `transaction_items` - 交易明细
+- `transaction_items` - 交易明细（包含 product_id、product_code、barcode 字段，v2.4.1 优化）
 - `shifts` - 交接班记录
 
 ### 辅助表
@@ -560,13 +681,18 @@ hello/
 - **新增 export_history 表**: 导出历史记录
 - **新增 export_templates 表**: 导出模板配置
 - **添加默认导出模板**: 交易记录、库存报表、会员列表
+
+### 数据库变更 (v2.4.1)
+
 - **transaction_items 表**: 新增 product_id 字段（商品ID）
 - **transaction_items 表**: 新增 product_code 字段（商品编号）
 - **transaction_items 表**: 新增 barcode 字段（条形码）
-- **添加索引**: idx_product_id
+- **添加索引**: idx_product_id 优化查询性能
+- **新增数据库版本管理文档**: DATABASE_VERSIONS.md
 
 详细变更说明请参考：
 - [docs/DATABASE_CHANGES_v2.3.1.md](docs/DATABASE_CHANGES_v2.3.1.md) - v2.3.1 数据库变更
+- [docs/PDF_TIME_FORMAT_OPTIMIZATION.md](docs/PDF_TIME_FORMAT_OPTIMIZATION.md) - PDF 导出优化
 - [docker/mysql-init/DATABASE_VERSIONS.md](docker/mysql-init/DATABASE_VERSIONS.md) - 完整版本管理
 
 ---
@@ -599,6 +725,7 @@ mvn test -Dtest=PasswordUtilTest#testHashPassword
 - **PasswordUtilTest** - 密码加密工具测试（10个测试用例）
 - **ProductDAOTest** - 商品数据访问测试（10个测试用例）
 - **UserDAOTest** - 用户数据访问测试（10个测试用例）
+- **DatabaseTestBase** - 测试基类（v2.4.1 新增）
 
 ### 测试约定
 
@@ -607,6 +734,7 @@ mvn test -Dtest=PasswordUtilTest#testHashPassword
 3. 使用 `@Test`、`@BeforeAll`、`@BeforeEach` 等注解组织测试
 4. 测试文件位置: `src/test/java/com/cashier/`
 5. 使用 H2 内存数据库进行单元测试，避免影响生产数据库
+6. 继承 `DatabaseTestBase` 基类以复用测试配置（v2.4.1 新增）
 
 ---
 
@@ -651,6 +779,13 @@ Service 层封装业务逻辑，提供以下功能：
   - 库存扣减（乐观锁）
   - 会员余额和积分更新
   - 交易统计信息
+- **ReturnService** - 退货相关业务逻辑 (v2.4.0 新增)
+  - 退货订单创建（关联原交易）
+  - 退货审批流程管理
+  - 库存恢复（乐观锁）
+  - 退款处理（余额/积分/现金）
+  - 退货统计信息
+  - 退货记录查询和筛选
 
 ### 控制器层规范
 
@@ -666,6 +801,7 @@ Service 层封装业务逻辑，提供以下功能：
 - 测试应独立运行，不依赖执行顺序
 - 每个测试方法应测试单一功能点
 - 使用 `@BeforeAll` 和 `@AfterAll` 进行测试环境的设置和清理
+- 继承 `DatabaseTestBase` 基类以复用测试配置（v2.4.1 新增）
 
 ### 日志规范
 
@@ -735,6 +871,68 @@ getApp().applyTheme(getScene(), themeName);
 - 支持 USB HID 扫描枪自动检测
 - 扫描音效反馈（成功、失败、未找到）
 
+### 数据导出规范 (v2.4.0 新增)
+
+- 使用 `ExportUtil` 工具类进行数据导出
+- 支持 Excel 格式（使用 Apache POI 5.2.5）
+  - 支持多 Sheet 导出
+  - 支持单元格样式自定义
+  - 支持数据格式化
+  - 支持大数据量导出
+- 支持 PDF 格式（使用 Apache PDFBox 2.0.31）
+  - 支持表格绘制
+  - 支持自定义字体（中文字体支持）
+  - 支持分页导出
+  - 支持水印和页眉页脚
+  - 优化时间格式显示（日期和时间分行显示，v2.3.2 优化）
+- 导出类型
+  - 交易记录导出
+  - 库存报表导出
+  - 数据统计导出
+  - 交接班记录导出
+  - 采购报表导出
+  - 利润分析导出
+  - 会员列表导出
+  - 退货报表导出
+- 导出历史记录
+  - 自动记录每次导出操作
+  - 记录导出文件信息（文件名、路径、大小）
+  - 记录导出参数和结果
+  - 支持导出记录查询和统计
+
+### 性能优化规范 (v2.4.0 新增)
+
+#### UI 渲染优化
+
+- 使用 `UIOptimizer` 进行 UI 渲染优化
+  - 虚拟化：只渲染可见区域的元素
+  - 异步加载：使用后台线程加载数据
+  - 缓存优化：缓存常用数据减少重复计算
+  - 延迟加载：按需加载数据和组件
+
+#### 查询优化
+
+- 使用 `QueryOptimizer` 进行数据库查询优化
+  - 批量查询：将大量 ID 分成小批次查询
+  - 索引优化：为常用查询字段添加索引
+  - 查询缓存：缓存常用查询结果
+  - 查询计划分析：使用 EXPLAIN 分析查询性能
+
+#### 批量操作优化
+
+- 使用 `BatchOperationUtil` 进行批量操作优化
+  - 批量插入：使用 JDBC 批处理功能
+  - 批量更新：减少数据库往返次数
+  - 事务管理：使用事务确保数据一致性
+  - 错误处理：提供详细的错误信息和重试机制
+
+### 通知管理规范 (v2.4.1 新增)
+
+- 使用 `NotificationManager` 管理系统通知
+- 支持多种通知类型（INFO、WARNING、ERROR、SUCCESS）
+- 实现 `NotificationListener` 接口监听通知事件
+- 使用 `NotificationIntegration` 集成通知功能
+
 ---
 
 ## 常见任务
@@ -757,6 +955,7 @@ getApp().applyTheme(getScene(), themeName);
 4. 更新 Model 类
 5. 添加对应的测试用例
 6. 更新数据库变更文档（`docs/DATABASE_CHANGES_vX.Y.Z.md`）
+7. 更新 `docker/mysql-init/DATABASE_VERSIONS.md`（v2.4.1 新增）
 
 ### 添加新的快捷键
 
@@ -767,10 +966,11 @@ getApp().applyTheme(getScene(), themeName);
 ### 添加单元测试
 
 1. 在 `src/test/java/com/cashier/` 下创建测试类
-2. 继承或使用 JUnit 5 注解
-3. 使用 H2 内存数据库进行测试
-4. 编写测试方法并使用断言验证结果
-5. 运行测试确保通过
+2. 继承 `DatabaseTestBase` 基类（v2.4.1 新增）
+3. 使用 JUnit 5 注解
+4. 使用 H2 内存数据库进行测试
+5. 编写测试方法并使用断言验证结果
+6. 运行测试确保通过
 
 ### 导入商品数据 (v2.3.1 新增)
 
@@ -820,6 +1020,113 @@ boolean valid = CacheManager.isCacheValid();
 3. 使用 `PrintTemplate` 定义打印内容
 4. 提交打印任务：`PrinterManager.getInstance().submitTask(task)`
 5. 可选：使用 `PrintPreviewDialog` 预览打印内容
+
+### 使用数据导出功能 (v2.4.0 新增)
+
+**导出为 Excel**:
+```java
+ExportUtil.exportToExcel(title, headers, data, subDir);
+```
+
+**导出为 PDF**:
+```java
+ExportUtil.exportToPDF(title, headers, data, subDir);
+```
+
+**自定义导出参数**:
+```java
+Map<String, Object> params = new HashMap<>();
+params.put("startDate", startDate);
+params.put("endDate", endDate);
+params.put("exportType", "TRANSACTION");
+params.put("exportFormat", "EXCEL");
+
+ExportUtil.exportToExcel(title, headers, data, subDir, params);
+```
+
+### 使用退货管理功能 (v2.4.0 新增)
+
+**创建退货订单**:
+```java
+ReturnService returnService = new ReturnService();
+ReturnOrder returnOrder = returnService.createReturnOrder(
+    originalTransactionId,
+    member,
+    returnItems,
+    returnReason,
+    operatorName
+);
+```
+
+**审批退货订单**:
+```java
+ReturnOrder approvedOrder = returnService.approveReturnOrder(
+    returnOrderId,
+    approverName,
+    approvalComment,
+    refundMethod
+);
+```
+
+**查询退货记录**:
+```java
+List<ReturnOrder> returnOrders = returnService.getReturnOrdersByDateRange(
+    startDate, endDate
+);
+```
+
+### 使用性能优化工具 (v2.4.0 新增)
+
+**UI 渲染优化**:
+```java
+// 异步加载数据
+UIOptimizer.asyncLoad(data -> {
+    // 更新 UI
+    tableView.setItems(FXCollections.observableArrayList(data));
+});
+
+// 虚拟化列表
+UIOptimizer.virtualize(tableView, items);
+```
+
+**查询优化**:
+```java
+// 批量查询
+List<Product> products = QueryOptimizer.batchQuery(
+    productIds,
+    batchIds -> ProductDAO.getInstance().findByIds(batchIds),
+    1000
+);
+```
+
+**批量操作**:
+```java
+// 批量插入
+Connection conn = DatabaseManager.getConnection();
+List<Object[]> params = prepareParams();
+int[] results = BatchOperationUtil.batchInsert(conn, sql, params);
+```
+
+### 使用通知管理功能 (v2.4.1 新增)
+
+**发送通知**:
+```java
+NotificationManager.getInstance().sendNotification(
+    "操作成功",
+    "商品已成功添加到库存",
+    NotificationType.SUCCESS
+);
+```
+
+**监听通知**:
+```java
+NotificationManager.getInstance().addListener(new NotificationListener() {
+    @Override
+    public void onNotification(Notification notification) {
+        System.out.println("收到通知: " + notification.getMessage());
+    }
+});
+```
 
 ---
 
@@ -919,11 +1226,42 @@ cat target/surefire-reports/*.txt
 3. 批量更新后自动清除缓存
 4. 预热缓存：`CacheManager.warmupCache()`
 
+### PDF 导出时间显示问题 (v2.3.2)
+
+**问题**: PDF 导出的时间格式显示不正常？
+
+**解决方案**: v2.3.2 已优化 PDF 导出时间格式显示，日期时间自动分成两行。如果仍有问题：
+1. 检查 `ExportUtil.java` 中的时间格式检测逻辑
+2. 确认 PDF 字体文件 `NotoSansSC-Regular.ttf` 存在
+3. 查看导出日志获取详细错误信息
+
+### Docker 端口冲突 (v2.4.1)
+
+**问题**: Docker MySQL 无法启动，提示端口被占用？
+
+**解决方案**: 智能安装脚本会自动检测端口冲突并提供解决方案：
+1. 使用 Docker MySQL（推荐）
+2. 停止 Docker MySQL 并使用本地 MySQL
+3. 使用不同的端口
+
+手动解决：
+```bash
+# 检查端口占用
+lsof -i :3306
+
+# 停止占用端口的进程
+kill -9 <PID>
+
+# 或修改 docker-compose.yml 使用其他端口
+```
+
 ---
 
 ## 相关文档
 
 - [README.md](README.md) - 项目说明
+- [CLAUDE.md](CLAUDE.md) - Claude Code 指南
+- [INSTALLER.md](INSTALLER.md) - 安装程序使用指南 (v2.4.1 新增)
 - [docs/DATABASE_CHANGES_v2.3.1.md](docs/DATABASE_CHANGES_v2.3.1.md) - v2.3.1 数据库变更文档
 - [docs/DATABASE_INIT.md](docs/DATABASE_INIT.md) - 数据库初始化文档
 - [docs/MYSQL_SETUP.md](docs/MYSQL_SETUP.md) - MySQL 部署指南
@@ -931,13 +1269,51 @@ cat target/surefire-reports/*.txt
 - [docs/PURCHASE_TABLE_DESIGN.md](docs/PURCHASE_TABLE_DESIGN.md) - 采购表结构设计
 - [docs/ICON_GUIDE.md](docs/ICON_GUIDE.md) - 应用图标指南
 - [docs/PDF_TIME_FORMAT_OPTIMIZATION.md](docs/PDF_TIME_FORMAT_OPTIMIZATION.md) - PDF 时间格式优化文档
-- [docker/mysql-init/DATABASE_VERSIONS.md](docker/mysql-init/DATABASE_VERSIONS.md) - 数据库版本管理文档
+- [docker/mysql-init/DATABASE_VERSIONS.md](docker/mysql-init/DATABASE_VERSIONS.md) - 数据库版本管理文档 (v2.4.1 新增)
+- [docker/README.md](docker/README.md) - Docker 配置说明
 
 ---
 
 ## 版本历史
 
-### v2.4.0 (2026-03-01)
+### v2.4.1 (2026-03-05)
+- 🐛 修复交易明细表结构
+  - 为 transaction_items 表新增 product_id 字段（商品ID）
+  - 为 transaction_items 表新增 product_code 字段（商品编号）
+  - 为 transaction_items 表新增 barcode 字段（条形码）
+  - 添加索引 idx_product_id 优化查询性能
+- 🗄️ 数据库版本管理
+  - 新增 DATABASE_VERSIONS.md 数据库版本管理文档
+  - 提供完整的升级和回滚脚本
+  - 添加数据库版本检查功能
+  - 整合历史脚本到 00-init-complete.sql
+- 📦 安装程序增强
+  - 新增图形化安装程序（Installer.java）
+  - 智能环境检测（Java、Maven、Docker）
+  - 端口冲突检测和自动解决
+  - 自动创建配置文件和桌面快捷方式
+  - 多平台支持（Windows、Linux、macOS）
+- 🔔 通知管理功能
+  - 新增通知管理模块（5 个类）
+  - 支持多种通知类型（INFO、WARNING、ERROR、SUCCESS）
+  - 通知监听器接口
+  - 实时通知推送
+- 🧪 测试改进
+  - 新增 DatabaseTestBase 测试基类
+  - 优化测试配置复用
+- 📝 文档更新
+  - 更新 AGENTS.md 反映项目最新状态
+  - 新增 INSTALLER.md 安装程序指南
+  - 添加性能优化规范说明
+  - 添加数据导出规范说明
+  - 添加通知管理规范说明
+- 🔧 代码优化
+  - 优化退货订单创建功能
+  - 优化商品编辑界面
+  - 优化数据库初始化流程
+  - 优化安装脚本（install.sh、install.bat）
+
+### v2.4.0 (2026-02-29)
 - ✨ 新增退货管理功能
   - 创建退货订单（基于原交易）
   - 退货审批流程
@@ -955,11 +1331,6 @@ cat target/surefire-reports/*.txt
   - 新增请求/响应数据记录
 - 🗄️ 新增退货管理相关数据表（return_orders、return_order_items）
 - 🗄️ 新增数据导出相关数据表（export_history、export_templates）
-- 🗄️ 交易明细表结构优化
-  - transaction_items 表新增 product_id 字段
-  - transaction_items 表新增 product_code 字段
-  - transaction_items 表新增 barcode 字段
-  - 添加索引 idx_product_id
 - 🐛 修复交易记录中商品重复显示的问题
 - 📝 添加数据库版本管理文档
 - 📝 添加交易明细重复记录检查脚本
@@ -1048,8 +1419,23 @@ cat target/surefire-reports/*.txt
 - [x] 缓存管理功能（v2.3.1 已实现）
 - [x] 数据导入功能（v2.3.1 已实现）
 - [x] Service 层封装（v2.3.1 已实现）
-- [ ] 性能优化
+- [x] 性能优化（v2.4.0 已实现）
+- [x] 通知管理功能（v2.4.1 已实现）
+- [x] 图形化安装程序（v2.4.1 已实现）
 - [ ] 支持更多打印机型号
 - [ ] 支持蓝牙扫描枪
 - [ ] 支持云打印服务
 - [ ] 支持多语言界面
+- [ ] 退货单据打印
+- [ ] 退货数据统计图表
+- [ ] 会员等级自定义配置
+- [ ] 商品规格管理（颜色、尺寸等）
+- [ ] 批发价格管理
+- [ ] 供应商评价系统
+- [ ] 库存预警通知
+- [ ] 销售预测分析
+- [ ] 数据可视化仪表板
+- [ ] 自动化报表生成
+- [ ] 财务会计模块
+- [ ] 税务管理
+- [ ] 客户关系管理（CRM）

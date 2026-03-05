@@ -13,7 +13,7 @@ cd /d "%APP_DIR%"
 
 REM Set application info
 set APP_NAME=Cashier System
-set APP_VERSION=2.4.1
+set APP_VERSION=2.4.2
 set MAIN_CLASS=com.cashier.CashierSystemFXApplication
 
 REM Set JAR file path

@@ -332,11 +332,15 @@ public class DatabaseManager {
                 CREATE TABLE IF NOT EXISTS transaction_items (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     transaction_id VARCHAR(50) NOT NULL,
+                    product_id INT COMMENT '商品ID',
+                    product_code VARCHAR(50) COMMENT '商品编号',
                     product_name VARCHAR(200) NOT NULL,
+                    barcode VARCHAR(100) COMMENT '条形码',
                     price DECIMAL(10,2) NOT NULL,
                     quantity INT NOT NULL,
                     subtotal DECIMAL(10,2) NOT NULL,
                     INDEX idx_transaction_id (transaction_id),
+                    INDEX idx_product_id (product_id),
                     FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id) ON DELETE CASCADE
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);

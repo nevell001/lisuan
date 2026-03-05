@@ -62,3 +62,7 @@ pom.xml.versionsBackup
 
 # 字体文件
 fonts/exports/
+
+# Claude/iFlow 配置文件（本地使用，不提交）
+CLAUDE.md
+IFLOW.md

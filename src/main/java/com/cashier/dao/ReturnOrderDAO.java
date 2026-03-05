@@ -29,7 +29,11 @@ public class ReturnOrderDAO {
             
             stmt.setString(1, returnOrder.returnOrderId);
             stmt.setString(2, returnOrder.originalTransactionId);
-            stmt.setInt(3, returnOrder.memberId);
+            if (returnOrder.memberId != null) {
+                stmt.setInt(3, returnOrder.memberId);
+            } else {
+                stmt.setNull(3, Types.INTEGER);
+            }
             stmt.setString(4, returnOrder.memberName);
             stmt.setTimestamp(5, new Timestamp(returnOrder.returnDate.getTime()));
             stmt.setString(6, returnOrder.returnReason);
@@ -65,7 +69,11 @@ public class ReturnOrderDAO {
              PreparedStatement stmt = conn.prepareStatement(sql)) {
             
             stmt.setString(1, returnOrder.originalTransactionId);
-            stmt.setInt(2, returnOrder.memberId);
+            if (returnOrder.memberId != null) {
+                stmt.setInt(2, returnOrder.memberId);
+            } else {
+                stmt.setNull(2, Types.INTEGER);
+            }
             stmt.setString(3, returnOrder.memberName);
             stmt.setTimestamp(4, new Timestamp(returnOrder.returnDate.getTime()));
             stmt.setString(5, returnOrder.returnReason);
@@ -222,21 +230,44 @@ public class ReturnOrderDAO {
     public static List<ReturnOrder> findByDateRange(Date startDate, Date endDate) {
         String sql = "SELECT * FROM return_orders WHERE return_date BETWEEN ? AND ? ORDER BY return_date DESC";
         List<ReturnOrder> returnOrders = new ArrayList<>();
-        
+
         try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
+
             stmt.setTimestamp(1, new Timestamp(startDate.getTime()));
             stmt.setTimestamp(2, new Timestamp(endDate.getTime()));
             ResultSet rs = stmt.executeQuery();
-            
+
             while (rs.next()) {
                 returnOrders.add(mapRowToReturnOrder(rs));
             }
         } catch (SQLException e) {
             logger.error("根据日期范围查找退货订单失败", e);
         }
-        
+
+        return returnOrders;
+    }
+
+    /**
+     * 根据原交易ID查找退货订单（不包括已拒绝的）
+     */
+    public static List<ReturnOrder> findByOriginalTransactionId(String transactionId) {
+        String sql = "SELECT * FROM return_orders WHERE original_transaction_id = ? AND status != 'REJECTED' ORDER BY create_time DESC";
+        List<ReturnOrder> returnOrders = new ArrayList<>();
+
+        try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+
+            stmt.setString(1, transactionId);
+            ResultSet rs = stmt.executeQuery();
+
+            while (rs.next()) {
+                returnOrders.add(mapRowToReturnOrder(rs));
+            }
+        } catch (SQLException e) {
+            logger.error("根据原交易ID查找退货订单失败", e);
+        }
+
         return returnOrders;
     }
 
@@ -273,7 +304,8 @@ public class ReturnOrderDAO {
         returnOrder.id = rs.getInt("id");
         returnOrder.returnOrderId = rs.getString("return_order_id");
         returnOrder.originalTransactionId = rs.getString("original_transaction_id");
-        returnOrder.memberId = rs.getInt("member_id");
+        int memberId = rs.getInt("member_id");
+        returnOrder.memberId = rs.wasNull() ? null : memberId;
         returnOrder.memberName = rs.getString("member_name");
         returnOrder.returnDate = new Date(rs.getTimestamp("return_date").getTime());
         returnOrder.returnReason = rs.getString("return_reason");

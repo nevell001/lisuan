@@ -5,7 +5,7 @@ echo   Cashier System Installation
 echo ========================================
 echo.
 
-set APP_VERSION=2.3.1
+set APP_VERSION=2.4.2
 set DB_TYPE=none
 set DB_HOST=localhost
 set DB_PORT=3306

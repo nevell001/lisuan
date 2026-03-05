@@ -27,6 +27,54 @@ public class ReturnOrderItem {
     public void calculateAmount() {
         this.returnAmount = this.returnQuantity * this.unitPrice;
     }
+    // Getter 方法
+    public int getId() {
+        return id;
+    }
+
+    public String getReturnOrderId() {
+        return returnOrderId;
+    }
+
+    public int getProductId() {
+        return productId;
+    }
+
+    public String getProductCode() {
+        return productCode;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public String getBarcode() {
+        return barcode;
+    }
+
+    public String getCategory() {
+        return category;
+    }
+
+    public int getReturnQuantity() {
+        return returnQuantity;
+    }
+
+    public double getUnitPrice() {
+        return unitPrice;
+    }
+
+    public double getReturnAmount() {
+        return returnAmount;
+    }
+
+    public String getReason() {
+        return reason;
+    }
+
+    public String getCondition() {
+        return condition;
+    }
 
     public String getConditionText() {
         switch (condition) {

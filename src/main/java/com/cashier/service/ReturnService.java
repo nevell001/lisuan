@@ -29,6 +29,13 @@ public class ReturnService {
             returnOrder.returnOrderId = ReturnOrderDAO.generateNextReturnOrderId();
             returnOrder.status = "PENDING";
 
+            // 设置退货订单明细的退货单号
+            if (items != null && !items.isEmpty()) {
+                for (ReturnOrderItem item : items) {
+                    item.returnOrderId = returnOrder.returnOrderId;
+                }
+            }
+
             // 插入退货订单
             boolean result = ReturnOrderDAO.insert(returnOrder);
             if (!result) {

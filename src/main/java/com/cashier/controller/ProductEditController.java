@@ -357,16 +357,16 @@ public class ProductEditController {
                             if (product.category == null || product.category.trim().isEmpty()) {
                                 product.category = "默认分类";
                             }
-                            product.barcode = barcodeField.getText().trim();
+                            product.barcode = barcodeField.getText() != null ? barcodeField.getText().trim() : "";
                             product.unit = unitComboBox.getSelectionModel().getSelectedItem();
                             if (product.unit == null || product.unit.trim().isEmpty()) {
                                 product.unit = "个";
                             }
-                            product.description = descriptionField.getText().trim();
-                            product.brand = brandField.getText().trim();
+                            product.description = descriptionField.getText() != null ? descriptionField.getText().trim() : "";
+                            product.brand = brandField.getText() != null ? brandField.getText().trim() : "";
                             product.supplier = supplierComboBox.getSelectionModel().getSelectedItem();
-                            product.spec = specField.getText().trim();
-                            product.cost = costField.getText().trim().isEmpty() ? product.price * 0.7 : Double.parseDouble(costField.getText().trim());
+                            product.spec = specField.getText() != null ? specField.getText().trim() : "";
+                            product.cost = costField.getText() != null && !costField.getText().trim().isEmpty() ? Double.parseDouble(costField.getText().trim()) : product.price * 0.7;
             
                             // 插入数据库
                             boolean success = ProductDAO.insert(product);
@@ -404,17 +404,16 @@ public class ProductEditController {
                             if (product.category == null || product.category.trim().isEmpty()) {
                                 product.category = "默认分类";
                             }
-                            product.barcode = barcodeField.getText().trim();
+                            product.barcode = barcodeField.getText() != null ? barcodeField.getText().trim() : "";
                             product.unit = unitComboBox.getSelectionModel().getSelectedItem();
                             if (product.unit == null || product.unit.trim().isEmpty()) {
                                 product.unit = "个";
                             }
-                            product.description = descriptionField.getText().trim();
-                            product.brand = brandField.getText().trim();
+                            product.description = descriptionField.getText() != null ? descriptionField.getText().trim() : "";
+                            product.brand = brandField.getText() != null ? brandField.getText().trim() : "";
                             product.supplier = supplierComboBox.getSelectionModel().getSelectedItem();
-                            product.spec = specField.getText().trim();
-                            product.cost = costField.getText().trim().isEmpty() ? product.price * 0.7 : Double.parseDouble(costField.getText().trim());
-            
+                            product.spec = specField.getText() != null ? specField.getText().trim() : "";
+                            product.cost = costField.getText() != null && !costField.getText().trim().isEmpty() ? Double.parseDouble(costField.getText().trim()) : product.price * 0.7;
                             logger.info("准备更新商品到数据库: id={}, name={}, price={}", product.id, product.name, product.price);
                             
                             // 更新数据库
@@ -464,7 +463,7 @@ public class ProductEditController {
      */
     private boolean isInputValid() {
         logger.info("开始验证输入，product是否为null: {}", (product == null));
-        
+
         String errorMessage = "";
 
         // 验证商品编号（仅当手动输入时才验证）

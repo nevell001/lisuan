@@ -80,8 +80,8 @@ public class ReturnApprovalController {
     private void initializePendingOrderTable() {
         returnOrderIdColumn.setCellValueFactory(new PropertyValueFactory<>("returnOrderId"));
         memberNameColumn.setCellValueFactory(new PropertyValueFactory<>("memberName"));
-        returnDateColumn.setCellValueFactory(new PropertyValueFactory<>("returnDate"));
-        totalAmountColumn.setCellValueFactory(new PropertyValueFactory<>("totalAmount"));
+        returnDateColumn.setCellValueFactory(new PropertyValueFactory<>("returnDateFormatted"));
+        totalAmountColumn.setCellValueFactory(new PropertyValueFactory<>("totalAmountFormatted"));
         returnReasonColumn.setCellValueFactory(new PropertyValueFactory<>("returnReason"));
         operatorNameColumn.setCellValueFactory(new PropertyValueFactory<>("operatorName"));
 
@@ -258,18 +258,19 @@ public class ReturnApprovalController {
         // 获取审批人名称（从当前登录用户获取）
         String approverName = getApproverName();
 
+        String returnOrderId = selectedOrder.returnOrderId;  // 保存退货单号
         boolean result = ReturnService.approveReturnOrder(
-            selectedOrder.returnOrderId,
+            returnOrderId,
             approverName,
             approvalComment,
             true  // 审批通过
         );
 
         if (result) {
+            logger.info("退货订单审批通过: {}", returnOrderId);
             showAlert(Alert.AlertType.INFORMATION, "审批成功", "退货订单已批准");
             loadPendingOrders();
             clearDetail();
-            logger.info("退货订单审批通过: {}", selectedOrder.returnOrderId);
         } else {
             showAlert(Alert.AlertType.ERROR, "审批失败", "审批失败，请查看日志");
         }
@@ -299,19 +300,20 @@ public class ReturnApprovalController {
 
         // 获取审批人名称
         String approverName = getApproverName();
+        String returnOrderId = selectedOrder.returnOrderId;  // 保存退货单号
 
         boolean result = ReturnService.approveReturnOrder(
-            selectedOrder.returnOrderId,
+            returnOrderId,
             approverName,
             approvalComment,
             false  // 拒绝
         );
 
         if (result) {
+            logger.info("退货订单已拒绝: {}", returnOrderId);
             showAlert(Alert.AlertType.INFORMATION, "拒绝成功", "退货订单已拒绝");
             loadPendingOrders();
             clearDetail();
-            logger.info("退货订单已拒绝: {}", selectedOrder.returnOrderId);
         } else {
             showAlert(Alert.AlertType.ERROR, "操作失败", "操作失败，请查看日志");
         }

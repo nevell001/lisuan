@@ -9,7 +9,7 @@ public class ReturnOrder {
     public int id;
     public String returnOrderId;  // 退货单号（格式：R + 年月日 + 4位序号）
     public String originalTransactionId;  // 原交易ID
-    public int memberId;  // 会员ID（可选）
+    public Integer memberId;  // 会员ID（可选）
     public String memberName;  // 会员名称
     public Date returnDate;  // 退货日期
     public String returnReason;  // 退货原因
@@ -31,6 +31,86 @@ public class ReturnOrder {
         this.updateTime = new Date();
         this.status = "PENDING";
         this.totalAmount = 0.0;
+    }
+    // Getter 方法
+    public int getId() {
+        return id;
+    }
+
+    public String getReturnOrderId() {
+        return returnOrderId;
+    }
+
+    public String getOriginalTransactionId() {
+        return originalTransactionId;
+    }
+
+    public Integer getMemberId() {
+        return memberId;
+    }
+
+    public String getMemberName() {
+        return memberName;
+    }
+
+    public Date getReturnDate() {
+        return returnDate;
+    }
+
+    public String getReturnDateFormatted() {
+        return returnDate != null ? new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(returnDate) : "";
+    }
+
+    public String getReturnReason() {
+        return returnReason;
+    }
+
+    public double getTotalAmount() {
+        return totalAmount;
+    }
+
+    public String getTotalAmountFormatted() {
+        return String.format("¥%.2f", totalAmount);
+    }
+
+    public String getStatus() {
+        return status;
+    }
+
+    public String getPaymentMethod() {
+        return paymentMethod;
+    }
+
+    public String getOperatorName() {
+        return operatorName;
+    }
+
+    public String getApproverName() {
+        return approverName;
+    }
+
+    public Date getApprovalDate() {
+        return approvalDate;
+    }
+
+    public String getApprovalComment() {
+        return approvalComment;
+    }
+
+    public Date getCompletedDate() {
+        return completedDate;
+    }
+
+    public String getNotes() {
+        return notes;
+    }
+
+    public Date getCreateTime() {
+        return createTime;
+    }
+
+    public Date getUpdateTime() {
+        return updateTime;
     }
 
     public String getStatusText() {

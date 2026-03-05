@@ -4,43 +4,85 @@
 
 | 版本 | 脚本文件 | 说明 | 发布日期 | 状态 |
 |------|----------|------|----------|------|
+| v2.4.2 | 00-init-complete.sql | 完整初始化脚本（整合所有功能） | 2026-03-05 | ✅ 已发布 |
 | v2.4.1 | 00-init-complete.sql | 完整初始化脚本（整合所有功能） | 2026-03-01 | ✅ 已发布 |
 | v2.4.1 | 06-v2.4.1-updates.sql | 添加商品ID和编号字段 | 2026-03-01 | ✅ 已发布 |
 | v2.4.0 | 05-v2.4.0-updates.sql | 退货管理、导出历史 | 2026-02-29 | ✅ 已发布 |
 | v2.3.1 | 04-v2.3.1-updates.sql | 退货管理功能 | 2026-02-13 | ✅ 已发布 |
-| v2.3.0 | 02-alter-tables.sql | 进销存管理 | 2026-02-07 | ✅ 已发布 |
-| v2.2.0 | 01-create-user.sql | MySQL迁移 | 2026-02-03 | ✅ 已发布 |
+| v2.3.0 | 02-alter-tables.sql | 进销存管理 | 2026-02-07 | ⚠️ 已整合（已删除） |
+| v2.2.0 | 01-create-user.sql | MySQL迁移 | 2026-02-03 | ⚠️ 已整合（已删除） |
+| - | 03-sample-data.sql | 示例数据 | - | ⚠️ 已整合（已删除） |
 
-## 初始化新环境
+> **注意**：v2.3.0 及之前的独立脚本（01/02/03）已被 `00-init-complete.sql` 完全整合，已从目录中删除以避免混淆。
 
-执行完整初始化：
+## 📋 使用指南
+
+### 场景一：全新安装 / 完全重建数据库
+
+**推荐使用**：`00-init-complete.sql`
 
 ```bash
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/00-init-complete.sql
+docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/00-init-complete.sql
 ```
 
-## 升级现有环境
+**特点**：
+- ✅ 包含所有功能的完整初始化
+- ✅ 创建所有必要的表结构
+- ✅ 插入示例数据
+- ✅ 适用于 Docker Compose 首次启动
+- ✅ 适用于 install.sh 安装脚本
 
-### 从 v2.4.0 升级到 v2.4.1
+**注意**：此脚本会重置所有数据，请勿在生产环境直接使用。
+
+---
+
+### 场景二：版本间增量升级
+
+**从 v2.4.1 升级到 v2.4.2**
+
+> **说明**：v2.4.2 版本无数据库结构变更，无需执行数据库升级脚本。直接更新应用代码即可。
+
+**从 v2.4.0 升级到 v2.4.1**
 
 ```bash
 docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
 ```
 
-### 从 v2.3.1 升级到 v2.4.0
+**从 v2.3.1 升级到 v2.4.1**
 
 ```bash
 docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
 docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
 ```
 
-### 从 v2.3.0 升级到 v2.4.1
+**从 v2.3.0 升级到 v2.4.1**
 
 ```bash
 docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/04-v2.3.1-updates.sql
 docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
 docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
 ```
+
+**特点**：
+- ✅ 保留现有数据
+- ✅ 只添加缺失的字段和表
+- ✅ 支持幂等操作（可重复执行）
+- ✅ 适用于生产环境升级
+
+---
+
+### 场景三：诊断和修复历史数据
+
+**检查交易明细重复记录**
+
+```bash
+docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/07-fix-transaction-items.sql
+```
+
+**特点**：
+- ⚠️ 仅用于诊断，不会自动修复
+- ⚠️ 需要手动检查结果后决定是否修复
+- ⚠️ 建议先备份数据库
 
 ## 可选脚本
 
@@ -52,67 +94,125 @@ docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docke
 
 注意：此脚本仅用于检查和诊断，不会自动修复数据。
 
-## 检查数据库版本
+## 🔍 检查数据库版本
 
 ```sql
--- 检查表结构
+-- 检查 transaction_items 表是否包含 v2.4.1 新字段
+DESC transaction_items;
+
+-- 检查是否包含 product_id、product_code、barcode 字段
 SHOW CREATE TABLE transaction_items;
 
--- 检查是否包含新字段
-DESC transaction_items;
+-- 检查所有表
+SHOW TABLES;
 ```
 
-## 脚本编写规范
+**v2.4.1 完整版本应包含的表**：
+- ✅ `transaction_items` 包含 `product_id`、`product_code`、`barcode` 字段
+- ✅ `return_orders`、`return_order_items`（退货管理）
+- ✅ `export_history`、`export_templates`（数据导出）
+- ✅ `suppliers`、`purchase_orders`...（采购管理）
+- ✅ `inventory_check`、`inventory_check_items`（库存盘点）
 
-1. **命名规范**
-   - 升级脚本：`v{version}-updates.sql`
-   - 修复脚本：`fix-{description}.sql`
-   - 检查脚本：`check-{description}.sql`
+---
 
-2. **脚本结构**
-   ```sql
-   -- ================================================
-   -- 版本: v{version}
-   -- 日期: {date}
-   -- 说明: {description}
-   -- ================================================
+## 🛠️ 脚本编写规范
 
-   -- 1. 变更1
-   ALTER TABLE...
+### 1. 命名规范
 
-   -- 2. 变更2
-   ALTER TABLE...
+| 文件类型 | 命名格式 | 示例 |
+|---------|---------|------|
+| 完整初始化 | `00-init-complete.sql` | - |
+| Root 权限配置 | `00-grant-root-permissions.sql` | - |
+| 版本升级 | `v{version}-updates.sql` | `06-v2.4.1-updates.sql` |
+| 诊断修复 | `07-fix-{description}.sql` | `07-fix-transaction-items.sql` |
 
-   -- 完成
-   ```
-
-3. **幂等性**
-   - 使用 `IF NOT EXISTS`、`ADD COLUMN IF NOT EXISTS`
-   - 避免重复执行时出错
-
-4. **注释清晰**
-   - 每个变更都要有说明
-   - 标注关联的功能或需求
-
-## 回滚策略
-
-每个升级脚本都应该有对应的回滚脚本（可选）：
+### 2. 脚本结构模板
 
 ```sql
--- rollback-v2.4.1.sql
-ALTER TABLE transaction_items DROP COLUMN product_id;
-ALTER TABLE transaction_items DROP COLUMN product_code;
-ALTER TABLE transaction_items DROP COLUMN barcode;
+-- ================================================
+-- 数据库变更脚本 v{version}
+-- 版本: {version}
+-- 日期: {date}
+-- 说明: {description}
+-- ================================================
+
+-- 1. 变更1（使用 IF NOT EXISTS 确保幂等性）
+ALTER TABLE table_name ADD COLUMN IF NOT EXISTS column_name;
+
+-- 2. 变更2
+CREATE TABLE IF NOT EXISTS table_name (...);
+
+-- 完成
+SELECT '=== v{version} 数据库变更完成 ===' AS status;
 ```
 
-## 备份建议
+### 3. 幂等性要求
 
-执行任何升级脚本前，先备份数据库：
+**必须保证脚本可重复执行**：
+- ✅ 使用 `CREATE TABLE IF NOT EXISTS`
+- ✅ 使用 `ADD COLUMN IF NOT EXISTS`
+- ✅ 使用 `ADD INDEX IF NOT EXISTS`
+- ✅ 检查字段/索引是否存在后再操作
+
+### 4. 注释要求
+
+- 每个变更都要有清晰的说明
+- 标注关联的功能或需求
+- 说明变更的影响范围
+
+---
+
+## ⚠️ 最佳实践
+
+### 开发环境
 
 ```bash
-# 备份
+# 推荐使用完整初始化脚本（简单快速）
+./install.sh
+# 或
+docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/00-init-complete.sql
+```
+
+### 生产环境
+
+```bash
+# 1. 备份数据库（必须！）
 docker exec cashier-mysql mysqldump -uroot -pRootPassword123! cashier_system > backup_$(date +%Y%m%d_%H%M%S).sql
 
-# 恢复
+# 2. 执行增量升级（按顺序）
+docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/04-v2.3.1-updates.sql
+docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
+docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
+
+# 3. 验证升级结果
+docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system -e "DESC transaction_items;"
+```
+
+### 回滚策略
+
+**如果升级失败，可以恢复备份**：
+
+```bash
 docker exec -i cashier-mysql mysql -uroot -pRootPassword123! cashier_system < backup_20260301_220000.sql
 ```
+
+---
+
+## 📦 当前文件清单
+
+```
+docker/mysql-init/
+├── 00-grant-root-permissions.sql  # Root 权限配置（Docker 初始化用）
+├── 00-init-complete.sql           # 完整初始化脚本（推荐用于全新安装）
+├── 04-v2.3.1-updates.sql          # v2.3.1 升级脚本
+├── 05-v2.4.0-updates.sql          # v2.4.0 升级脚本
+├── 06-v2.4.1-updates.sql          # v2.4.1 升级脚本
+├── 07-fix-transaction-items.sql   # 诊断修复脚本
+└── DATABASE_VERSIONS.md            # 本文档
+```
+
+**已删除的文件**（已被 `00-init-complete.sql` 整合）：
+- ❌ `01-create-user.sql`
+- ❌ `02-alter-tables.sql`
+- ❌ `03-sample-data.sql`

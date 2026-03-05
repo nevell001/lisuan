@@ -12,7 +12,7 @@ echo   Cashier System Windows Package Tool
 echo ========================================
 echo.
 
-set APP_VERSION=v2.4.1
+set APP_VERSION=v2.4.2
 set APP_NAME=Cashier System
 set VENDOR=Nevell
 set MAIN_CLASS=com.cashier.CashierSystemFXApplication

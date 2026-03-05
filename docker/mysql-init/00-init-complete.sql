@@ -4,8 +4,8 @@
 -- 此脚本整合了用户创建、表结构初始化和示例数据
 -- 使用方法: docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < 00-init-complete.sql
 -- 
--- 版本: v2.4.1
--- 更新日期: 2026-03-01
+-- 版本: v2.4.2
+-- 更新日期: 2026-03-05
 
 -- ============================================
 -- 确保使用正确的数据库
@@ -35,8 +35,208 @@ SELECT '=== MySQL 用户创建完成 ===' AS status;
 SELECT user, host FROM mysql.user WHERE user IN ('root', 'cashier');
 
 -- ============================================
--- 第二部分：升级现有表结构
+-- 第二部分：创建基础表
 -- ============================================
+
+-- 创建用户表
+CREATE TABLE IF NOT EXISTS users (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) UNIQUE NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    role VARCHAR(20) NOT NULL,
+    active TINYINT(1) DEFAULT 1,
+    force_password_change TINYINT(1) DEFAULT 0,
+    last_login_time BIGINT,
+    create_time BIGINT,
+    INDEX idx_username (username),
+    INDEX idx_role (role)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建商品表
+CREATE TABLE IF NOT EXISTS products (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    product_code VARCHAR(50) UNIQUE COMMENT '商品编号',
+    name VARCHAR(200) NOT NULL,
+    price DECIMAL(10,2) NOT NULL,
+    quantity INT DEFAULT 0,
+    category VARCHAR(50),
+    barcode VARCHAR(50),
+    unit VARCHAR(20) DEFAULT '件',
+    description TEXT,
+    brand VARCHAR(100),
+    supplier VARCHAR(100),
+    spec VARCHAR(100),
+    min_stock INT DEFAULT 0,
+    cost DECIMAL(10,2),
+    version INT DEFAULT 0 COMMENT '版本号（用于乐观锁）',
+    created_at BIGINT,
+    updated_at BIGINT,
+    INDEX idx_product_code (product_code),
+    INDEX idx_name (name),
+    INDEX idx_barcode (barcode),
+    INDEX idx_category (category),
+    FULLTEXT idx_ft_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建会员表
+CREATE TABLE IF NOT EXISTS members (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    member_code VARCHAR(50) UNIQUE COMMENT '会员编号',
+    phone VARCHAR(20) UNIQUE NOT NULL,
+    name VARCHAR(100) NOT NULL,
+    balance DECIMAL(10,2) DEFAULT 0,
+    points DECIMAL(10,2) DEFAULT 0,
+    level VARCHAR(20) DEFAULT '普通',
+    discount DECIMAL(4,2) DEFAULT 10.00,
+    join_date BIGINT,
+    birthday VARCHAR(10),
+    INDEX idx_member_code (member_code),
+    INDEX idx_name (name),
+    INDEX idx_level (level)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建交易表
+CREATE TABLE IF NOT EXISTS transactions (
+    transaction_id VARCHAR(50) PRIMARY KEY,
+    timestamp VARCHAR(50) NOT NULL,
+    total_amount DECIMAL(10,2) NOT NULL,
+    tax DECIMAL(10,2) DEFAULT 0,
+    final_amount DECIMAL(10,2) NOT NULL,
+    payment_method VARCHAR(20) NOT NULL,
+    operator_username VARCHAR(50),
+    operator_name VARCHAR(100),
+    member_phone VARCHAR(20),
+    transaction_type VARCHAR(20) DEFAULT 'sale',
+    voided TINYINT(1) DEFAULT 0,
+    voided_by VARCHAR(50),
+    voided_at BIGINT,
+    INDEX idx_timestamp (timestamp),
+    INDEX idx_operator (operator_username),
+    INDEX idx_member (member_phone),
+    INDEX idx_payment_method (payment_method),
+    FOREIGN KEY (operator_username) REFERENCES users(username) ON DELETE SET NULL,
+    FOREIGN KEY (member_phone) REFERENCES members(phone) ON DELETE SET NULL
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建交易商品明细表
+CREATE TABLE IF NOT EXISTS transaction_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    transaction_id VARCHAR(50) NOT NULL,
+    product_id INT COMMENT '商品ID',
+    product_code VARCHAR(50) COMMENT '商品编号',
+    product_name VARCHAR(200) NOT NULL,
+    barcode VARCHAR(100) COMMENT '条形码',
+    price DECIMAL(10,2) NOT NULL,
+    quantity INT NOT NULL,
+    subtotal DECIMAL(10,2) NOT NULL,
+    INDEX idx_transaction_id (transaction_id),
+    INDEX idx_product_id (product_id),
+    FOREIGN KEY (transaction_id) REFERENCES transactions(transaction_id) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建班次表
+CREATE TABLE IF NOT EXISTS shifts (
+    shift_id VARCHAR(50) PRIMARY KEY,
+    operator_username VARCHAR(50),
+    operator_name VARCHAR(100),
+    start_time BIGINT NOT NULL,
+    end_time BIGINT,
+    opening_revenue DECIMAL(10,2) DEFAULT 0,
+    closing_revenue DECIMAL(10,2) DEFAULT 0,
+    shift_revenue DECIMAL(10,2) DEFAULT 0,
+    opening_transaction_count INT DEFAULT 0,
+    closing_transaction_count INT DEFAULT 0,
+    shift_transaction_count INT DEFAULT 0,
+    cash_revenue DECIMAL(10,2) DEFAULT 0,
+    wechat_revenue DECIMAL(10,2) DEFAULT 0,
+    alipay_revenue DECIMAL(10,2) DEFAULT 0,
+    card_revenue DECIMAL(10,2) DEFAULT 0,
+    notes TEXT,
+    INDEX idx_operator (operator_username),
+    INDEX idx_start_time (start_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建促销表
+CREATE TABLE IF NOT EXISTS promotions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(200) NOT NULL,
+    type VARCHAR(20) NOT NULL,
+    threshold DECIMAL(10,2) DEFAULT 0,
+    discount DECIMAL(10,2) NOT NULL,
+    description TEXT,
+    start_date BIGINT,
+    end_date BIGINT,
+    enabled TINYINT(1) DEFAULT 1,
+    usage_count INT DEFAULT 0,
+    max_usage INT,
+    created_at BIGINT,
+    INDEX idx_type (type),
+    INDEX idx_enabled (enabled)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建分类表
+CREATE TABLE IF NOT EXISTS categories (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(100) NOT NULL UNIQUE,
+    description TEXT,
+    created_at BIGINT,
+    INDEX idx_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建单位表
+CREATE TABLE IF NOT EXISTS units (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    name VARCHAR(20) NOT NULL UNIQUE,
+    description TEXT,
+    created_at BIGINT,
+    INDEX idx_name (name)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建充值记录表
+CREATE TABLE IF NOT EXISTS recharges (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    member_phone VARCHAR(20) NOT NULL,
+    amount DECIMAL(10,2) NOT NULL,
+    payment_method VARCHAR(20) NOT NULL,
+    operator_username VARCHAR(50),
+    operator_name VARCHAR(100),
+    timestamp BIGINT NOT NULL,
+    balance_before DECIMAL(10,2),
+    balance_after DECIMAL(10,2),
+    notes TEXT,
+    INDEX idx_member (member_phone),
+    INDEX idx_timestamp (timestamp),
+    FOREIGN KEY (member_phone) REFERENCES members(phone) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- 创建操作日志表
+CREATE TABLE IF NOT EXISTS operation_logs (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    username VARCHAR(50) NOT NULL,
+    operation VARCHAR(200) NOT NULL,
+    details TEXT,
+    timestamp BIGINT NOT NULL,
+    log_level VARCHAR(20) DEFAULT 'INFO',
+    log_category VARCHAR(50) DEFAULT 'SYSTEM',
+    operation_result VARCHAR(20) DEFAULT 'SUCCESS',
+    affected_records INT DEFAULT 0,
+    request_data TEXT,
+    response_data TEXT,
+    INDEX idx_username (username),
+    INDEX idx_timestamp (timestamp),
+    INDEX idx_log_level (log_level),
+    INDEX idx_log_category (log_category),
+    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+SELECT '=== 基础表创建完成 ===' AS status;
+
+-- ============================================
+-- 第三部分：升级现有表结构（向后兼容）
+-- ============================================
+-- 注意：基础表已在第二部分创建
+-- 下面的 ALTER TABLE 语句仅用于从旧版本升级时的向后兼容
 
 -- 创建默认管理员用户（如果不存在）
 -- 密码: admin123 (明文，首次登录时强制修改密码)
@@ -45,6 +245,8 @@ SELECT 'admin', 'admin123', '系统管理员', 'admin', 1, 1, UNIX_TIMESTAMP() *
 WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
 
 -- 为 products 表添加 product_code 字段（如果不存在）
+-- 注意：product_code 字段已在 CREATE TABLE 中定义（见第二部分）
+-- 此语句仅用于从旧版本升级时的向后兼容
 SET @column_exists = (
     SELECT COUNT(*)
     FROM INFORMATION_SCHEMA.COLUMNS
@@ -615,8 +817,10 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- ============================================
--- v2.4.1 更新：transaction_items 表添加字段
+-- v2.4.2 更新：transaction_items 表字段向后兼容
 -- ============================================
+-- 注意：这些字段已在 CREATE TABLE 中定义（见第二部分）
+-- 下面的 ALTER TABLE 语句仅用于从旧版本升级时的向后兼容
 
 -- 为 transaction_items 表添加 product_id 字段（如果不存在）
 SET @column_exists = (
@@ -689,7 +893,7 @@ DEALLOCATE PREPARE stmt;
 SELECT '=== 表结构升级完成 ===' AS status;
 
 -- ============================================
--- 第三部分：示例数据
+-- 第四部分：示例数据
 -- ============================================
 
 -- 清除旧数据（仅清理新增的表，避免影响原有数据）
