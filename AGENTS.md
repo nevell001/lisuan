@@ -6,6 +6,8 @@
 
 **当前版本**: v2.4.2
 
+**最新更新**: 2026-03-05
+
 **项目类型**: JavaFX 桌面应用程序
 
 **项目描述**: 一个功能完整的现代化收银系统，使用 JavaFX 17 开发，提供完整的 POS（销售点）管理、库存管理、会员管理、采购管理、退货管理、报表统计、打印机管理、扫描枪管理、数据导出、通知管理等功能。
@@ -129,14 +131,30 @@ docker-compose restart mysql
 ```bash
 # 使用完整初始化脚本（包含所有功能）
 docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/00-init-complete.sql
+```
+
+**数据库版本升级**（适用于从旧版本升级）：
+```bash
+# 从 v2.4.0 升级到 v2.4.1
+docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
 
 # 从 v2.3.1 升级到 v2.4.1
-docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
-docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
+docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
+docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
 
-# 检查和修复交易明细重复记录（可选）
+# 从 v2.3.0 升级到 v2.4.1
+docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/04-v2.3.1-updates.sql
+docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
+docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
+```
+
+**诊断和修复历史数据**（可选）：
+```bash
+# 检查交易明细重复记录
 docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/07-fix-transaction-items.sql
 ```
+
+> **注意**：v2.4.2 版本无数据库结构变更，无需执行数据库升级脚本。详细升级指南请参考 [docker/mysql-init/DATABASE_VERSIONS.md](docker/mysql-init/DATABASE_VERSIONS.md)
 
 **使用本地 MySQL**:
 ```bash
@@ -258,7 +276,7 @@ hello/
 │   │   ├── PrintTemplate.java             # 打印模板
 │   │   ├── PrintUtil.java                 # 打印工具类
 │   │   └── PrintPreviewDialog.java        # 打印预览对话框
-│   ├── scanner/                           # 扫描枪管理模块 (11 个类，v2.3.1 新增)
+│   ├── scanner/                           # 扫描枪管理模块 (10 个类，v2.3.1 新增)
 │   │   ├── ScannerManager.java            # 扫描枪管理器
 │   │   ├── ScannerDevice.java             # 扫描设备
 │   │   ├── ScannerDeviceStatus.java       # 设备状态枚举
@@ -357,13 +375,13 @@ hello/
 │   └── printer.properties.example         # 打印机配置示例
 ├── docker/                                # Docker 配置
 │   ├── mysql-init/                        # 数据库初始化脚本
-│   │   ├── 00-grant-root-permissions.sql  # Root 权限配置 (v2.4.1 新增)
-│   │   ├── 00-init-complete.sql           # 完整初始化脚本（整合所有功能）
+│   │   ├── 00-grant-root-permissions.sql  # Root 权限配置
+│   │   ├── 00-init-complete.sql           # 完整初始化脚本（整合所有功能，v2.4.2）
 │   │   ├── 04-v2.3.1-updates.sql          # v2.3.1 独立升级脚本
 │   │   ├── 05-v2.4.0-updates.sql          # v2.4.0 独立升级脚本（退货管理、数据导出）
 │   │   ├── 06-v2.4.1-updates.sql          # v2.4.1 独立升级脚本（交易明细优化）
-│   │   ├── 07-fix-transaction-items.sql   # 修复交易明细重复记录
-│   │   └── DATABASE_VERSIONS.md           # 数据库版本管理文档 (v2.4.1 新增)
+│   │   ├── 07-fix-transaction-items.sql   # 修复交易明细重复记录（诊断脚本）
+│   │   └── DATABASE_VERSIONS.md           # 数据库版本管理文档
 │   └── mysql-backup/                      # 数据库备份目录
 ├── docs/                                  # 文档目录
 │   ├── DATABASE_CHANGES_v2.3.1.md         # v2.3.1 数据库变更文档
@@ -690,6 +708,13 @@ hello/
 - **添加索引**: idx_product_id 优化查询性能
 - **新增数据库版本管理文档**: DATABASE_VERSIONS.md
 
+### 数据库变更 (v2.4.2)
+
+- **无数据库结构变更**
+- 修复 SQL 脚本导入时的中文编码问题
+- 优化字符集配置和声明
+- 确保中文字符正确导入和显示
+
 详细变更说明请参考：
 - [docs/DATABASE_CHANGES_v2.3.1.md](docs/DATABASE_CHANGES_v2.3.1.md) - v2.3.1 数据库变更
 - [docs/PDF_TIME_FORMAT_OPTIMIZATION.md](docs/PDF_TIME_FORMAT_OPTIMIZATION.md) - PDF 导出优化
@@ -703,7 +728,7 @@ hello/
 
 - **JUnit 5.10.0** - 单元测试框架
 - **TestFX 4.0.18** - JavaFX UI 测试框架
-- **H2 Database 2.2.224** - 测试用内存数据库（v2.3.1 新增）
+- **H2 Database 2.2.224** - 测试用内存数据库
 
 ### 运行测试
 
@@ -1255,6 +1280,26 @@ kill -9 <PID>
 # 或修改 docker-compose.yml 使用其他端口
 ```
 
+### 中文字符显示乱码 (v2.4.2)
+
+**问题**: 数据库中的中文字符显示为乱码？
+
+**解决方案**: v2.4.2 已修复中文字符编码问题。如果仍然遇到问题：
+1. 确保数据库使用 utf8mb4 字符集
+2. 确保连接 URL 包含 `characterEncoding=utf8mb4`
+3. 确保使用最新的初始化脚本（00-init-complete.sql v2.4.2）
+4. 查看日志获取详细错误信息
+
+### SQL 脚本导入失败 (v2.4.2)
+
+**问题**: 执行 SQL 初始化脚本时出现错误？
+
+**解决方案**: v2.4.2 已修复 SQL 脚本导入问题。如果仍然遇到问题：
+1. 确保使用 `--default-character-set=utf8mb4` 参数
+2. 确保使用最新的初始化脚本（00-init-complete.sql v2.4.2）
+3. 检查 MySQL 用户权限
+4. 查看详细错误信息
+
 ---
 
 ## 相关文档
@@ -1276,7 +1321,45 @@ kill -9 <PID>
 
 ## 版本历史
 
-### v2.4.1 (2026-03-05)
+### v2.4.2 (2026-03-05)
+- 🐛 修复 SQL 脚本导入时的中文编码问题
+  - 修复 docker-compose.yml 中的字符集配置
+  - 修复 00-init-complete.sql 的字符集声明
+  - 确保中文字符正确导入和显示
+- 🐛 修复中文字符显示乱码问题
+  - 修复数据库连接字符集配置
+  - 修复日志输出字符编码
+  - 修复 UI 界面中文字符显示
+- 🐛 修复数据库连接和安装脚本问题
+  - 优化 install.sh 脚本的数据库连接检测
+  - 优化 install.bat 脚本的错误处理
+  - 改进数据库初始化流程
+- 🐛 修复创建退货订单失败的问题
+  - 修复退货订单创建时的空指针异常
+  - 优化退货订单验证逻辑
+  - 改进错误提示信息
+- 🐛 修复 ProfitReportView.fxml 中的重复元素
+  - 修复 FXML 加载失败的问题
+  - 移除重复的 UI 元素定义
+  - 优化界面结构
+- 🐛 为利润分析、退货报表、促销管理按钮添加 @FXML 注解
+  - 修复按钮点击事件无法触发的问题
+  - 确保所有按钮正确注入
+  - 改进事件处理机制
+- 🐛 为 ShiftView.fxml 添加图表导入语句
+  - 修复交接班界面图表无法显示的问题
+  - 添加必要的 FXML 导入
+  - 优化图表显示效果
+- 🎨 优化数据统计页面上部分布局
+  - 改进统计数据的展示方式
+  - 优化卡片布局和间距
+  - 提升用户体验
+- 📝 更新文档
+  - 更新 README.md 补充新功能说明
+  - 更新 AGENTS.md 反映最新项目状态
+  - 优化安装和使用文档
+
+### v2.4.1 (2026-03-01)
 - 🐛 修复交易明细表结构
   - 为 transaction_items 表新增 product_id 字段（商品ID）
   - 为 transaction_items 表新增 product_code 字段（商品编号）
@@ -1412,7 +1495,7 @@ kill -9 <PID>
 - [x] 退货管理功能（v2.4.0 已实现）
 - [x] 数据导出功能（Excel/PDF）（v2.4.0 已实现）
 - [ ] 多仓库管理
-- [x] 单元测试覆盖
+- [x] 单元测试覆盖（v2.3.1 已实现）
 - [ ] 集成测试
 - [x] 打印机管理功能（v2.3.1 已实现）
 - [x] 扫描枪管理功能（v2.3.1 已实现）

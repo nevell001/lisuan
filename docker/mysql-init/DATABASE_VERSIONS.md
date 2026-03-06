@@ -4,6 +4,7 @@
 
 | 版本 | 脚本文件 | 说明 | 发布日期 | 状态 |
 |------|----------|------|----------|------|
+| v2.4.3 | 00-init-complete.sql | MySQL 8.4 LTS 兼容性升级 | 2026-03-06 | ✅ 已发布 |
 | v2.4.2 | 00-init-complete.sql | 完整初始化脚本（整合所有功能） | 2026-03-05 | ✅ 已发布 |
 | v2.4.1 | 00-init-complete.sql | 完整初始化脚本（整合所有功能） | 2026-03-01 | ✅ 已发布 |
 | v2.4.1 | 06-v2.4.1-updates.sql | 添加商品ID和编号字段 | 2026-03-01 | ✅ 已发布 |
@@ -31,12 +32,32 @@ docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-se
 - ✅ 插入示例数据
 - ✅ 适用于 Docker Compose 首次启动
 - ✅ 适用于 install.sh 安装脚本
+- ✅ 兼容 MySQL 8.0、8.3、8.4 LTS
 
 **注意**：此脚本会重置所有数据，请勿在生产环境直接使用。
 
 ---
 
 ### 场景二：版本间增量升级
+
+**从 v2.4.2 升级到 v2.4.3**
+
+> **说明**：v2.4.3 版本主要是 MySQL 8.4 LTS 兼容性升级，无数据库结构变更。
+> - 如果使用 MySQL 8.0 或 8.3，无需执行升级脚本
+> - 如果升级到 MySQL 8.4，请确保 docker-compose.yml 使用正确的启动参数
+
+**MySQL 8.4 升级步骤**：
+
+1. 更新 `docker-compose.yml`：
+```yaml
+image: mysql:8.4
+command: --mysql-native-password=ON --bind-address=0.0.0.0 --skip-name-resolve
+```
+
+2. 重新初始化数据库（如需要）：
+```bash
+docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/00-init-complete.sql
+```
 
 **从 v2.4.1 升级到 v2.4.2**
 

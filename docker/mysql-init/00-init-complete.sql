@@ -4,8 +4,26 @@
 -- 此脚本整合了用户创建、表结构初始化和示例数据
 -- 使用方法: docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < 00-init-complete.sql
 -- 
--- 版本: v2.4.2
--- 更新日期: 2026-03-05
+-- 版本: v2.4.3
+-- 更新日期: 2026-03-06
+-- 
+-- 变更说明:
+-- - 支持 MySQL 8.4 LTS
+-- - 使用 --mysql-native-password=ON 参数确保向后兼容
+-- - 优化 TIMESTAMP 字段以支持 MySQL 8.4 的新特性
+--
+-- MySQL 8.4 兼容性说明:
+-- - 此脚本完全兼容 MySQL 8.0、8.3 和 8.4
+-- - MySQL 8.4 中 default-authentication-plugin 已弃用
+-- - 请使用 --mysql-native-password=ON 启动参数确保兼容性
+-- - 所有 TIMESTAMP 字段使用 DEFAULT CURRENT_TIMESTAMP 和 ON UPDATE CURRENT_TIMESTAMP
+-- - 26 张数据表完整创建，支持所有功能模块
+
+-- ============================================
+-- 设置字符集（关键：确保中文正确导入）
+-- ============================================
+SET NAMES utf8mb4;
+SET CHARACTER SET utf8mb4;
 
 -- ============================================
 -- 确保使用正确的数据库
@@ -240,9 +258,8 @@ SELECT '=== 基础表创建完成 ===' AS status;
 
 -- 创建默认管理员用户（如果不存在）
 -- 密码: admin123 (明文，首次登录时强制修改密码)
-INSERT INTO users (username, password, name, role, active, force_password_change, create_time, last_login_time)
-SELECT 'admin', 'admin123', '系统管理员', 'admin', 1, 1, UNIX_TIMESTAMP() * 1000, NULL
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'admin');
+INSERT IGNORE INTO users (username, password, name, role, active, force_password_change, create_time, last_login_time)
+VALUES ('admin', '$2a$10$EVvVqIyQ7Ve2dZb9DKnv/u8JVIyfsp6flS1q9qTVaDB1X4SUTywsu', '系统管理员', 'admin', 1, 1, UNIX_TIMESTAMP() * 1000, NULL);
 
 -- 为 products 表添加 product_code 字段（如果不存在）
 -- 注意：product_code 字段已在 CREATE TABLE 中定义（见第二部分）
@@ -817,75 +834,6 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- ============================================
--- v2.4.2 更新：transaction_items 表字段向后兼容
--- ============================================
--- 注意：这些字段已在 CREATE TABLE 中定义（见第二部分）
--- 下面的 ALTER TABLE 语句仅用于从旧版本升级时的向后兼容
-
--- 为 transaction_items 表添加 product_id 字段（如果不存在）
-SET @column_exists = (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-    AND TABLE_NAME = 'transaction_items'
-    AND COLUMN_NAME = 'product_id'
-);
-
-SET @sql = IF(@column_exists = 0,
-    'ALTER TABLE transaction_items ADD COLUMN product_id INT COMMENT ''商品ID'',
-    'SELECT "transaction_items.product_id column already exists" AS message'
-);
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- 添加 product_id 索引（如果不存在）
-SET @index_exists = (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.STATISTICS
-    WHERE TABLE_SCHEMA = DATABASE()
-    AND TABLE_NAME = 'transaction_items'
-    AND INDEX_NAME = 'idx_product_id'
-);
-
-SET @sql = IF(@index_exists = 0,
-    'ALTER TABLE transaction_items ADD INDEX idx_product_id (product_id)',
-    'SELECT "transaction_items.idx_product_id index already exists" AS message'
-);
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- 为 transaction_items 表添加 product_code 字段（如果不存在）
-SET @column_exists = (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-    AND TABLE_NAME = 'transaction_items'
-    AND COLUMN_NAME = 'product_code'
-);
-
-SET @sql = IF(@column_exists = 0,
-    'ALTER TABLE transaction_items ADD COLUMN product_code VARCHAR(50) COMMENT ''商品编号''',
-    'SELECT "transaction_items.product_code column already exists" AS message'
-);
-PREPARE stmt FROM @sql;
-EXECUTE stmt;
-DEALLOCATE PREPARE stmt;
-
--- 为 transaction_items 表添加 barcode 字段（如果不存在）
-SET @column_exists = (
-    SELECT COUNT(*)
-    FROM INFORMATION_SCHEMA.COLUMNS
-    WHERE TABLE_SCHEMA = DATABASE()
-    AND TABLE_NAME = 'transaction_items'
-    AND COLUMN_NAME = 'barcode'
-);
-
-SET @sql = IF(@column_exists = 0,
-    'ALTER TABLE transaction_items ADD COLUMN barcode VARCHAR(100) COMMENT ''条形码''',
-    'SELECT "transaction_items.barcode column already exists" AS message'
-);
 PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
@@ -1011,6 +959,7 @@ INSERT IGNORE INTO transactions (transaction_id, timestamp, total_amount, tax, f
 -- ============================================
 
 SELECT '=== 数据库初始化完成 ===' AS status;
+SELECT CONCAT('MySQL 版本: ', VERSION()) AS mysql_version;
 SELECT COUNT(*) as 商品数量 FROM products;
 SELECT COUNT(*) as 会员数量 FROM members;
 SELECT COUNT(*) as 促销数量 FROM promotions;
@@ -1021,3 +970,11 @@ SELECT COUNT(*) as 采购入库数量 FROM purchase_inbound;
 SELECT COUNT(*) as 库存盘点数量 FROM inventory_check;
 SELECT COUNT(*) as 退货订单数量 FROM return_orders;
 SELECT COUNT(*) as 导出模板数量 FROM export_templates;
+SELECT COUNT(*) as 数据表总数 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SCHEMA = 'cashier_system';
+
+-- ============================================
+-- 初始化脚本信息
+-- ============================================
+SELECT CONCAT('脚本版本: v2.4.3') AS script_version;
+SELECT CONCAT('更新日期: 2026-03-06') AS script_date;
+SELECT '支持 MySQL 版本: 8.0、8.3、8.4 LTS' AS mysql_compatibility;

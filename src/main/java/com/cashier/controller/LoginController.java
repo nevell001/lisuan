@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.animation.FadeTransition;
 import javafx.animation.ScaleTransition;
+import javafx.application.Platform;
 import javafx.fxml.FXML;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Scene;
@@ -118,23 +119,29 @@ public class LoginController {
                 User user = UserDAO.findByUsername(username);
                 if (user == null) {
                     loginAttempts++;
-                    showError("用户名不存在！剩余尝试次数：" + (MAX_LOGIN_ATTEMPTS - loginAttempts));
-                    shakeTextField(usernameField);
-                    setLoginState(false);
+                    Platform.runLater(() -> {
+                        showError("用户名不存在！剩余尝试次数：" + (MAX_LOGIN_ATTEMPTS - loginAttempts));
+                        shakeTextField(usernameField);
+                        setLoginState(false);
+                    });
                     return;
                 }
 
                 if (!PasswordUtil.verifyPassword(password, user.password, username)) {
                     loginAttempts++;
-                    showError("密码错误！剩余尝试次数：" + (MAX_LOGIN_ATTEMPTS - loginAttempts));
-                    shakeTextField(passwordField);
-                    setLoginState(false);
+                    Platform.runLater(() -> {
+                        showError("密码错误！剩余尝试次数：" + (MAX_LOGIN_ATTEMPTS - loginAttempts));
+                        shakeTextField(passwordField);
+                        setLoginState(false);
+                    });
                     return;
                 }
 
                 if (!user.active) {
-                    showError("该账户已被禁用！");
-                    setLoginState(false);
+                    Platform.runLater(() -> {
+                        showError("该账户已被禁用！");
+                        setLoginState(false);
+                    });
                     return;
                 }
 

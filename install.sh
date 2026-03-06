@@ -155,7 +155,8 @@ if [ "$DB_TYPE" == "docker" ]; then
 
         echo "[Docker] Initializing database with complete schema..."
         docker exec cashier-mysql mysql -uroot -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null || true
-        echo "[Done] Database initialization completed (v2.4.1)"
+        echo "[Done] Database initialization completed (v2.4.3)"
+        echo "[Note] Tables will be created automatically when you start the application"
         echo ""
     fi
 fi
@@ -181,194 +182,7 @@ if [ "$DB_TYPE" == "local" ]; then
     echo ""
 
     echo ""
-
-    
-
-        # 智能检测：检查端口冲突和 Docker MySQL 状态
-
-        echo "[Local MySQL] Checking port ${DB_PORT} for conflicts..."
-
-    
-
-        # 首先检查 Docker MySQL 容器是否运行（双重保险）
-
-        DOCKER_MYSQL_RUNNING=false
-
-        if command -v docker &> /dev/null && docker info &> /dev/null; then
-
-            if docker ps --format '{{.Names}}' | grep -q cashier-mysql; then
-
-                DOCKER_MYSQL_RUNNING=true
-
-            fi
-
-        fi
-
-    
-
-        # 检测端口占用情况
-
-        PORT_OCCUPIED=false
-
-        PORT_PROCESS=""
-
-        PORT_CMD=""
-
-        if command -v lsof &> /dev/null; then
-
-            if lsof -Pi :${DB_PORT} -sTCP:LISTEN -t >/dev/null 2>&1; then
-
-                PORT_OCCUPIED=true
-
-                PORT_PROCESS=$(lsof -Pi :${DB_PORT} -sTCP:LISTEN -t | head -1)
-
-                PORT_CMD=$(ps -p $PORT_PROCESS -o command= 2>/dev/null || echo "")
-
-            fi
-
-        fi
-
-    
-
-        # 如果 Docker MySQL 运行或端口被占用，检测冲突
-
-        if $DOCKER_MYSQL_RUNNING || $PORT_OCCUPIED; then
-
-            if $PORT_OCCUPIED; then
-
-                echo "[Warning] Port ${DB_PORT} is already in use!"
-
-                echo ""
-
-                echo "Process using port ${DB_PORT}:"
-
-                echo "  PID: $PORT_PROCESS"
-
-                echo "  Command: $PORT_CMD"
-
-                echo ""
-
-            else
-
-                echo "[Warning] Docker MySQL container is running!"
-
-                echo ""
-
-                echo "Docker container: cashier-mysql"
-
-                echo ""
-
-            fi
-
-    
-
-            # 检测是否为 Docker MySQL 或 Colima ssh
-
-            if echo "$PORT_CMD" | grep -qE "(colima|docker)" || $DOCKER_MYSQL_RUNNING; then
-
-                # 检测到 Docker MySQL 正在运行
-
-                echo "[Info] Detected Docker MySQL is running on port ${DB_PORT}!"
-
-                echo ""
-
-                echo "Please select an option:"
-
-                echo "  1 - Switch to use Docker MySQL (Recommended)"
-
-                echo "  2 - Stop Docker MySQL and use local MySQL"
-
-                echo "  3 - Use a different port for local MySQL"
-
-                echo ""
-
-                read -p "Enter option (1/2/3, default=1): " PORT_CHOICE
-
-                PORT_CHOICE=${PORT_CHOICE:-1}
-
-    
-
-                if [ "$PORT_CHOICE" == "1" ]; then
-
-                    echo "[Info] Switching to Docker MySQL..."
-
-                    DB_HOST="localhost"
-
-                    DB_PORT="${DB_PORT:-3306}"
-
-                    DB_USERNAME="cashier"
-
-                    DB_PASSWORD="YourStrongPassword123!"
-
-                    echo "[Info] Will use Docker MySQL on port ${DB_PORT}"
-
-                elif [ "$PORT_CHOICE" == "2" ]; then
-
-                    echo "[Local MySQL] Stopping Docker MySQL..."
-
-                    if command -v docker-compose &> /dev/null; then
-
-                        docker-compose stop mysql &> /dev/null || true
-
-                    else
-
-                        docker compose stop mysql &> /dev/null || true
-
-                    fi
-
-                    # 等待端口释放
-
-                    for i in {1..10}; do
-
-                        if ! lsof -Pi :${DB_PORT} -sTCP:LISTEN -t >/dev/null 2>&1; then
-
-                            echo "[Local MySQL] Docker MySQL stopped, port ${DB_PORT} is now free"
-
-                            break
-
-                        fi
-
-                        if [ $i -eq 10 ]; then
-
-                            echo "[Warning] Port ${DB_PORT} is still in use, continuing anyway"
-
-                        fi
-
-                        sleep 1
-
-                    done
-
-                    echo "[Local MySQL] Proceeding with local MySQL configuration..."
-
-                elif [ "$PORT_CHOICE" == "3" ]; then
-
-                    echo "[Local MySQL] Please enter a different port:"
-
-                    read -p "New port (default=3307): " DB_PORT_INPUT
-
-                    DB_PORT=${DB_PORT_INPUT:-3307}
-
-                    echo "[Local MySQL] Using port ${DB_PORT}"
-
-                else
-
-                    echo "[Warning] Invalid option, continuing with port ${DB_PORT}"
-
-                fi
-
-            fi
-
-        else
-
-            echo "[Local MySQL] Port ${DB_PORT} is free"
-
-        fi
-
-        echo ""
-
-    
-
-        echo "[Local MySQL] Testing connection..."
+    echo "[Local MySQL] Testing connection..."
     if command -v mysql &> /dev/null; then
         if mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} -e "SELECT 1" &> /dev/null; then
             echo "[Local MySQL] Connection successful"
@@ -378,9 +192,9 @@ if [ "$DB_TYPE" == "local" ]; then
             mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null || true
 
             echo "[Local MySQL] Initializing database with complete schema..."
-            mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null || true
+            mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null || true
 
-            echo "[Done] Database initialization completed (v2.4.1)"
+            echo "[Done] Database initialization completed (v2.4.3)"
             echo ""
         else
             echo "[Error] Failed to connect to MySQL"
@@ -411,6 +225,7 @@ elif [ "$DB_TYPE" == "local" ]; then
 else
     echo "[Skip] Database configuration skipped"
     echo ""
+    goto create_shortcut
 fi
 
 cat > config/database.properties << EOF
