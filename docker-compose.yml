@@ -11,7 +11,7 @@ services:
       MYSQL_COLLATION: utf8mb4_unicode_ci
     command: --default-authentication-plugin=mysql_native_password --bind-address=0.0.0.0 --skip-name-resolve
     ports:
-      - "3306:3306"
+      - "0.0.0.0:3306:3306"
     volumes:
       - cashier-mysql-data:/var/lib/mysql
       - ./docker/mysql-init/00-init-complete.sql:/docker-entrypoint-initdb.d/00-init-complete.sql:ro

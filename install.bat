@@ -262,7 +262,10 @@ echo [Docker] Waiting for MySQL to be ready...
 timeout /t 10 /nobreak >nul
 
 echo [Docker] Importing initialization script...
+endlocal
+set DB_PASSWORD=%DB_PASSWORD%
 docker exec cashier-mysql mysql -uroot -p%DB_PASSWORD% --default-character-set=utf8mb4 %DB_NAME% < docker\mysql-init\00-init-complete.sql 2>nul
+setlocal enabledelayedexpansion
 echo [Done] Database initialization completed
 echo [Note] All tables and sample data have been imported
 echo.
@@ -317,6 +320,8 @@ echo [Local MySQL] Testing connection...
 where mysql >nul 2>&1
 if errorlevel 1 goto :no_mysql_client
 
+endlocal
+set DB_PASSWORD=%DB_PASSWORD%
 mysql -h%DB_HOST% -P%DB_PORT% -u%DB_USERNAME% -p%DB_PASSWORD% -e "SELECT 1" >nul 2>&1
 if errorlevel 1 goto :mysql_conn_failed
 
@@ -325,9 +330,13 @@ echo.
 
 echo [Local MySQL] Creating database if not exists...
 mysql -h%DB_HOST% -P%DB_PORT% -u%DB_USERNAME% -p%DB_PASSWORD% -e "CREATE DATABASE IF NOT EXISTS %DB_NAME% CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>nul
+setlocal enabledelayedexpansion
 
 echo [Local MySQL] Importing initialization script...
+endlocal
+set DB_PASSWORD=%DB_PASSWORD%
 mysql -h%DB_HOST% -P%DB_PORT% -u%DB_USERNAME% -p%DB_PASSWORD% %DB_NAME% < docker\mysql-init\00-init-complete.sql 2>nul
+setlocal enabledelayedexpansion
 
 echo [Done] Database initialization completed
 echo [Note] All tables and sample data have been imported
