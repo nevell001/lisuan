@@ -86,8 +86,9 @@ public class DatabaseManager {
         // 从文件加载配置
         File configFile = new File(CONFIG_FILE);
         if (configFile.exists()) {
-            try (FileInputStream fis = new FileInputStream(configFile)) {
-                props.load(fis);
+            try (FileInputStream fis = new FileInputStream(configFile);
+                 InputStreamReader isr = new InputStreamReader(fis, "UTF-8")) {
+                props.load(isr);
                 System.out.println("已加载数据库配置: " + CONFIG_FILE);
             } catch (IOException e) {
                 System.err.println("加载配置文件失败: " + e.getMessage());

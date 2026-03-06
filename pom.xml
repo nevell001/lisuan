@@ -256,6 +256,10 @@
                     <launcher>cashier-system</launcher>
                     <jlinkImageName>cashier-system-image</jlinkImageName>
                     <jlinkZipName>cashier-system</jlinkZipName>
+                    <jvmArgs>
+                        <jvmArg>-Dfile.encoding=UTF-8</jvmArg>
+                        <jvmArg>-Dsun.jnu.encoding=UTF-8</jvmArg>
+                    </jvmArgs>
                     <!-- 添加 JavaFX 模块参数，支持 Windows -->
                     <release>
                         <imageZipName>cashier-system</imageZipName>
