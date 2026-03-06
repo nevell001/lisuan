@@ -39,12 +39,23 @@
 
 ### 🔧 数据管理
 - **数据导入** - 支持 CSV 文件导入、GitHub 商品条码库导入
+- **数据导出** - 支持 Excel 和 PDF 格式导出（交易记录、库存报表、数据统计等）
 - **缓存管理** - 商品数据缓存（5分钟过期）
 - **数据备份** - 自动和手动数据备份
+
+### 🔔 消息通知
+- **实时通知** - 系统操作实时通知提醒
+- **通知类型** - 支持信息、警告、错误、成功等多种类型
+- **通知管理** - 通知历史记录和管理
 
 ### 🖨️ 硬件支持
 - **打印机管理** - 支持多种打印机设备、打印预览、打印模板定制
 - **扫描枪管理** - 支持 USB HID 扫描枪、自动检测、智能焦点管理
+
+### 📦 安装程序
+- **Windows** - 运行 `install.bat` 图形化安装向导
+- **Linux/macOS** - 运行 `./install.sh` 智能安装脚本
+- **自动配置** - 自动检测环境并配置数据库连接
 
 ### 🔒 安全与权限
 - 三种角色权限管理（管理员、收银员、财务）
@@ -157,6 +168,17 @@ java -jar target/cashier-system-fx-2.4.2.jar
 - 删除冗余的数据库增量更新脚本
 - 优化数据库初始化脚本结构
 
+### v2.4.1 (2026-03-05)
+- 图形化安装程序（install.bat/install.sh）
+- 消息通知模块
+- 数据库版本管理文档
+- transaction_items 表结构优化（新增 product_id、product_code、barcode 字段）
+
+### v2.4.0 (2026-02-29)
+- 退货管理功能（退货订单、审批、统计）
+- 数据导出功能（Excel、PDF）
+- 性能优化（UI渲染、查询、批量操作）
+
 ### v2.3.1 (2026-02-13)
 - 商品管理模块重构（商品编号自动生成、条形码重复支持）
 - 打印机管理和扫描枪管理模块
@@ -176,22 +198,28 @@ hello/
 ├── pom.xml                          # Maven 配置
 ├── src/main/java/com/cashier/
 │   ├── CashierSystemFXApplication.java  # 主程序入口
+│   ├── constant/                       # 常量定义 (2个)
 │   ├── dao/                            # 数据访问层 (22个)
-│   ├── controller/                     # 控制器层 (29个)
+│   ├── controller/                     # 控制器层 (30个)
 │   ├── model/                          # 实体类 (22个)
-│   ├── service/                        # 服务层 (4个)
-│   ├── printer/                        # 打印机管理模块
-│   ├── scanner/                        # 扫描枪管理模块
-│   └── util/                           # 工具类
+│   ├── service/                        # 服务层 (5个)
+│   ├── printer/                        # 打印机管理模块 (10个类)
+│   ├── scanner/                        # 扫描枪管理模块 (10个类)
+│   ├── notification/                   # 消息通知模块 (5个类)
+│   └── util/                           # 工具类 (13个)
 ├── src/main/resources/
-│   ├── com/cashier/view/               # FXML 视图文件
+│   ├── com/cashier/view/               # FXML 视图文件 (30个)
 │   ├── css/                            # 样式文件
+│   ├── fonts/                          # 字体文件 (PDF中文支持)
+│   ├── images/                         # 图片资源
 │   └── sounds/                         # 音效文件
-├── config/
-│   └── database.properties             # 数据库配置
-├── docker/
+├── config/                             # 配置目录
+├── docker/                             # Docker 配置
 │   └── mysql-init/                     # MySQL 初始化脚本
-└── docs/                               # 项目文档
+├── docs/                               # 项目文档
+├── install.sh                          # Linux/macOS 安装脚本
+├── install.bat                         # Windows 安装脚本
+└── start.sh / start.bat                # 启动脚本
 ```
 
 ## 🛠️ 开发
@@ -219,6 +247,7 @@ mvn test
 - **编程语言**: Java 17
 - **数据库**: MySQL 8.0
 - **连接池**: HikariCP 5.1.0
+- **数据导出**: Apache POI 5.2.5 (Excel) + Apache PDFBox 2.0.31 (PDF)
 - **测试框架**: JUnit 5 + TestFX + H2 Database
 
 ## 🔧 故障排除
