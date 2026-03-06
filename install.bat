@@ -264,7 +264,10 @@ timeout /t 10 /nobreak >nul
 echo [Docker] Importing initialization script...
 endlocal
 set DB_PASSWORD=%DB_PASSWORD%
-docker exec cashier-mysql mysql -uroot -p%DB_PASSWORD% --default-character-set=utf8mb4 %DB_NAME% < docker\mysql-init\00-init-complete.sql 2>nul
+REM 使用 docker cp 将 SQL 文件复制到容器内，避免 Windows 重定向导致的编码问题
+docker cp docker\mysql-init\00-init-complete.sql cashier-mysql:/tmp/init.sql
+docker exec cashier-mysql mysql -uroot -p%DB_PASSWORD% --default-character-set=utf8mb4 %DB_NAME% -e "SOURCE /tmp/init.sql" 2>nul
+docker exec cashier-mysql rm -f /tmp/init.sql
 setlocal enabledelayedexpansion
 echo [Done] Database initialization completed
 echo [Note] All tables and sample data have been imported
@@ -335,7 +338,8 @@ setlocal enabledelayedexpansion
 echo [Local MySQL] Importing initialization script...
 endlocal
 set DB_PASSWORD=%DB_PASSWORD%
-mysql -h%DB_HOST% -P%DB_PORT% -u%DB_USERNAME% -p%DB_PASSWORD% %DB_NAME% < docker\mysql-init\00-init-complete.sql 2>nul
+REM 使用 PowerShell 的正确编码导入
+powershell -Command "Get-Content docker\mysql-init\00-init-complete.sql -Encoding UTF8 | & 'mysql' -h%DB_HOST% -P%DB_PORT% -u%DB_USERNAME% -p%DB_PASSWORD% %DB_NAME% 2^>$null"
 setlocal enabledelayedexpansion
 
 echo [Done] Database initialization completed
