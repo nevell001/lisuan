@@ -554,7 +554,7 @@ private Button shiftBtn;
         updateStatus("关于");
         String about =
             "收银系统 Cashier System\n\n" +
-            "版本: 2.4.2 (JavaFX)\n" +
+            "版本: 2.4.3 (JavaFX)\n" +
             "开发: nevell\n\n" +
             "技术栈:\n" +
             "- JavaFX 17.0.8\n" +

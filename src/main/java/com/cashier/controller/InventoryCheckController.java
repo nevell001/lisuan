@@ -29,6 +29,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
 import javafx.util.converter.IntegerStringConverter;
+import javafx.application.Platform;
 
 /**
  * 库存盘点控制器
@@ -478,52 +479,51 @@ public class InventoryCheckController {
             TableView<Product> productTable = new TableView<>();
             productTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
             
-            // 用于跟踪选中状态的 Map
-            Map<Integer, SimpleBooleanProperty> selectedProperties = new HashMap<>();
-            
             // 添加复选框列
             TableColumn<Product, Boolean> selectColumn = new TableColumn<>();
             selectColumn.setPrefWidth(50);
-            selectColumn.setCellValueFactory(cellData -> {
-                // 为每个商品创建或获取选中状态属性
-                SimpleBooleanProperty property = selectedProperties.computeIfAbsent(
-                    cellData.getValue().id,
-                    k -> new SimpleBooleanProperty(false)
-                );
+            selectColumn.setSortable(false);
+            selectColumn.setCellValueFactory(param -> new SimpleBooleanProperty(true)); // 总是显示复选框
+            selectColumn.setCellFactory(col -> new TableCell<Product, Boolean>() {
+                private final CheckBox checkBox = new CheckBox();
                 
-                // 复选框变化时更新选中状态
-                property.addListener((obs, oldVal, newVal) -> {
-                    if (newVal) {
-                        productTable.getSelectionModel().select(cellData.getValue());
+                {
+                    // 设置复选框点击事件
+                    checkBox.setOnAction(e -> {
+                        if (!isEmpty()) {
+                            Product product = getTableView().getItems().get(getIndex());
+                            if (checkBox.isSelected()) {
+                                getTableView().getSelectionModel().select(product);
+                            } else {
+                                getTableView().getSelectionModel().clearSelection(getIndex());
+                            }
+                        }
+                    });
+                }
+                
+                @Override
+                protected void updateItem(Boolean item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty) {
+                        setGraphic(null);
                     } else {
-                        productTable.getSelectionModel().clearSelection(productTable.getItems().indexOf(cellData.getValue()));
-                    }
-                });
-                return property;
-            });
-            // 添加单元格工厂以显示复选框
-            selectColumn.setCellFactory(col -> {
-                CheckBoxTableCell<Product, Boolean> cell = new CheckBoxTableCell<>();
-                return cell;
-            });
-            
-            // 监听选中状态变化，更新复选框
-            productTable.getSelectionModel().getSelectedItems().addListener((javafx.collections.ListChangeListener<Product>) change -> {
-                Set<Integer> selectedIds = productTable.getSelectionModel().getSelectedItems().stream()
-                    .map(p -> p.id)
-                    .collect(Collectors.toSet());
-                
-                // 更新所有商品的选中状态
-                for (Product product : productTable.getItems()) {
-                    SimpleBooleanProperty property = selectedProperties.get(product.id);
-                    if (property != null) {
-                        property.setValue(selectedIds.contains(product.id));
+                        Product product = getTableView().getItems().get(getIndex());
+                        checkBox.setSelected(productTable.getSelectionModel().getSelectedItems().contains(product));
+                        setGraphic(checkBox);
                     }
                 }
             });
             
+            // 监听选择状态变化，刷新表格以更新复选框显示
+            productTable.getSelectionModel().getSelectedItems().addListener((javafx.collections.ListChangeListener<Product>) c -> {
+                Platform.runLater(() -> productTable.refresh());
+            });
+            
             TableColumn<Product, String> nameCol = new TableColumn<>("商品名称");
             nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
+
+            TableColumn<Product, String> barcodeCol = new TableColumn<>("条形码");
+            barcodeCol.setCellValueFactory(new PropertyValueFactory<>("barcode"));
 
             TableColumn<Product, String> categoryCol = new TableColumn<>("分类");
             categoryCol.setCellValueFactory(new PropertyValueFactory<>("category"));
@@ -534,28 +534,16 @@ public class InventoryCheckController {
             TableColumn<Product, Number> costCol = new TableColumn<>("成本价");
             costCol.setCellValueFactory(new PropertyValueFactory<>("cost"));
 
-            productTable.getColumns().addAll(selectColumn, nameCol, categoryCol, stockCol, costCol);
+            productTable.getColumns().addAll(selectColumn, nameCol, barcodeCol, categoryCol, stockCol, costCol);
             
             // 设置行工厂，使选中行背景色更明显
             productTable.setRowFactory(tv -> {
                 TableRow<Product> row = new TableRow<>();
                 ChangeListener<Boolean> changeListener = (obs, wasSelected, isNowSelected) -> {
                     if (isNowSelected) {
-                        row.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
-                        // 为每个单元格设置白色文字
-                        for (Node node : row.getChildrenUnmodifiable()) {
-                            if (node instanceof Labeled) {
-                                ((Labeled) node).setTextFill(javafx.scene.paint.Color.WHITE);
-                            }
-                        }
+                        row.setStyle("-fx-background-color: linear-gradient(to right, rgba(63, 81, 181, 0.25), rgba(63, 81, 181, 0.35));");
                     } else {
                         row.setStyle("");
-                        // 恢复默认文字颜色
-                        for (Node node : row.getChildrenUnmodifiable()) {
-                            if (node instanceof Labeled) {
-                                ((Labeled) node).setTextFill(javafx.scene.paint.Color.BLACK);
-                            }
-                        }
                     }
                 };
                 row.selectedProperty().addListener(changeListener);
@@ -589,8 +577,6 @@ public class InventoryCheckController {
                         .collect(Collectors.toList());
                     productTable.setItems(FXCollections.observableArrayList(filtered));
                 }
-                // 清除选中状态
-                selectedProperties.clear();
                 productTable.getSelectionModel().clearSelection();
             });
 
@@ -606,8 +592,6 @@ public class InventoryCheckController {
                     })
                     .collect(Collectors.toList());
                 productTable.setItems(FXCollections.observableArrayList(filtered));
-                // 清除选中状态
-                selectedProperties.clear();
                 productTable.getSelectionModel().clearSelection();
             });
 

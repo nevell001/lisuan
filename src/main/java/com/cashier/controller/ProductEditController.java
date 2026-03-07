@@ -368,6 +368,14 @@ public class ProductEditController {
                             product.spec = specField.getText() != null ? specField.getText().trim() : "";
                             product.cost = costField.getText() != null && !costField.getText().trim().isEmpty() ? Double.parseDouble(costField.getText().trim()) : product.price * 0.7;
             
+                            // 检查商品名称是否已存在
+                            Product existingProduct = ProductDAO.findByName(product.name);
+                            if (existingProduct != null) {
+                                errorLabel.setText("商品名称已存在，请使用其他名称");
+                                logger.warn("商品名称已存在: {}", product.name);
+                                return;
+                            }
+                            
                             // 插入数据库
                             boolean success = ProductDAO.insert(product);
                             if (!success) {
@@ -396,6 +404,14 @@ public class ProductEditController {
                             // 更新商品编号（如果不是自动生成）
                             if (!autoCodeCheckBox.isSelected()) {
                                 product.productCode = productCodeField.getText().trim();
+                            }
+                            
+                            // 检查商品名称是否已存在（排除当前商品）
+                            Product existingProduct = ProductDAO.findByName(product.name);
+                            if (existingProduct != null && existingProduct.id != product.id) {
+                                errorLabel.setText("商品名称已存在，请使用其他名称");
+                                logger.warn("商品名称已存在: {}", product.name);
+                                return;
                             }
             
                             // 更新商品信息

@@ -4,7 +4,8 @@
 
 | 版本 | 脚本文件 | 说明 | 发布日期 | 状态 |
 |------|----------|------|----------|------|
-| v2.4.3 | 00-init-complete.sql | MySQL 8.4 LTS 兼容性升级 | 2026-03-06 | ✅ 已发布 |
+| v2.4.3 | 00-init-complete.sql | 商品名称唯一性约束 + MySQL 8.4 LTS 兼容性 | 2026-03-07 | ✅ 已发布 |
+| v2.4.3 | 08-v2.4.3-product-name-unique.sql | 商品名称唯一性约束升级脚本 | 2026-03-07 | ✅ 已发布 |
 | v2.4.2 | 00-init-complete.sql | 完整初始化脚本（整合所有功能） | 2026-03-05 | ✅ 已发布 |
 | v2.4.1 | 00-init-complete.sql | 完整初始化脚本（整合所有功能） | 2026-03-01 | ✅ 已发布 |
 | v2.4.1 | 06-v2.4.1-updates.sql | 添加商品ID和编号字段 | 2026-03-01 | ✅ 已发布 |
@@ -42,8 +43,25 @@ docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-se
 
 **从 v2.4.2 升级到 v2.4.3**
 
-> **说明**：v2.4.3 版本主要是 MySQL 8.4 LTS 兼容性升级，无数据库结构变更。
-> - 如果使用 MySQL 8.0 或 8.3，无需执行升级脚本
+> **重要**：v2.4.3 版本添加了商品名称唯一性约束，升级前必须检查并处理重复的商品名称。
+
+**步骤 1：检查重复的商品名称**
+```bash
+docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/08-v2.4.3-product-name-unique.sql
+```
+
+脚本会显示重复的商品名称列表，请根据实际情况进行处理：
+- 如果重复的商品是同一个商品的不同条形码版本，请合并为一个商品
+- 如果确实是不同的商品，请重命名其中一个商品的名称
+
+**步骤 2：添加 UNIQUE 约束**
+```sql
+-- 手动执行（在处理完重复名称后）
+ALTER TABLE products ADD CONSTRAINT uk_product_name UNIQUE (name);
+```
+
+**MySQL 8.4 兼容性**：
+> - 如果使用 MySQL 8.0 或 8.3，应用层面已添加名称唯一性检查，无需数据库约束
 > - 如果升级到 MySQL 8.4，请确保 docker-compose.yml 使用正确的启动参数
 
 **MySQL 8.4 升级步骤**：

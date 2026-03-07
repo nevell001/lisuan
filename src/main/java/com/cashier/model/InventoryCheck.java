@@ -35,6 +35,27 @@ public class InventoryCheck {
     }
 
     /**
+     * 获取盘点单号
+     */
+    public String getCheckNo() {
+        return checkNo;
+    }
+
+    /**
+     * 获取盘点日期
+     */
+    public String getCheckDate() {
+        return checkDate;
+    }
+
+    /**
+     * 获取盘点人
+     */
+    public String getOperator() {
+        return operator;
+    }
+
+    /**
      * 获取盘点类型显示名称
      */
     public String getCheckTypeDisplayName() {

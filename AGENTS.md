@@ -4,7 +4,7 @@
 
 **项目名称**: 收银系统 (Cashier System)
 
-**当前版本**: v2.4.2
+**当前版本**: v2.4.3
 
 **最新更新**: 2026-03-05
 
@@ -57,7 +57,7 @@ mvn javafx:run
 mvn clean package
 
 # 运行打包后的 JAR
-java -jar target/cashier-system-fx-2.4.2-jar-with-dependencies.jar
+java -jar target/cashier-system-fx-2.4.3-jar-with-dependencies.jar
 
 # 运行所有测试
 mvn test
@@ -154,7 +154,7 @@ docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docke
 docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/07-fix-transaction-items.sql
 ```
 
-> **注意**：v2.4.2 版本无数据库结构变更，无需执行数据库升级脚本。详细升级指南请参考 [docker/mysql-init/DATABASE_VERSIONS.md](docker/mysql-init/DATABASE_VERSIONS.md)
+> **注意**：v2.4.3 版本添加了商品名称唯一性约束，详见数据库升级脚本，无需执行数据库升级脚本。详细升级指南请参考 [docker/mysql-init/DATABASE_VERSIONS.md](docker/mysql-init/DATABASE_VERSIONS.md)
 
 **使用本地 MySQL**:
 ```bash
@@ -376,7 +376,7 @@ hello/
 ├── docker/                                # Docker 配置
 │   ├── mysql-init/                        # 数据库初始化脚本
 │   │   ├── 00-grant-root-permissions.sql  # Root 权限配置
-│   │   ├── 00-init-complete.sql           # 完整初始化脚本（整合所有功能，v2.4.2）
+│   │   ├── 00-init-complete.sql           # 完整初始化脚本（整合所有功能，v2.4.3）
 │   │   ├── 04-v2.3.1-updates.sql          # v2.3.1 独立升级脚本
 │   │   ├── 05-v2.4.0-updates.sql          # v2.4.0 独立升级脚本（退货管理、数据导出）
 │   │   ├── 06-v2.4.1-updates.sql          # v2.4.1 独立升级脚本（交易明细优化）
@@ -1287,7 +1287,7 @@ kill -9 <PID>
 **解决方案**: v2.4.2 已修复中文字符编码问题。如果仍然遇到问题：
 1. 确保数据库使用 utf8mb4 字符集
 2. 确保连接 URL 包含 `characterEncoding=utf8mb4`
-3. 确保使用最新的初始化脚本（00-init-complete.sql v2.4.2）
+3. 确保使用最新的初始化脚本（00-init-complete.sql v2.4.3）
 4. 查看日志获取详细错误信息
 
 ### SQL 脚本导入失败 (v2.4.2)
@@ -1296,7 +1296,7 @@ kill -9 <PID>
 
 **解决方案**: v2.4.2 已修复 SQL 脚本导入问题。如果仍然遇到问题：
 1. 确保使用 `--default-character-set=utf8mb4` 参数
-2. 确保使用最新的初始化脚本（00-init-complete.sql v2.4.2）
+2. 确保使用最新的初始化脚本（00-init-complete.sql v2.4.3）
 3. 检查 MySQL 用户权限
 4. 查看详细错误信息
 

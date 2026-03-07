@@ -169,12 +169,69 @@
 }
 
 .table-view .table-row-cell:selected {
-    -fx-background-color: rgba(63, 81, 181, 0.15);
+    -fx-background-color: linear-gradient(to right, rgba(63, 81, 181, 0.25), rgba(63, 81, 181, 0.35));
     -fx-text-fill: #3F51B5;
+    -fx-font-weight: bold;
 }
 
 .table-view .table-row-cell:hover {
     -fx-background-color: rgba(63, 81, 181, 0.08);
+}
+
+/* ========== 所有业务表格统一选中样式 ========== */
+.table-view.supplier-table .table-row-cell:selected,
+.table-view.purchase-order-table .table-row-cell:selected,
+.table-view.purchase-inbound-table .table-row-cell:selected,
+.table-view.inventory-check-table .table-row-cell:selected,
+.table-view.promotion-table .table-row-cell:selected,
+.table-view.transaction-table .table-row-cell:selected,
+.table-view.purchase-approval-table .table-row-cell:selected,
+.table-view.shift-table .table-row-cell:selected,
+.table-view.user-table .table-row-cell:selected,
+.table-view.member-table .table-row-cell:selected {
+    -fx-background-color: linear-gradient(to right, rgba(63, 81, 181, 0.25), rgba(63, 81, 181, 0.35));
+    -fx-text-fill: #3F51B5;
+    -fx-font-weight: bold;
+}
+
+.table-view.supplier-table .table-row-cell:selected .table-cell,
+.table-view.purchase-order-table .table-row-cell:selected .table-cell,
+.table-view.purchase-inbound-table .table-row-cell:selected .table-cell,
+.table-view.inventory-check-table .table-row-cell:selected .table-cell,
+.table-view.promotion-table .table-row-cell:selected .table-cell,
+.table-view.transaction-table .table-row-cell:selected .table-cell,
+.table-view.purchase-approval-table .table-row-cell:selected .table-cell,
+.table-view.shift-table .table-row-cell:selected .table-cell,
+.table-view.user-table .table-row-cell:selected .table-cell,
+.table-view.member-table .table-row-cell:selected .table-cell {
+    -fx-text-fill: #3F51B5;
+    -fx-font-weight: bold;
+}
+
+.table-view.supplier-table .table-row-cell:hover,
+.table-view.purchase-order-table .table-row-cell:hover,
+.table-view.purchase-inbound-table .table-row-cell:hover,
+.table-view.inventory-check-table .table-row-cell:hover,
+.table-view.promotion-table .table-row-cell:hover,
+.table-view.transaction-table .table-row-cell:hover,
+.table-view.purchase-approval-table .table-row-cell:hover,
+.table-view.shift-table .table-row-cell:hover,
+.table-view.user-table .table-row-cell:hover,
+.table-view.member-table .table-row-cell:hover {
+    -fx-background-color: rgba(63, 81, 181, 0.08);
+}
+
+.table-view.supplier-table .table-row-cell:selected:hover,
+.table-view.purchase-order-table .table-row-cell:selected:hover,
+.table-view.purchase-inbound-table .table-row-cell:selected:hover,
+.table-view.inventory-check-table .table-row-cell:selected:hover,
+.table-view.promotion-table .table-row-cell:selected:hover,
+.table-view.transaction-table .table-row-cell:selected:hover,
+.table-view.purchase-approval-table .table-row-cell:selected:hover,
+.table-view.shift-table .table-row-cell:selected:hover,
+.table-view.user-table .table-row-cell:selected:hover,
+.table-view.member-table .table-row-cell:selected:hover {
+    -fx-background-color: linear-gradient(to right, rgba(63, 81, 181, 0.3), rgba(63, 81, 181, 0.4));
 }
 
 /* ========== 菜单和工具栏 ========== */

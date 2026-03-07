@@ -90,7 +90,7 @@ public class InventoryController {
     private Button unitButton;
 
     private ObservableList<Product> inventoryList;
-    private Map<String, Product> inventory;
+    private Map<Integer, Product> inventory;
 
     /**
      * 初始化方法
@@ -195,7 +195,7 @@ public class InventoryController {
             var products = ProductDAO.findAll();
             inventory = new java.util.HashMap<>();
             for (Product product : products) {
-                inventory.put(product.name, product);
+                inventory.put(product.id, product);
             }
         } catch (SQLException e) {
             logger.error("加载商品数据失败", e);

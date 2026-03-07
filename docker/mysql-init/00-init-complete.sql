@@ -5,7 +5,7 @@
 -- 使用方法: docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < 00-init-complete.sql
 -- 
 -- 版本: v2.4.3
--- 更新日期: 2026-03-06
+-- 更新日期: 2026-03-07
 -- 
 -- 变更说明:
 -- - 支持 MySQL 8.4 LTS
@@ -75,7 +75,7 @@ CREATE TABLE IF NOT EXISTS users (
 CREATE TABLE IF NOT EXISTS products (
     id INT AUTO_INCREMENT PRIMARY KEY,
     product_code VARCHAR(50) UNIQUE COMMENT '商品编号',
-    name VARCHAR(200) NOT NULL,
+    name VARCHAR(200) NOT NULL UNIQUE COMMENT '商品名称（唯一）',
     price DECIMAL(10,2) NOT NULL,
     quantity INT DEFAULT 0,
     category VARCHAR(50),

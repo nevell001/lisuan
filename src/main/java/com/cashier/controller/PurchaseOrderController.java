@@ -13,6 +13,8 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.SimpleBooleanProperty;
+import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -27,6 +29,7 @@ import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import javafx.application.Platform;
 import javafx.util.converter.BigDecimalStringConverter;
 import javafx.util.converter.IntegerStringConverter;
 
@@ -564,108 +567,173 @@ public class PurchaseOrderController {
             selectorStage.setTitle("选择商品");
             selectorStage.initModality(Modality.WINDOW_MODAL);
             selectorStage.initOwner(orderTable.getScene().getWindow());
+            selectorStage.setWidth(650);
+            selectorStage.setHeight(500);
 
             VBox root = new VBox(10);
             root.setPadding(new javafx.geometry.Insets(15));
             root.setStyle("-fx-background-color: white;");
 
-            // 搜索框
+            // 搜索框和分类筛选
             TextField searchField = new TextField();
             searchField.setPromptText("输入商品名称搜索");
             searchField.setStyle("-fx-text-fill: black; -fx-prompt-text-fill: #666666;");
+            searchField.setPrefWidth(200);
             
             Label searchLabel = new Label("搜索:");
             searchLabel.setStyle("-fx-text-fill: #000000; -fx-font-weight: bold; -fx-font-size: 13px;");
             
-            HBox searchBox = new HBox(10, searchLabel, searchField);
+            // 分类筛选
+            ComboBox<String> categoryCombo = new ComboBox<>();
+            categoryCombo.setPromptText("全部分类");
+            categoryCombo.setPrefWidth(150);
+            categoryCombo.setStyle("-fx-text-fill: black; -fx-border-color: #BDBDBD; -fx-border-radius: 4px; -fx-padding: 5px 10px;");
+            
+            Label categoryLabel = new Label("分类:");
+            categoryLabel.setStyle("-fx-text-fill: #000000; -fx-font-weight: bold; -fx-font-size: 13px;");
+            
+            HBox searchBox = new HBox(10, searchLabel, searchField, categoryLabel, categoryCombo);
+            searchBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
+
+            // 加载分类数据
+            List<Category> categories = CategoryDAO.findAll();
+            ObservableList<String> categoryList = FXCollections.observableArrayList("全部分类");
+            for (Category category : categories) {
+                categoryList.add(category.name);
+            }
+            categoryCombo.setItems(categoryList);
 
             // 商品表格
-                        TableView<Product> productTable = new TableView<>();
-                        productTable.setStyle("-fx-font-size: 13px;");
-                        productTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
-                        productTable.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
-                        
-                        TableColumn<Product, String> nameCol = new TableColumn<>("商品名称");
-                        nameCol.setPrefWidth(200);
-                        nameCol.setStyle("-fx-font-weight: bold;");
-                        nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
+            TableView<Product> productTable = new TableView<>();
+            productTable.setStyle("-fx-font-size: 13px;");
+            productTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
+            productTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
             
-                        TableColumn<Product, Number> costCol = new TableColumn<>("成本价");
-                        costCol.setPrefWidth(100);
-                        costCol.setCellValueFactory(new PropertyValueFactory<>("cost"));
-            
-                        TableColumn<Product, Number> stockCol = new TableColumn<>("库存");
-                        stockCol.setPrefWidth(80);
-                        stockCol.setCellValueFactory(new PropertyValueFactory<>("quantity"));
-            
-                        productTable.getColumns().addAll(nameCol, costCol, stockCol);
-                        
-                        // 设置行工厂，使选中行背景色更明显
-                        productTable.setRowFactory(tv -> {
-                            TableRow<Product> row = new TableRow<>();
-                            ChangeListener<Boolean> changeListener = (obs, wasSelected, isNowSelected) -> {
-                                if (isNowSelected) {
-                                    row.setStyle("-fx-background-color: #2196F3; -fx-text-fill: white;");
-                                    // 为每个单元格设置白色文字
-                                    for (Node node : row.getChildrenUnmodifiable()) {
-                                        if (node instanceof Labeled) {
-                                            ((Labeled) node).setTextFill(javafx.scene.paint.Color.WHITE);
-                                        }
-                                    }
-                                } else {
-                                    row.setStyle("");
-                                    // 恢复默认文字颜色
-                                    for (Node node : row.getChildrenUnmodifiable()) {
-                                        if (node instanceof Labeled) {
-                                            ((Labeled) node).setTextFill(javafx.scene.paint.Color.BLACK);
-                                        }
-                                    }
-                                }
-                            };
-                            row.selectedProperty().addListener(changeListener);
-                            return row;
-                        });            // 加载商品数据
-            List<Product> products = ProductDAO.findAll();
-            ObservableList<Product> productList = FXCollections.observableArrayList(products);
-            productTable.setItems(productList);
-
-            // 搜索功能
-            searchField.textProperty().addListener((obs, oldVal, newVal) -> {
-                String searchText = newVal.toLowerCase();
-                if (searchText.isEmpty()) {
-                    productTable.setItems(productList);
-                } else {
-                    productTable.setItems(FXCollections.observableArrayList(productList.stream()
-                        .filter(p -> p.name.toLowerCase().contains(searchText))
-                        .collect(Collectors.toList())));
+            // 添加复选框列
+            TableColumn<Product, Boolean> selectColumn = new TableColumn<>();
+            selectColumn.setPrefWidth(50);
+            selectColumn.setSortable(false);
+            selectColumn.setCellValueFactory(param -> new SimpleBooleanProperty(true)); // 总是显示复选框
+            selectColumn.setCellFactory(col -> new TableCell<Product, Boolean>() {
+                private final CheckBox checkBox = new CheckBox();
+                
+                {
+                    // 设置复选框点击事件
+                    checkBox.setOnAction(e -> {
+                        if (!isEmpty()) {
+                            Product product = getTableView().getItems().get(getIndex());
+                            if (checkBox.isSelected()) {
+                                getTableView().getSelectionModel().select(product);
+                            } else {
+                                getTableView().getSelectionModel().clearSelection(getIndex());
+                            }
+                        }
+                    });
+                }
+                
+                @Override
+                protected void updateItem(Boolean item, boolean empty) {
+                    super.updateItem(item, empty);
+                    if (empty) {
+                        setGraphic(null);
+                    } else {
+                        // 根据当前选择状态更新复选框
+                        Product product = getTableView().getItems().get(getIndex());
+                        checkBox.setSelected(productTable.getSelectionModel().getSelectedItems().contains(product));
+                        setGraphic(checkBox);
+                    }
                 }
             });
+            productTable.getColumns().add(selectColumn);
+            
+            TableColumn<Product, String> nameCol = new TableColumn<>("商品名称");
+            nameCol.setPrefWidth(200);
+            nameCol.setStyle("-fx-font-weight: bold;");
+            nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
+            
+            TableColumn<Product, String> barcodeCol = new TableColumn<>("条形码");
+            barcodeCol.setPrefWidth(150);
+            barcodeCol.setCellValueFactory(new PropertyValueFactory<>("barcode"));
+            
+            TableColumn<Product, Number> costCol = new TableColumn<>("成本价");
+            costCol.setPrefWidth(100);
+            costCol.setCellValueFactory(new PropertyValueFactory<>("cost"));
+            
+            TableColumn<Product, Number> stockCol = new TableColumn<>("库存");
+            stockCol.setPrefWidth(80);
+            stockCol.setCellValueFactory(new PropertyValueFactory<>("quantity"));
+            
+            productTable.getColumns().addAll(nameCol, barcodeCol, costCol, stockCol);
+            
+            // 加载商品数据
+            List<Product> allProducts = ProductDAO.findAll();
+            ObservableList<Product> productList = FXCollections.observableArrayList(allProducts);
+            productTable.setItems(productList);
+
+            // 监听选择状态变化，刷新表格以更新复选框显示
+            productTable.getSelectionModel().getSelectedItems().addListener((javafx.collections.ListChangeListener<Product>) c -> {
+                Platform.runLater(() -> productTable.refresh());
+            });
+
+            // 搜索和分类筛选功能
+            searchField.textProperty().addListener((obs, oldVal, newVal) -> {
+                filterProducts(productTable, allProducts, productList, newVal, categoryCombo.getValue());
+            });
+            
+            categoryCombo.setOnAction(e -> {
+                filterProducts(productTable, allProducts, productList, searchField.getText(), categoryCombo.getValue());
+            });
+
+            // 全选/取消全选按钮
+            Button selectAllButton = new Button("全选");
+            selectAllButton.setOnAction(e -> {
+                productTable.getSelectionModel().selectAll();
+            });
+
+            Button deselectAllButton = new Button("取消全选");
+            deselectAllButton.setOnAction(e -> {
+                productTable.getSelectionModel().clearSelection();
+            });
+
+            HBox selectButtonsBox = new HBox(10, selectAllButton, deselectAllButton);
 
             // 添加按钮
             Button addButton = new Button("添加选中商品");
             addButton.setStyle("-fx-text-fill: white; -fx-font-weight: bold;");
             addButton.setOnAction(e -> {
-                Product selected = productTable.getSelectionModel().getSelectedItem();
-                if (selected != null) {
-                    PurchaseOrderItem item = new PurchaseOrderItem();
-                    item.productId = selected.id;
-                    item.productName = selected.name != null ? selected.name : "";
-                    item.quantity = 1;
-                    item.unitPrice = selected.cost > 0 ? BigDecimal.valueOf(selected.cost) : BigDecimal.valueOf(selected.price);
-                    item.totalPrice = item.unitPrice.multiply(BigDecimal.valueOf(item.quantity));
-                    item.inboundQuantity = 0;
+                ObservableList<Product> selectedProducts = productTable.getSelectionModel().getSelectedItems();
+                if (selectedProducts == null || selectedProducts.isEmpty()) {
+                    showError("请先选择商品");
+                    return;
+                }
+                
+                int addedCount = 0;
+                for (Product selected : selectedProducts) {
+                    // 检查是否已经添加过
+                    boolean exists = itemTable.getItems().stream()
+                        .anyMatch(item -> item.productId == selected.id);
                     
-                    // 添加到表格并刷新
-                    itemTable.getItems().add(item);
+                    if (!exists) {
+                        PurchaseOrderItem item = new PurchaseOrderItem();
+                        item.productId = selected.id;
+                        item.productName = selected.name != null ? selected.name : "";
+                        item.quantity = 1;
+                        item.unitPrice = selected.cost > 0 ? BigDecimal.valueOf(selected.cost) : BigDecimal.valueOf(selected.price);
+                        item.totalPrice = item.unitPrice.multiply(BigDecimal.valueOf(item.quantity));
+                        item.inboundQuantity = 0;
+                        
+                        itemTable.getItems().add(item);
+                        addedCount++;
+                    }
+                }
+                
+                if (addedCount > 0) {
                     itemTable.refresh();
                     updateItemTotal(itemTable);
-                    
-                    // 关闭选择器
                     selectorStage.close();
-
-                    logger.debug("添加商品: {}, 数量: {}, 单价: {}", item.productName, item.quantity, item.unitPrice);
+                    logger.info("成功添加 {} 个商品到采购订单", addedCount);
                 } else {
-                    showError("请先选择一个商品");
+                    showError("所选商品已存在");
                 }
             });
 
@@ -676,21 +744,52 @@ public class PurchaseOrderController {
             HBox buttonBox = new HBox(10, addButton, cancelButton);
             buttonBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
 
-            root.getChildren().addAll(searchBox, productTable, buttonBox);
+            VBox selectBox = new VBox(5, selectButtonsBox, buttonBox);
+            selectBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
 
-            Scene scene = new Scene(root, 550, 400);
+            root.getChildren().addAll(searchBox, productTable, selectBox);
+
+            Scene scene = new Scene(root);
             scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
-            scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
-
             selectorStage.setScene(scene);
             selectorStage.showAndWait();
 
         } catch (SQLException e) {
-            logger.error("加载商品数据失败", e);
-            showError("加载商品数据失败: " + e.getMessage());
+            logger.error("加载商品选择器失败", e);
+            showError("加载商品失败: " + e.getMessage());
         }
     }
 
+    /**
+     * 过滤商品列表
+     */
+    private void filterProducts(TableView<Product> productTable, List<Product> allProducts, 
+                                ObservableList<Product> productList, String searchText, String category) {
+        String searchLower = searchText.toLowerCase();
+        String categoryLower = category != null ? category.toLowerCase() : "";
+        
+        List<Product> filtered = allProducts.stream()
+            .filter(p -> {
+                // 分类筛选
+                if (!"全部分类".equals(categoryLower) && !"".equals(categoryLower)) {
+                    if (p.category == null || !p.category.toLowerCase().contains(categoryLower)) {
+                        return false;
+                    }
+                }
+                // 搜索筛选
+                if (!searchLower.isEmpty()) {
+                    return p.name.toLowerCase().contains(searchLower) || 
+                           (p.barcode != null && p.barcode.toLowerCase().contains(searchLower));
+                }
+                return true;
+            })
+            .collect(Collectors.toList());
+        
+        productTable.setItems(FXCollections.observableArrayList(filtered));
+    }
+
+    /**
+     * 更新商品明细总金额
     /**
      * 更新商品明细总金额
      */

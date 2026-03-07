@@ -2,7 +2,7 @@
 
 一个功能完整的收银系统，使用 JavaFX 17 开发，提供现代化的图形化界面。
 
-**当前版本**: v2.4.2 | **最新更新**: 2026-03-05
+**当前版本**: v2.4.3 | **最新更新**: 2026-03-07
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.8-blue)
@@ -115,7 +115,7 @@ mvn javafx:run
 **打包后运行**：
 ```bash
 mvn clean package
-java -jar target/cashier-system-fx-2.4.2.jar
+java -jar target/cashier-system-fx-2.4.3.jar
 ```
 
 ### 默认账户
@@ -149,7 +149,7 @@ java -jar target/cashier-system-fx-2.4.2.jar
 
 **核心表**：
 - `users` - 用户账户
-- `products` - 商品库存信息
+- `products` - 商品库存信息（name 字段添加 UNIQUE 约束）
 - `members` - 会员账户和积分
 - `transactions` - 交易记录主表
 - `transaction_items` - 交易明细
@@ -162,6 +162,28 @@ java -jar target/cashier-system-fx-2.4.2.jar
 - `return_orders` - 退货订单
 
 ## 🎯 最近更新
+
+### v2.4.3 (2026-03-07)
+- ✨ **商品名称唯一性约束**
+  - 数据库层面添加商品名称 UNIQUE 约束
+  - 应用层面添加商品添加/编辑时的名称唯一性检查
+  - 提供友好错误提示："商品名称已存在，请使用其他名称"
+  - 确保商品数据的一致性和准确性
+- 🐛 **修复商品管理界面数据丢失问题**
+  - 修复 HashMap 使用商品名称作为 key 导致同名商品被覆盖的问题
+  - 改为使用商品 ID 作为 key，确保所有商品都能正确显示
+- 🎨 **商品选择对话框优化**
+  - 在采购订单和库存盘点的商品选择对话框中添加条形码列
+  - 解决同名商品无法区分的问题
+  - 商品表格列顺序：复选框、商品名称、条形码、成本价、库存
+- 🐛 **修复库存盘点多选功能**
+  - 统一库存盘点和采购订单的复选框实现
+  - 修复选择多个商品时之前选择被取消的问题
+  - 使用 Platform.runLater() 确保表格刷新正确
+- 📝 **数据库版本管理**
+  - 新增 v2.4.3 数据库升级脚本（08-v2.4.3-product-name-unique.sql）
+  - 更新 DATABASE_VERSIONS.md 文档
+  - 提供详细的升级指南
 
 ### v2.4.2 (2026-03-07)
 - 🐛 修复退货订单审批失败问题（移除 OperationLogDAO 中不存在的 ip_address 字段引用）
