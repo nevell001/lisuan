@@ -332,6 +332,15 @@
                     <include>**/*.ttf</include>
                     <include>**/*.png</include>
                     <include>**/*.jpg</include>
+                    <include>**/*.xml</include>
+                </includes>
+            </resource>
+            <resource>
+                <directory>src/main/resources</directory>
+                <filtering>false</filtering>
+                <includes>
+                    <include>**/*.wav</include>
+                    <include>**/*.svg</include>
                 </includes>
             </resource>
         </resources>

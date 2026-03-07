@@ -187,8 +187,10 @@ public class CashierSystemFXApplication extends Application {
             scene.getStylesheets().add(themeStylesheet.toExternalForm());
         }
 
-        // 保存主题设置
-        DataService.saveThemePreference(themeName);
+        // 保存主题设置（仅在用户登录后）
+        if (currentUser != null) {
+            DataService.saveThemePreference(currentUser.username, themeName);
+        }
     }
 
     /**
