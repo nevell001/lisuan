@@ -84,8 +84,6 @@
                     styleClass="secondary-button"/>
         </HBox>
     </VBox>
-        <Label fx:id="countLabel" text="促销数量: 0" style="-fx-text-fill: #757575;"/>
-    </HBox>
 
     <!-- 促销列表表格 -->
     <TableView fx:id="promotionTable"
