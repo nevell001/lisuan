@@ -478,11 +478,20 @@ public class InventoryCheckController {
             TableView<Product> productTable = new TableView<>();
             productTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
             
+            // 用于跟踪选中状态的 Map
+            Map<Integer, SimpleBooleanProperty> selectedProperties = new HashMap<>();
+            
             // 添加复选框列
             TableColumn<Product, Boolean> selectColumn = new TableColumn<>();
             selectColumn.setPrefWidth(50);
             selectColumn.setCellValueFactory(cellData -> {
-                SimpleBooleanProperty property = new SimpleBooleanProperty(false);
+                // 为每个商品创建或获取选中状态属性
+                SimpleBooleanProperty property = selectedProperties.computeIfAbsent(
+                    cellData.getValue().id,
+                    k -> new SimpleBooleanProperty(false)
+                );
+                
+                // 复选框变化时更新选中状态
                 property.addListener((obs, oldVal, newVal) -> {
                     if (newVal) {
                         productTable.getSelectionModel().select(cellData.getValue());
@@ -496,6 +505,21 @@ public class InventoryCheckController {
             selectColumn.setCellFactory(col -> {
                 CheckBoxTableCell<Product, Boolean> cell = new CheckBoxTableCell<>();
                 return cell;
+            });
+            
+            // 监听选中状态变化，更新复选框
+            productTable.getSelectionModel().getSelectedItems().addListener((javafx.collections.ListChangeListener<Product>) change -> {
+                Set<Integer> selectedIds = productTable.getSelectionModel().getSelectedItems().stream()
+                    .map(p -> p.id)
+                    .collect(Collectors.toSet());
+                
+                // 更新所有商品的选中状态
+                for (Product product : productTable.getItems()) {
+                    SimpleBooleanProperty property = selectedProperties.get(product.id);
+                    if (property != null) {
+                        property.setValue(selectedIds.contains(product.id));
+                    }
+                }
             });
             
             TableColumn<Product, String> nameCol = new TableColumn<>("商品名称");
@@ -565,6 +589,9 @@ public class InventoryCheckController {
                         .collect(Collectors.toList());
                     productTable.setItems(FXCollections.observableArrayList(filtered));
                 }
+                // 清除选中状态
+                selectedProperties.clear();
+                productTable.getSelectionModel().clearSelection();
             });
 
             // 搜索功能
@@ -579,6 +606,9 @@ public class InventoryCheckController {
                     })
                     .collect(Collectors.toList());
                 productTable.setItems(FXCollections.observableArrayList(filtered));
+                // 清除选中状态
+                selectedProperties.clear();
+                productTable.getSelectionModel().clearSelection();
             });
 
             // 全选/取消全选按钮
