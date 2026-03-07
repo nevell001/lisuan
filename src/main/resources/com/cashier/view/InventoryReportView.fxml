@@ -30,8 +30,13 @@
 
             <Label text="分类:"/>
             <ComboBox fx:id="categoryComboBox" prefWidth="150"/>
+        </HBox>
 
-            <Separator orientation="VERTICAL"/>
+        <!-- 第二行：阈值设置和操作按钮 -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="5" right="10" bottom="10" left="10"/>
+            </padding>
 
             <Label text="周转率阈值:"/>
             <TextField fx:id="turnoverThresholdField" prefWidth="80" promptText="1.0"/>
@@ -41,13 +46,8 @@
 
             <Label text="库存天数:"/>
             <TextField fx:id="inventoryDaysField" prefWidth="80" promptText="90"/>
-        </HBox>
 
-        <!-- 第二行：操作按钮 -->
-        <HBox spacing="10" alignment="CENTER_LEFT">
-            <padding>
-                <Insets top="5" right="10" bottom="10" left="10"/>
-            </padding>
+            <Separator orientation="VERTICAL"/>
 
             <Button fx:id="queryButton"
                     text="查询"
