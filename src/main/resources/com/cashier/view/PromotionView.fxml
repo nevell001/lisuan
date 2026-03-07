@@ -11,73 +11,79 @@
       styleClass="promotion-view">
 
     <!-- 顶部工具栏 -->
-    <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
-        <padding>
-            <Insets top="10" right="10" bottom="10" left="10"/>
-        </padding>
+    <VBox spacing="5" styleClass="toolbar">
+        <!-- 第一行：操作按钮 -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="10" right="10" bottom="5" left="10"/>
+            </padding>
 
-        <!-- 操作按钮 -->
-        <Button fx:id="addButton"
-                text="添加促销"
-                onAction="#handleAddPromotion"
-                prefWidth="100"
-                styleClass="primary-button"/>
+            <Button fx:id="addButton"
+                    text="添加促销"
+                    onAction="#handleAddPromotion"
+                    prefWidth="100"
+                    styleClass="primary-button"/>
 
-        <Button fx:id="editButton"
-                text="编辑"
-                onAction="#handleEditPromotion"
-                prefWidth="80"
-                styleClass="secondary-button"/>
+            <Button fx:id="editButton"
+                    text="编辑"
+                    onAction="#handleEditPromotion"
+                    prefWidth="80"
+                    styleClass="secondary-button"/>
 
-        <Button fx:id="deleteButton"
-                text="删除"
-                onAction="#handleDeletePromotion"
-                prefWidth="80"
-                styleClass="danger-button"/>
+            <Button fx:id="deleteButton"
+                    text="删除"
+                    onAction="#handleDeletePromotion"
+                    prefWidth="80"
+                    styleClass="danger-button"/>
 
-        <Button fx:id="enableButton"
-                text="启用"
-                onAction="#handleEnablePromotion"
-                prefWidth="80"
-                styleClass="success-button"/>
+            <Button fx:id="enableButton"
+                    text="启用"
+                    onAction="#handleEnablePromotion"
+                    prefWidth="80"
+                    styleClass="success-button"/>
 
-        <Button fx:id="disableButton"
-                text="禁用"
-                onAction="#handleDisablePromotion"
-                prefWidth="80"
-                styleClass="warning-button"/>
+            <Button fx:id="disableButton"
+                    text="禁用"
+                    onAction="#handleDisablePromotion"
+                    prefWidth="80"
+                    styleClass="warning-button"/>
 
-        <Separator orientation="VERTICAL"/>
+            <Region HBox.hgrow="ALWAYS"/>
 
-        <!-- 筛选条件 -->
-        <Label text="类型:"/>
-        <ComboBox fx:id="typeFilterComboBox" prefWidth="100"/>
+            <Label fx:id="countLabel" text="促销活动: 0 个" style="-fx-text-fill: #757575;"/>
+        </HBox>
 
-        <Label text="状态:"/>
-        <ComboBox fx:id="statusFilterComboBox" prefWidth="100"/>
+        <!-- 第二行：筛选和搜索 -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="5" right="10" bottom="10" left="10"/>
+            </padding>
 
-        <Separator orientation="VERTICAL"/>
+            <Label text="类型:"/>
+            <ComboBox fx:id="typeFilterComboBox" prefWidth="100"/>
 
-        <!-- 搜索 -->
-        <Label text="搜索:"/>
-        <TextField fx:id="searchField"
-                  promptText="促销名称或描述"
-                  prefWidth="200"
-                  onAction="#handleSearch"/>
+            <Label text="状态:"/>
+            <ComboBox fx:id="statusFilterComboBox" prefWidth="100"/>
 
-        <Button text="搜索"
-                onAction="#handleSearch"
-                prefWidth="60"
-                styleClass="secondary-button"/>
+            <Separator orientation="VERTICAL"/>
 
-        <Button text="清除"
-                onAction="#handleClearSearch"
-                prefWidth="60"
-                styleClass="secondary-button"/>
+            <Label text="搜索:"/>
+            <TextField fx:id="searchField"
+                      promptText="促销名称或描述"
+                      prefWidth="200"
+                      onAction="#handleSearch"/>
 
-        <Region HBox.hgrow="ALWAYS"/>
+            <Button text="搜索"
+                    onAction="#handleSearch"
+                    prefWidth="60"
+                    styleClass="secondary-button"/>
 
-        <!-- 统计信息 -->
+            <Button text="清除"
+                    onAction="#handleClearSearch"
+                    prefWidth="60"
+                    styleClass="secondary-button"/>
+        </HBox>
+    </VBox>
         <Label fx:id="countLabel" text="促销数量: 0" style="-fx-text-fill: #757575;"/>
     </HBox>
 

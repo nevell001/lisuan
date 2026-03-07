@@ -11,80 +11,87 @@
       styleClass="inventory-view">
 
     <!-- 顶部工具栏 -->
-    <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
-        <padding>
-            <Insets top="10" right="10" bottom="10" left="10"/>
-        </padding>
+    <VBox spacing="5" styleClass="toolbar">
+        <!-- 第一行：操作按钮 -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="10" right="10" bottom="5" left="10"/>
+            </padding>
 
-        <!-- 操作按钮 -->
-        <Button fx:id="addButton"
-                text="添加商品"
-                onAction="#handleAddProduct"
-                prefWidth="100"
-                styleClass="primary-button"/>
+            <Button fx:id="addButton"
+                    text="添加商品"
+                    onAction="#handleAddProduct"
+                    prefWidth="100"
+                    styleClass="primary-button"/>
 
-        <Button fx:id="editButton"
-                text="编辑"
-                onAction="#handleEditProduct"
-                prefWidth="80"
-                styleClass="secondary-button"/>
+            <Button fx:id="editButton"
+                    text="编辑"
+                    onAction="#handleEditProduct"
+                    prefWidth="80"
+                    styleClass="secondary-button"/>
 
-        <Button fx:id="deleteButton"
-                text="删除"
-                onAction="#handleDeleteProduct"
-                prefWidth="80"
-                styleClass="danger-button"/>
+            <Button fx:id="deleteButton"
+                    text="删除"
+                    onAction="#handleDeleteProduct"
+                    prefWidth="80"
+                    styleClass="danger-button"/>
 
-        <Button fx:id="restockButton"
-                text="补货"
-                onAction="#handleRestock"
-                prefWidth="80"
-                styleClass="info-button"/>
+            <Button fx:id="restockButton"
+                    text="补货"
+                    onAction="#handleRestock"
+                    prefWidth="80"
+                    styleClass="info-button"/>
 
-        <Button fx:id="categoryButton"
-                text="分类管理"
-                onAction="#handleCategoryManagement"
-                prefWidth="100"
-                styleClass="secondary-button"/>
+            <Button fx:id="categoryButton"
+                    text="分类管理"
+                    onAction="#handleCategoryManagement"
+                    prefWidth="100"
+                    styleClass="secondary-button"/>
 
-        <Button fx:id="unitButton"
-                text="单位管理"
-                onAction="#handleUnitManagement"
-                prefWidth="100"
-                styleClass="secondary-button"/>
+            <Button fx:id="unitButton"
+                    text="单位管理"
+                    onAction="#handleUnitManagement"
+                    prefWidth="100"
+                    styleClass="secondary-button"/>
 
-        <Separator orientation="VERTICAL"/>
+            <Region HBox.hgrow="ALWAYS"/>
 
-        <!-- 搜索和排序 -->
-        <Label text="搜索:"/>
-        <TextField fx:id="searchField"
-                  promptText="输入商品名称或条码搜索"
-                  prefWidth="200"
-                  onAction="#handleSearch"/>
+            <Label fx:id="countLabel" text="商品数量: 0" style="-fx-text-fill: #757575;"/>
+        </HBox>
 
-        <Button text="搜索"
-                onAction="#handleSearch"
-                prefWidth="60"
-                styleClass="secondary-button"/>
+        <!-- 第二行：搜索和排序 -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="5" right="10" bottom="10" left="10"/>
+            </padding>
 
-        <Button text="清除"
-                onAction="#handleClearSearch"
-                prefWidth="60"
-                styleClass="secondary-button"/>
+            <Label text="搜索:"/>
+            <TextField fx:id="searchField"
+                      promptText="输入商品名称或条码搜索"
+                      prefWidth="200"
+                      onAction="#handleSearch"/>
 
-        <Button text="刷新"
-                onAction="#handleRefresh"
-                prefWidth="60"
-                styleClass="success-button"/>
+            <Button text="搜索"
+                    onAction="#handleSearch"
+                    prefWidth="60"
+                    styleClass="secondary-button"/>
 
-        <Label text="排序:"/>
-        <ComboBox fx:id="sortComboBox" prefWidth="150"/>
+            <Button text="清除"
+                    onAction="#handleClearSearch"
+                    prefWidth="60"
+                    styleClass="secondary-button"/>
 
-        <Region HBox.hgrow="ALWAYS"/>
+            <Button text="刷新"
+                    onAction="#handleRefresh"
+                    prefWidth="60"
+                    styleClass="success-button"/>
 
-        <!-- 统计信息 -->
-        <Label fx:id="countLabel" text="商品数量: 0" style="-fx-text-fill: #757575;"/>
-    </HBox>
+            <Separator orientation="VERTICAL"/>
+
+            <Label text="排序:"/>
+            <ComboBox fx:id="sortComboBox" prefWidth="150"/>
+        </HBox>
+    </VBox>
 
     <!-- 商品表格 -->
     <TableView fx:id="inventoryTable"

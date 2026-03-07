@@ -12,53 +12,58 @@
       styleClass="statistics-view">
 
     <!-- 顶部工具栏 -->
-    <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
-        <padding>
-            <Insets top="10" right="10" bottom="10" left="10"/>
-        </padding>
+    <VBox spacing="5" styleClass="toolbar">
+        <!-- 第一行：时间范围和筛选 -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="10" right="10" bottom="5" left="10"/>
+            </padding>
 
-        <!-- 时间范围选择 -->
-        <Label text="时间范围:"/>
-        <ComboBox fx:id="timeRangeComboBox" prefWidth="120"/>
+            <Label text="时间范围:"/>
+            <ComboBox fx:id="timeRangeComboBox" prefWidth="120"/>
 
-        <Label text="开始日期:"/>
-        <DatePicker fx:id="startDatePicker" prefWidth="150"/>
+            <Label text="开始日期:"/>
+            <DatePicker fx:id="startDatePicker" prefWidth="150"/>
 
-        <Label text="结束日期:"/>
-        <DatePicker fx:id="endDatePicker" prefWidth="150"/>
+            <Label text="结束日期:"/>
+            <DatePicker fx:id="endDatePicker" prefWidth="150"/>
 
-        <Label text="分类:"/>
-        <ComboBox fx:id="categoryComboBox" prefWidth="150"/>
+            <Label text="分类:"/>
+            <ComboBox fx:id="categoryComboBox" prefWidth="150"/>
 
-        <Separator orientation="VERTICAL"/>
+            <Separator orientation="VERTICAL"/>
 
-        <!-- 阈值设置 -->
-        <Label text="周转率阈值:"/>
-        <TextField fx:id="turnoverThresholdField" prefWidth="80" promptText="1.0"/>
+            <Label text="周转率阈值:"/>
+            <TextField fx:id="turnoverThresholdField" prefWidth="80" promptText="1.0"/>
 
-        <Label text="滞销阈值:"/>
-        <TextField fx:id="slowSalesThresholdField" prefWidth="80" promptText="10"/>
+            <Label text="滞销阈值:"/>
+            <TextField fx:id="slowSalesThresholdField" prefWidth="80" promptText="10"/>
 
-        <Label text="库存天数:"/>
-        <TextField fx:id="inventoryDaysField" prefWidth="80" promptText="90"/>
+            <Label text="库存天数:"/>
+            <TextField fx:id="inventoryDaysField" prefWidth="80" promptText="90"/>
+        </HBox>
 
-        <Region HBox.hgrow="ALWAYS"/>
+        <!-- 第二行：操作按钮 -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="5" right="10" bottom="10" left="10"/>
+            </padding>
 
-        <!-- 操作按钮 -->
-        <Button fx:id="queryButton"
-                text="查询"
-                onAction="#handleQuery"
-                prefWidth="100"
-                prefHeight="35"
-                styleClass="primary-button"/>
+            <Button fx:id="queryButton"
+                    text="查询"
+                    onAction="#handleQuery"
+                    prefWidth="100"
+                    prefHeight="35"
+                    styleClass="primary-button"/>
 
-        <Button fx:id="exportButton"
-                text="导出"
-                onAction="#handleExport"
-                prefWidth="100"
-                prefHeight="35"
-                styleClass="secondary-button"/>
-    </HBox>
+            <Button fx:id="exportButton"
+                    text="导出"
+                    onAction="#handleExport"
+                    prefWidth="100"
+                    prefHeight="35"
+                    styleClass="secondary-button"/>
+        </HBox>
+    </VBox>
 
     <!-- 主要内容区域：使用 SplitPane 分割上中下三部分 -->
     <SplitPane VBox.vgrow="ALWAYS" orientation="VERTICAL" dividerPositions="0.25,0.58">
