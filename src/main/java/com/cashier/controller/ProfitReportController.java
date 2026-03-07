@@ -67,18 +67,6 @@ public class ProfitReportController {
     private Label avgMarginLabel;
 
     @FXML
-    private Label bestMarginProductLabel;
-
-    @FXML
-    private Label bestMarginValueLabel;
-
-    @FXML
-    private Label worstMarginProductLabel;
-
-    @FXML
-    private Label worstMarginValueLabel;
-
-    @FXML
     private PieChart profitCompositionPieChart;
 
     @FXML
@@ -94,7 +82,7 @@ public class ProfitReportController {
     private TableColumn<ProfitReportRecord, String> productNameColumn;
 
     @FXML
-    private TableColumn<ProfitReportRecord, String> categoryColumn;
+    private TableColumn<ProfitReportRecord, String> productCategoryColumn;
 
     @FXML
     private TableColumn<ProfitReportRecord, String> salesRevenueColumn;
@@ -205,7 +193,7 @@ public class ProfitReportController {
     private void setupProductProfitTableColumns() {
         productNameColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(cellData.getValue().productName));
-        categoryColumn.setCellValueFactory(cellData ->
+        productCategoryColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(cellData.getValue().category));
         salesRevenueColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().revenue)));
@@ -568,10 +556,10 @@ public class ProfitReportController {
         grossMarginLabel.setText(String.format("%.2f%%", grossMargin * 100));
         netProfitLabel.setText(String.format("¥%,.2f", netProfit));
         avgMarginLabel.setText(String.format("%.2f%%", avgMargin * 100));
-        bestMarginProductLabel.setText(bestMarginProduct);
-        bestMarginValueLabel.setText(String.format("%.2f%%", bestMarginValue * 100));
-        worstMarginProductLabel.setText(worstMarginProduct);
-        worstMarginValueLabel.setText(String.format("%.2f%%", worstMarginValue * 100));
+        // bestMarginProductLabel.setText(bestMarginProduct);
+        // bestMarginValueLabel.setText(String.format("%.2f%%", bestMarginValue * 100));
+        // worstMarginProductLabel.setText(worstMarginProduct);
+        // worstMarginValueLabel.setText(String.format("%.2f%%", worstMarginValue * 100));
 
         // 记录成本来源统计信息
         int actualCostCount = 0;

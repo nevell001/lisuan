@@ -68,7 +68,7 @@
 
 - **JDK**: Java 17 或更高版本
 - **Maven**: 3.8 或更高版本
-- **MySQL**: 8.0 或更高版本
+- **MySQL**: 8.4 或更高版本
 - **操作系统**: Windows、macOS、Linux
 
 ### 安装步骤
@@ -163,10 +163,15 @@ java -jar target/cashier-system-fx-2.4.2.jar
 
 ## 🎯 最近更新
 
-### v2.4.2 (2026-03-05)
-- 版本号更新到 v2.4.2
-- 删除冗余的数据库增量更新脚本
-- 优化数据库初始化脚本结构
+### v2.4.2 (2026-03-07)
+- 🐛 修复退货订单审批失败问题（移除 OperationLogDAO 中不存在的 ip_address 字段引用）
+- 🎨 优化报表页面布局（采购报表、库存报表、利润分析）
+  - 上部（1/4 高度）：紧凑的两行数据汇总卡片
+  - 中部（1/3 高度）：图表展示区域（饼图、折线图、柱状图）
+  - 底部（剩余空间）：使用 TabPane 显示多个表格
+- 🐛 修复利润分析界面加载失败问题（移除控制器中不存在的 FXML 字段引用）
+- 🗄️ 升级数据库到 MySQL 8.4 和 MySQL JDBC 驱动到 8.4.0
+- 📝 更新文档说明
 
 ### v2.4.1 (2026-03-05)
 - 图形化安装程序（install.bat/install.sh）
@@ -245,8 +250,9 @@ mvn test
 - **前端框架**: JavaFX 17.0.8
 - **构建工具**: Maven 3.8+
 - **编程语言**: Java 17
-- **数据库**: MySQL 8.0
+- **数据库**: MySQL 8.4
 - **连接池**: HikariCP 5.1.0
+- **MySQL JDBC**: mysql-connector-j 8.4.0
 - **数据导出**: Apache POI 5.2.5 (Excel) + Apache PDFBox 2.0.31 (PDF)
 - **测试框架**: JUnit 5 + TestFX + H2 Database
 

@@ -48,214 +48,183 @@
                 styleClass="secondary-button"/>
     </HBox>
 
-    <!-- 统计卡片区域 -->
-    <ScrollPane fitToWidth="true" VBox.vgrow="NEVER">
-        <HBox spacing="15" styleClass="cards-container">
-            <padding>
-                <Insets top="15" right="15" bottom="15" left="15"/>
-            </padding>
-
-            <!-- 总收入 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="总收入" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="totalRevenueLabel" text="¥0.00" style="-fx-text-fill: #4CAF50; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
-
-            <!-- 总成本 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="总成本" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="totalCostLabel" text="¥0.00" style="-fx-text-fill: #F44336; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
-
-            <!-- 毛利润 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="毛利润" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="grossProfitLabel" text="¥0.00" style="-fx-text-fill: #2196F3; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
-
-            <!-- 毛利率 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="毛利率" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="grossMarginLabel" text="0.00%" style="-fx-text-fill: #FF9800; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
-
-            <!-- 净利润 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="净利润" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="netProfitLabel" text="¥0.00" style="-fx-text-fill: #9C27B0; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
-
-            <!-- 平均毛利率 -->
-            <VBox spacing="5" styleClass="stat-card" prefWidth="160">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="平均毛利率" style="-fx-text-fill: #757575; -fx-font-size: 13px;"/>
-                <Label fx:id="avgMarginLabel" text="0.00%" style="-fx-text-fill: #00BCD4; -fx-font-size: 24px; -fx-font-weight: bold;"/>
-            </VBox>
-        </HBox>
-    </ScrollPane>
-
-    <!-- 最高/最低毛利率商品 -->
-    <ScrollPane fitToWidth="true" VBox.vgrow="NEVER">
-        <HBox spacing="15" styleClass="cards-container">
+    <!-- 主要内容区域：使用 SplitPane 分割上中下三部分 -->
+    <SplitPane VBox.vgrow="ALWAYS" orientation="VERTICAL" dividerPositions="0.25,0.58">
+        
+        <!-- 上部（1/4）：数据汇总 - 紧凑的两行布局 -->
+        <VBox styleClass="cards-container">
             <padding>
                 <Insets top="10" right="15" bottom="10" left="15"/>
             </padding>
+            <GridPane hgap="10" vgap="8">
+                <!-- 第一行：3列 -->
+                <VBox spacing="4" styleClass="stat-card-compact" GridPane.columnIndex="0" GridPane.rowIndex="0" GridPane.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
+                    </padding>
+                    <Label text="总收入" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label fx:id="totalRevenueLabel" text="¥0.00" style="-fx-text-fill: #4CAF50; -fx-font-size: 22px; -fx-font-weight: bold;"/>
+                </VBox>
 
-            <!-- 最高毛利率商品 -->
-            <VBox spacing="5" styleClass="info-box" prefWidth="300">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="最高毛利率商品" style="-fx-text-fill: #4CAF50; -fx-font-size: 14px; -fx-font-weight: bold;"/>
-                <HBox spacing="20" alignment="CENTER_LEFT">
-                    <VBox spacing="3">
-                        <Label text="商品名称" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
-                        <Label fx:id="bestMarginProductLabel" text="无" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
-                    </VBox>
-                    <VBox spacing="3">
-                        <Label text="毛利率" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
-                        <Label fx:id="bestMarginValueLabel" text="0.00%" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
-                    </VBox>
-                </HBox>
-            </VBox>
+                <VBox spacing="4" styleClass="stat-card-compact" GridPane.columnIndex="1" GridPane.rowIndex="0" GridPane.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
+                    </padding>
+                    <Label text="总成本" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label fx:id="totalCostLabel" text="¥0.00" style="-fx-text-fill: #F44336; -fx-font-size: 22px; -fx-font-weight: bold;"/>
+                </VBox>
 
-            <!-- 最低毛利率商品 -->
-            <VBox spacing="5" styleClass="info-box" prefWidth="300">
-                <padding>
-                    <Insets top="15" right="15" bottom="15" left="15"/>
-                </padding>
-                <Label text="最低毛利率商品" style="-fx-text-fill: #F44336; -fx-font-size: 14px; -fx-font-weight: bold;"/>
-                <HBox spacing="20" alignment="CENTER_LEFT">
-                    <VBox spacing="3">
-                        <Label text="商品名称" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
-                        <Label fx:id="worstMarginProductLabel" text="无" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
-                    </VBox>
-                    <VBox spacing="3">
-                        <Label text="毛利率" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
-                        <Label fx:id="worstMarginValueLabel" text="0.00%" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #F44336;"/>
-                    </VBox>
-                </HBox>
-            </VBox>
-        </HBox>
-    </ScrollPane>
+                <VBox spacing="4" styleClass="stat-card-compact" GridPane.columnIndex="2" GridPane.rowIndex="0" GridPane.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
+                    </padding>
+                    <Label text="毛利润" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label fx:id="grossProfitLabel" text="¥0.00" style="-fx-text-fill: #2196F3; -fx-font-size: 22px; -fx-font-weight: bold;"/>
+                </VBox>
 
-    <!-- 图表区域 -->
-    <ScrollPane fitToWidth="true" VBox.vgrow="NEVER" prefHeight="350">
-        <HBox spacing="15" styleClass="charts-container">
+                <!-- 第二行：3列 -->
+                <VBox spacing="4" styleClass="stat-card-compact" GridPane.columnIndex="0" GridPane.rowIndex="1" GridPane.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
+                    </padding>
+                    <Label text="毛利率" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label fx:id="grossMarginLabel" text="0.00%" style="-fx-text-fill: #FF9800; -fx-font-size: 22px; -fx-font-weight: bold;"/>
+                </VBox>
+
+                <VBox spacing="4" styleClass="stat-card-compact" GridPane.columnIndex="1" GridPane.rowIndex="1" GridPane.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
+                    </padding>
+                    <Label text="净利润" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label fx:id="netProfitLabel" text="¥0.00" style="-fx-text-fill: #9C27B0; -fx-font-size: 22px; -fx-font-weight: bold;"/>
+                </VBox>
+
+                <VBox spacing="4" styleClass="stat-card-compact" GridPane.columnIndex="2" GridPane.rowIndex="1" GridPane.hgrow="ALWAYS">
+                    <padding>
+                        <Insets top="10" right="10" bottom="10" left="10"/>
+                    </padding>
+                    <Label text="平均毛利率" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label fx:id="avgMarginLabel" text="0.00%" style="-fx-text-fill: #00BCD4; -fx-font-size: 22px; -fx-font-weight: bold;"/>
+                </VBox>
+            </GridPane>
+        </VBox>
+
+        <!-- 中部（1/3）：图表区域 -->
+        <VBox styleClass="charts-container">
             <padding>
-                <Insets top="10" right="10" bottom="10" left="10"/>
+                <Insets top="10" right="15" bottom="10" left="15"/>
             </padding>
+            <GridPane hgap="15" vgap="10">
+                <columnConstraints>
+                    <ColumnConstraints hgrow="SOMETIMES" percentWidth="25"/>
+                    <ColumnConstraints hgrow="ALWAYS" percentWidth="50"/>
+                    <ColumnConstraints hgrow="SOMETIMES" percentWidth="25"/>
+                </columnConstraints>
 
-            <!-- 利润组成饼图 -->
-            <VBox spacing="5" styleClass="chart-card" prefWidth="330">
-                <padding>
-                    <Insets top="10" right="10" bottom="10" left="10"/>
-                </padding>
-                <Label text="利润组成" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-                <PieChart fx:id="profitCompositionPieChart" prefWidth="310" prefHeight="280" legendSide="RIGHT"/>
-            </VBox>
+                <!-- 利润组成饼图 -->
+                <VBox spacing="8" styleClass="chart-card" GridPane.columnIndex="0" GridPane.rowIndex="0">
+                    <padding>
+                        <Insets top="12" right="12" bottom="12" left="12"/>
+                    </padding>
+                    <Label text="利润组成" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    <PieChart fx:id="profitCompositionPieChart" VBox.vgrow="ALWAYS" legendSide="RIGHT"/>
+                </VBox>
 
-            <!-- 利润趋势折线图 -->
-            <VBox spacing="5" styleClass="chart-card" HBox.hgrow="ALWAYS">
-                <padding>
-                    <Insets top="10" right="10" bottom="10" left="10"/>
-                </padding>
-                <Label text="利润趋势" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
-                <LineChart fx:id="dailyProfitTrendLineChart" prefHeight="280">
-                    <xAxis>
-                        <CategoryAxis label="日期"/>
-                    </xAxis>
-                    <yAxis>
-                        <NumberAxis label="金额（元）"/>
-                    </yAxis>
-                </LineChart>
-            </VBox>
+                <!-- 利润趋势折线图 -->
+                <VBox spacing="8" styleClass="chart-card" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                    <padding>
+                        <Insets top="12" right="12" bottom="12" left="12"/>
+                    </padding>
+                    <Label text="利润趋势" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
+                    <LineChart fx:id="dailyProfitTrendLineChart" VBox.vgrow="ALWAYS">
+                        <xAxis>
+                            <CategoryAxis label="日期"/>
+                        </xAxis>
+                        <yAxis>
+                            <NumberAxis label="金额（元）"/>
+                        </yAxis>
+                    </LineChart>
+                </VBox>
 
-            <!-- 分类利润分布柱状图 -->
-            <VBox spacing="5" styleClass="chart-card" prefWidth="400">
-                <padding>
-                    <Insets top="10" right="10" bottom="10" left="10"/>
-                </padding>
-                <Label text="分类利润分布" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #FF9800;"/>
-                <BarChart fx:id="categoryProfitBarChart" prefHeight="280">
-                    <xAxis>
-                        <CategoryAxis label="分类"/>
-                    </xAxis>
-                    <yAxis>
-                        <NumberAxis label="利润（元）"/>
-                    </yAxis>
-                </BarChart>
-            </VBox>
-        </HBox>
-    </ScrollPane>
+                <!-- 分类利润分布柱状图 -->
+                <VBox spacing="8" styleClass="chart-card" GridPane.columnIndex="2" GridPane.rowIndex="0">
+                    <padding>
+                        <Insets top="12" right="12" bottom="12" left="12"/>
+                    </padding>
+                    <Label text="分类利润分布" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #FF9800;"/>
+                    <BarChart fx:id="categoryProfitBarChart" VBox.vgrow="ALWAYS">
+                        <xAxis>
+                            <CategoryAxis label="分类"/>
+                        </xAxis>
+                        <yAxis>
+                            <NumberAxis label="利润（元）"/>
+                        </yAxis>
+                    </BarChart>
+                </VBox>
+            </GridPane>
+        </VBox>
 
-    <!-- 商品利润明细表格 -->
-    <VBox VBox.vgrow="ALWAYS" spacing="10">
-        <padding>
-            <Insets top="10" right="10" bottom="10" left="10"/>
-        </padding>
-        <Label text="商品利润明细" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-        <TableView fx:id="productProfitTable" VBox.vgrow="ALWAYS">
-            <columns>
-                <TableColumn fx:id="productNameColumn" text="商品名称" prefWidth="200"/>
-                <TableColumn fx:id="categoryColumn" text="分类" prefWidth="100"/>
-                <TableColumn fx:id="salesRevenueColumn" text="销售收入" prefWidth="120"/>
-                <TableColumn fx:id="salesCostColumn" text="成本" prefWidth="120"/>
-                <TableColumn fx:id="salesProfitColumn" text="利润" prefWidth="120"/>
-                <TableColumn fx:id="salesMarginColumn" text="毛利率" prefWidth="100"/>
-            </columns>
-        </TableView>
-    </VBox>
+        <!-- 底部：商品利润明细列表 - 使用 TabPane 支持多个表格 -->
+        <TabPane VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
+            <padding>
+                <Insets top="5" right="10" bottom="5" left="10"/>
+            </padding>
+            
+            <!-- 商品利润明细 Tab -->
+            <Tab text="商品利润明细">
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                    <padding>
+                        <Insets top="5" right="10" bottom="5" left="10"/>
+                    </padding>
+                    <TableView fx:id="productProfitTable" VBox.vgrow="ALWAYS">
+                        <columns>
+                            <TableColumn fx:id="productNameColumn" text="商品名称" prefWidth="200"/>
+                            <TableColumn fx:id="productCategoryColumn" text="分类" prefWidth="100"/>
+                            <TableColumn fx:id="salesRevenueColumn" text="销售收入" prefWidth="120"/>
+                            <TableColumn fx:id="salesCostColumn" text="成本" prefWidth="120"/>
+                            <TableColumn fx:id="salesProfitColumn" text="利润" prefWidth="120"/>
+                            <TableColumn fx:id="salesMarginColumn" text="毛利率" prefWidth="100"/>
+                        </columns>
+                    </TableView>
+                </ScrollPane>
+            </Tab>
 
-    <!-- 分类利润汇总表格 -->
-    <VBox VBox.vgrow="ALWAYS" spacing="10">
-        <padding>
-            <Insets top="10" right="10" bottom="10" left="10"/>
-        </padding>
-        <Label text="分类利润汇总" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-        <TableView fx:id="categoryProfitTable" VBox.vgrow="ALWAYS">
-            <columns>
-                <TableColumn fx:id="categoryNameColumn" text="分类" prefWidth="150"/>
-                <TableColumn fx:id="categoryRevenueColumn" text="销售收入" prefWidth="120"/>
-                <TableColumn fx:id="categoryCostColumn" text="成本" prefWidth="120"/>
-                <TableColumn fx:id="categoryProfitColumn" text="利润" prefWidth="120"/>
-                <TableColumn fx:id="categoryMarginColumn" text="毛利率" prefWidth="100"/>
-            </columns>
-        </TableView>
-    </VBox>
+            <!-- 分类利润汇总 Tab -->
+            <Tab text="分类利润汇总">
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                    <padding>
+                        <Insets top="5" right="10" bottom="5" left="10"/>
+                    </padding>
+                    <TableView fx:id="categoryProfitTable" VBox.vgrow="ALWAYS">
+                        <columns>
+                            <TableColumn fx:id="categoryNameColumn" text="分类" prefWidth="150"/>
+                            <TableColumn fx:id="categoryRevenueColumn" text="销售收入" prefWidth="120"/>
+                            <TableColumn fx:id="categoryCostColumn" text="成本" prefWidth="120"/>
+                            <TableColumn fx:id="categoryProfitColumn" text="利润" prefWidth="120"/>
+                            <TableColumn fx:id="categoryMarginColumn" text="毛利率" prefWidth="100"/>
+                        </columns>
+                    </TableView>
+                </ScrollPane>
+            </Tab>
 
-    <!-- 每日利润明细表格 -->
-    <VBox VBox.vgrow="ALWAYS" spacing="10">
-        <padding>
-            <Insets top="10" right="10" bottom="10" left="10"/>
-        </padding>
-        <Label text="每日利润明细" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-        <TableView fx:id="dailyProfitTable" VBox.vgrow="ALWAYS">
-            <columns>
-                <TableColumn fx:id="dateColumn" text="日期" prefWidth="120"/>
-                <TableColumn fx:id="dailyRevenueColumn" text="销售收入" prefWidth="120"/>
-                <TableColumn fx:id="dailyCostColumn" text="成本" prefWidth="120"/>
-                <TableColumn fx:id="dailyProfitColumn" text="利润" prefWidth="120"/>
-                <TableColumn fx:id="dailyMarginColumn" text="毛利率" prefWidth="100"/>
-            </columns>
-        </TableView>
-    </VBox>
+            <!-- 每日利润明细 Tab -->
+            <Tab text="每日利润明细">
+                <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
+                    <padding>
+                        <Insets top="5" right="10" bottom="5" left="10"/>
+                    </padding>
+                    <TableView fx:id="dailyProfitTable" VBox.vgrow="ALWAYS">
+                        <columns>
+                            <TableColumn fx:id="dateColumn" text="日期" prefWidth="120"/>
+                            <TableColumn fx:id="dailyRevenueColumn" text="销售收入" prefWidth="120"/>
+                            <TableColumn fx:id="dailyCostColumn" text="成本" prefWidth="120"/>
+                            <TableColumn fx:id="dailyProfitColumn" text="利润" prefWidth="120"/>
+                            <TableColumn fx:id="dailyMarginColumn" text="毛利率" prefWidth="100"/>
+                        </columns>
+                    </TableView>
+                </ScrollPane>
+            </Tab>
+        </TabPane>
+    </SplitPane>
 
 </VBox>
