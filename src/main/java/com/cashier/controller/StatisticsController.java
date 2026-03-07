@@ -241,6 +241,20 @@ public class StatisticsController {
     }
 
     /**
+     * 处理刷新
+     */
+    @FXML
+    private void handleRefresh() {
+        // 重新加载数据
+        loadTransactions();
+        
+        // 重新查询
+        handleQuery();
+        
+        logger.info("数据统计已刷新");
+    }
+
+    /**
      * 按日期筛选交易记录
      */
     private List<Transaction> filterTransactionsByDate(LocalDate startDate, LocalDate endDate) {
