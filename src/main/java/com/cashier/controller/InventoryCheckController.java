@@ -12,6 +12,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 import javafx.beans.property.SimpleStringProperty;
+import javafx.beans.property.SimpleBooleanProperty;
 import javafx.beans.value.ChangeListener;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -21,6 +22,7 @@ import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.control.cell.TextFieldTableCell;
+import javafx.scene.control.cell.CheckBoxTableCell;
 import javafx.scene.layout.GridPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
@@ -474,7 +476,27 @@ public class InventoryCheckController {
 
             // 商品表格
             TableView<Product> productTable = new TableView<>();
-            productTable.getSelectionModel().setSelectionMode(SelectionMode.SINGLE);
+            productTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
+            
+            // 添加复选框列
+            TableColumn<Product, Boolean> selectColumn = new TableColumn<>();
+            selectColumn.setPrefWidth(50);
+            selectColumn.setCellValueFactory(cellData -> {
+                SimpleBooleanProperty property = new SimpleBooleanProperty(false);
+                property.addListener((obs, oldVal, newVal) -> {
+                    if (newVal) {
+                        productTable.getSelectionModel().select(cellData.getValue());
+                    } else {
+                        productTable.getSelectionModel().clearSelection(productTable.getItems().indexOf(cellData.getValue()));
+                    }
+                });
+                return property;
+            });
+            // 添加单元格工厂以显示复选框
+            selectColumn.setCellFactory(col -> {
+                CheckBoxTableCell<Product, Boolean> cell = new CheckBoxTableCell<>();
+                return cell;
+            });
             
             TableColumn<Product, String> nameCol = new TableColumn<>("商品名称");
             nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
@@ -488,7 +510,7 @@ public class InventoryCheckController {
             TableColumn<Product, Number> costCol = new TableColumn<>("成本价");
             costCol.setCellValueFactory(new PropertyValueFactory<>("cost"));
 
-            productTable.getColumns().addAll(nameCol, categoryCol, stockCol, costCol);
+            productTable.getColumns().addAll(selectColumn, nameCol, categoryCol, stockCol, costCol);
             
             // 设置行工厂，使选中行背景色更明显
             productTable.setRowFactory(tv -> {
@@ -532,7 +554,7 @@ public class InventoryCheckController {
             categoryCombo.setItems(categoryList);
             categoryCombo.setValue("全部分类");
 
-            // 分类筛选功能
+            // 分类筛选和全选功能
             categoryCombo.setOnAction(e -> {
                 String selectedCategory = categoryCombo.getValue();
                 if ("全部分类".equals(selectedCategory)) {
@@ -559,19 +581,49 @@ public class InventoryCheckController {
                 productTable.setItems(FXCollections.observableArrayList(filtered));
             });
 
+            // 全选/取消全选按钮
+            Button selectAllButton = new Button("全选");
+            selectAllButton.setOnAction(e -> {
+                ObservableList<Product> items = productTable.getItems();
+                productTable.getSelectionModel().selectAll();
+            });
+
+            Button deselectAllButton = new Button("取消全选");
+            deselectAllButton.setOnAction(e -> {
+                productTable.getSelectionModel().clearSelection();
+            });
+
+            HBox selectButtonsBox = new HBox(10, selectAllButton, deselectAllButton);
+
             // 添加按钮
             Button addButton = new Button("添加选中商品");
             addButton.setOnAction(e -> {
-                Product selected = productTable.getSelectionModel().getSelectedItem();
-                if (selected != null) {
-                    logger.debug("选中的商品 - ID: {}, 名称: {}, 名称是否为null: {}", selected.id, selected.name, selected.name == null);
-                    CheckItemWrapper wrapper = new CheckItemWrapper(selected);
-                    logger.debug("Wrapper 商品名称: {}", wrapper.getProductName());
-                    itemTable.getItems().add(wrapper);
+                ObservableList<Product> selectedProducts = productTable.getSelectionModel().getSelectedItems();
+                if (selectedProducts == null || selectedProducts.isEmpty()) {
+                    showError("请先选择商品");
+                    return;
+                }
+                
+                int addedCount = 0;
+                for (Product selected : selectedProducts) {
+                    // 检查是否已经添加过
+                    boolean exists = itemTable.getItems().stream()
+                        .anyMatch(item -> item.productId == selected.id);
+                    
+                    if (!exists) {
+                        logger.debug("选中的商品 - ID: {}, 名称: {}", selected.id, selected.name);
+                        CheckItemWrapper wrapper = new CheckItemWrapper(selected);
+                        itemTable.getItems().add(wrapper);
+                        addedCount++;
+                    }
+                }
+                
+                if (addedCount > 0) {
                     itemTable.refresh();
+                    logger.info("成功添加 {} 个商品", addedCount);
                     selectorStage.close();
                 } else {
-                    showError("请先选择一个商品");
+                    showError("所选商品已存在");
                 }
             });
 
@@ -581,9 +633,9 @@ public class InventoryCheckController {
             HBox buttonBox = new HBox(10, addButton, cancelButton);
             buttonBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
 
-            root.getChildren().addAll(filterBox, productTable, buttonBox);
+            root.getChildren().addAll(filterBox, selectButtonsBox, productTable, buttonBox);
 
-            Scene scene = new Scene(root, 500, 400);
+            Scene scene = new Scene(root, 600, 450);
             scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
             scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
 
