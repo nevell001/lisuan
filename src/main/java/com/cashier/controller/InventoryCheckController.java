@@ -462,10 +462,15 @@ public class InventoryCheckController {
             VBox root = new VBox(10);
             root.setPadding(new javafx.geometry.Insets(10));
 
+            // 分类筛选
+            ComboBox<String> categoryCombo = new ComboBox<>();
+            categoryCombo.setPromptText("全部分类");
+            categoryCombo.setPrefWidth(150);
+            
             // 搜索框
             TextField searchField = new TextField();
             searchField.setPromptText("输入商品名称搜索");
-            HBox searchBox = new HBox(10, new Label("搜索:"), searchField);
+            HBox filterBox = new HBox(10, new Label("分类:"), categoryCombo, new Label("搜索:"), searchField);
 
             // 商品表格
             TableView<Product> productTable = new TableView<>();
@@ -474,13 +479,16 @@ public class InventoryCheckController {
             TableColumn<Product, String> nameCol = new TableColumn<>("商品名称");
             nameCol.setCellValueFactory(new PropertyValueFactory<>("name"));
 
+            TableColumn<Product, String> categoryCol = new TableColumn<>("分类");
+            categoryCol.setCellValueFactory(new PropertyValueFactory<>("category"));
+
             TableColumn<Product, Number> stockCol = new TableColumn<>("库存");
             stockCol.setCellValueFactory(new PropertyValueFactory<>("quantity"));
 
             TableColumn<Product, Number> costCol = new TableColumn<>("成本价");
             costCol.setCellValueFactory(new PropertyValueFactory<>("cost"));
 
-            productTable.getColumns().addAll(nameCol, stockCol, costCol);
+            productTable.getColumns().addAll(nameCol, categoryCol, stockCol, costCol);
             
             // 设置行工厂，使选中行背景色更明显
             productTable.setRowFactory(tv -> {
@@ -513,17 +521,42 @@ public class InventoryCheckController {
             ObservableList<Product> productList = FXCollections.observableArrayList(products);
             productTable.setItems(productList);
 
-            // 搜索功能
-            searchField.textProperty().addListener((obs, oldVal, newVal) -> {
-                String searchText = newVal.toLowerCase();
-                if (searchText.isEmpty()) {
+            // 加载分类列表
+            Set<String> categories = products.stream()
+                .map(p -> p.category)
+                .filter(c -> c != null && !c.isEmpty())
+                .collect(Collectors.toSet());
+            ObservableList<String> categoryList = FXCollections.observableArrayList();
+            categoryList.add("全部分类");
+            categoryList.addAll(categories);
+            categoryCombo.setItems(categoryList);
+            categoryCombo.setValue("全部分类");
+
+            // 分类筛选功能
+            categoryCombo.setOnAction(e -> {
+                String selectedCategory = categoryCombo.getValue();
+                if ("全部分类".equals(selectedCategory)) {
                     productTable.setItems(productList);
                 } else {
                     List<Product> filtered = productList.stream()
-                        .filter(p -> p.name.toLowerCase().contains(searchText))
+                        .filter(p -> selectedCategory.equals(p.category))
                         .collect(Collectors.toList());
                     productTable.setItems(FXCollections.observableArrayList(filtered));
                 }
+            });
+
+            // 搜索功能
+            searchField.textProperty().addListener((obs, oldVal, newVal) -> {
+                String searchText = newVal.toLowerCase();
+                String selectedCategory = categoryCombo.getValue();
+                List<Product> filtered = productList.stream()
+                    .filter(p -> {
+                        boolean matchCategory = "全部分类".equals(selectedCategory) || selectedCategory.equals(p.category);
+                        boolean matchSearch = searchText.isEmpty() || p.name.toLowerCase().contains(searchText);
+                        return matchCategory && matchSearch;
+                    })
+                    .collect(Collectors.toList());
+                productTable.setItems(FXCollections.observableArrayList(filtered));
             });
 
             // 添加按钮
@@ -548,7 +581,7 @@ public class InventoryCheckController {
             HBox buttonBox = new HBox(10, addButton, cancelButton);
             buttonBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
 
-            root.getChildren().addAll(searchBox, productTable, buttonBox);
+            root.getChildren().addAll(filterBox, productTable, buttonBox);
 
             Scene scene = new Scene(root, 500, 400);
             scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
