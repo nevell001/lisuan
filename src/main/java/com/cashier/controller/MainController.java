@@ -1,8 +1,10 @@
 package com.cashier.controller;
 
 import com.cashier.CashierSystemFXApplication;
-import com.cashier.service.DataService;
+import com.cashier.dao.ShiftDAO;
+import com.cashier.model.Shift;
 import com.cashier.model.User;
+import com.cashier.service.DataService;
 import com.cashier.util.FXUtils;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
@@ -36,6 +38,9 @@ import java.util.Map;
  */
 public class MainController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(MainController.class);
+
+    // 静态引用，用于外部更新班次信息
+    private static MainController instance;
 
     @FXML
     private Label currentUserLabel;
@@ -139,6 +144,9 @@ private Button shiftBtn;
      */
     @FXML
     private void initialize() {
+        // 保存实例引用
+        instance = this;
+
         // 启动时间更新
         startTimeUpdate();
 
@@ -151,6 +159,7 @@ private Button shiftBtn;
         // 更新状态
         StatusBarManager.updateStatus("就绪");
         updateDate();
+        updateShiftInfo();
 
         // 创建加载覆盖层
         createLoadingOverlay();
@@ -325,6 +334,8 @@ private Button shiftBtn;
     private void updateTime() {
         SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm:ss");
         currentTimeLabel.setText(timeFormat.format(new Date()));
+        // 同时更新班次信息
+        updateShiftInfo();
     }
 
     /**
@@ -333,6 +344,39 @@ private Button shiftBtn;
     private void updateDate() {
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd EEEE");
         dateLabel.setText(dateFormat.format(new Date()));
+    }
+
+    /**
+     * 更新班次信息
+     */
+    private void updateShiftInfo() {
+        try {
+            Shift activeShift = ShiftDAO.findActiveShift();
+            if (activeShift != null) {
+                // 有活跃班次
+                SimpleDateFormat timeFormat = new SimpleDateFormat("HH:mm");
+                String startTime = timeFormat.format(activeShift.startTime);
+                currentShiftLabel.setText(String.format("班次: %s - %s (%s)",
+                    activeShift.shiftId,
+                    activeShift.operatorName,
+                    startTime));
+            } else {
+                // 无活跃班次
+                currentShiftLabel.setText("班次: 未开始");
+            }
+        } catch (Exception e) {
+            logger.error("更新班次信息失败", e);
+            currentShiftLabel.setText("班次: 未知");
+        }
+    }
+
+    /**
+     * 更新班次信息（公共静态方法，供其他控制器调用）
+     */
+    public static void updateShiftInfoGlobal() {
+        if (instance != null) {
+            instance.updateShiftInfo();
+        }
     }
 
     /**

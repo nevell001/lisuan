@@ -1,5 +1,6 @@
 package com.cashier.controller;
 
+import com.cashier.controller.MainController;
 import com.cashier.dao.ShiftDAO;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Shift;
@@ -617,6 +618,9 @@ public class ShiftController {
 
             showSuccess("开班成功！班次ID: " + shiftId);
 
+            // 更新主界面的班次信息
+            MainController.updateShiftInfoGlobal();
+
         } catch (Exception e) {
             showError("开班失败: " + e.getMessage());
             logger.error("开班失败", e);
@@ -745,6 +749,9 @@ try {
             successAlert.setContentText(detail);
             successAlert.getDialogPane().setPrefWidth(500);
             successAlert.showAndWait();
+
+            // 更新主界面的班次信息
+            MainController.updateShiftInfoGlobal();
 
             // 退出登录
             handleLogout();

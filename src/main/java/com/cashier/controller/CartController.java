@@ -2,8 +2,10 @@ package com.cashier.controller;
 
 import com.cashier.dao.MemberDAO;
 import com.cashier.dao.ProductDAO;
+import com.cashier.dao.PromotionDAO;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.CartItem;
+import com.cashier.model.Promotion;
 import com.cashier.service.DataService;
 import com.cashier.model.Member;
 import com.cashier.model.Product;
@@ -132,6 +134,7 @@ public class CartController {
     private User currentUser;
     private String orderNumber;
     private double alreadyPaidAmount = 0.0; // 已支付金额
+    private Promotion appliedPromotion; // 当前应用的促销
 
     /**
      * 初始化方法
@@ -931,6 +934,16 @@ public class CartController {
             Transaction transaction = createTransaction(paymentMethod, receivedAmount, changeAmount);
             saveTransactionWithConnection(conn, transaction);
 
+            // 增加促销使用次数
+            if (appliedPromotion != null) {
+                try {
+                    PromotionDAO.incrementUsage(appliedPromotion.id);
+                    logger.info("购物车促销 {} 使用次数已增加", appliedPromotion.name);
+                } catch (Exception e) {
+                    logger.error("购物车增加促销使用次数失败", e);
+                }
+            }
+
             // 提交事务
             com.cashier.util.DatabaseManager.commitTransaction(conn);
             logger.info("交易成功完成，交易ID: {}", transaction.transactionId);
@@ -1040,7 +1053,7 @@ public class CartController {
         // 将合并后的商品列表添加到交易中
         transaction.items.addAll(productMap.values());
         
-        transaction.totalAmount = getTotalAmount();
+        transaction.totalAmount = getFinalAmount();  // 使用最终金额（包含会员折扣和促销优惠）
         // 实现税费计算：从系统设置中读取税率
         Map<String, String> settings = DataService.loadSettings();
         double taxRate = Double.parseDouble(settings.getOrDefault("taxRate", "0.0"));
@@ -1112,19 +1125,62 @@ public class CartController {
             totalAmount += item.subtotal;
         }
 
-        // 计算折扣
+// 计算折扣
         double discountRate = 1.0;  // 默认不打折
         if (currentMember != null) {
             discountRate = currentMember.discountRate / 10.0;  // 将0-10的折扣值转换为0-1的折扣率
         }
 
-        double finalAmount = totalAmount * discountRate;  // 应付金额 = 原价 * 折扣率
+        // 计算促销优惠
+        appliedPromotion = null;  // 重置当前应用的促销
+        double promotionDiscount = 0.0;
+        try {
+            List<Promotion> promotions = PromotionDAO.findActive();
+            logger.info("购物车加载到 {} 个活跃促销", promotions.size());
+            
+            for (Promotion promotion : promotions) {
+                logger.info("购物车检查促销: {} (类型: {}, 门槛: {}, 优惠: {})", 
+                    promotion.name, promotion.type, promotion.threshold, promotion.discount);
+                
+                double discount = promotion.calculateDiscount(totalAmount);
+                logger.info("购物车促销 {} 的折扣金额: {}", promotion.name, discount);
+                
+                if (discount > promotionDiscount) {
+                    promotionDiscount = discount;
+                    appliedPromotion = promotion;  // 记录应用的促销
+                    logger.info("购物车选择促销: {} (优惠金额: {})", promotion.name, discount);
+                }
+            }
+            
+            if (promotionDiscount > 0) {
+                logger.info("购物车最终应用促销: {}，优惠金额: {}", 
+                    appliedPromotion != null ? appliedPromotion.name : "无", promotionDiscount);
+            }
+        } catch (Exception e) {
+            logger.error("购物车加载促销数据失败", e);
+        }
+
+        // 计算最终金额：先应用会员折扣，再减去促销优惠
+        double amountAfterMemberDiscount = totalAmount * discountRate;
+        double finalAmount = Math.max(0, amountAfterMemberDiscount - promotionDiscount);  // 应付金额不能为负数
+        
+        // 计算总优惠金额
         double discountAmount = totalAmount - finalAmount;  // 优惠金额 = 原价 - 应付金额
 
         totalQuantityLabel.setText(String.valueOf(totalQuantity));
         totalAmountLabel.setText(String.format("¥%.2f", totalAmount));
         memberDiscountLabel.setText(String.format("%.1f折", currentMember != null ? currentMember.discountRate : 10));
-        discountLabel.setText(String.format("-¥%.2f", discountAmount));
+        
+        // 显示优惠明细
+        if (promotionDiscount > 0 && appliedPromotion != null) {
+            discountLabel.setText(String.format("-¥%.2f (促销: %s - ¥%.2f)", 
+                discountAmount, appliedPromotion.name, promotionDiscount));
+        } else if (promotionDiscount > 0) {
+            discountLabel.setText(String.format("-¥%.2f (促销: ¥%.2f)", discountAmount, promotionDiscount));
+        } else {
+            discountLabel.setText(String.format("-¥%.2f", discountAmount));
+        }
+        
         finalAmountLabel.setText(String.format("¥%.2f", finalAmount));
         
         // 更新支付按钮状态
@@ -1214,12 +1270,31 @@ public class CartController {
 
     /**
      * 获取最终金额
-     * @return 最终金额
+     * @return 最终金额（包含会员折扣和促销优惠）
      */
     private double getFinalAmount() {
         double totalAmount = getTotalAmount();
+        
+        // 计算会员折扣
         double discountRate = currentMember != null ? currentMember.discountRate / 10.0 : 1.0;
-        return totalAmount * discountRate;
+        double amountAfterMemberDiscount = totalAmount * discountRate;
+        
+        // 计算促销优惠
+        double promotionDiscount = 0.0;
+        try {
+            List<Promotion> promotions = PromotionDAO.findActive();
+            for (Promotion promotion : promotions) {
+                double discount = promotion.calculateDiscount(totalAmount);
+                if (discount > promotionDiscount) {
+                    promotionDiscount = discount;
+                }
+            }
+        } catch (Exception e) {
+            logger.error("加载促销数据失败", e);
+        }
+        
+        // 返回最终金额：会员折扣后减去促销优惠
+        return Math.max(0, amountAfterMemberDiscount - promotionDiscount);
     }
 
     /**

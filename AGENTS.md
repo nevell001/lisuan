@@ -6,7 +6,7 @@
 
 **当前版本**: v2.4.3
 
-**最新更新**: 2026-03-05
+**最新更新**: 2026-03-07
 
 **项目类型**: JavaFX 桌面应用程序
 
@@ -16,8 +16,9 @@
 - **前端框架**: JavaFX 17.0.8
 - **编程语言**: Java 17
 - **构建工具**: Maven 3.8+
-- **数据库**: MySQL 8.0（唯一存储方式）
+- **数据库**: MySQL 8.0/8.3/8.4 LTS（唯一存储方式）
 - **连接池**: HikariCP 5.1.0
+- **数据库驱动**: MySQL Connector/J 8.4.0
 - **ORM**: 自定义 DAO 层
 - **日志**: SLF4J 2.0.9 + Logback 1.4.11
 - **测试**: JUnit 5.10.0 + TestFX 4.0.18 + H2 Database 2.2.224
@@ -114,7 +115,7 @@ export CASHER_DB_PASSWORD="YourPassword"
 
 **使用 Docker Compose（推荐）**:
 ```bash
-# 启动 MySQL 8.0
+# 启动 MySQL 8.4 LTS
 docker-compose up -d mysql
 
 # 查看日志
@@ -134,19 +135,28 @@ docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-se
 ```
 
 **数据库版本升级**（适用于从旧版本升级）：
+
+> **重要**：v2.4.3 版本添加了商品名称唯一性约束，升级前必须检查并处理重复的商品名称。
+
+**从 v2.4.2 升级到 v2.4.3**:
+
+1. **检查重复的商品名称**:
 ```bash
-# 从 v2.4.0 升级到 v2.4.1
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
-
-# 从 v2.3.1 升级到 v2.4.1
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
-
-# 从 v2.3.0 升级到 v2.4.1
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/04-v2.3.1-updates.sql
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
+docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/08-v2.4.3-product-name-unique.sql
 ```
+
+2. **处理重复名称**（如有）:
+   - 如果重复的商品是同一个商品的不同条形码版本，请合并为一个商品
+   - 如果确实是不同的商品，请重命名其中一个商品的名称
+
+3. **添加 UNIQUE 约束**（手动执行）:
+```sql
+ALTER TABLE products ADD CONSTRAINT uk_product_name UNIQUE (name);
+```
+
+**从 v2.4.0/v2.4.1/v2.4.2 升级到 v2.4.3**:
+
+如果从更早的版本升级，请参考 [docker/mysql-init/DATABASE_VERSIONS.md](docker/mysql-init/DATABASE_VERSIONS.md) 获取详细的升级指南。
 
 **诊断和修复历史数据**（可选）：
 ```bash
@@ -154,7 +164,11 @@ docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docke
 docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/07-fix-transaction-items.sql
 ```
 
-> **注意**：v2.4.3 版本添加了商品名称唯一性约束，详见数据库升级脚本，无需执行数据库升级脚本。详细升级指南请参考 [docker/mysql-init/DATABASE_VERSIONS.md](docker/mysql-init/DATABASE_VERSIONS.md)
+**MySQL 版本兼容性**:
+- ✅ 支持 MySQL 8.0 LTS
+- ✅ 支持 MySQL 8.3 LTS
+- ✅ 支持 MySQL 8.4 LTS
+- 详细兼容性说明请参考 [docker/mysql-init/DATABASE_VERSIONS.md](docker/mysql-init/DATABASE_VERSIONS.md)
 
 **使用本地 MySQL**:
 ```bash
@@ -189,7 +203,7 @@ hello/
 │   ├── constant/                           # 常量定义
 │   │   ├── FXConstants.java               # JavaFX 常量
 │   │   └── SpacingConstants.java          # 间距常量
-│   ├── controller/                        # 控制器层 (30 个)
+│   ├── controller/                        # 控制器层 (30 个控制器)
 │   │   ├── CartController.java            # 购物车控制器
 │   │   ├── CheckoutController.java        # 结账控制器
 │   │   ├── InventoryController.java       # 库存管理控制器
@@ -220,7 +234,7 @@ hello/
 │   │   ├── ReturnApprovalController.java  # 退货审批控制器 (v2.4.0 新增)
 │   │   ├── ReturnReportController.java    # 退货报表控制器 (v2.4.0 新增)
 │   │   └── CreateReturnOrderDialogController.java # 创建退货订单对话框控制器 (v2.4.0 新增)
-│   ├── dao/                               # 数据访问层 (22 个)
+│   ├── dao/                               # 数据访问层 (22 个 DAO 类)
 │   │   ├── UserDAO.java                   # 用户 DAO
 │   │   ├── ProductDAO.java                # 商品 DAO
 │   │   ├── MemberDAO.java                 # 会员 DAO
@@ -243,7 +257,7 @@ hello/
 │   │   ├── InventoryCheckItemDAO.java     # 库存盘点明细 DAO
 │   │   ├── ReturnOrderDAO.java            # 退货订单 DAO (v2.4.0 新增)
 │   │   └── ReturnOrderItemDAO.java        # 退货订单明细 DAO (v2.4.0 新增)
-│   ├── model/                             # 实体类 (21 个)
+│   ├── model/                             # 实体类 (21 个模型类)
 │   │   ├── Product.java                   # 商品实体类
 │   │   ├── Member.java                    # 会员实体类
 │   │   ├── User.java                      # 用户实体类
@@ -301,7 +315,7 @@ hello/
 │   │   ├── MemberService.java             # 会员服务 (v2.3.1 新增)
 │   │   ├── TransactionService.java        # 交易服务 (v2.3.1 新增)
 │   │   └── ReturnService.java             # 退货服务 (v2.4.0 新增)
-│   └── util/                              # 工具类 (13 个)
+│   └── util/                              # 工具类 (13 个工具类)
 │       ├── DatabaseManager.java           # 数据库管理器
 │       ├── PasswordUtil.java              # 密码工具
 │       ├── FXUtils.java                   # JavaFX 工具类
@@ -324,7 +338,7 @@ hello/
 │   │   └── UserDAOTest.java               # 用户 DAO 测试
 │   └── service/                           # 服务层测试 (v2.3.1 新增)
 ├── src/main/resources/
-│   ├── com/cashier/view/                  # FXML 视图文件 (30 个)
+│   ├── com/cashier/view/                  # FXML 视图文件 (30 个视图)
 │   │   ├── CartView.fxml
 │   │   ├── CheckoutView.fxml
 │   │   ├── InventoryCheckView.fxml
@@ -377,10 +391,8 @@ hello/
 │   ├── mysql-init/                        # 数据库初始化脚本
 │   │   ├── 00-grant-root-permissions.sql  # Root 权限配置
 │   │   ├── 00-init-complete.sql           # 完整初始化脚本（整合所有功能，v2.4.3）
-│   │   ├── 04-v2.3.1-updates.sql          # v2.3.1 独立升级脚本
-│   │   ├── 05-v2.4.0-updates.sql          # v2.4.0 独立升级脚本（退货管理、数据导出）
-│   │   ├── 06-v2.4.1-updates.sql          # v2.4.1 独立升级脚本（交易明细优化）
 │   │   ├── 07-fix-transaction-items.sql   # 修复交易明细重复记录（诊断脚本）
+│   │   ├── 08-v2.4.3-product-name-unique.sql  # 商品名称唯一性约束升级脚本（v2.4.3 新增）
 │   │   └── DATABASE_VERSIONS.md           # 数据库版本管理文档
 │   └── mysql-backup/                      # 数据库备份目录
 ├── docs/                                  # 文档目录
@@ -436,6 +448,10 @@ hello/
 - 单位管理
 - 商品编号自动生成（格式：P + 年月日 + 4位序号）
 - 条形码重复支持（允许多个商品使用相同条形码）
+- **商品名称唯一性约束**（v2.4.3 新增）
+  - 数据库层面添加商品名称 UNIQUE 约束
+  - 应用层面添加商品添加/编辑时的名称唯一性检查
+  - 提供友好错误提示：'商品名称已存在，请使用其他名称'
 
 ### 3. 会员管理
 - 会员注册（自动生成会员编号，格式：M000001）
@@ -708,12 +724,25 @@ hello/
 - **添加索引**: idx_product_id 优化查询性能
 - **新增数据库版本管理文档**: DATABASE_VERSIONS.md
 
-### 数据库变更 (v2.4.2)
+### 数据库变更 (v2.4.3)
 
-- **无数据库结构变更**
-- 修复 SQL 脚本导入时的中文编码问题
-- 优化字符集配置和声明
-- 确保中文字符正确导入和显示
+- **products 表**: 添加商品名称 UNIQUE 约束
+  - 应用层面添加商品添加/编辑时的名称唯一性检查
+  - 修复 HashMap 使用商品名称作为 key 导致同名商品被覆盖的问题
+  - 改为使用商品 ID 作为 key，确保所有商品都能正确显示
+- **MySQL 8.4 LTS 兼容性优化**
+  - 支持 MySQL 8.0、8.3、8.4 LTS 版本
+  - 更新数据库连接器到 MySQL Connector/J 8.4.0
+  - 提供详细的版本升级指南
+- **新增数据库升级脚本**: `08-v2.4.3-product-name-unique.sql`
+- **商品选择对话框优化**
+  - 在采购订单和库存盘点的商品选择对话框中添加条形码列
+  - 解决同名商品无法区分的问题
+
+详细变更说明请参考：
+- [docs/DATABASE_CHANGES_v2.3.1.md](docs/DATABASE_CHANGES_v2.3.1.md) - v2.3.1 数据库变更
+- [docs/PDF_TIME_FORMAT_OPTIMIZATION.md](docs/PDF_TIME_FORMAT_OPTIMIZATION.md) - PDF 导出优化
+- [docker/mysql-init/DATABASE_VERSIONS.md](docker/mysql-init/DATABASE_VERSIONS.md) - 完整版本管理（包含 v2.4.3 升级指南）
 
 详细变更说明请参考：
 - [docs/DATABASE_CHANGES_v2.3.1.md](docs/DATABASE_CHANGES_v2.3.1.md) - v2.3.1 数据库变更
@@ -1321,6 +1350,37 @@ kill -9 <PID>
 
 ## 版本历史
 
+### v2.4.3 (2026-03-07)
+- ✨ 商品名称唯一性约束
+  - 数据库层面添加商品名称 UNIQUE 约束
+  - 应用层面添加商品添加/编辑时的名称唯一性检查
+  - 提供友好错误提示：'商品名称已存在，请使用其他名称'
+- 🐛 修复商品管理界面数据丢失问题
+  - 修复 HashMap 使用商品名称作为 key 导致同名商品被覆盖的问题
+  - 改为使用商品 ID 作为 key，确保所有商品都能正确显示
+- 🎨 商品选择对话框优化
+  - 在采购订单和库存盘点的商品选择对话框中添加条形码列
+  - 解决同名商品无法区分的问题
+- 🐛 修复库存盘点多选功能
+  - 统一库存盘点和采购订单的复选框实现
+  - 修复选择多个商品时之前选择被取消的问题
+- 🗄️ MySQL 8.4 LTS 兼容性优化
+  - 更新数据库连接器到 MySQL Connector/J 8.4.0
+  - 支持 MySQL 8.0、8.3、8.4 LTS 版本
+  - 提供详细的版本升级指南
+- 📝 数据库版本管理
+  - 新增 v2.4.3 数据库升级脚本
+  - 更新 DATABASE_VERSIONS.md 文档
+  - 提供详细的升级指南和兼容性说明
+- 🎨 界面优化
+  - 优化所有 FXML 文件的导入语句
+  - 优化主题样式文件（浅色、深色、IntelliJ）
+  - 改进 UI 控件的焦点管理
+- 📝 文档更新
+  - 更新所有项目文件版本号到 v2.4.3
+  - 更新文档和代码中的版本信息
+  - 补充 v2.4.3 功能说明和使用指南
+
 ### v2.4.2 (2026-03-05)
 - 🐛 修复 SQL 脚本导入时的中文编码问题
   - 修复 docker-compose.yml 中的字符集配置
@@ -1505,6 +1565,8 @@ kill -9 <PID>
 - [x] 性能优化（v2.4.0 已实现）
 - [x] 通知管理功能（v2.4.1 已实现）
 - [x] 图形化安装程序（v2.4.1 已实现）
+- [x] 商品名称唯一性约束（v2.4.3 已实现）
+- [x] MySQL 8.4 LTS 兼容性（v2.4.3 已实现）
 - [ ] 支持更多打印机型号
 - [ ] 支持蓝牙扫描枪
 - [ ] 支持云打印服务

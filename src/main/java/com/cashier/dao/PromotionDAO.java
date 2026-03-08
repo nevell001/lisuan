@@ -17,7 +17,7 @@ public class PromotionDAO {
      */
     public static List<Promotion> findAll() throws SQLException {
         List<Promotion> promotions = new ArrayList<>();
-        String sql = "SELECT id, name, type, threshold, discount, description, enabled, " +
+        String sql = "SELECT id, promotion_code, name, type, threshold, discount, description, enabled, " +
                      "start_date, end_date, usage_count, max_usage FROM promotions ORDER BY id DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -35,7 +35,7 @@ public class PromotionDAO {
      * 根据ID查找促销
      */
     public static Promotion findById(int id) throws SQLException {
-        String sql = "SELECT id, name, type, threshold, discount, description, enabled, " +
+        String sql = "SELECT id, promotion_code, name, type, threshold, discount, description, enabled, " +
                      "start_date, end_date, usage_count, max_usage FROM promotions WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
@@ -56,7 +56,7 @@ public class PromotionDAO {
      */
     public static List<Promotion> findEnabled() throws SQLException {
         List<Promotion> promotions = new ArrayList<>();
-        String sql = "SELECT id, name, type, threshold, discount, description, enabled, " +
+        String sql = "SELECT id, promotion_code, name, type, threshold, discount, description, enabled, " +
                      "start_date, end_date, usage_count, max_usage FROM promotions " +
                      "WHERE enabled = true ORDER BY id DESC";
 
@@ -76,14 +76,18 @@ public class PromotionDAO {
      */
     public static List<Promotion> findActive() throws SQLException {
         List<Promotion> promotions = new ArrayList<>();
-        String sql = "SELECT id, name, type, threshold, discount, description, enabled, " +
+        long now = System.currentTimeMillis();
+        String sql = "SELECT id, promotion_code, name, type, threshold, discount, description, enabled, " +
                      "start_date, end_date, usage_count, max_usage FROM promotions " +
-                     "WHERE enabled = true AND start_date <= NOW() AND end_date >= NOW() " +
+                     "WHERE enabled = true AND start_date <= ? AND end_date >= ? " +
                      "ORDER BY id DESC";
 
         try (Connection conn = DatabaseManager.getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
+            pstmt.setLong(1, now);
+            pstmt.setLong(2, now);
+            ResultSet rs = pstmt.executeQuery();
 
             while (rs.next()) {
                 promotions.add(mapRowToPromotion(rs));
@@ -96,23 +100,24 @@ public class PromotionDAO {
      * 插入新促销
      */
     public static boolean insert(Promotion promotion) throws SQLException {
-        String sql = "INSERT INTO promotions (name, type, threshold, discount, description, " +
+        String sql = "INSERT INTO promotions (promotion_code, name, type, threshold, discount, description, " +
                      "enabled, start_date, end_date, usage_count, max_usage) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
 
-            pstmt.setString(1, promotion.name);
-            pstmt.setString(2, promotion.type);
-            pstmt.setDouble(3, promotion.threshold);
-            pstmt.setDouble(4, promotion.discount);
-            pstmt.setString(5, promotion.description);
-            pstmt.setBoolean(6, promotion.enabled);
-            pstmt.setTimestamp(7, new Timestamp(promotion.startDate.getTime()));
-            pstmt.setTimestamp(8, new Timestamp(promotion.endDate.getTime()));
-            pstmt.setInt(9, promotion.usageCount);
-            pstmt.setInt(10, promotion.maxUsage);
+            pstmt.setString(1, promotion.promotionCode);
+            pstmt.setString(2, promotion.name);
+            pstmt.setString(3, promotion.type);
+            pstmt.setDouble(4, promotion.threshold);
+            pstmt.setDouble(5, promotion.discount);
+            pstmt.setString(6, promotion.description);
+            pstmt.setBoolean(7, promotion.enabled);
+            pstmt.setLong(8, promotion.startDate.getTime());
+            pstmt.setLong(9, promotion.endDate.getTime());
+            pstmt.setInt(10, promotion.usageCount);
+            pstmt.setInt(11, promotion.maxUsage);
 
             int affectedRows = pstmt.executeUpdate();
             if (affectedRows > 0) {
@@ -130,24 +135,25 @@ public class PromotionDAO {
      * 更新促销
      */
     public static boolean update(Promotion promotion) throws SQLException {
-        String sql = "UPDATE promotions SET name = ?, type = ?, threshold = ?, discount = ?, " +
+        String sql = "UPDATE promotions SET promotion_code = ?, name = ?, type = ?, threshold = ?, discount = ?, " +
                      "description = ?, enabled = ?, start_date = ?, end_date = ?, " +
                      "usage_count = ?, max_usage = ? WHERE id = ?";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setString(1, promotion.name);
-            pstmt.setString(2, promotion.type);
-            pstmt.setDouble(3, promotion.threshold);
-            pstmt.setDouble(4, promotion.discount);
-            pstmt.setString(5, promotion.description);
-            pstmt.setBoolean(6, promotion.enabled);
-            pstmt.setTimestamp(7, new Timestamp(promotion.startDate.getTime()));
-            pstmt.setTimestamp(8, new Timestamp(promotion.endDate.getTime()));
-            pstmt.setInt(9, promotion.usageCount);
-            pstmt.setInt(10, promotion.maxUsage);
-            pstmt.setInt(11, promotion.id);
+            pstmt.setString(1, promotion.promotionCode);
+            pstmt.setString(2, promotion.name);
+            pstmt.setString(3, promotion.type);
+            pstmt.setDouble(4, promotion.threshold);
+            pstmt.setDouble(5, promotion.discount);
+            pstmt.setString(6, promotion.description);
+            pstmt.setBoolean(7, promotion.enabled);
+            pstmt.setLong(8, promotion.startDate.getTime());
+            pstmt.setLong(9, promotion.endDate.getTime());
+            pstmt.setInt(10, promotion.usageCount);
+            pstmt.setInt(11, promotion.maxUsage);
+            pstmt.setInt(12, promotion.id);
 
             return pstmt.executeUpdate() > 0;
         }
@@ -185,24 +191,25 @@ public class PromotionDAO {
      * 批量插入促销
      */
     public static void batchInsert(List<Promotion> promotions) throws SQLException {
-        String sql = "INSERT INTO promotions (name, type, threshold, discount, description, " +
+        String sql = "INSERT INTO promotions (promotion_code, name, type, threshold, discount, description, " +
                      "enabled, start_date, end_date, usage_count, max_usage) " +
-                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             for (Promotion promotion : promotions) {
-                pstmt.setString(1, promotion.name);
-                pstmt.setString(2, promotion.type);
-                pstmt.setDouble(3, promotion.threshold);
-                pstmt.setDouble(4, promotion.discount);
-                pstmt.setString(5, promotion.description);
-                pstmt.setBoolean(6, promotion.enabled);
-                pstmt.setTimestamp(7, new Timestamp(promotion.startDate.getTime()));
-                pstmt.setTimestamp(8, new Timestamp(promotion.endDate.getTime()));
-                pstmt.setInt(9, promotion.usageCount);
-                pstmt.setInt(10, promotion.maxUsage);
+                pstmt.setString(1, promotion.promotionCode);
+                pstmt.setString(2, promotion.name);
+                pstmt.setString(3, promotion.type);
+                pstmt.setDouble(4, promotion.threshold);
+                pstmt.setDouble(5, promotion.discount);
+                pstmt.setString(6, promotion.description);
+                pstmt.setBoolean(7, promotion.enabled);
+                pstmt.setLong(8, promotion.startDate.getTime());
+                pstmt.setLong(9, promotion.endDate.getTime());
+                pstmt.setInt(10, promotion.usageCount);
+                pstmt.setInt(11, promotion.maxUsage);
                 pstmt.addBatch();
             }
 
@@ -216,14 +223,15 @@ public class PromotionDAO {
     private static Promotion mapRowToPromotion(ResultSet rs) throws SQLException {
         Promotion promotion = new Promotion(
             rs.getInt("id"),
+            rs.getString("promotion_code"),
             rs.getString("name"),
             rs.getString("type"),
             rs.getDouble("threshold"),
             rs.getDouble("discount"),
             rs.getString("description"),
             rs.getBoolean("enabled"),
-            rs.getTimestamp("start_date"),
-            rs.getTimestamp("end_date"),
+            new java.util.Date(rs.getLong("start_date")),
+            new java.util.Date(rs.getLong("end_date")),
             rs.getInt("usage_count"),
             rs.getInt("max_usage")
         );

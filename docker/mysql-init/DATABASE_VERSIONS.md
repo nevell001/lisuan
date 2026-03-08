@@ -6,6 +6,7 @@
 |------|----------|------|----------|------|
 | v2.4.3 | 00-init-complete.sql | 商品名称唯一性约束 + MySQL 8.4 LTS 兼容性 | 2026-03-07 | ✅ 已发布 |
 | v2.4.3 | 08-v2.4.3-product-name-unique.sql | 商品名称唯一性约束升级脚本 | 2026-03-07 | ✅ 已发布 |
+| v2.4.3 | 09-v2.4.3-fix-promotions.sql | 促销表修复（添加 promotion_code 字段） | 2026-03-08 | ✅ 已发布 |
 | v2.4.2 | 00-init-complete.sql | 完整初始化脚本（整合所有功能） | 2026-03-05 | ✅ 已发布 |
 | v2.4.1 | 00-init-complete.sql | 完整初始化脚本（整合所有功能） | 2026-03-01 | ✅ 已发布 |
 | v2.4.1 | 06-v2.4.1-updates.sql | 添加商品ID和编号字段 | 2026-03-01 | ✅ 已发布 |
@@ -110,7 +111,34 @@ docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docke
 
 ---
 
-### 场景三：诊断和修复历史数据
+### 场景三：诊断和修复已知问题
+
+**修复促销表结构（v2.4.3 重要）**
+
+> **重要**：v2.4.3 版本修复了促销管理功能无法保存的问题，必须执行此脚本才能正常使用促销管理功能。
+
+```bash
+docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/09-v2.4.3-fix-promotions.sql
+```
+
+**问题说明**：
+- 数据库表缺少 `promotion_code` 字段
+- 导致促销编号无法保存到数据库
+- 促销管理功能无法正常保存新促销
+
+**修复内容**：
+- 添加 `promotion_code VARCHAR(50) UNIQUE` 字段
+- 为现有促销生成编号（格式：P + 6位ID）
+- 修复日期字段类型匹配问题
+
+**检查修复结果**：
+```sql
+DESC promotions;
+```
+
+应该能看到 `promotion_code` 字段。
+
+**检查交易明细重复记录**
 
 **检查交易明细重复记录**
 
@@ -242,13 +270,15 @@ docker exec -i cashier-mysql mysql -uroot -pRootPassword123! cashier_system < ba
 
 ```
 docker/mysql-init/
-├── 00-grant-root-permissions.sql  # Root 权限配置（Docker 初始化用）
-├── 00-init-complete.sql           # 完整初始化脚本（推荐用于全新安装）
-├── 04-v2.3.1-updates.sql          # v2.3.1 升级脚本
-├── 05-v2.4.0-updates.sql          # v2.4.0 升级脚本
-├── 06-v2.4.1-updates.sql          # v2.4.1 升级脚本
-├── 07-fix-transaction-items.sql   # 诊断修复脚本
-└── DATABASE_VERSIONS.md            # 本文档
+├── 00-grant-root-permissions.sql          # Root 权限配置（Docker 初始化用）
+├── 00-init-complete.sql                   # 完整初始化脚本（推荐用于全新安装）
+├── 04-v2.3.1-updates.sql                  # v2.3.1 升级脚本
+├── 05-v2.4.0-updates.sql                  # v2.4.0 升级脚本
+├── 06-v2.4.1-updates.sql                  # v2.4.1 升级脚本
+├── 07-fix-transaction-items.sql           # 诊断修复脚本
+├── 08-v2.4.3-product-name-unique.sql      # 商品名称唯一性约束升级脚本
+├── 09-v2.4.3-fix-promotions.sql           # 促销表修复脚本（v2.4.3 重要）
+└── DATABASE_VERSIONS.md                    # 本文档
 ```
 
 **已删除的文件**（已被 `00-init-complete.sql` 整合）：

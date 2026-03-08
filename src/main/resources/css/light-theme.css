@@ -179,6 +179,7 @@
 }
 
 /* ========== 所有业务表格统一选中样式 ========== */
+.table-view.inventory-table .table-row-cell:selected,
 .table-view.supplier-table .table-row-cell:selected,
 .table-view.purchase-order-table .table-row-cell:selected,
 .table-view.purchase-inbound-table .table-row-cell:selected,
@@ -194,6 +195,7 @@
     -fx-font-weight: bold;
 }
 
+.table-view.inventory-table .table-row-cell:selected .table-cell,
 .table-view.supplier-table .table-row-cell:selected .table-cell,
 .table-view.purchase-order-table .table-row-cell:selected .table-cell,
 .table-view.purchase-inbound-table .table-row-cell:selected .table-cell,
@@ -206,6 +208,31 @@
 .table-view.member-table .table-row-cell:selected .table-cell {
     -fx-text-fill: #3F51B5;
     -fx-font-weight: bold;
+}
+
+/* 商品管理表格特殊样式 - 更明显的选中效果 */
+.table-view.inventory-table .table-row-cell:selected {
+    -fx-background-color: linear-gradient(to right, rgba(63, 81, 181, 0.25), rgba(63, 81, 181, 0.35));
+    -fx-text-fill: #3F51B5;
+    -fx-font-weight: bold;
+    -fx-font-size: 15px;
+    -fx-border-color: #3F51B5;
+    -fx-border-width: 0 0 0 4px;
+    -fx-effect: dropshadow(three-pass-box, rgba(63, 81, 181, 0.2), 3, 0, 0, 1);
+}
+
+.table-view.inventory-table .table-row-cell:selected .table-cell {
+    -fx-text-fill: #3F51B5;
+    -fx-font-weight: bold;
+    -fx-font-size: 15px;
+}
+
+.table-view.inventory-table .table-row-cell:hover {
+    -fx-background-color: rgba(63, 81, 181, 0.12);
+}
+
+.table-view.inventory-table .table-row-cell:selected:hover {
+    -fx-background-color: linear-gradient(to right, rgba(63, 81, 181, 0.3), rgba(63, 81, 181, 0.4));
 }
 
 .table-view.supplier-table .table-row-cell:hover,

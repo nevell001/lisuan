@@ -224,6 +224,7 @@ public class PromotionController {
 
         if (promotion != null) {
             promotionCodeField.setText(promotion.promotionCode);
+            promotionCodeField.setDisable(true);  // 编辑时禁用促销编号
             nameField.setText(promotion.name);
             typeComboBox.getSelectionModel().select(promotion.type);
             thresholdField.setText(String.valueOf(promotion.threshold));
@@ -232,6 +233,10 @@ public class PromotionController {
             startDatePicker.setValue(promotion.startDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
             endDatePicker.setValue(promotion.endDate.toInstant().atZone(ZoneId.systemDefault()).toLocalDate());
             maxUsageField.setText(promotion.maxUsage == -1 ? "" : String.valueOf(promotion.maxUsage));
+        } else {
+            // 新建促销时自动生成编号
+            promotionCodeField.setText(generatePromotionCode());
+            promotionCodeField.setDisable(true);  // 禁用促销编号字段
         }
 
         grid.add(new Label("促销编号:"), 0, 0);
@@ -260,37 +265,115 @@ public class PromotionController {
 
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == okButtonType) {
-                Promotion newPromotion = promotion != null ? promotion : new Promotion();
-                newPromotion.promotionCode = promotionCodeField.getText().trim();
-                newPromotion.name = nameField.getText().trim();
-                newPromotion.type = typeComboBox.getSelectionModel().getSelectedItem();
-                newPromotion.threshold = Double.parseDouble(thresholdField.getText().trim());
-                newPromotion.discount = Double.parseDouble(discountField.getText().trim());
-                newPromotion.description = descriptionArea.getText().trim();
+                try {
+                    // 验证必填字段
+                    String code = promotionCodeField.getText().trim();
+                    String name = nameField.getText().trim();
+                    String type = typeComboBox.getSelectionModel().getSelectedItem();
+                    String thresholdText = thresholdField.getText().trim();
+                    String discountText = discountField.getText().trim();
 
-                if (startDatePicker.getValue() != null) {
+                    if (name.isEmpty()) {
+                        throw new IllegalArgumentException("促销名称不能为空");
+                    }
+                    if (type == null || type.isEmpty()) {
+                        throw new IllegalArgumentException("请选择促销类型");
+                    }
+                    if (thresholdText.isEmpty()) {
+                        throw new IllegalArgumentException("门槛金额不能为空");
+                    }
+                    if (discountText.isEmpty()) {
+                        throw new IllegalArgumentException("折扣值不能为空");
+                    }
+
+                    // 验证日期
+                    if (startDatePicker.getValue() == null) {
+                        throw new IllegalArgumentException("请选择开始日期");
+                    }
+                    if (endDatePicker.getValue() == null) {
+                        throw new IllegalArgumentException("请选择结束日期");
+                    }
+                    if (endDatePicker.getValue().isBefore(startDatePicker.getValue())) {
+                        throw new IllegalArgumentException("结束日期不能早于开始日期");
+                    }
+
+                    // 解析数字字段
+                    double threshold = Double.parseDouble(thresholdText);
+                    double discount = Double.parseDouble(discountText);
+
+                    if (threshold < 0) {
+                        throw new IllegalArgumentException("门槛金额不能为负数");
+                    }
+                    if (discount < 0) {
+                        throw new IllegalArgumentException("折扣值不能为负数");
+                    }
+
+                    // 解析最大使用次数
+                    String maxUsageText = maxUsageField.getText().trim();
+                    int maxUsage = maxUsageText.isEmpty() ? -1 : Integer.parseInt(maxUsageText);
+
+                    if (maxUsage != -1 && maxUsage < 0) {
+                        throw new IllegalArgumentException("最大使用次数不能为负数");
+                    }
+
+                    // 创建或更新促销对象
+                    Promotion newPromotion = promotion != null ? promotion : new Promotion();
+                    newPromotion.promotionCode = code.isEmpty() ? generatePromotionCode() : code;
+                    newPromotion.name = name;
+                    newPromotion.type = type;
+                    newPromotion.threshold = threshold;
+                    newPromotion.discount = discount;
+                    newPromotion.description = descriptionArea.getText().trim();
                     newPromotion.startDate = java.sql.Date.valueOf(startDatePicker.getValue());
-                }
-                if (endDatePicker.getValue() != null) {
                     newPromotion.endDate = java.sql.Date.valueOf(endDatePicker.getValue());
+                    newPromotion.maxUsage = maxUsage;
+
+                    return newPromotion;
+                } catch (NumberFormatException e) {
+                    logger.error("促销数据格式错误", e);
+                    showAlert("输入错误", "请输入有效的数字");
+                } catch (IllegalArgumentException e) {
+                    logger.error("促销数据验证失败", e);
+                    showAlert("验证错误", e.getMessage());
+                } catch (Exception e) {
+                    logger.error("保存促销失败", e);
+                    showAlert("保存失败", "保存促销时发生错误: " + e.getMessage());
                 }
-
-                String maxUsageText = maxUsageField.getText().trim();
-                newPromotion.maxUsage = maxUsageText.isEmpty() ? -1 : Integer.parseInt(maxUsageText);
-
-                return newPromotion;
             }
             return null;
         });
 
         dialog.showAndWait().ifPresent(result -> {
-            if (promotion == null) {
-                allPromotions.add(result);
+            try {
+                if (promotion == null) {
+                    allPromotions.add(result);
+                }
+                DataService.savePromotions(allPromotions);
+                loadPromotions();
+                updateStatus(promotion == null ? "促销添加成功" : "促销更新成功");
+            } catch (Exception e) {
+                logger.error("保存促销失败", e);
+                showAlert("保存失败", "保存促销时发生错误: " + e.getMessage());
             }
-            DataService.savePromotions(allPromotions);
-            loadPromotions();
-            updateStatus(promotion == null ? "促销添加成功" : "促销更新成功");
         });
+    }
+
+    /**
+     * 生成促销编号
+     */
+    private String generatePromotionCode() {
+        return "P" + System.currentTimeMillis();
+    }
+
+    /**
+     * 显示警告对话框
+     */
+    private void showAlert(String title, String message) {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle(title);
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     /**
