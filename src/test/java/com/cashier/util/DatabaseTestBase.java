@@ -17,6 +17,13 @@ public abstract class DatabaseTestBase {
     private static boolean initialized = false;
 
     /**
+     * 检查测试数据库是否已初始化
+     */
+    protected static boolean isInitialized() {
+        return initialized && testDataSource != null && !testDataSource.isClosed();
+    }
+
+    /**
      * 初始化测试数据库
      */
     protected static void initTestDatabase() throws SQLException {
@@ -123,6 +130,60 @@ public abstract class DatabaseTestBase {
                 min_stock INT DEFAULT 0,
                 cost DECIMAL(10,2),
                 version INT DEFAULT 0
+            )
+            """);
+
+        // 创建 members 表
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS members (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                member_code VARCHAR(50) UNIQUE,
+                phone VARCHAR(20) UNIQUE NOT NULL,
+                name VARCHAR(100) NOT NULL,
+                level VARCHAR(20) DEFAULT '普通',
+                points DECIMAL(10,2) DEFAULT 0.0,
+                balance DECIMAL(10,2) DEFAULT 0.0,
+                discount DECIMAL(3,1) DEFAULT 10.0,
+                birthday DATE,
+                address VARCHAR(200),
+                remark TEXT,
+                create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """);
+
+        // 创建 transactions 表
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS transactions (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                transaction_id VARCHAR(50) UNIQUE NOT NULL,
+                timestamp VARCHAR(50) NOT NULL,
+                total_amount DECIMAL(10,2) NOT NULL,
+                final_amount DECIMAL(10,2) NOT NULL,
+                discount_amount DECIMAL(10,2) DEFAULT 0.0,
+                payment_method VARCHAR(20) NOT NULL,
+                cash_received DECIMAL(10,2) DEFAULT 0.0,
+                cash_change DECIMAL(10,2) DEFAULT 0.0,
+                member_phone VARCHAR(20),
+                operator_name VARCHAR(50),
+                remark TEXT,
+                create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """);
+
+        // 创建 transaction_items 表
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS transaction_items (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                transaction_id VARCHAR(50) NOT NULL,
+                product_name VARCHAR(100) NOT NULL,
+                price DECIMAL(10,2) NOT NULL,
+                quantity INT NOT NULL,
+                subtotal DECIMAL(10,2) NOT NULL,
+                category VARCHAR(50),
+                product_id INT,
+                product_code VARCHAR(50),
+                barcode VARCHAR(50)
             )
             """);
 
@@ -274,6 +335,9 @@ public abstract class DatabaseTestBase {
         try (Connection conn = testDataSource.getConnection()) {
             Statement stmt = conn.createStatement();
             // 按依赖关系倒序删除
+            stmt.execute("DELETE FROM transaction_items");
+            stmt.execute("DELETE FROM transactions");
+            stmt.execute("DELETE FROM members");
             stmt.execute("DELETE FROM inventory_check_items");
             stmt.execute("DELETE FROM inventory_check");
             stmt.execute("DELETE FROM purchase_inbound_items");

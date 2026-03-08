@@ -203,13 +203,13 @@ public class CashierSystemFXApplication extends Application {
             alert.setTitle("确认退出");
             alert.setHeaderText(null);
             alert.setContentText("当前有活跃班次未交班！\n\n确定要退出系统吗？\n\n提示：建议先交班后再退出。");
-
+    
             ButtonType yesButton = new ButtonType("先交班", ButtonBar.ButtonData.YES);
             ButtonType noButton = new ButtonType("直接退出", ButtonBar.ButtonData.NO);
             ButtonType cancelButton = new ButtonType("取消", ButtonBar.ButtonData.CANCEL_CLOSE);
-
+    
             alert.getButtonTypes().setAll(yesButton, noButton, cancelButton);
-
+    
             alert.showAndWait().ifPresent(buttonType -> {
                 if (buttonType == yesButton) {
                     // 用户选择先交班，这里不执行任何操作
@@ -217,6 +217,7 @@ public class CashierSystemFXApplication extends Application {
                     logger.info("用户选择先交班");
                 } else if (buttonType == noButton) {
                     // 用户选择直接退出
+                    shutdown();
                     System.exit(0);
                 }
                 // 如果选择取消，不做任何操作
@@ -224,12 +225,32 @@ public class CashierSystemFXApplication extends Application {
         } else {
             // 没有活跃班次，直接退出
             if (FXUtils.showConfirmAlert("确认退出", "确定要退出系统吗？")) {
+                shutdown();
                 System.exit(0);
             }
         }
     }
-
+    
     /**
+     * 关闭系统服务
+     */
+    private void shutdown() {
+        try {
+            logger.info("正在关闭系统服务...");
+            
+            // 停止库存预警服务
+            try {
+                com.cashier.service.InventoryAlertService.getInstance().stop();
+                logger.info("库存预警服务已停止");
+            } catch (Exception e) {
+                logger.error("停止库存预警服务时发生错误", e);
+            }
+            
+            logger.info("系统服务已关闭");
+        } catch (Exception e) {
+            logger.error("关闭系统服务时发生错误", e);
+        }
+    }    /**
      * 切换到主界面（登录成功后）
      * 根据用户角色选择进入主界面或POS模式
      * @param user 当前登录用户
@@ -291,29 +312,36 @@ public class CashierSystemFXApplication extends Application {
             FXMLLoader loader = new FXMLLoader();
             loader.setLocation(getClass().getResource("/com/cashier/view/MainView.fxml"));
             Parent root = loader.load();
-
+    
             // 获取控制器并设置应用程序引用
             MainController controller = loader.getController();
             controller.setApplication(this);
             controller.setCurrentUser(user);
-
+    
             // 创建场景
             Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
-
+    
             // 应用主题
             String currentTheme = DataService.loadThemePreference();
             applyTheme(scene, currentTheme);
-
+    
             // 设置场景
             primaryStage.setScene(scene);
-
+    
             // 更新窗口标题
             primaryStage.setTitle(APP_TITLE + " - " + user.name + " (" + user.getRoleDisplayName() + ")");
-
+    
             logger.info("用户 {} ({}) 进入完整主界面", user.name, user.getRoleDisplayName());
-
-        } catch (IOException e) {
-            logger.error("加载主界面失败", e);
+    
+            // 启动库存预警服务
+            try {
+                com.cashier.service.InventoryAlertService.getInstance().start();
+                logger.info("库存预警服务已启动");
+            } catch (Exception e) {
+                logger.error("启动库存预警服务失败", e);
+            }
+    
+        } catch (IOException e) {            logger.error("加载主界面失败", e);
         }
     }
 

@@ -31,8 +31,13 @@ class TransactionServiceTest extends DatabaseTestBase {
 
     @BeforeEach
     void setUp() throws Exception {
+        // 确保使用测试数据库
+        if (!DatabaseTestBase.isInitialized()) {
+            DatabaseTestBase.initTestDatabase();
+        }
+        
         // 清空数据库
-        cleanDatabase();
+        clearTestData();
 
         // 创建测试会员
         testMember = new Member();
@@ -241,16 +246,4 @@ class TransactionServiceTest extends DatabaseTestBase {
         return ProductDAO.findByName(name);
     }
 
-    /**
-     * 辅助方法：清空数据库
-     */
-    private void cleanDatabase() throws Exception {
-        try (var conn = com.cashier.util.DatabaseManager.getConnection();
-             var stmt = conn.createStatement()) {
-            stmt.execute("DELETE FROM transaction_items");
-            stmt.execute("DELETE FROM transactions");
-            stmt.execute("DELETE FROM members");
-            stmt.execute("DELETE FROM products");
-        }
     }
-}

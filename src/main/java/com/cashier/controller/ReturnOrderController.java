@@ -4,6 +4,7 @@ import com.cashier.dao.*;
 import com.cashier.model.*;
 import com.cashier.service.ReturnService;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.ReceiptPrinter;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -368,6 +369,41 @@ public class ReturnOrderController {
         // 跳转到交易详情页面
         // TODO: 实现跳转逻辑
         showAlert(Alert.AlertType.INFORMATION, "提示", "查看原交易: " + selectedReturnOrder.originalTransactionId);
+    }
+
+    @FXML
+    private void handlePrintReturnReceipt() {
+        if (selectedReturnOrder == null) {
+            showAlert(Alert.AlertType.WARNING, "提示", "请先选择退货订单");
+            return;
+        }
+
+        // 获取退货商品明细
+        List<ReturnOrderItem> returnItems = ReturnOrderItemDAO.findByReturnOrderId(selectedReturnOrder.returnOrderId);
+        
+        if (returnItems == null || returnItems.isEmpty()) {
+            showAlert(Alert.AlertType.WARNING, "提示", "退货商品明细为空，无法打印");
+            return;
+        }
+
+        try {
+            // 打印退货单据
+            String filePath = ReceiptPrinter.printReturnReceipt(selectedReturnOrder, returnItems);
+            
+            if (filePath != null) {
+                showAlert(Alert.AlertType.INFORMATION, "打印成功", 
+                    "退货单据已打印！\n\n" +
+                    "退货单号: " + selectedReturnOrder.returnOrderId + "\n" +
+                    "文件路径: " + filePath);
+                logger.info("退货单据打印成功: {}, 文件路径: {}", selectedReturnOrder.returnOrderId, filePath);
+            } else {
+                showAlert(Alert.AlertType.ERROR, "打印失败", "打印退货单据失败，请查看日志");
+                logger.error("退货单据打印失败: {}", selectedReturnOrder.returnOrderId);
+            }
+        } catch (Exception e) {
+            logger.error("打印退货单据时发生错误", e);
+            showAlert(Alert.AlertType.ERROR, "打印失败", "打印退货单据时发生错误:\n" + e.getMessage());
+        }
     }
 
     @FXML

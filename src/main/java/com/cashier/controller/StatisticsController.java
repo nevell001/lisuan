@@ -5,9 +5,12 @@ import com.cashier.model.Transaction;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.fxml.FXML;
+import javafx.collections.FXCollections;
+import javafx.collections.ObservableList;
 
 import java.sql.SQLException;
 import javafx.scene.control.*;
+import javafx.scene.chart.*;
 
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -92,6 +95,15 @@ public class StatisticsController {
 
     @FXML
     private Button exportButton;
+
+    @FXML
+    private PieChart paymentMethodPieChart;
+
+    @FXML
+    private LineChart<String, Number> salesTrendLineChart;
+
+    @FXML
+    private BarChart<String, Number> categorySalesBarChart;
 
     private List<Transaction> allTransactions;
 
@@ -388,6 +400,9 @@ public class StatisticsController {
 
         // 更新小时表格
         updateHourlyTable(hourCountMap, hourAmountMap);
+
+        // 更新图表
+        updateCharts(cashSales, wechatSales, alipaySales, cardSales, transactions, categoryCountMap, categoryAmountMap);
     }
 
     /**
@@ -536,6 +551,115 @@ public class StatisticsController {
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
+    }
+
+    /**
+     * 更新图表
+     */
+    private void updateCharts(double cashSales, double wechatSales, double alipaySales, double cardSales,
+                             List<Transaction> transactions, Map<String, Integer> categoryCountMap,
+                             Map<String, Double> categoryAmountMap) {
+        // 更新支付方式分布饼图
+        updatePaymentMethodPieChart(cashSales, wechatSales, alipaySales, cardSales);
+
+        // 更新销售趋势折线图
+        updateSalesTrendLineChart(transactions);
+
+        // 更新分类销售柱状图
+        updateCategorySalesBarChart(categoryCountMap, categoryAmountMap);
+    }
+
+    /**
+     * 更新支付方式分布饼图
+     */
+    private void updatePaymentMethodPieChart(double cashSales, double wechatSales, double alipaySales, double cardSales) {
+        ObservableList<PieChart.Data> pieChartData = FXCollections.observableArrayList();
+        
+        if (cashSales > 0) {
+            pieChartData.add(new PieChart.Data("现金", cashSales));
+        }
+        if (wechatSales > 0) {
+            pieChartData.add(new PieChart.Data("微信", wechatSales));
+        }
+        if (alipaySales > 0) {
+            pieChartData.add(new PieChart.Data("支付宝", alipaySales));
+        }
+        if (cardSales > 0) {
+            pieChartData.add(new PieChart.Data("银行卡", cardSales));
+        }
+        
+        paymentMethodPieChart.setData(pieChartData);
+        paymentMethodPieChart.setTitle("支付方式分布");
+        paymentMethodPieChart.setLegendSide(javafx.geometry.Side.RIGHT);
+        
+        // 为每个数据项添加百分比显示
+        for (PieChart.Data data : pieChartData) {
+            double total = cashSales + wechatSales + alipaySales + cardSales;
+            double percentage = (data.getPieValue() / total) * 100;
+            data.setName(String.format("%s (%.1f%%)", data.getName(), percentage));
+        }
+    }
+
+    /**
+     * 更新销售趋势折线图
+     */
+    private void updateSalesTrendLineChart(List<Transaction> transactions) {
+        // 按日期统计销售额
+        Map<String, Double> dailySalesMap = new TreeMap<>();
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+        
+        for (Transaction t : transactions) {
+            try {
+                Date date = sdf.parse(t.timestamp);
+                String dateStr = sdf.format(date);
+                dailySalesMap.put(dateStr, dailySalesMap.getOrDefault(dateStr, 0.0) + t.finalAmount);
+            } catch (Exception e) {
+                // 解析失败，跳过
+            }
+        }
+        
+        // 创建数据系列
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("销售额");
+        
+        for (Map.Entry<String, Double> entry : dailySalesMap.entrySet()) {
+            series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
+        }
+        
+        salesTrendLineChart.getData().clear();
+        salesTrendLineChart.getData().add(series);
+        salesTrendLineChart.setTitle("销售趋势");
+        salesTrendLineChart.getXAxis().setLabel("日期");
+        salesTrendLineChart.getYAxis().setLabel("销售额（元）");
+        salesTrendLineChart.setCreateSymbols(true);
+        salesTrendLineChart.setLegendVisible(true);
+    }
+
+    /**
+     * 更新分类销售柱状图
+     */
+    private void updateCategorySalesBarChart(Map<String, Integer> categoryCountMap, Map<String, Double> categoryAmountMap) {
+        // 创建数据系列
+        XYChart.Series<String, Number> series = new XYChart.Series<>();
+        series.setName("销售额");
+        
+        // 按销售额排序
+        List<Map.Entry<String, Double>> sortedCategories = new ArrayList<>(categoryAmountMap.entrySet());
+        sortedCategories.sort((a, b) -> Double.compare(b.getValue(), a.getValue()));
+        
+        // 限制显示前10个分类
+        int maxCategories = Math.min(sortedCategories.size(), 10);
+        for (int i = 0; i < maxCategories; i++) {
+            Map.Entry<String, Double> entry = sortedCategories.get(i);
+            series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
+        }
+        
+        categorySalesBarChart.getData().clear();
+        categorySalesBarChart.getData().add(series);
+        categorySalesBarChart.setTitle("分类销售排名");
+        categorySalesBarChart.getXAxis().setLabel("分类");
+        categorySalesBarChart.getYAxis().setLabel("销售额（元）");
+        categorySalesBarChart.setLegendVisible(true);
     }
 
     /**

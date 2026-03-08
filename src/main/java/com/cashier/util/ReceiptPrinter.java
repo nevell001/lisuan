@@ -3,6 +3,8 @@ package com.cashier.util;
 import com.cashier.model.CartItem;
 import com.cashier.model.Member;
 import com.cashier.model.Transaction;
+import com.cashier.model.ReturnOrder;
+import com.cashier.model.ReturnOrderItem;
 
 import java.io.File;
 import java.io.FileWriter;
@@ -257,6 +259,176 @@ public class ReceiptPrinter {
 
         } catch (IOException e) {
             System.err.println("打开文件失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 生成并打印退货单据
+     * @param returnOrder 退货订单
+     * @param returnItems 退货商品列表
+     * @return 退货单据文件路径，如果打印失败则返回 null
+     */
+    public static String printReturnReceipt(ReturnOrder returnOrder, List<ReturnOrderItem> returnItems) {
+        try {
+            // 创建收据目录
+            File dir = new File(RECEIPT_DIR);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            // 生成退货单据文件名
+            String fileName = String.format("return_%s_%s.txt",
+                returnOrder.returnOrderId,
+                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss")));
+
+            File returnReceiptFile = new File(dir, fileName);
+
+            // 生成退货单据内容
+            String content = generateReturnReceiptContent(returnOrder, returnItems);
+
+            // 写入文件
+            try (FileWriter writer = new FileWriter(returnReceiptFile)) {
+                writer.write(content);
+            }
+
+            // 打印退货单据（使用系统默认打印机）
+            printFile(returnReceiptFile);
+
+            return returnReceiptFile.getAbsolutePath();
+
+        } catch (Exception e) {
+            System.err.println("打印退货单据失败: " + e.getMessage());
+            return null;
+        }
+    }
+
+    /**
+     * 生成退货单据内容
+     */
+    private static String generateReturnReceiptContent(ReturnOrder returnOrder, List<ReturnOrderItem> returnItems) {
+        StringBuilder sb = new StringBuilder();
+
+        // 店铺信息
+        sb.append("========================================\n");
+        sb.append("           退货单据\n");
+        sb.append("========================================\n\n");
+
+        // 退货单信息
+        sb.append("退货单号: ").append(returnOrder.returnOrderId).append("\n");
+        sb.append("原订单号: ").append(returnOrder.originalTransactionId != null ? returnOrder.originalTransactionId : "无").append("\n");
+        sb.append("退货日期: ").append(returnOrder.getReturnDateFormatted()).append("\n");
+        sb.append("操作员: ").append(returnOrder.operatorName).append("\n");
+
+        // 审批信息
+        if ("APPROVED".equals(returnOrder.status) || "COMPLETED".equals(returnOrder.status)) {
+            sb.append("----------------------------------------\n");
+            sb.append("审批信息:\n");
+            sb.append("  审批人: ").append(returnOrder.approverName != null ? returnOrder.approverName : "无").append("\n");
+            if (returnOrder.approvalDate != null) {
+                sb.append("  审批日期: ").append(new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(returnOrder.approvalDate)).append("\n");
+            }
+            if (returnOrder.approvalComment != null && !returnOrder.approvalComment.isEmpty()) {
+                sb.append("  审批意见: ").append(returnOrder.approvalComment).append("\n");
+            }
+            sb.append("----------------------------------------\n");
+        }
+
+        // 会员信息
+        if (returnOrder.memberName != null) {
+            sb.append("----------------------------------------\n");
+            sb.append("会员信息:\n");
+            sb.append("  会员姓名: ").append(returnOrder.memberName).append("\n");
+            sb.append("----------------------------------------\n");
+        }
+
+        sb.append("\n");
+
+        // 退货商品列表
+        sb.append("退货商品列表:\n");
+        sb.append("----------------------------------------\n");
+        sb.append(String.format("%-20s %8s %8s %10s %10s\n", "商品名称", "退货数量", "单价", "退货金额", "商品状态"));
+        sb.append("----------------------------------------\n");
+
+        for (ReturnOrderItem item : returnItems) {
+            String name = item.productName;
+            if (name.length() > 18) {
+                name = name.substring(0, 17) + "~";
+            }
+            sb.append(String.format("%-20s %8d %8.2f %10.2f %10s\n",
+                name,
+                item.returnQuantity,
+                item.unitPrice,
+                item.returnAmount,
+                item.condition != null ? item.condition : "正常"));
+        }
+
+        sb.append("----------------------------------------\n");
+
+        // 金额汇总
+        sb.append(String.format("%35s %10.2f\n", "退货总额:", returnOrder.totalAmount));
+        sb.append("========================================\n");
+
+        // 退款方式
+        String paymentMethod = returnOrder.getPaymentMethodText();
+        sb.append(String.format("退款方式: %s\n", paymentMethod));
+
+        // 退货原因
+        if (returnOrder.returnReason != null && !returnOrder.returnReason.isEmpty()) {
+            sb.append(String.format("退货原因: %s\n", returnOrder.returnReason));
+        }
+
+        // 状态
+        sb.append(String.format("订单状态: %s\n", returnOrder.getStatusText()));
+
+        sb.append("\n");
+
+        // 备注
+        if (returnOrder.notes != null && !returnOrder.notes.isEmpty()) {
+            sb.append("备注: ").append(returnOrder.notes).append("\n\n");
+        }
+
+        // 底部信息
+        sb.append("========================================\n");
+        sb.append("      退货单据\n");
+        sb.append("========================================\n");
+
+        return sb.toString();
+    }
+
+    /**
+     * 生成退货单据内容（不打印，只生成文件）
+     * @param returnOrder 退货订单
+     * @param returnItems 退货商品列表
+     * @return 退货单据文件路径，如果生成失败则返回 null
+     */
+    public static String generateReturnReceiptOnly(ReturnOrder returnOrder, List<ReturnOrderItem> returnItems) {
+        try {
+            // 创建收据目录
+            File dir = new File(RECEIPT_DIR);
+            if (!dir.exists()) {
+                dir.mkdirs();
+            }
+
+            // 生成退货单据文件名
+            String fileName = String.format("return_%s_%s.txt",
+                returnOrder.returnOrderId,
+                java.time.LocalDateTime.now().format(java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss")));
+
+            File returnReceiptFile = new File(dir, fileName);
+
+            // 生成退货单据内容
+            String content = generateReturnReceiptContent(returnOrder, returnItems);
+
+            // 写入文件
+            try (FileWriter writer = new FileWriter(returnReceiptFile)) {
+                writer.write(content);
+            }
+
+            return returnReceiptFile.getAbsolutePath();
+
+        } catch (Exception e) {
+            System.err.println("生成退货单据失败: " + e.getMessage());
+            return null;
         }
     }
 }
