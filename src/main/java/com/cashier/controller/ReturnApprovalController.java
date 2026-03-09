@@ -52,6 +52,7 @@ public class ReturnApprovalController {
     private ObservableList<ReturnOrder> pendingOrderList = FXCollections.observableArrayList();
     private ObservableList<ReturnOrderItem> itemList = FXCollections.observableArrayList();
     private ReturnOrder selectedOrder;
+    private User currentUser;
 
     @FXML
     public void initialize() {
@@ -338,8 +339,17 @@ public class ReturnApprovalController {
         try {
             Transaction transaction = TransactionDAO.findById(selectedOrder.originalTransactionId);
             if (transaction != null) {
-                // TODO: 显示交易详情
-                showAlert(Alert.AlertType.INFORMATION, "原交易", "交易ID: " + transaction.transactionId + "\n金额: " + transaction.totalAmount);
+                // 显示交易详情
+                String details = String.format(
+                    "交易ID: %s\n交易时间: %s\n收银员: %s\n支付方式: %s\n总金额: ¥%.2f\n会员: %s",
+                    transaction.transactionId,
+                    transaction.timestamp,
+                    transaction.operatorName,
+                    transaction.paymentMethod,
+                    transaction.totalAmount,
+                    transaction.memberName != null ? transaction.memberName : "无"
+                );
+                showAlert(Alert.AlertType.INFORMATION, "原交易详情", details);
             } else {
                 showAlert(Alert.AlertType.WARNING, "提示", "未找到原交易记录");
             }
@@ -348,9 +358,15 @@ public class ReturnApprovalController {
         }
     }
 
+    /**
+     * 设置当前用户
+     */
+    public void setCurrentUser(User user) {
+        this.currentUser = user;
+    }
+
     private String getApproverName() {
-        // TODO: 从当前登录用户获取审批人名称
-        return "admin";
+        return currentUser != null ? currentUser.name : "admin";
     }
 
     private void showAlert(Alert.AlertType type, String title, String message) {

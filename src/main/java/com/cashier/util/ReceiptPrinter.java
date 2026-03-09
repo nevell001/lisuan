@@ -13,12 +13,15 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
 import java.util.List;
+import org.slf4j.Logger;
 
 /**
  * 小票打印工具类
  * 支持打印收银小票
  */
 public class ReceiptPrinter {
+
+    private static final Logger logger = LoggerFactoryUtil.getLogger(ReceiptPrinter.class);
 
     // 使用线程安全的 DateTimeFormatter 替代 SimpleDateFormat
     private static final DateTimeFormatter DATE_FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -184,13 +187,13 @@ public class ReceiptPrinter {
                 Runtime.getRuntime().exec(new String[]{"lpr", file.getAbsolutePath()});
             } else {
                 // 未知系统，显示提示
-                System.out.println("小票已生成: " + file.getAbsolutePath());
-                System.out.println("请使用系统打印机打开文件并打印。");
+                logger.info("小票已生成: {}", file.getAbsolutePath());
+                logger.info("请使用系统打印机打开文件并打印。");
             }
         } catch (IOException e) {
-            System.err.println("打印命令执行失败: " + e.getMessage());
-            System.out.println("小票文件: " + file.getAbsolutePath());
-            System.out.println("请手动打开文件并打印。");
+            logger.error("打印命令执行失败: {}", e.getMessage(), e);
+            logger.info("小票文件: {}", file.getAbsolutePath());
+            logger.info("请手动打开文件并打印。");
         }
     }
 

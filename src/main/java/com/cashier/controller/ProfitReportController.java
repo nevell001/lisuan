@@ -518,8 +518,9 @@ public class ProfitReportController {
         double grossMargin = totalRevenue > 0 ? grossProfit / totalRevenue : 0.0;
 
         // 净利润计算（毛利润 - 运营成本）
-        // 运营成本包括：人工、水电、租金等，这里使用固定比例估算
-        // TODO: 可以从配置文件读取或让用户自定义运营成本比例
+        // 运营成本包括：人工、水电、租金等
+        // 注：如需自定义运营成本比例，可修改 DEFAULT_OPERATING_COST_RATIO 常量值
+        // 未来改进：可添加系统设置让用户配置此比例
         double operatingCost = totalRevenue * DEFAULT_OPERATING_COST_RATIO;
         double netProfit = grossProfit - operatingCost;
 

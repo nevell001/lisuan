@@ -12,6 +12,7 @@ import javafx.scene.image.Image;
 import javafx.scene.image.ImageView;
 import javafx.stage.Stage;
 import javafx.util.Duration;
+import org.slf4j.Logger;
 
 import java.util.Optional;
 
@@ -20,6 +21,8 @@ import java.util.Optional;
  * 提供常用的 JavaFX 操作方法
  */
 public class FXUtils {
+
+    private static final Logger logger = LoggerFactoryUtil.getLogger(FXUtils.class);
 
     /**
      * 显示信息对话框
@@ -177,7 +180,7 @@ public class FXUtils {
         try {
             return new Image(imagePath);
         } catch (Exception e) {
-            System.err.println("无法加载图片: " + imagePath);
+            logger.error("无法加载图片: {}", imagePath, e);
             return null;
         }
     }

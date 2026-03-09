@@ -57,6 +57,7 @@ public class CreateReturnOrderDialogController {
     private Transaction originalTransaction;
     private Stage dialogStage;
     private boolean submitted = false;
+    private User currentUser;
 
     // 退货商品临时类
     public static class ReturnItem {
@@ -555,8 +556,14 @@ public class CreateReturnOrderDialogController {
      * 获取操作员名称
      */
     private String getOperatorName() {
-        // TODO: 从当前登录用户获取
-        return "admin";
+        return currentUser != null ? currentUser.name : "admin";
+    }
+
+    /**
+     * 设置当前用户
+     */
+    public void setCurrentUser(User user) {
+        this.currentUser = user;
     }
 
     /**

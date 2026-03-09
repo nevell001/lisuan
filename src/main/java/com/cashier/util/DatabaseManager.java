@@ -89,14 +89,14 @@ public class DatabaseManager {
             try (FileInputStream fis = new FileInputStream(configFile);
                  InputStreamReader isr = new InputStreamReader(fis, "UTF-8")) {
                 props.load(isr);
-                System.out.println("已加载数据库配置: " + CONFIG_FILE);
+                logger.info("已加载数据库配置: {}", CONFIG_FILE);
             } catch (IOException e) {
-                System.err.println("加载配置文件失败: " + e.getMessage());
+                logger.error("加载配置文件失败: {}", e.getMessage(), e);
                 throw new RuntimeException("无法加载数据库配置文件: " + CONFIG_FILE, e);
             }
         } else {
             // 配置文件不存在，创建默认配置文件模板
-            System.out.println("配置文件不存在，创建默认配置文件模板");
+            logger.info("配置文件不存在，创建默认配置文件模板");
             saveDefaultConfigTemplate();
             throw new RuntimeException("数据库配置文件不存在: " + CONFIG_FILE + "\n" +
                 "请先配置数据库连接信息：\n" +
@@ -109,12 +109,12 @@ public class DatabaseManager {
         // 验证必需的配置项
         dbUrl = props.getProperty("db.url");
         dbUsername = props.getProperty("db.username");
-        
+
         // 优先从环境变量读取密码（更安全），如果没有则从配置文件读取
         String envPassword = System.getenv("CASHER_DB_PASSWORD");
         if (envPassword != null && !envPassword.isEmpty()) {
             dbPassword = envPassword;
-            System.out.println("已从环境变量读取数据库密码");
+            logger.info("已从环境变量读取数据库密码");
         } else {
             dbPassword = props.getProperty("db.password");
         }
@@ -156,10 +156,10 @@ public class DatabaseManager {
             try (FileOutputStream fos = new FileOutputStream(configFile)) {
                 props.store(fos, "收银系统数据库配置文件模板\n" +
                     "安全提示：建议设置环境变量 CASHER_DB_PASSWORD 来存储数据库密码，避免明文存储");
-                System.out.println("已创建默认配置文件模板: " + CONFIG_FILE);
+                logger.info("已创建默认配置文件模板: {}", CONFIG_FILE);
             }
         } catch (IOException e) {
-            System.err.println("创建配置文件模板失败: " + e.getMessage());
+            logger.error("创建配置文件模板失败: {}", e.getMessage(), e);
         }
     }
 
@@ -186,7 +186,7 @@ public class DatabaseManager {
      */
     public static void setTestConnection(HikariDataSource dataSource) {
         testDataSource = dataSource;
-        System.out.println("DatabaseManager: 测试数据源已设置，testDataSource=" + testDataSource);
+        logger.debug("测试数据源已设置，testDataSource={}", testDataSource);
     }
 
     /**
@@ -197,7 +197,7 @@ public class DatabaseManager {
             testDataSource.close();
         }
         testDataSource = null;
-        System.out.println("DatabaseManager: 测试数据源已清除");
+        logger.debug("测试数据源已清除");
     }
 
     /**
@@ -628,7 +628,7 @@ public class DatabaseManager {
             createDefaultAdminUser(stmt);
 
             initialized = true;
-            System.out.println("MySQL 数据库初始化成功");
+            logger.info("MySQL 数据库初始化成功");
 
         } catch (SQLException e) {
             logger.error("数据库表创建失败", e);
@@ -639,18 +639,18 @@ public class DatabaseManager {
      * 升级表结构（为旧表添加 id 字段）
      */
     private static void upgradeTableStructure(Statement stmt) throws SQLException {
-        System.out.println("检查表结构...");
-        
+        logger.info("检查表结构...");
+
         // 为 products 表添加 product_code 字段（如果不存在）
         ResultSet rs = stmt.executeQuery("""
-            SELECT COUNT(*) as count 
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_SCHEMA = DATABASE() 
-            AND TABLE_NAME = 'products' 
+            SELECT COUNT(*) as count
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'products'
             AND COLUMN_NAME = 'product_code'
         """);
         if (rs.next() && rs.getInt("count") == 0) {
-            System.out.println("正在为 products 表添加 product_code 字段...");
+            logger.info("正在为 products 表添加 product_code 字段...");
             stmt.execute("ALTER TABLE products ADD COLUMN product_code VARCHAR(50) UNIQUE COMMENT '商品编号' AFTER id");
             stmt.execute("ALTER TABLE products ADD INDEX idx_product_code (product_code)");
         }
@@ -658,43 +658,43 @@ public class DatabaseManager {
         
         // 为 members 表添加 id 字段（如果不存在）
         rs = stmt.executeQuery("""
-            SELECT COUNT(*) as count 
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_SCHEMA = DATABASE() 
-            AND TABLE_NAME = 'members' 
+            SELECT COUNT(*) as count
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'members'
             AND COLUMN_NAME = 'id'
         """);
         if (rs.next() && rs.getInt("count") == 0) {
-            System.out.println("正在为 members 表添加 id 字段...");
+            logger.info("正在为 members 表添加 id 字段...");
             stmt.execute("ALTER TABLE members ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST");
         }
         rs.close();
-        
+
         // 为 categories 表添加 id 字段（如果不存在）
         rs = stmt.executeQuery("""
-            SELECT COUNT(*) as count 
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_SCHEMA = DATABASE() 
-            AND TABLE_NAME = 'categories' 
+            SELECT COUNT(*) as count
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'categories'
             AND COLUMN_NAME = 'id'
         """);
         if (rs.next() && rs.getInt("count") == 0) {
-            System.out.println("正在为 categories 表添加 id 字段...");
+            logger.info("正在为 categories 表添加 id 字段...");
             stmt.execute("ALTER TABLE categories ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST");
             stmt.execute("ALTER TABLE categories MODIFY COLUMN name VARCHAR(50) UNIQUE NOT NULL");
         }
         rs.close();
-        
+
         // 为 units 表添加 id 字段（如果不存在）
         rs = stmt.executeQuery("""
-            SELECT COUNT(*) as count 
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_SCHEMA = DATABASE() 
-            AND TABLE_NAME = 'units' 
+            SELECT COUNT(*) as count
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'units'
             AND COLUMN_NAME = 'id'
         """);
         if (rs.next() && rs.getInt("count") == 0) {
-            System.out.println("正在为 units 表添加 id 字段...");
+            logger.info("正在为 units 表添加 id 字段...");
             stmt.execute("ALTER TABLE units ADD COLUMN id INT AUTO_INCREMENT PRIMARY KEY FIRST");
             stmt.execute("ALTER TABLE units MODIFY COLUMN name VARCHAR(50) UNIQUE NOT NULL");
         }
@@ -702,13 +702,13 @@ public class DatabaseManager {
         
         // 创建主题偏好表（如果不存在）
         rs = stmt.executeQuery("""
-            SELECT COUNT(*) as count 
-            FROM INFORMATION_SCHEMA.TABLES 
-            WHERE TABLE_SCHEMA = DATABASE() 
+            SELECT COUNT(*) as count
+            FROM INFORMATION_SCHEMA.TABLES
+            WHERE TABLE_SCHEMA = DATABASE()
             AND TABLE_NAME = 'theme_preferences'
         """);
         if (rs.next() && rs.getInt("count") == 0) {
-            System.out.println("正在创建 theme_preferences 表...");
+            logger.info("正在创建 theme_preferences 表...");
             stmt.execute("""
                 CREATE TABLE IF NOT EXISTS theme_preferences (
                     username VARCHAR(50) PRIMARY KEY,
@@ -722,30 +722,30 @@ public class DatabaseManager {
 
         // 为 users 表添加 force_password_change 字段（如果不存在）
         rs = stmt.executeQuery("""
-            SELECT COUNT(*) as count 
-            FROM INFORMATION_SCHEMA.COLUMNS 
-            WHERE TABLE_SCHEMA = DATABASE() 
-            AND TABLE_NAME = 'users' 
+            SELECT COUNT(*) as count
+            FROM INFORMATION_SCHEMA.COLUMNS
+            WHERE TABLE_SCHEMA = DATABASE()
+            AND TABLE_NAME = 'users'
             AND COLUMN_NAME = 'force_password_change'
         """);
         if (rs.next() && rs.getInt("count") == 0) {
-            System.out.println("正在为 users 表添加 force_password_change 字段...");
+            logger.info("正在为 users 表添加 force_password_change 字段...");
             stmt.execute("ALTER TABLE users ADD COLUMN force_password_change TINYINT(1) DEFAULT 0 AFTER active");
         }
         rs.close();
-        
-        System.out.println("表结构检查完成");
+
+        logger.info("表结构检查完成");
     }
 
     /**
      * 创建默认管理员用户（如果不存在）
      */
     private static void createDefaultAdminUser(Statement stmt) throws SQLException {
-        System.out.println("检查默认用户...");
+        logger.info("检查默认用户...");
 
         ResultSet rs = stmt.executeQuery("SELECT COUNT(*) as count FROM users");
         if (rs.next() && rs.getInt("count") == 0) {
-            System.out.println("创建默认管理员用户...");
+            logger.info("创建默认管理员用户...");
             // 使用明文密码，首次登录时强制修改
             String plainPassword = "admin123";
             long currentTime = System.currentTimeMillis();
@@ -766,11 +766,11 @@ public class DatabaseManager {
                 pstmt.executeUpdate();
             }
 
-            System.out.println("默认管理员用户创建成功:");
-            System.out.println("  用户名: admin");
-            System.out.println("  密码: admin123 (明文，首次登录需修改)");
+            logger.info("默认管理员用户创建成功:");
+            logger.info("  用户名: admin");
+            logger.info("  密码: admin123 (明文，首次登录需修改)");
         } else {
-            System.out.println("用户表已有数据，跳过创建默认用户");
+            logger.info("用户表已有数据，跳过创建默认用户");
         }
         rs.close();
     }
@@ -790,7 +790,7 @@ public class DatabaseManager {
             }
 
         } catch (SQLException e) {
-            System.err.println("检查数据库状态失败: " + e.getMessage());
+            logger.error("检查数据库状态失败: {}", e.getMessage(), e);
         }
         return false;
     }
@@ -845,7 +845,7 @@ public class DatabaseManager {
     public static void shutdown() {
         if (dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
-            System.out.println("数据库连接池已关闭");
+            logger.info("数据库连接池已关闭");
         }
     }
 
@@ -894,7 +894,7 @@ public class DatabaseManager {
             "-r", containerPath
         };
 
-        System.out.println("执行 Docker 备份命令...");
+        logger.info("执行 Docker 备份命令...");
         Process process = Runtime.getRuntime().exec(command);
         int exitCode = process.waitFor();
 
@@ -903,10 +903,10 @@ public class DatabaseManager {
             try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
                 String line;
                 while ((line = reader.readLine()) != null) {
-                    System.err.println("Docker 错误: " + line);
+                    logger.error("Docker 错误: {}", line);
                 }
             }
-            System.err.println("Docker 备份失败，退出码: " + exitCode);
+            logger.error("Docker 备份失败，退出码: {}", exitCode);
             return false;
         }
 
@@ -922,11 +922,11 @@ public class DatabaseManager {
         if (copyExitCode == 0) {
             // 清理容器中的临时文件
             Runtime.getRuntime().exec(new String[]{"docker", "exec", "cashier-mysql", "rm", "-f", containerPath});
-            
-            System.out.println("数据库备份成功: " + backupFile.getAbsolutePath());
+
+            logger.info("数据库备份成功: {}", backupFile.getAbsolutePath());
             return true;
         } else {
-            System.err.println("从容器复制备份文件失败，退出码: " + copyExitCode);
+            logger.error("从容器复制备份文件失败，退出码: {}", copyExitCode);
             return false;
         }
     }
@@ -949,15 +949,15 @@ public class DatabaseManager {
             "cashier_system"
         };
 
-        System.out.println("执行本地备份命令...");
+        logger.info("执行本地备份命令...");
         Process process = Runtime.getRuntime().exec(command);
         int exitCode = process.waitFor();
 
         if (exitCode == 0) {
-            System.out.println("数据库备份成功: " + backupFile.getAbsolutePath());
+            logger.info("数据库备份成功: {}", backupFile.getAbsolutePath());
             return true;
         } else {
-            System.err.println("mysqldump 执行失败，退出码: " + exitCode);
+            logger.error("mysqldump 执行失败，退出码: {}", exitCode);
             return false;
         }
     }
@@ -969,7 +969,7 @@ public class DatabaseManager {
      */
     public static boolean restore(File backupFile) {
         if (!backupFile.exists()) {
-            System.err.println("备份文件不存在: " + backupFile.getAbsolutePath());
+            logger.error("备份文件不存在: {}", backupFile.getAbsolutePath());
             return false;
         }
 
@@ -1003,7 +1003,7 @@ public class DatabaseManager {
         int copyExitCode = copyProcess.waitFor();
 
         if (copyExitCode != 0) {
-            System.err.println("复制文件到容器失败，退出码: " + copyExitCode);
+            logger.error("复制文件到容器失败，退出码: {}", copyExitCode);
             return false;
         }
 
@@ -1014,23 +1014,23 @@ public class DatabaseManager {
             "mysql -u" + dbUsername + " -p" + dbPassword + " cashier_system < " + containerPath
         };
 
-        System.out.println("执行 Docker 恢复命令...");
-        
+        logger.info("执行 Docker 恢复命令...");
+
         Process process = Runtime.getRuntime().exec(command);
-        
+
         // 读取输出
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                System.out.println(line);
+                logger.info(line);
             }
         }
-        
+
         // 读取错误
         try (BufferedReader errorReader = new BufferedReader(new InputStreamReader(process.getErrorStream()))) {
             String line;
             while ((line = errorReader.readLine()) != null) {
-                System.err.println(line);
+                logger.error(line);
             }
         }
 
@@ -1040,10 +1040,10 @@ public class DatabaseManager {
         Runtime.getRuntime().exec(new String[]{"docker", "exec", "cashier-mysql", "rm", "-f", containerPath});
 
         if (exitCode == 0) {
-            System.out.println("数据库恢复成功: " + backupFile.getAbsolutePath());
+            logger.info("数据库恢复成功: {}", backupFile.getAbsolutePath());
             return true;
         } else {
-            System.err.println("Docker 恢复失败，退出码: " + exitCode);
+            logger.error("Docker 恢复失败，退出码: {}", exitCode);
             return false;
         }
     }
@@ -1062,30 +1062,30 @@ public class DatabaseManager {
             "cashier_system"
         };
 
-        System.out.println("执行本地恢复命令...");
-        
+        logger.info("执行本地恢复命令...");
+
         // 使用 ProcessBuilder 重定向输入
         ProcessBuilder pb = new ProcessBuilder(command);
         pb.redirectInput(ProcessBuilder.Redirect.from(backupFile));
         pb.redirectErrorStream(true);
-        
+
         Process process = pb.start();
-        
+
         // 读取输出
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()))) {
             String line;
             while ((line = reader.readLine()) != null) {
-                System.out.println(line);
+                logger.info(line);
             }
         }
 
         int exitCode = process.waitFor();
 
         if (exitCode == 0) {
-            System.out.println("数据库恢复成功: " + backupFile.getAbsolutePath());
+            logger.info("数据库恢复成功: {}", backupFile.getAbsolutePath());
             return true;
         } else {
-            System.err.println("mysql 恢复失败，退出码: " + exitCode);
+            logger.error("mysql 恢复失败，退出码: {}", exitCode);
             return false;
         }
     }
@@ -1159,6 +1159,6 @@ public class DatabaseManager {
 
         dataSource = new HikariDataSource(config);
 
-        System.out.println("数据库配置已重新加载");
+        logger.info("数据库配置已重新加载");
     }
 }

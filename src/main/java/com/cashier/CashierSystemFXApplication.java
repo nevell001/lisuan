@@ -85,7 +85,7 @@ public class CashierSystemFXApplication extends Application {
                 primaryStage.getIcons().add(new Image(iconUrl.toExternalForm()));
             }
         } catch (Exception e) {
-            System.err.println("无法加载应用图标: " + e.getMessage());
+            logger.warn("无法加载应用图标: {}", e.getMessage(), e);
         }
     }
 

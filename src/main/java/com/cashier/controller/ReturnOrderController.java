@@ -366,9 +366,27 @@ public class ReturnOrderController {
             return;
         }
 
-        // 跳转到交易详情页面
-        // TODO: 实现跳转逻辑
-        showAlert(Alert.AlertType.INFORMATION, "提示", "查看原交易: " + selectedReturnOrder.originalTransactionId);
+        // 查询并显示原交易详情
+        try {
+            Transaction transaction = TransactionDAO.findById(selectedReturnOrder.originalTransactionId);
+            if (transaction != null) {
+                String details = String.format(
+                    "交易ID: %s\n交易时间: %s\n收银员: %s\n支付方式: %s\n总金额: ¥%.2f\n会员: %s",
+                    transaction.transactionId,
+                    transaction.timestamp,
+                    transaction.operatorName,
+                    transaction.paymentMethod,
+                    transaction.totalAmount,
+                    transaction.memberName != null ? transaction.memberName : "无"
+                );
+                showAlert(Alert.AlertType.INFORMATION, "原交易详情", details);
+            } else {
+                showAlert(Alert.AlertType.WARNING, "提示", "未找到原交易记录");
+            }
+        } catch (Exception e) {
+            logger.error("查询原交易失败", e);
+            showAlert(Alert.AlertType.ERROR, "错误", "查询原交易失败: " + e.getMessage());
+        }
     }
 
     @FXML

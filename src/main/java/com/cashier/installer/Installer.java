@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 收银系统图形化安装程序
  */
 public class Installer {
-    private static final String APP_VERSION = "2.4.3";
+    private static final String APP_VERSION = "2.4.4-SNAPSHOT";
     private static final String DB_NAME = "cashier_system";
     
     private JFrame frame;
@@ -32,7 +32,8 @@ public class Installer {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
-            e.printStackTrace();
+            // UI look and feel 设置失败，使用默认设置
+            System.err.println("无法设置系统外观: " + e.getMessage());
         }
         new Installer().start();
     }
@@ -334,10 +335,15 @@ public class Installer {
                 install();
             } catch (Exception e) {
                 log("安装失败: " + e.getMessage());
-                e.printStackTrace();
+                // 记录堆栈跟踪信息
+                StringWriter sw = new StringWriter();
+                PrintWriter pw = new PrintWriter(sw);
+                e.printStackTrace(pw);
+                log(sw.toString());
+
                 SwingUtilities.invokeLater(() -> {
-                    JOptionPane.showMessageDialog(frame, 
-                        "安装失败：\n" + e.getMessage(), 
+                    JOptionPane.showMessageDialog(frame,
+                        "安装失败：\n" + e.getMessage(),
                         "错误", JOptionPane.ERROR_MESSAGE);
                     nextButton.setEnabled(true);
                     cancelButton.setEnabled(true);
