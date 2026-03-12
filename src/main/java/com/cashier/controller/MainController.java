@@ -209,7 +209,7 @@ private Button shiftBtn;
                 handlePromotions();
                 event.consume();
             } else if (event.getCode() == KeyCode.F10) {
-                showPlaceholder("库存预警", "⚠️", "库存预警功能正在开发中...");
+                handleInventoryAlert();
                 event.consume();
             } else if (event.getCode() == KeyCode.F11) {
                 handleDataBackup();
@@ -858,6 +858,45 @@ private Button shiftBtn;
 
         } catch (IOException e) {
             showError("加载数据统计界面失败: " + e.getMessage());
+        }
+    }
+
+    @FXML
+    private void handleInventoryAlert() {
+        updateStatus("库存预警");
+        setActiveButton(inventoryReportBtn);
+
+        try {
+            // 加载库存预警界面（在新窗口中打开）
+            FXMLLoader loader = new FXMLLoader();
+            loader.setLocation(getClass().getResource("/com/cashier/view/InventoryAlertView.fxml"));
+            javafx.scene.Parent root = loader.load();
+
+            // 获取控制器
+            InventoryAlertController controller = loader.getController();
+
+            // 创建新窗口
+            javafx.stage.Stage stage = new javafx.stage.Stage();
+            stage.setTitle("库存预警 - " + (currentUser != null ? currentUser.name : ""));
+            stage.setScene(new javafx.scene.Scene(root, 1000, 700));
+            stage.setResizable(false);
+
+            // 应用主题
+            String currentTheme = com.cashier.service.DataService.loadThemePreference();
+            if (application != null) {
+                application.applyTheme(stage.getScene(), currentTheme);
+            }
+
+            // 显示窗口
+            stage.show();
+
+            // 窗口关闭时清理资源
+            stage.setOnHiding(event -> {
+                controller.cleanup();
+            });
+
+        } catch (IOException e) {
+            showError("加载库存预警界面失败: " + e.getMessage());
         }
     }
 

@@ -125,6 +125,18 @@ public class TransactionService {
             DatabaseManager.commitTransaction(conn);
             logger.info("交易成功完成，交易ID: {}", transactionId);
 
+            // 交易成功后，检查并自动升级会员等级
+            if (member != null) {
+                try {
+                    boolean levelUpgraded = MemberService.updateMemberLevel(member);
+                    if (levelUpgraded) {
+                        logger.info("会员 {} 等级已升级，新等级: {}", member.phone, member.level);
+                    }
+                } catch (Exception e) {
+                    logger.error("更新会员等级失败", e);
+                }
+            }
+
             // 更新内存中的库存
             for (Product product : updatedProducts) {
                 inventory.put(product.name, product);

@@ -63,7 +63,28 @@ public class CheckoutController {
     private Label discountLabel;
 
     @FXML
+    private TextField couponCodeField;
+
+    @FXML
+    private Button verifyCouponButton;
+
+    @FXML
+    private Button clearCouponButton;
+
+    @FXML
+    private Label couponInfoLabel;
+
+    @FXML
     private Label finalAmountLabel;
+
+    private ObservableList<CartItem> cartList;
+    private List<CartItem> cartItems;
+    private Member currentMember;
+    private User currentUser;
+    private String orderNumber;
+    private Transaction lastTransaction; // 保存最后完成的交易信息
+    private Promotion appliedPromotion; // 当前应用的促销
+    private Promotion appliedCoupon; // 当前应用的优惠券
 
     @FXML
     private Button cashButton;
@@ -88,14 +109,6 @@ public class CheckoutController {
 
     @FXML
     private Label cashierLabel;
-
-    private ObservableList<CartItem> cartList;
-    private List<CartItem> cartItems;
-    private Member currentMember;
-    private User currentUser;
-    private String orderNumber;
-    private Transaction lastTransaction; // 保存最后完成的交易信息
-    private Promotion appliedPromotion; // 当前应用的促销
 
     /**
      * 初始化方法
@@ -284,27 +297,40 @@ public class CheckoutController {
         appliedPromotion = null;  // 重置当前应用的促销
         double promotionDiscount = 0.0;
         try {
-            List<Promotion> promotions = PromotionDAO.findActive();
-            logger.info("加载到 {} 个活跃促销", promotions.size());
-            
-            for (Promotion promotion : promotions) {
-                logger.info("检查促销: {} (类型: {}, 门槛: {}, 优惠: {}, 启用: {}, 有效期: {}-{})", 
-                    promotion.name, promotion.type, promotion.threshold, promotion.discount, 
-                    promotion.enabled, promotion.startDate, promotion.endDate);
-                
-                double discount = promotion.calculateDiscount(totalAmount);
-                logger.info("促销 {} 的折扣金额: {}", promotion.name, discount);
-                
-                if (discount > promotionDiscount) {
-                    promotionDiscount = discount;
-                    appliedPromotion = promotion;  // 记录应用的促销
-                    logger.info("选择促销: {} (优惠金额: {})", promotion.name, discount);
+            // 如果用户手动选择了优惠券，使用优惠券
+            if (appliedCoupon != null) {
+                appliedPromotion = appliedCoupon;
+                promotionDiscount = appliedCoupon.calculateDiscount(totalAmount);
+                logger.info("使用优惠券: {}，优惠金额: ¥{}", appliedCoupon.name, promotionDiscount);
+            } else {
+                // 否则自动计算最佳促销（不包括优惠券）
+                List<Promotion> promotions = PromotionDAO.findActive();
+                logger.info("加载到 {} 个活跃促销", promotions.size());
+
+                for (Promotion promotion : promotions) {
+                    // 跳过优惠券类型，只处理满减和打折
+                    if ("优惠券".equals(promotion.type)) {
+                        continue;
+                    }
+
+                    logger.info("检查促销: {} (类型: {}, 门槛: {}, 优惠: {}, 启用: {}, 有效期: {}-{})",
+                        promotion.name, promotion.type, promotion.threshold, promotion.discount,
+                        promotion.enabled, promotion.startDate, promotion.endDate);
+
+                    double discount = promotion.calculateDiscount(totalAmount);
+                    logger.info("促销 {} 的折扣金额: {}", promotion.name, discount);
+
+                    if (discount > promotionDiscount) {
+                        promotionDiscount = discount;
+                        appliedPromotion = promotion;  // 记录应用的促销
+                        logger.info("选择促销: {} (优惠金额: {})", promotion.name, discount);
+                    }
                 }
-            }
-            
-            if (promotionDiscount > 0) {
-                logger.info("最终应用促销: {}，优惠金额: {}", 
-                    appliedPromotion != null ? appliedPromotion.name : "无", promotionDiscount);
+
+                if (promotionDiscount > 0) {
+                    logger.info("最终应用促销: {}，优惠金额: {}",
+                        appliedPromotion != null ? appliedPromotion.name : "无", promotionDiscount);
+                }
             }
         } catch (Exception e) {
             logger.error("加载促销数据失败", e);
@@ -313,24 +339,25 @@ public class CheckoutController {
         // 计算最终金额：先应用会员折扣，再减去促销优惠
         double amountAfterMemberDiscount = totalAmount * discountRate;
         double finalAmount = Math.max(0, amountAfterMemberDiscount - promotionDiscount);  // 应付金额不能为负数
-        
+
         // 计算总优惠金额
         double totalDiscountAmount = totalAmount - finalAmount;  // 优惠金额 = 原价 - 应付金额
 
         totalQuantityLabel.setText(String.valueOf(totalQuantity));
         totalAmountLabel.setText(String.format("¥%.2f", totalAmount));
         memberDiscountLabel.setText(String.format("%.1f折", currentMember != null ? currentMember.discountRate : 10));
-        
+
         // 显示优惠明细
         if (promotionDiscount > 0 && appliedPromotion != null) {
-            discountLabel.setText(String.format("-¥%.2f (促销: %s - ¥%.2f)", 
-                totalDiscountAmount, appliedPromotion.name, promotionDiscount));
+            String promotionType = "优惠券".equals(appliedPromotion.type) ? "优惠券" : "促销";
+            discountLabel.setText(String.format("-¥%.2f (%s: %s - ¥%.2f)",
+                totalDiscountAmount, promotionType, appliedPromotion.name, promotionDiscount));
         } else if (promotionDiscount > 0) {
             discountLabel.setText(String.format("-¥%.2f (促销: ¥%.2f)", totalDiscountAmount, promotionDiscount));
         } else {
             discountLabel.setText(String.format("-¥%.2f", totalDiscountAmount));
         }
-        
+
         finalAmountLabel.setText(String.format("¥%.2f", finalAmount));
     }
 
@@ -650,7 +677,10 @@ public class CheckoutController {
         currentMember = null;
         memberPhoneField.clear();
         memberInfoLabel.setText("");
-        
+
+        // 清除优惠券
+        clearCoupon();
+
         // 清空购物车
         cartList.clear();
         updateStatistics();
@@ -694,5 +724,94 @@ public class CheckoutController {
         alert.setContentText(shortcuts);
         alert.getDialogPane().setPrefWidth(500);
         alert.showAndWait();
+    }
+
+    /**
+     * 验证优惠券
+     */
+    @FXML
+    private void handleVerifyCoupon() {
+        String couponCode = couponCodeField.getText().trim();
+        if (couponCode.isEmpty()) {
+            showError("请输入优惠券代码！");
+            return;
+        }
+
+        try {
+            // 根据优惠券代码查询促销
+            List<Promotion> allPromotions = PromotionDAO.findAll();
+            Promotion coupon = null;
+
+            for (Promotion p : allPromotions) {
+                if ("优惠券".equals(p.type) && couponCode.equals(p.promotionCode)) {
+                    coupon = p;
+                    break;
+                }
+            }
+
+            if (coupon == null) {
+                showError("优惠券代码无效！");
+                couponInfoLabel.setText("优惠券代码无效");
+                couponInfoLabel.setStyle("-fx-text-fill: #F44336;");
+                return;
+            }
+
+            // 检查优惠券是否启用
+            if (!coupon.enabled) {
+                showError("优惠券已禁用！");
+                couponInfoLabel.setText("优惠券已禁用");
+                couponInfoLabel.setStyle("-fx-text-fill: #F44336;");
+                return;
+            }
+
+            // 检查优惠券是否有效期内
+            if (!coupon.isValid()) {
+                showError("优惠券已过期！");
+                couponInfoLabel.setText("优惠券已过期");
+                couponInfoLabel.setStyle("-fx-text-fill: #F44336;");
+                return;
+            }
+
+            // 检查使用次数
+            if (coupon.maxUsage > 0 && coupon.usageCount >= coupon.maxUsage) {
+                showError("优惠券已达到最大使用次数！");
+                couponInfoLabel.setText("优惠券已达到最大使用次数");
+                couponInfoLabel.setStyle("-fx-text-fill: #F44336;");
+                return;
+            }
+
+            // 验证成功，应用优惠券
+            appliedCoupon = coupon;
+            couponInfoLabel.setText(String.format("优惠券: %s (面额: ¥%.2f)", coupon.name, coupon.discount));
+            couponInfoLabel.setStyle("-fx-text-fill: #4CAF50;");
+            clearCouponButton.setDisable(false);
+            logger.info("优惠券验证成功: {} (面额: ¥{})", coupon.name, coupon.discount);
+
+            // 重新计算金额
+            updateStatistics();
+
+        } catch (Exception e) {
+            logger.error("验证优惠券失败", e);
+            showError("验证优惠券失败：" + e.getMessage());
+        }
+    }
+
+    /**
+     * 清除优惠券
+     */
+    @FXML
+    private void handleClearCoupon() {
+        clearCoupon();
+    }
+
+    /**
+     * 清除优惠券逻辑
+     */
+    private void clearCoupon() {
+        appliedCoupon = null;
+        couponCodeField.clear();
+        couponInfoLabel.setText("");
+        clearCouponButton.setDisable(true);
+        logger.info("优惠券已清除");
     }
 }

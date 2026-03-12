@@ -2,6 +2,7 @@ package com.cashier.controller;
 
 import com.cashier.dao.MemberDAO;
 import com.cashier.model.Member;
+import com.cashier.service.MemberService;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
 import org.slf4j.Logger;
@@ -177,6 +178,18 @@ public class MemberEditController {
             member.discount = Double.parseDouble(discountField.getText().trim());
             member.balance = Double.parseDouble(balanceField.getText().trim());
             member.birthday = birthdayField.getText().trim();
+
+            // 根据新的积分自动计算并更新会员等级
+            try {
+                MemberService.updateMemberLevel(member);
+                // 如果等级已更新，同步到对话框显示
+                member.level = MemberService.calculateLevel(member.points);
+                member.discount = MemberService.getDiscountByLevel(member.level);
+                logger.info("会员 {} 等级已根据积分自动更新: 积分={}, 等级={}",
+                    member.phone, member.points, member.level);
+            } catch (Exception e) {
+                logger.error("自动更新会员等级失败", e);
+            }
 
             okClicked = true;
             dialogStage.close();

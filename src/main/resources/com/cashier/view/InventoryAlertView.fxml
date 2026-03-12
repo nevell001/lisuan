@@ -1,0 +1,126 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cashier.controller.InventoryAlertController"
+      spacing="0"
+      styleClass="inventory-alert-view">
+
+    <!-- 顶部工具栏 -->
+    <VBox spacing="5" styleClass="toolbar">
+        <!-- 第一行：标题和服务状态 -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="10" right="10" bottom="5" left="10"/>
+            </padding>
+
+            <Label text="库存预警" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
+            <Separator orientation="VERTICAL" style="-fx-padding: 0 10 0 10;"/>
+
+            <Label text="服务状态:" style="-fx-font-size: 13px; -fx-text-fill: #424242;"/>
+            <Label fx:id="serviceStatusLabel" text="未启动" style="-fx-font-size: 13px; -fx-font-weight: bold;"/>
+            <Circle fx:id="statusIndicator" radius="6" fill="#9E9E9E"/>
+
+            <Region HBox.hgrow="ALWAYS"/>
+
+            <Label fx:id="lastCheckTimeLabel" text="上次检查: 未检查" style="-fx-font-size: 12px; -fx-text-fill: #757575;"/>
+        </HBox>
+
+        <!-- 第二行：配置信息和操作按钮 -->
+        <HBox spacing="10" alignment="CENTER_LEFT">
+            <padding>
+                <Insets top="5" right="10" bottom="10" left="10"/>
+            </padding>
+
+            <Label text="检查间隔:" style="-fx-font-size: 13px; -fx-text-fill: #424242;"/>
+            <Label fx:id="checkIntervalLabel" text="5分钟" style="-fx-font-size: 13px; -fx-font-weight: bold;"/>
+
+            <Label text="冷却时间:" style="-fx-font-size: 13px; -fx-text-fill: #424242;"/>
+            <Label fx:id="alertCooldownLabel" text="1小时" style="-fx-font-size: 13px; -fx-font-weight: bold;"/>
+
+            <Separator orientation="VERTICAL" style="-fx-padding: 0 10 0 10;"/>
+
+            <Button fx:id="refreshButton"
+                    text="立即检查"
+                    onAction="#handleRefresh"
+                    prefWidth="100"
+                    styleClass="primary-button"/>
+
+            <Button fx:id="clearCooldownButton"
+                    text="清除所有冷却"
+                    onAction="#handleClearCooldown"
+                    prefWidth="120"
+                    styleClass="secondary-button"/>
+
+            <Button fx:id="exportButton"
+                    text="导出预警"
+                    onAction="#handleExport"
+                    prefWidth="100"
+                    styleClass="info-button"/>
+        </HBox>
+    </VBox>
+
+    <!-- 统计信息 -->
+    <HBox spacing="20" alignment="CENTER_LEFT" styleClass="alert-stats">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+
+        <VBox spacing="5">
+            <Label text="预警商品数" style="-fx-font-size: 12px; -fx-text-fill: #757575;"/>
+            <Label fx:id="alertCountLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #F44336;"/>
+        </VBox>
+
+        <VBox spacing="5">
+            <Label text="严重警告" style="-fx-font-size: 12px; -fx-text-fill: #757575;"/>
+            <Label fx:id="criticalCountLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #D32F2F;"/>
+        </VBox>
+
+        <VBox spacing="5">
+            <Label text="警告" style="-fx-font-size: 12px; -fx-text-fill: #757575;"/>
+            <Label fx:id="warningCountLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #FF9800;"/>
+        </VBox>
+
+        <VBox spacing="5">
+            <Label text="提示" style="-fx-font-size: 12px; -fx-text-fill: #757575;"/>
+            <Label fx:id="infoCountLabel" text="0" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #2196F3;"/>
+        </VBox>
+    </HBox>
+
+    <!-- 预警商品表格 -->
+    <TableView fx:id="alertTable"
+              VBox.vgrow="ALWAYS"
+              styleClass="alert-table">
+        <columns>
+            <TableColumn fx:id="nameColumn" text="商品名称" prefWidth="200"/>
+            <TableColumn fx:id="productCodeColumn" text="商品编号" prefWidth="120"/>
+            <TableColumn fx:id="currentStockColumn" text="当前库存" prefWidth="100"/>
+            <TableColumn fx:id="minStockColumn" text="最低库存" prefWidth="100"/>
+            <TableColumn fx:id="unitColumn" text="单位" prefWidth="80"/>
+            <TableColumn fx:id="alertLevelColumn" text="预警级别" prefWidth="120"/>
+            <TableColumn fx:id="lastAlertTimeColumn" text="上次预警时间" prefWidth="180"/>
+        </columns>
+        <placeholder>
+            <Label text="暂无库存预警商品"/>
+        </placeholder>
+    </TableView>
+
+    <!-- 底部操作栏 -->
+    <HBox spacing="10" alignment="CENTER_LEFT" styleClass="bottom-actions">
+        <padding>
+            <Insets top="10" right="10" bottom="10" left="10"/>
+        </padding>
+
+        <Button fx:id="closeButton"
+                text="关闭"
+                onAction="#handleClose"
+                prefWidth="100"
+                styleClass="secondary-button"/>
+    </HBox>
+
+</VBox>

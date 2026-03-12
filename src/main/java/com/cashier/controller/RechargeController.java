@@ -224,6 +224,14 @@ public class RechargeController {
             records.add(record);
             DataService.saveRechargeRecords(records);
 
+            // 充值成功后，检查并自动升级会员等级
+            try {
+                com.cashier.service.MemberService.updateMemberLevel(member);
+                logger.info("会员 {} 等级已更新，当前积分: {}", member.phone, member.points);
+            } catch (Exception e) {
+                logger.error("更新会员等级失败", e);
+            }
+
             okClicked = true;
             dialogStage.close();
         }

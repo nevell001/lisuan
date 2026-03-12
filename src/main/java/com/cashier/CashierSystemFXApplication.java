@@ -237,7 +237,7 @@ public class CashierSystemFXApplication extends Application {
     private void shutdown() {
         try {
             logger.info("正在关闭系统服务...");
-            
+
             // 停止库存预警服务
             try {
                 com.cashier.service.InventoryAlertService.getInstance().stop();
@@ -245,12 +245,22 @@ public class CashierSystemFXApplication extends Application {
             } catch (Exception e) {
                 logger.error("停止库存预警服务时发生错误", e);
             }
-            
+
+            // 停止自动备份服务
+            try {
+                com.cashier.service.BackupService.getInstance().stop();
+                logger.info("自动备份服务已停止");
+            } catch (Exception e) {
+                logger.error("停止自动备份服务时发生错误", e);
+            }
+
             logger.info("系统服务已关闭");
         } catch (Exception e) {
             logger.error("关闭系统服务时发生错误", e);
         }
-    }    /**
+    }
+
+    /**
      * 切换到主界面（登录成功后）
      * 根据用户角色选择进入主界面或POS模式
      * @param user 当前登录用户
@@ -298,6 +308,22 @@ public class CashierSystemFXApplication extends Application {
 
             logger.info("用户 {} ({}) 进入POS模式", user.name, user.getRoleDisplayName());
 
+            // 启动库存预警服务
+            try {
+                com.cashier.service.InventoryAlertService.getInstance().start();
+                logger.info("库存预警服务已启动");
+            } catch (Exception e) {
+                logger.error("启动库存预警服务失败", e);
+            }
+
+            // 启动自动备份服务
+            try {
+                com.cashier.service.BackupService.getInstance().start();
+                logger.info("自动备份服务已启动");
+            } catch (Exception e) {
+                logger.error("启动自动备份服务失败", e);
+            }
+
         } catch (IOException e) {
             logger.error("加载POS模式界面失败", e);
         }
@@ -332,7 +358,7 @@ public class CashierSystemFXApplication extends Application {
             primaryStage.setTitle(APP_TITLE + " - " + user.name + " (" + user.getRoleDisplayName() + ")");
     
             logger.info("用户 {} ({}) 进入完整主界面", user.name, user.getRoleDisplayName());
-    
+
             // 启动库存预警服务
             try {
                 com.cashier.service.InventoryAlertService.getInstance().start();
@@ -340,8 +366,17 @@ public class CashierSystemFXApplication extends Application {
             } catch (Exception e) {
                 logger.error("启动库存预警服务失败", e);
             }
-    
-        } catch (IOException e) {            logger.error("加载主界面失败", e);
+
+            // 启动自动备份服务
+            try {
+                com.cashier.service.BackupService.getInstance().start();
+                logger.info("自动备份服务已启动");
+            } catch (Exception e) {
+                logger.error("启动自动备份服务失败", e);
+            }
+
+        } catch (IOException e) {
+            logger.error("加载主界面失败", e);
         }
     }
 
@@ -349,6 +384,22 @@ public class CashierSystemFXApplication extends Application {
      * 返回登录界面（退出登录）
      */
     public void logoutToLoginView() {
+        // 停止库存预警服务
+        try {
+            com.cashier.service.InventoryAlertService.getInstance().stop();
+            logger.info("库存预警服务已停止");
+        } catch (Exception e) {
+            logger.error("停止库存预警服务时发生错误", e);
+        }
+
+        // 停止自动备份服务
+        try {
+            com.cashier.service.BackupService.getInstance().stop();
+            logger.info("自动备份服务已停止");
+        } catch (Exception e) {
+            logger.error("停止自动备份服务时发生错误", e);
+        }
+
         this.currentUser = null;
 
         try {

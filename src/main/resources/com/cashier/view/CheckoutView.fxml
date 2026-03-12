@@ -90,6 +90,36 @@
                     <Label fx:id="memberDiscountLabel" text="0%" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
                 </HBox>
 
+                <!-- 优惠券输入区域 -->
+                <VBox spacing="5" styleClass="coupon-section">
+                    <padding>
+                        <Insets top="5" right="0" bottom="5" left="0"/>
+                    </padding>
+                    <HBox spacing="5" alignment="CENTER_LEFT">
+                        <Label text="优惠券代码:" style="-fx-font-size: 13px; -fx-text-fill: #424242;"/>
+                        <TextField fx:id="couponCodeField"
+                                    prefWidth="150"
+                                    promptText="输入优惠券代码"
+                                    onAction="#handleVerifyCoupon"/>
+                        <Button fx:id="verifyCouponButton"
+                                text="验证"
+                                onAction="#handleVerifyCoupon"
+                                prefWidth="70"
+                                prefHeight="30"
+                                style="-fx-font-size: 12px; -fx-font-weight: bold;"
+                                styleClass="secondary-button"/>
+                        <Button fx:id="clearCouponButton"
+                                text="清除"
+                                onAction="#handleClearCoupon"
+                                prefWidth="70"
+                                prefHeight="30"
+                                style="-fx-font-size: 12px;"
+                                styleClass="warning-button"
+                                disable="true"/>
+                    </HBox>
+                    <Label fx:id="couponInfoLabel" text="" style="-fx-font-size: 12px; -fx-text-fill: #4CAF50;"/>
+                </VBox>
+
                 <HBox spacing="10" alignment="CENTER_LEFT">
                     <Label text="折扣金额:" style="-fx-font-size: 13px;"/>
                     <Label fx:id="discountLabel" text="-¥0.00" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>

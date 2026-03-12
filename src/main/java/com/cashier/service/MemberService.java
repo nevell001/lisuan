@@ -163,6 +163,15 @@ public class MemberService {
     }
 
     /**
+     * 根据等级获取折扣
+     * @param level 等级
+     * @return 折扣值（0-10，10表示不打折）
+     */
+    public static double getDiscountByLevel(String level) {
+        return LEVEL_DISCOUNTS.getOrDefault(level, 10.0);
+    }
+
+    /**
      * 检查会员余额是否充足
      * @param member 会员
      * @param amount 需要的金额
