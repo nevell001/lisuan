@@ -2,8 +2,11 @@ name: Sync from Gitee
 
 on:
   schedule:
-    - cron: '0 1,7,13 * * *'
+    - cron: '0 1,7,13 * * *'  # UTC 1:00, 7:00, 13:00 = 北京时间 9:00, 15:00, 21:00
   workflow_dispatch:
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 提前使用 Node.js 24
 
 jobs:
   sync:
@@ -16,29 +19,32 @@ jobs:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
 
+      - name: Configure Git
+        run: |
+          git config --global user.name "nevell"
+          git config --global user.email "nevell001@gmail.com"
+
       - name: Sync from Gitee (protect .github)
         run: |
-          # 配置 Git
-          git config user.name "nevell"
-          git config user.email "nevell001@gmail.com"
-          
-          # 备份 GitHub 的 .github 目录
+          # 备份 GitHub 的 .github 目录（防止被 Gitee 覆盖）
           cp -r .github /tmp/github-backup
           
-          # 添加 Gitee 远程并获取更新
+          # 添加 Gitee 远程
           git remote add gitee https://gitee.com/nevell/hello.git || true
+          
+          # 获取 Gitee 更新
           git fetch gitee
           
-          # 重置到 Gitee 的状态
+          # 重置到 Gitee 状态
           git reset --hard gitee/main
           
-          # 恢复 GitHub 的 .github 目录
+          # 恢复 GitHub 特有的工作流文件
           rm -rf .github
           mv /tmp/github-backup .github
           
-          # 提交恢复的工作流文件
+          # 提交（如果有变化）
           git add .github
-          git commit -m "Restore GitHub workflows after sync" || true
+          git commit -m "Restore GitHub workflows after sync from Gitee" || echo "No changes to commit"
           
           # 推送到 GitHub
           git push origin main --force
