@@ -26,7 +26,7 @@ jobs:
 
       - name: Sync from Gitee (protect .github)
         run: |
-          # 备份 GitHub 的 .github 目录（防止被 Gitee 覆盖）
+          # 备份 GitHub 的 .github 目录
           cp -r .github /tmp/github-backup
           
           # 添加 Gitee 远程
@@ -35,16 +35,16 @@ jobs:
           # 获取 Gitee 更新
           git fetch gitee
           
-          # 重置到 Gitee 状态
+          # 重置到 Gitee 状态（获取所有 Gitee 的文件修改）
           git reset --hard gitee/main
           
           # 恢复 GitHub 特有的工作流文件
           rm -rf .github
           mv /tmp/github-backup .github
           
-          # 提交（如果有变化）
-          git add .github
-          git commit -m "Restore GitHub workflows after sync from Gitee" || echo "No changes to commit"
+          # 提交所有更改（Gitee 的文件 + 恢复的 .github）
+          git add .
+          git commit -m "Sync from Gitee (restore GitHub workflows)" || echo "No changes to commit"
           
           # 推送到 GitHub
           git push origin main --force
