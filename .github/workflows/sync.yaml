@@ -1,0 +1,44 @@
+name: Sync from Gitee
+
+on:
+  schedule:
+    - cron: '0 1,7,13 * * *'
+  workflow_dispatch:
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout GitHub repo
+        uses: actions/checkout@v4
+        with:
+          token: ${{ secrets.GH_PAT }}
+          fetch-depth: 0
+
+      - name: Sync from Gitee (protect .github)
+        run: |
+          # 配置 Git
+          git config user.name "nevell"
+          git config user.email "nevell001@gmail.com"
+          
+          # 备份 GitHub 的 .github 目录
+          cp -r .github /tmp/github-backup
+          
+          # 添加 Gitee 远程并获取更新
+          git remote add gitee https://gitee.com/nevell/hello.git || true
+          git fetch gitee
+          
+          # 重置到 Gitee 的状态
+          git reset --hard gitee/main
+          
+          # 恢复 GitHub 的 .github 目录
+          rm -rf .github
+          mv /tmp/github-backup .github
+          
+          # 提交恢复的工作流文件
+          git add .github
+          git commit -m "Restore GitHub workflows after sync" || true
+          
+          # 推送到 GitHub
+          git push origin main --force
