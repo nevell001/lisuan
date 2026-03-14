@@ -72,7 +72,7 @@ public class LoginController {
         passwordField.setOnAction(event -> handleLogin());
 
         // 设置版本信息
-        versionLabel.setText("版本 2.4.3 (JavaFX)");
+        versionLabel.setText("版本 " + AppConstants.APP_VERSION + " (" + AppConstants.APP_SUBTITLE + ")");
 
         // 添加入场动画
         addEntranceAnimation();
