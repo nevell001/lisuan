@@ -301,6 +301,88 @@ public abstract class DatabaseTestBase {
             )
             """);
 
+        // 创建 promotions 表（促销）
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS promotions (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                promotion_code VARCHAR(50) UNIQUE,
+                name VARCHAR(200) NOT NULL,
+                type VARCHAR(20) NOT NULL,
+                threshold DECIMAL(10,2) DEFAULT 0.00,
+                discount DECIMAL(10,2) NOT NULL,
+                description TEXT,
+                enabled BOOLEAN DEFAULT TRUE,
+                start_date TIMESTAMP,
+                end_date TIMESTAMP,
+                usage_count INT DEFAULT 0,
+                max_usage INT,
+                create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """);
+
+        // 创建 return_orders 表（退货订单）
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS return_orders (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                return_order_id VARCHAR(50) UNIQUE NOT NULL,
+                original_transaction_id VARCHAR(50),
+                member_id INT DEFAULT 0,
+                total_amount DECIMAL(10,2) NOT NULL,
+                refund_amount DECIMAL(10,2),
+                refund_method VARCHAR(20),
+                reason TEXT,
+                status VARCHAR(20) DEFAULT 'PENDING',
+                operator_name VARCHAR(50),
+                approver_name VARCHAR(50),
+                approval_date TIMESTAMP,
+                approval_comment TEXT,
+                completed_date TIMESTAMP,
+                create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """);
+
+        // 创建 return_order_items 表（退货订单明细）
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS return_order_items (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                return_order_id VARCHAR(50) NOT NULL,
+                product_id INT,
+                product_name VARCHAR(100) NOT NULL,
+                product_code VARCHAR(50),
+                barcode VARCHAR(50),
+                original_price DECIMAL(10,2) NOT NULL,
+                return_quantity INT NOT NULL,
+                return_amount DECIMAL(10,2) NOT NULL,
+                reason TEXT,
+                create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """);
+
+        // 创建 operation_logs 表（操作日志）
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS operation_logs (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                username VARCHAR(50) NOT NULL,
+                operation VARCHAR(50) NOT NULL,
+                details TEXT,
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """);
+
+        // 创建 recharge_records 表（充值记录）
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS recharge_records (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                record_id VARCHAR(50) UNIQUE NOT NULL,
+                member_phone VARCHAR(20) NOT NULL,
+                member_name VARCHAR(100),
+                amount DECIMAL(10,2) NOT NULL,
+                payment_method VARCHAR(20),
+                operator VARCHAR(50),
+                timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """);
+
         stmt.close();
     }
 
@@ -347,6 +429,11 @@ public abstract class DatabaseTestBase {
             stmt.execute("DELETE FROM suppliers");
             stmt.execute("DELETE FROM products");
             stmt.execute("DELETE FROM users");
+            stmt.execute("DELETE FROM promotions");
+            stmt.execute("DELETE FROM return_order_items");
+            stmt.execute("DELETE FROM return_orders");
+            stmt.execute("DELETE FROM operation_logs");
+            stmt.execute("DELETE FROM recharge_records");
             stmt.close();
         }
     }

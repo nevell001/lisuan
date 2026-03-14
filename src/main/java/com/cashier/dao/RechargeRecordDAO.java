@@ -127,9 +127,9 @@ public class RechargeRecordDAO {
      * @throws SQLException 数据库操作异常
      */
     public static boolean insertWithConnection(Connection conn, RechargeRecord record) throws SQLException {
-        String sql = "INSERT INTO recharges (member_phone, member_name, " +
+        String sql = "INSERT INTO recharge_records (record_id, member_phone, member_name, " +
                      "amount, payment_method, timestamp, operator) " +
-                     "VALUES (?, ?, ?, ?, ?, ?)";
+                     "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, record.memberPhone);
