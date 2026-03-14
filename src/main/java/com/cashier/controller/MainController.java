@@ -1,6 +1,7 @@
 package com.cashier.controller;
 
 import com.cashier.CashierSystemFXApplication;
+import com.cashier.constant.AppConstants;
 import com.cashier.dao.ShiftDAO;
 import com.cashier.model.Shift;
 import com.cashier.model.User;
@@ -597,14 +598,14 @@ private Button shiftBtn;
     private void handleAbout() {
         updateStatus("关于");
         String about =
-            "收银系统 Cashier System\n\n" +
-            "版本: 2.4.3 (JavaFX)\n" +
-            "开发: nevell\n\n" +
+            AppConstants.APP_NAME + "\n\n" +
+            "版本: " + AppConstants.FULL_VERSION_STRING + "\n" +
+            "开发: " + AppConstants.DEVELOPER + "\n\n" +
             "技术栈:\n" +
-            "- JavaFX 17.0.8\n" +
-            "- Maven 3.8+\n" +
-            "- JDK 17/21\n\n" +
-            "许可证: 木兰宽松许可证 v2 (MulanPSL2)";
+            "- JavaFX " + AppConstants.JAVAFX_VERSION + "\n" +
+            "- Maven " + AppConstants.MIN_MAVEN_VERSION + "+\n" +
+            "- JDK " + AppConstants.MIN_JDK_VERSION + "/21\n\n" +
+            "许可证: " + AppConstants.LICENSE;
 
         FXUtils.showInfoAlert("关于", about);
     }

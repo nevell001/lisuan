@@ -7,7 +7,7 @@ echo ========================================
 echo.
 
 set APP_NAME=Cashier System
-set APP_VERSION=v2.4.2
+set APP_VERSION=v2.4.5
 set SCRIPT_DIR=%~dp0
 set SHORTCUT_NAME=%APP_NAME%.lnk
 set WORKING_DIR=%SCRIPT_DIR%

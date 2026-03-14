@@ -1,6 +1,7 @@
 package com.cashier.controller;
 
 import com.cashier.CashierSystemFXApplication;
+import com.cashier.constant.AppConstants;
 import com.cashier.dao.UserDAO;
 import com.cashier.model.User;
 import com.cashier.util.FXUtils;
@@ -290,12 +291,12 @@ public class LoginController {
     private void handleAbout() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("关于");
-        alert.setHeaderText("收银系统 v2.2.1");
-        alert.setContentText("现代化收银系统 - JavaFX 版本\n\n" +
+        alert.setHeaderText(AppConstants.APP_NAME + " v" + AppConstants.APP_VERSION);
+        alert.setContentText("现代化收银系统 - " + AppConstants.APP_SUBTITLE + "\n\n" +
                 "技术栈：\n" +
-                "- JavaFX 17.0.8\n" +
-                "- Maven 3.8+\n" +
-                "- JDK 17\n\n" +
+                "- JavaFX " + AppConstants.JAVAFX_VERSION + "\n" +
+                "- Maven " + AppConstants.MIN_MAVEN_VERSION + "+\n" +
+                "- JDK " + AppConstants.MIN_JDK_VERSION + "\n\n" +
                 "功能特性：\n" +
                 "- 商品管理\n" +
                 "- 购物车\n" +
@@ -303,7 +304,7 @@ public class LoginController {
                 "- 会员管理\n" +
                 "- 交易记录\n" +
                 "- 数据统计\n\n" +
-                "© 2026 收银系统团队");
+                "© 2026 " + AppConstants.DEVELOPER);
         alert.initOwner(usernameField.getScene().getWindow());
         alert.showAndWait();
     }

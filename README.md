@@ -2,7 +2,7 @@
 
 一个功能完整的收银系统，使用 JavaFX 17 开发，提供现代化的图形化界面。
 
-**当前版本**: v2.4.4-SNAPSHOT | **最新更新**: 2026-03-09
+**当前版本**: v2.4.5 | **最新更新**: 2026-03-14
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.8-blue)
@@ -115,7 +115,7 @@ mvn javafx:run
 **打包后运行**：
 ```bash
 mvn clean package
-java -jar target/cashier-system-fx-2.4.4-SNAPSHOT.jar
+java -jar target/cashier-system-fx-2.4.5.jar
 ```
 
 ### 默认账户
@@ -163,20 +163,21 @@ java -jar target/cashier-system-fx-2.4.4-SNAPSHOT.jar
 
 ## 🎯 最近更新
 
-### v2.4.4-SNAPSHOT (2026-03-09) - 开发中
-- 🔧 **代码质量改进**（基于审计报告）
-  - ✅ 版本管理统一：将项目版本更新为 2.4.4-SNAPSHOT
-  - ✅ 清理 TODO 标记：实现用户会话管理和交易详情显示
-  - ✅ 日志系统规范化：替换 40+ 处 System.out 为 SLF4J logger
-  - ✅ 代码重复修复：删除重复的 import 语句
-  - ✅ 异常处理改进：移除 printStackTrace，使用结构化日志
+### v2.4.5 (2026-03-14) - 发布
+- 🔧 **版本管理优化**
+  - ✅ 创建 AppConstants 集中管理版本号
+  - ✅ 帮助菜单版本号使用常量（MainController、LoginController）
+  - ✅ 启动脚本自动从 pom.xml 读取版本号
+  - ✅ 更新所有相关文件版本号到 v2.4.5
+  - ✅ 删除问题文件 start.vbs
 - 📝 **文档改进**
-  - 添加代码改进总结文档 (IMPROVEMENTS_SUMMARY.md)
-  - 记录所有 50+ 处代码改进详情
+  - 更新 README.md 版本信息
+  - 更新 AGENTS.md 版本信息
+  - 更新所有启动脚本和安装脚本版本号
 - 🎯 **改进统计**
-  - 修复问题数量：50+ 处
-  - 影响文件数量：12 个
-  - 代码质量提升：良好 → 优秀
+  - 修改文件数量：14 个
+  - 新增文件：1 个（AppConstants.java）
+  - 删除文件：1 个（start.vbs）
   - 编译状态：✅ BUILD SUCCESS
 
 ### v2.4.3 (2026-03-07)
@@ -327,7 +328,7 @@ mvn test
 ## 📚 相关文档
 
 - [AGENTS.md](AGENTS.md) - 项目开发指南
-- [IMPROVEMENTS_SUMMARY.md](IMPROVEMENTS_SUMMARY.md) - 代码改进总结（v2.4.4-SNAPSHOT）
+- [IMPROVEMENTS_SUMMARY.md](IMPROVEMENTS_SUMMARY.md) - 代码改进总结（v2.4.5）
 - [MySQL 部署指南](docs/MYSQL_SETUP.md)
 - [数据库初始化文档](docs/DATABASE_INIT.md)
 - [采购表结构设计](docs/PURCHASE_TABLE_DESIGN.md)

@@ -12,7 +12,7 @@ import java.util.concurrent.atomic.AtomicBoolean;
  * 收银系统图形化安装程序
  */
 public class Installer {
-    private static final String APP_VERSION = "2.4.4-SNAPSHOT";
+    private static final String APP_VERSION = "2.4.5";
     private static final String DB_NAME = "cashier_system";
     
     private JFrame frame;

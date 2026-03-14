@@ -2,7 +2,7 @@
 setlocal
 
 echo ========================================
-echo   Cashier System Installer v2.4.2
+echo   Cashier System Installer v2.4.5
 echo ========================================
 echo.
 

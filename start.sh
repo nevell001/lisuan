@@ -20,7 +20,14 @@
 # ============================================
 
 APP_NAME="Cashier System"
-APP_VERSION="2.4.2"
+
+# Read version from pom.xml automatically
+APP_VERSION=$(grep -E "^[[:space:]]*<version>[^<]+</version>[[:space:]]*$" pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+
+# Fallback if version not found
+if [ -z "$APP_VERSION" ]; then
+    APP_VERSION="2.4.5"
+fi
 MAIN_CLASS="com.cashier.CashierSystemFXApplication"
 CONFIG_FILE="config/jvm.config"
 
