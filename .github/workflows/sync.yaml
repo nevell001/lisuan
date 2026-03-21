@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
 
 env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true  # 提前使用 Node.js 24
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
 
 jobs:
   sync:
@@ -24,27 +24,27 @@ jobs:
           git config --global user.name "nevell"
           git config --global user.email "nevell001@gmail.com"
 
-      - name: Sync from Gitee (protect .github)
+      - name: Force sync from Gitee
         run: |
-          # 备份 GitHub 的 .github 目录
-          cp -r .github /tmp/github-backup
-          
           # 添加 Gitee 远程
           git remote add gitee https://gitee.com/nevell/hello.git || true
           
           # 获取 Gitee 更新
-          git fetch gitee
+          git fetch gitee main
           
-          # 重置到 Gitee 状态（获取所有 Gitee 的文件修改）
+          # 备份 GitHub 的 workflows
+          mkdir -p /tmp/workflows-backup
+          cp .github/workflows/* /tmp/workflows-backup/ 2>/dev/null || true
+          
+          # 强制重置到 Gitee 的 main 分支
           git reset --hard gitee/main
           
-          # 恢复 GitHub 特有的工作流文件
-          rm -rf .github
-          mv /tmp/github-backup .github
+          # 恢复 GitHub 的 workflows
+          rm -rf .github/workflows
+          mkdir -p .github/workflows
+          cp /tmp/workflows-backup/* .github/workflows/ 2>/dev/null || true
           
-          # 提交所有更改（Gitee 的文件 + 恢复的 .github）
+          # 提交并强制推送
           git add .
-          git commit -m "Sync from Gitee (restore GitHub workflows)" || echo "No changes to commit"
-          
-          # 推送到 GitHub
+          git commit -m "Sync from Gitee $(date +%Y-%m-%d-%H:%M)" || echo "No changes"
           git push origin main --force
