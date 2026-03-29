@@ -132,12 +132,13 @@ public class RechargeRecordDAO {
                      "VALUES (?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, record.memberPhone);
-            pstmt.setString(2, record.memberName);
-            pstmt.setDouble(3, record.amount);
-            pstmt.setString(4, record.paymentMethod);
-            pstmt.setTimestamp(5, new Timestamp(record.timestamp.getTime()));
-            pstmt.setString(6, record.operator);
+            pstmt.setString(1, record.recordId);
+            pstmt.setString(2, record.memberPhone);
+            pstmt.setString(3, record.memberName);
+            pstmt.setDouble(4, record.amount);
+            pstmt.setString(5, record.paymentMethod);
+            pstmt.setTimestamp(6, new Timestamp(record.timestamp.getTime()));
+            pstmt.setString(7, record.operator);
 
             return pstmt.executeUpdate() > 0;
         }

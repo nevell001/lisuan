@@ -117,7 +117,7 @@ public abstract class DatabaseTestBase {
             CREATE TABLE IF NOT EXISTS products (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 product_code VARCHAR(50) UNIQUE,
-                name VARCHAR(200) NOT NULL,
+                name VARCHAR(200) NOT NULL UNIQUE,
                 price DECIMAL(10,2) NOT NULL,
                 quantity INT DEFAULT 0,
                 category VARCHAR(50),
@@ -129,7 +129,9 @@ public abstract class DatabaseTestBase {
                 spec VARCHAR(100),
                 min_stock INT DEFAULT 0,
                 cost DECIMAL(10,2),
-                version INT DEFAULT 0
+                version INT DEFAULT 0,
+                created_at BIGINT,
+                updated_at BIGINT
             )
             """);
 
@@ -140,11 +142,12 @@ public abstract class DatabaseTestBase {
                 member_code VARCHAR(50) UNIQUE,
                 phone VARCHAR(20) UNIQUE NOT NULL,
                 name VARCHAR(100) NOT NULL,
+                balance DECIMAL(10,2) DEFAULT 0,
+                points DECIMAL(10,2) DEFAULT 0,
                 level VARCHAR(20) DEFAULT '普通',
-                points DECIMAL(10,2) DEFAULT 0.0,
-                balance DECIMAL(10,2) DEFAULT 0.0,
-                discount DECIMAL(3,1) DEFAULT 10.0,
-                birthday DATE,
+                discount DECIMAL(4,2) DEFAULT 10.00,
+                join_date BIGINT,
+                birthday VARCHAR(10),
                 address VARCHAR(200),
                 remark TEXT,
                 create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
@@ -155,19 +158,19 @@ public abstract class DatabaseTestBase {
         // 创建 transactions 表
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS transactions (
-                id INT AUTO_INCREMENT PRIMARY KEY,
-                transaction_id VARCHAR(50) UNIQUE NOT NULL,
+                transaction_id VARCHAR(50) PRIMARY KEY,
                 timestamp VARCHAR(50) NOT NULL,
                 total_amount DECIMAL(10,2) NOT NULL,
+                tax DECIMAL(10,2) DEFAULT 0,
                 final_amount DECIMAL(10,2) NOT NULL,
-                discount_amount DECIMAL(10,2) DEFAULT 0.0,
                 payment_method VARCHAR(20) NOT NULL,
-                cash_received DECIMAL(10,2) DEFAULT 0.0,
-                cash_change DECIMAL(10,2) DEFAULT 0.0,
+                operator_username VARCHAR(50),
+                operator_name VARCHAR(100),
                 member_phone VARCHAR(20),
-                operator_name VARCHAR(50),
-                remark TEXT,
-                create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                transaction_type VARCHAR(20) DEFAULT 'sale',
+                voided TINYINT(1) DEFAULT 0,
+                voided_by VARCHAR(50),
+                voided_at BIGINT
             )
             """);
 
@@ -308,36 +311,39 @@ public abstract class DatabaseTestBase {
                 promotion_code VARCHAR(50) UNIQUE,
                 name VARCHAR(200) NOT NULL,
                 type VARCHAR(20) NOT NULL,
-                threshold DECIMAL(10,2) DEFAULT 0.00,
+                threshold DECIMAL(10,2) DEFAULT 0,
                 discount DECIMAL(10,2) NOT NULL,
                 description TEXT,
-                enabled BOOLEAN DEFAULT TRUE,
-                start_date TIMESTAMP,
-                end_date TIMESTAMP,
+                enabled TINYINT(1) DEFAULT 1,
+                start_date BIGINT,
+                end_date BIGINT,
                 usage_count INT DEFAULT 0,
                 max_usage INT,
-                create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                created_at BIGINT
             )
             """);
 
         // 创建 return_orders 表（退货订单）
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS return_orders (
-                id INT PRIMARY KEY AUTO_INCREMENT,
+                id INT AUTO_INCREMENT PRIMARY KEY,
                 return_order_id VARCHAR(50) UNIQUE NOT NULL,
                 original_transaction_id VARCHAR(50),
-                member_id INT DEFAULT 0,
-                total_amount DECIMAL(10,2) NOT NULL,
-                refund_amount DECIMAL(10,2),
-                refund_method VARCHAR(20),
-                reason TEXT,
-                status VARCHAR(20) DEFAULT 'PENDING',
-                operator_name VARCHAR(50),
+                member_id INT,
+                member_name VARCHAR(100),
+                return_date TIMESTAMP NOT NULL,
+                return_reason VARCHAR(500),
+                total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+                status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+                payment_method VARCHAR(20),
+                operator_name VARCHAR(50) NOT NULL,
                 approver_name VARCHAR(50),
                 approval_date TIMESTAMP,
-                approval_comment TEXT,
+                approval_comment VARCHAR(500),
                 completed_date TIMESTAMP,
-                create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                notes TEXT,
+                create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
             )
             """);
 
@@ -347,13 +353,15 @@ public abstract class DatabaseTestBase {
                 id INT PRIMARY KEY AUTO_INCREMENT,
                 return_order_id VARCHAR(50) NOT NULL,
                 product_id INT,
-                product_name VARCHAR(100) NOT NULL,
                 product_code VARCHAR(50),
+                product_name VARCHAR(100) NOT NULL,
                 barcode VARCHAR(50),
-                original_price DECIMAL(10,2) NOT NULL,
+                category VARCHAR(50),
                 return_quantity INT NOT NULL,
+                unit_price DECIMAL(10,2) NOT NULL,
                 return_amount DECIMAL(10,2) NOT NULL,
                 reason TEXT,
+                `condition` VARCHAR(50),
                 create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
             """);

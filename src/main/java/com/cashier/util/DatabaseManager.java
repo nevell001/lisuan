@@ -32,48 +32,57 @@ public class DatabaseManager {
     private static int poolSize = 10;
 
     static {
-        try {
-            // 加载配置
-            loadConfig();
+        // 检查是否在测试环境中运行
+        // 如果设置了 testDataSource（测试数据库）或者环境变量指示测试模式，则跳过 MySQL 初始化
+        boolean isTestMode = System.getProperty("test.mode", "false").equals("true") ||
+                             System.getenv("TEST_MODE") != null;
 
-            // 配置 HikariCP 连接池
-            HikariConfig config = new HikariConfig();
-            config.setJdbcUrl(dbUrl);
-            config.setUsername(dbUsername);
-            config.setPassword(dbPassword);
-            config.setDriverClassName("com.mysql.cj.jdbc.Driver");
+        if (!isTestMode) {
+            try {
+                // 加载配置
+                loadConfig();
 
-            // 连接池配置
-            config.setMaximumPoolSize(poolSize);
-            config.setMinimumIdle(2);
-            config.setConnectionTimeout(30000); // 30秒超时
-            config.setIdleTimeout(600000); // 10分钟空闲超时
-            config.setMaxLifetime(1800000); // 30分钟最大生命周期
+                // 配置 HikariCP 连接池
+                HikariConfig config = new HikariConfig();
+                config.setJdbcUrl(dbUrl);
+                config.setUsername(dbUsername);
+                config.setPassword(dbPassword);
+                config.setDriverClassName("com.mysql.cj.jdbc.Driver");
 
-            // MySQL 特定配置
-            config.addDataSourceProperty("cachePrepStmts", "true");
-            config.addDataSourceProperty("prepStmtCacheSize", "250");
-            config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
-            config.addDataSourceProperty("useServerPrepStmts", "true");
-            config.addDataSourceProperty("useLocalSessionState", "true");
-            config.addDataSourceProperty("rewriteBatchedStatements", "true");
-            config.addDataSourceProperty("cacheResultSetMetadata", "true");
-            config.addDataSourceProperty("cacheServerConfiguration", "true");
-            config.addDataSourceProperty("elideSetAutoCommits", "true");
-            config.addDataSourceProperty("maintainTimeStats", "false");
+                // 连接池配置
+                config.setMaximumPoolSize(poolSize);
+                config.setMinimumIdle(2);
+                config.setConnectionTimeout(30000); // 30秒超时
+                config.setIdleTimeout(600000); // 10分钟空闲超时
+                config.setMaxLifetime(1800000); // 30分钟最大生命周期
 
-            // 时区设置（重要！）
-            config.addDataSourceProperty("serverTimezone", "Asia/Shanghai");
-            config.addDataSourceProperty("useUnicode", "true");
-            config.addDataSourceProperty("characterEncoding", "UTF-8");
+                // MySQL 特定配置
+                config.addDataSourceProperty("cachePrepStmts", "true");
+                config.addDataSourceProperty("prepStmtCacheSize", "250");
+                config.addDataSourceProperty("prepStmtCacheSqlLimit", "2048");
+                config.addDataSourceProperty("useServerPrepStmts", "true");
+                config.addDataSourceProperty("useLocalSessionState", "true");
+                config.addDataSourceProperty("rewriteBatchedStatements", "true");
+                config.addDataSourceProperty("cacheResultSetMetadata", "true");
+                config.addDataSourceProperty("cacheServerConfiguration", "true");
+                config.addDataSourceProperty("elideSetAutoCommits", "true");
+                config.addDataSourceProperty("maintainTimeStats", "false");
 
-            dataSource = new HikariDataSource(config);
+                // 时区设置（重要！）
+                config.addDataSourceProperty("serverTimezone", "Asia/Shanghai");
+                config.addDataSourceProperty("useUnicode", "true");
+                config.addDataSourceProperty("characterEncoding", "UTF-8");
 
-            // 初始化数据库表结构
-            initializeDatabase();
+                dataSource = new HikariDataSource(config);
 
-        } catch (Exception e) {
-            logger.error("数据库初始化失败", e);
+                // 初始化数据库表结构
+                initializeDatabase();
+
+            } catch (Exception e) {
+                logger.error("数据库初始化失败", e);
+            }
+        } else {
+            logger.info("检测到测试模式，跳过 MySQL 数据库初始化");
         }
     }
 

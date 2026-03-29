@@ -296,13 +296,13 @@ class PromotionServiceTest extends DatabaseTestBase {
      */
     private Promotion createPromotion(String name, String type, double threshold, double discount) throws Exception {
         Promotion promotion = new Promotion();
+        promotion.promotionCode = "PROMO_" + System.currentTimeMillis() + "_" + name.hashCode();  // 设置唯一的促销编码
         promotion.name = name;
         promotion.type = type;
         promotion.threshold = threshold;
         promotion.discount = discount;
         promotion.description = "测试促销：" + name;
         promotion.enabled = true;
-        // 注意：不设置startDate和endDate，避免Timestamp类型转换问题
         promotion.usageCount = 0;
         promotion.maxUsage = 100;
 

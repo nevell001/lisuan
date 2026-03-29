@@ -52,10 +52,13 @@ class ReturnServiceTest extends DatabaseTestBase {
         testTransaction.transactionId = "T202603140001";
         testTransaction.timestamp = "2026-03-14 12:00:00";
         testTransaction.totalAmount = 30.0;
+        testTransaction.tax = 0.0;  // 添加 tax 字段
         testTransaction.finalAmount = 30.0;
         testTransaction.paymentMethod = "现金";
         testTransaction.operatorName = "测试操作员";
         testTransaction.operatorUsername = "test_operator";
+        // 初始化 items 列表，避免 NullPointerException
+        testTransaction.items = new ArrayList<>();
         TransactionDAO.insert(testTransaction);
 
         // 注意：transaction_items表没有单独的TransactionItem模型类
@@ -161,9 +164,9 @@ class ReturnServiceTest extends DatabaseTestBase {
         assertEquals("测试审批员", updatedOrder.approverName);
         assertNotNull(updatedOrder.approvalDate);
 
-        // 验证库存已增加
+        // 验证库存已增加（退货数量 = 30/10 = 3）
         Product updatedProduct = ProductDAO.findById(testProduct1.id);
-        assertEquals(initialQuantity + 2, updatedProduct.quantity);
+        assertEquals(initialQuantity + 3, updatedProduct.quantity);
     }
 
     @Test
@@ -232,6 +235,7 @@ class ReturnServiceTest extends DatabaseTestBase {
     void testCompleteReturnOrderWithCashRefund() throws Exception {
         // 先创建并审批退货订单（无会员）
         ReturnOrder returnOrder = createTestReturnOrderWithoutMember(30.0, "现金");
+        ReturnService.approveReturnOrder(returnOrder.returnOrderId, "测试审批员", "同意", true);
 
         // 完成退货订单
         boolean success = ReturnService.completeReturnOrder(returnOrder.returnOrderId);
@@ -360,9 +364,9 @@ class ReturnServiceTest extends DatabaseTestBase {
         assertNotNull(stats);
         assertEquals(4, stats.totalReturnOrders); // 总共4个退货单
         assertEquals(75.0, stats.totalReturnAmount, 0.01); // 10+20+30+15
-        assertEquals(2, stats.approvedOrders); // 2个已批准
+        assertEquals(1, stats.approvedOrders); // 1个已批准（order2），order3已完成
         assertEquals(1, stats.rejectedOrders); // 1个已拒绝
-        assertEquals(1, stats.completedOrders); // 1个已完成
+        assertEquals(1, stats.completedOrders); // 1个已完成（order3）
     }
 
     /**

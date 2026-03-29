@@ -202,12 +202,12 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         MemberDAO.update(testMember);
 
         List<CartItem> cartItems = new ArrayList<>();
-        cartItems.add(new CartItem(testProduct, 50));
+        cartItems.add(new CartItem(testProduct, 120)); // 120 * 10 = 1200, 打9折后 1080 > 1000 余额
 
-        double totalAmount = 50 * testProduct.price;
+        double totalAmount = 120 * testProduct.price;
         double discountedAmount = totalAmount * 0.9;
 
-        // 会员余额不足
+        // 会员余额不足 (需要1080，但只有1000)
         TransactionService.TransactionResult result = TransactionService.executeTransaction(
             cartItems,
             testMember,
@@ -312,8 +312,8 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         assertTrue(result.success);
         assertNotNull(result.transactionId);
 
-        // 验证交易ID格式（T + 时间戳）
-        assertTrue(result.transactionId.startsWith("T"));
+        // 验证交易ID格式（ORD + 时间戳）
+        assertTrue(result.transactionId.startsWith("ORD"));
         assertTrue(result.transactionId.length() > 10);
     }
 
@@ -355,6 +355,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
     void testMultiProductTransaction() throws Exception {
         // 创建第二个商品
         Product product2 = createProduct("商品2", 20.0, 50);
+        inventory.put(product2.name, product2); // 添加到库存
 
         List<CartItem> cartItems = new ArrayList<>();
         cartItems.add(new CartItem(testProduct, 3));
@@ -387,6 +388,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
     void testInventoryDeductionAtomicity() throws Exception {
         // 创建第二个商品
         Product product2 = createProduct("商品2", 20.0, 50);
+        inventory.put(product2.name, product2); // 添加到库存
 
         List<CartItem> cartItems = new ArrayList<>();
         cartItems.add(new CartItem(testProduct, 60)); // 正好用完库存

@@ -316,7 +316,10 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.1.2</version>
                 <configuration>
-                    <argLine>-Dfile.encoding=UTF-8</argLine>
+                    <argLine>-Dfile.encoding=UTF-8 -Dtest.mode=true</argLine>
+                    <systemPropertyVariables>
+                        <TEST_MODE>true</TEST_MODE>
+                    </systemPropertyVariables>
                 </configuration>
             </plugin>
         </plugins>
