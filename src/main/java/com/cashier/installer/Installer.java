@@ -7,11 +7,14 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * 收银系统图形化安装程序
  */
 public class Installer {
+    private static final Logger LOGGER = Logger.getLogger(Installer.class.getName());
     private static final String APP_VERSION = "2.4.5";
     private static final String DB_NAME = "cashier_system";
     
@@ -33,7 +36,7 @@ public class Installer {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
         } catch (Exception e) {
             // UI look and feel 设置失败，使用默认设置
-            System.err.println("无法设置系统外观: " + e.getMessage());
+            LOGGER.log(Level.WARNING, "无法设置系统外观: {0}", e.getMessage());
         }
         new Installer().start();
     }
@@ -335,7 +338,8 @@ public class Installer {
                 install();
             } catch (Exception e) {
                 log("安装失败: " + e.getMessage());
-                // 记录堆栈跟踪信息
+                // 记录堆栈跟踪信息到日志
+                LOGGER.log(Level.SEVERE, "安装失败", e);
                 StringWriter sw = new StringWriter();
                 PrintWriter pw = new PrintWriter(sw);
                 e.printStackTrace(pw);
@@ -390,7 +394,8 @@ public class Installer {
         log("");
         log("默认登录：");
         log("  用户名: admin");
-        log("  密码: admin123");
+        log("  初始密码: 请查看控制台日志中的随机生成密码");
+        log("  注意: 首次登录需要修改密码");
         log("");
         
         SwingUtilities.invokeLater(() -> {

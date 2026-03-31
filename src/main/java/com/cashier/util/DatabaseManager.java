@@ -755,8 +755,9 @@ public class DatabaseManager {
         ResultSet rs = stmt.executeQuery("SELECT COUNT(*) as count FROM users");
         if (rs.next() && rs.getInt("count") == 0) {
             logger.info("创建默认管理员用户...");
-            // 使用明文密码，首次登录时强制修改
-            String plainPassword = "admin123";
+            // 生成随机初始密码并加密存储
+            String initialPassword = generateRandomPassword();
+            String hashedPassword = com.cashier.util.PasswordUtil.hashPassword(initialPassword);
             long currentTime = System.currentTimeMillis();
 
             // 使用 PreparedStatement 防止 SQL 注入
@@ -766,7 +767,7 @@ public class DatabaseManager {
             try (Connection conn = getConnection();
                  PreparedStatement pstmt = conn.prepareStatement(sql)) {
                 pstmt.setString(1, "admin");
-                pstmt.setString(2, plainPassword);
+                pstmt.setString(2, hashedPassword);
                 pstmt.setString(3, "系统管理员");
                 pstmt.setString(4, "admin");
                 pstmt.setInt(5, 1);
@@ -777,11 +778,26 @@ public class DatabaseManager {
 
             logger.info("默认管理员用户创建成功:");
             logger.info("  用户名: admin");
-            logger.info("  密码: admin123 (明文，首次登录需修改)");
+            logger.info("  初始密码: " + initialPassword + " (请妥善保存，首次登录需修改)");
+            logger.info("  密码已使用 BCrypt 加密存储");
         } else {
             logger.info("用户表已有数据，跳过创建默认用户");
         }
         rs.close();
+    }
+
+    /**
+     * 生成随机密码
+     * @return 随机生成的密码
+     */
+    private static String generateRandomPassword() {
+        String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
+        StringBuilder sb = new StringBuilder();
+        java.security.SecureRandom random = new java.security.SecureRandom();
+        for (int i = 0; i < 10; i++) {
+            sb.append(chars.charAt(random.nextInt(chars.length())));
+        }
+        return sb.toString();
     }
 
     /**

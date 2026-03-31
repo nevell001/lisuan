@@ -63,7 +63,7 @@ public class ReceiptPrinter {
             return receiptFile.getAbsolutePath();
 
         } catch (Exception e) {
-            System.err.println("打印小票失败: " + e.getMessage());
+            logger.error("打印小票失败: {}", e.getMessage(), e);
             return null;
         }
     }
@@ -230,7 +230,7 @@ public class ReceiptPrinter {
             return receiptFile.getAbsolutePath();
 
         } catch (Exception e) {
-            System.err.println("生成小票失败: " + e.getMessage());
+            logger.error("生成小票失败: {}", e.getMessage(), e);
             return null;
         }
     }
@@ -243,7 +243,7 @@ public class ReceiptPrinter {
         try {
             File file = new File(filePath);
             if (!file.exists()) {
-                System.err.println("文件不存在: " + filePath);
+                logger.warn("文件不存在: {}", filePath);
                 return;
             }
 
@@ -261,7 +261,7 @@ public class ReceiptPrinter {
             }
 
         } catch (IOException e) {
-            System.err.println("打开文件失败: " + e.getMessage());
+            logger.error("打开文件失败: {}", e.getMessage(), e);
         }
     }
 
@@ -300,7 +300,7 @@ public class ReceiptPrinter {
             return returnReceiptFile.getAbsolutePath();
 
         } catch (Exception e) {
-            System.err.println("打印退货单据失败: " + e.getMessage());
+            logger.error("打印退货单据失败: {}", e.getMessage(), e);
             return null;
         }
     }
@@ -430,7 +430,7 @@ public class ReceiptPrinter {
             return returnReceiptFile.getAbsolutePath();
 
         } catch (Exception e) {
-            System.err.println("生成退货单据失败: " + e.getMessage());
+            logger.error("生成退货单据失败: {}", e.getMessage(), e);
             return null;
         }
     }

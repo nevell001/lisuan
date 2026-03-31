@@ -20,6 +20,7 @@ import javafx.stage.Stage;
 import javafx.util.Duration;
 
 import java.io.*;
+import java.time.Instant;
 import java.util.Map;
 import java.util.Properties;
 
@@ -54,7 +55,9 @@ public class LoginController {
     private CashierSystemFXApplication application;
     private static final String CONFIG_FILE = "config/login_config.properties";
     private static final int MAX_LOGIN_ATTEMPTS = 5;
+    private static final long LOCKOUT_DURATION_MINUTES = 5; // 锁定5分钟
     private int loginAttempts = 0;
+    private Instant lockoutEndTime = null; // 锁定结束时间
 
     /**
      * 初始化方法
@@ -102,11 +105,10 @@ public class LoginController {
             return;
         }
 
-        // 检查登录尝试次数
-        if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
-            showError("登录尝试次数过多，请稍后再试！");
-            usernameField.setDisable(true);
-            passwordField.setDisable(true);
+        // 检查是否处于锁定状态
+        if (isLockedOut()) {
+            long remainingSeconds = getRemainingLockoutSeconds();
+            showError("登录尝试次数过多，请 " + remainingSeconds + " 秒后再试！");
             return;
         }
 
@@ -120,6 +122,7 @@ public class LoginController {
                 User user = UserDAO.findByUsername(username);
                 if (user == null) {
                     loginAttempts++;
+                    checkAndLockAccount(username);
                     Platform.runLater(() -> {
                         showError("用户名不存在！剩余尝试次数：" + (MAX_LOGIN_ATTEMPTS - loginAttempts));
                         shakeTextField(usernameField);
@@ -130,6 +133,7 @@ public class LoginController {
 
                 if (!PasswordUtil.verifyPassword(password, user.password, username)) {
                     loginAttempts++;
+                    checkAndLockAccount(username);
                     Platform.runLater(() -> {
                         showError("密码错误！剩余尝试次数：" + (MAX_LOGIN_ATTEMPTS - loginAttempts));
                         shakeTextField(passwordField);
@@ -307,6 +311,50 @@ public class LoginController {
                 "© 2026 " + AppConstants.DEVELOPER);
         alert.initOwner(usernameField.getScene().getWindow());
         alert.showAndWait();
+    }
+
+    /**
+     * 检查是否需要锁定账户
+     * @param username 用户名
+     */
+    private void checkAndLockAccount(String username) {
+        if (loginAttempts >= MAX_LOGIN_ATTEMPTS) {
+            lockoutEndTime = Instant.now().plusSeconds(LOCKOUT_DURATION_MINUTES * 60);
+            logger.warn("用户 {} 登录失败次数过多，账户已锁定 {} 分钟", username, LOCKOUT_DURATION_MINUTES);
+        }
+    }
+
+    /**
+     * 检查是否处于锁定状态
+     * @return 是否被锁定
+     */
+    private boolean isLockedOut() {
+        if (lockoutEndTime == null) {
+            return false;
+        }
+        if (Instant.now().isAfter(lockoutEndTime)) {
+            // 锁定时间已过，重置
+            lockoutEndTime = null;
+            loginAttempts = 0;
+            Platform.runLater(() -> {
+                usernameField.setDisable(false);
+                passwordField.setDisable(false);
+            });
+            return false;
+        }
+        return true;
+    }
+
+    /**
+     * 获取剩余锁定时间（秒）
+     * @return 剩余秒数
+     */
+    private long getRemainingLockoutSeconds() {
+        if (lockoutEndTime == null) {
+            return 0;
+        }
+        long seconds = java.time.Duration.between(Instant.now(), lockoutEndTime).getSeconds();
+        return Math.max(0, seconds);
     }
 
     /**
