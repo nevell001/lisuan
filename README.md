@@ -163,6 +163,19 @@ java -jar target/cashier-system-fx-2.4.5.jar
 
 ## 🎯 最近更新
 
+### v2.4.5-refactor-transaction-semantics (2026-04-04) - 维护检查点
+- 🔒 **事务语义统一**
+  - `DatabaseManager` / `BaseDAO` 的提交、回滚后行为已统一，都会恢复 `autoCommit=true`
+  - Service 层重复事务模板已收敛到统一事务入口
+- 🧩 **交易流程收敛**
+  - `TransactionService.executeTransaction(...)` 改为统一事务模板
+  - 会员余额、积分、等级、折扣更新并入同一事务
+  - 促销使用次数更新失败时继续保证整体回滚
+- ✅ **定向回归通过**
+  - `BaseDAOTest`、`TransactionServiceTest`、`MemberServiceTest`、`InventoryServiceTest`、`ReturnServiceTest` 共 55/55 通过
+- 📝 **详细说明**
+  - 见 `docs/RELEASE_NOTE_v2.4.5-refactor-transaction-semantics.md`
+
 ### v2.4.5 (2026-03-14) - 发布
 - 🔧 **版本管理优化**
   - ✅ 创建 AppConstants 集中管理版本号
