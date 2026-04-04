@@ -35,6 +35,7 @@ config/*.config
 .iflow/
 .claude/
 .workbuddy/
+AGENTS.md
 
 # 日志文件
 *.log
