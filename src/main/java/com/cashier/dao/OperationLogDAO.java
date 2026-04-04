@@ -119,12 +119,23 @@ public class OperationLogDAO {
      * 插入新操作日志
      */
     public static boolean insert(OperationLog log) throws SQLException {
+        try (Connection conn = DatabaseManager.getConnection()) {
+            return insertWithConnection(conn, log);
+        }
+    }
+
+    /**
+     * 使用指定连接插入操作日志
+     * @param conn 数据库连接
+     * @param log 操作日志
+     * @return 如果插入成功返回true，否则返回false
+     * @throws SQLException 数据库操作异常
+     */
+    public static boolean insertWithConnection(Connection conn, OperationLog log) throws SQLException {
         String sql = "INSERT INTO operation_logs (username, operation, details, timestamp) " +
                      "VALUES (?, ?, ?, ?)";
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, log.username);
             pstmt.setString(2, log.operation);
             pstmt.setString(3, log.details);

@@ -258,7 +258,7 @@ public class ProductDAORefactored extends BaseDAO {
     private void setProductParameters(PreparedStatement pstmt, Product product) throws SQLException {
         pstmt.setString(1, product.productCode);
         pstmt.setString(2, product.name);
-        pstmt.setDouble(3, product.price);
+        pstmt.setBigDecimal(3, product.price);
         pstmt.setInt(4, product.quantity);
         pstmt.setString(5, product.category);
         pstmt.setString(6, product.barcode);
@@ -268,7 +268,7 @@ public class ProductDAORefactored extends BaseDAO {
         pstmt.setString(10, product.supplier);
         pstmt.setString(11, product.spec);
         pstmt.setInt(12, product.minStock);
-        pstmt.setDouble(13, product.cost);
+        pstmt.setBigDecimal(13, product.cost);
     }
 
     private boolean existsByProductCode(Connection conn, String productCode) throws SQLException {
@@ -304,7 +304,7 @@ public class ProductDAORefactored extends BaseDAO {
             rs.getInt("id"),
             rs.getString("product_code"),
             rs.getString("name"),
-            rs.getDouble("price"),
+            rs.getBigDecimal("price"),
             rs.getInt("quantity"),
             rs.getString("category"),
             rs.getString("barcode"),
@@ -314,7 +314,7 @@ public class ProductDAORefactored extends BaseDAO {
             rs.getString("supplier"),
             rs.getString("spec"),
             rs.getInt("min_stock"),
-            rs.getDouble("cost")
+            rs.getBigDecimal("cost")
         );
         product.version = rs.getInt("version");
         return product;

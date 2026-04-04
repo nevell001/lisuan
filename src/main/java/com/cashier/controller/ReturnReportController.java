@@ -348,7 +348,7 @@ public class ReturnReportController {
         // 汇总每日退货金额
         for (ReturnOrder order : orders) {
             String dateKey = sdf.format(order.returnDate);
-            dailyReturns.put(dateKey, dailyReturns.getOrDefault(dateKey, 0.0) + order.totalAmount);
+            dailyReturns.put(dateKey, dailyReturns.getOrDefault(dateKey, 0.0) + order.getTotalAmount().doubleValue());
         }
 
         // 创建柱状图数据
@@ -369,7 +369,7 @@ public class ReturnReportController {
             List<ReturnOrderItem> items = ReturnOrderItemDAO.findByReturnOrderId(order.returnOrderId);
             for (ReturnOrderItem item : items) {
                 String category = item.category != null && !item.category.isEmpty() ? item.category : "未分类";
-                categoryReturns.put(category, categoryReturns.getOrDefault(category, 0.0) + item.returnAmount);
+                categoryReturns.put(category, categoryReturns.getOrDefault(category, 0.0) + item.getReturnAmount().doubleValue());
             }
         }
 

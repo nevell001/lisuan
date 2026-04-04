@@ -6,6 +6,7 @@ import com.cashier.util.DatabaseTestBase;
 import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.DisplayName;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.List;
 
@@ -112,7 +113,7 @@ public class ProductDAOTest extends DatabaseTestBase {
     @Order(6)
     @DisplayName("测试更新商品")
     public void testUpdateProduct() throws SQLException {
-        testProduct.price = 25.99;
+        testProduct.price = BigDecimal.valueOf(25.99);
         testProduct.quantity = 100;
         testProduct.description = "更新后的商品描述";
 
@@ -120,7 +121,7 @@ public class ProductDAOTest extends DatabaseTestBase {
         assertTrue(result);
 
         Product updated = ProductDAO.findById(insertedProductId);
-        assertEquals(25.99, updated.price);
+        assertEquals(25.99, updated.price.doubleValue(), 0.01);
         assertEquals(100, updated.quantity);
         assertEquals("更新后的商品描述", updated.description);
     }

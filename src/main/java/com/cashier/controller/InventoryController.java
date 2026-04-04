@@ -444,10 +444,10 @@ public class InventoryController {
                 inventoryList.sort((p1, p2) -> p1.name.compareTo(p2.name));
                 break;
             case "按价格(低→高)":
-                inventoryList.sort((p1, p2) -> Double.compare(p1.price, p2.price));
+                inventoryList.sort((p1, p2) -> p1.getPrice().compareTo(p2.getPrice()));
                 break;
             case "按价格(高→低)":
-                inventoryList.sort((p1, p2) -> Double.compare(p2.price, p1.price));
+                inventoryList.sort((p1, p2) -> p2.getPrice().compareTo(p1.getPrice()));
                 break;
             case "按库存(多→少)":
                 inventoryList.sort((p1, p2) -> Integer.compare(p2.quantity, p1.quantity));

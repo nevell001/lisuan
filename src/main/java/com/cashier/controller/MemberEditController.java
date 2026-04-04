@@ -8,6 +8,7 @@ import javafx.fxml.FXML;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
@@ -125,10 +126,10 @@ public class MemberEditController {
             phoneField.setText(member.phone);
             phoneField.setDisable(true); // 手机号不可修改
             nameField.setText(member.name);
-            pointsField.setText(String.valueOf((int)member.points));
+            pointsField.setText(String.valueOf(member.getPoints().intValue()));
             levelComboBox.getSelectionModel().select(member.level);
-            discountField.setText(String.valueOf(member.discount));
-            balanceField.setText(String.format("%.2f", member.balance));
+            discountField.setText(String.valueOf(member.getDiscount()));
+            balanceField.setText(String.format("%.2f", member.getBalance()));
             birthdayField.setText(member.birthday);
         } else {
             // 添加模式
@@ -173,10 +174,11 @@ public class MemberEditController {
 
             // 更新会员信息
             member.memberCode = memberCodeField.getText().trim();
-            member.points = Double.parseDouble(pointsField.getText().trim());
+            member.points = new BigDecimal(pointsField.getText().trim());
             member.level = levelComboBox.getSelectionModel().getSelectedItem();
-            member.discount = Double.parseDouble(discountField.getText().trim());
-            member.balance = Double.parseDouble(balanceField.getText().trim());
+            member.discount = new BigDecimal(discountField.getText().trim());
+            member.discountRate = member.discount;
+            member.balance = new BigDecimal(balanceField.getText().trim());
             member.birthday = birthdayField.getText().trim();
 
             // 根据新的积分自动计算并更新会员等级
@@ -184,7 +186,8 @@ public class MemberEditController {
                 MemberService.updateMemberLevel(member);
                 // 如果等级已更新，同步到对话框显示
                 member.level = MemberService.calculateLevel(member.points);
-                member.discount = MemberService.getDiscountByLevel(member.level);
+                member.discount = MemberService.getDiscountByLevelDecimal(member.level);
+                member.discountRate = member.discount;
                 logger.info("会员 {} 等级已根据积分自动更新: 积分={}, 等级={}",
                     member.phone, member.points, member.level);
             } catch (Exception e) {

@@ -842,8 +842,12 @@ public class DatabaseManager {
      */
     public static void commitTransaction(Connection conn) throws SQLException {
         if (conn != null && !conn.getAutoCommit()) {
-            conn.commit();
-            logger.debug("事务已提交");
+            try {
+                conn.commit();
+                logger.debug("事务已提交");
+            } finally {
+                restoreAutoCommit(conn);
+            }
         }
     }
 
@@ -855,13 +859,78 @@ public class DatabaseManager {
         if (conn != null) {
             try {
                 if (!conn.getAutoCommit()) {
-                    conn.rollback();
-                    logger.debug("事务已回滚");
+                    try {
+                        conn.rollback();
+                        logger.debug("事务已回滚");
+                    } finally {
+                        restoreAutoCommit(conn);
+                    }
                 }
             } catch (SQLException e) {
                 logger.error("回滚事务失败", e);
             }
         }
+    }
+
+    /**
+     * 执行返回任意结果的事务操作
+     * @param callback 事务回调
+     * @param <T> 返回值类型
+     * @return 事务执行结果
+     * @throws SQLException 数据库操作异常
+     */
+    public static <T> T executeInTransaction(TransactionCallback<T> callback) throws SQLException {
+        try (Connection conn = getConnection()) {
+            beginTransaction(conn);
+            try {
+                T result = callback.execute(conn);
+                commitTransaction(conn);
+                return result;
+            } catch (SQLException | RuntimeException e) {
+                rollbackTransaction(conn);
+                throw e;
+            }
+        }
+    }
+
+    /**
+     * 执行返回成功状态的事务操作；当回调返回 false 时统一回滚
+     * @param callback 事务回调
+     * @return 是否执行成功
+     * @throws SQLException 数据库操作异常
+     */
+    public static boolean executeBooleanTransaction(BooleanTransactionCallback callback) throws SQLException {
+        try (Connection conn = getConnection()) {
+            beginTransaction(conn);
+            try {
+                boolean success = callback.execute(conn);
+                if (!success) {
+                    rollbackTransaction(conn);
+                    return false;
+                }
+                commitTransaction(conn);
+                return true;
+            } catch (SQLException | RuntimeException e) {
+                rollbackTransaction(conn);
+                throw e;
+            }
+        }
+    }
+
+    private static void restoreAutoCommit(Connection conn) throws SQLException {
+        if (conn != null && !conn.getAutoCommit()) {
+            conn.setAutoCommit(true);
+        }
+    }
+
+    @FunctionalInterface
+    public interface TransactionCallback<T> {
+        T execute(Connection conn) throws SQLException;
+    }
+
+    @FunctionalInterface
+    public interface BooleanTransactionCallback {
+        boolean execute(Connection conn) throws SQLException;
     }
 
     /**

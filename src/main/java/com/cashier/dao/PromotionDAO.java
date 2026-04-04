@@ -110,8 +110,8 @@ public class PromotionDAO {
             pstmt.setString(1, promotion.promotionCode);
             pstmt.setString(2, promotion.name);
             pstmt.setString(3, promotion.type);
-            pstmt.setDouble(4, promotion.threshold);
-            pstmt.setDouble(5, promotion.discount);
+            pstmt.setBigDecimal(4, promotion.threshold);
+            pstmt.setBigDecimal(5, promotion.discount);
             pstmt.setString(6, promotion.description);
             pstmt.setBoolean(7, promotion.enabled);
             pstmt.setLong(8, promotion.startDate.getTime());
@@ -145,8 +145,8 @@ public class PromotionDAO {
             pstmt.setString(1, promotion.promotionCode);
             pstmt.setString(2, promotion.name);
             pstmt.setString(3, promotion.type);
-            pstmt.setDouble(4, promotion.threshold);
-            pstmt.setDouble(5, promotion.discount);
+            pstmt.setBigDecimal(4, promotion.threshold);
+            pstmt.setBigDecimal(5, promotion.discount);
             pstmt.setString(6, promotion.description);
             pstmt.setBoolean(7, promotion.enabled);
             pstmt.setLong(8, promotion.startDate.getTime());
@@ -177,11 +177,22 @@ public class PromotionDAO {
      * 增加促销使用次数
      */
     public static boolean incrementUsage(int id) throws SQLException {
+        try (Connection conn = DatabaseManager.getConnection()) {
+            return incrementUsageWithConnection(conn, id);
+        }
+    }
+
+    /**
+     * 使用指定连接增加促销使用次数
+     * @param conn 数据库连接
+     * @param id 促销ID
+     * @return 更新是否成功
+     * @throws SQLException 数据库操作异常
+     */
+    public static boolean incrementUsageWithConnection(Connection conn, int id) throws SQLException {
         String sql = "UPDATE promotions SET usage_count = usage_count + 1 WHERE id = ?";
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, id);
             return pstmt.executeUpdate() > 0;
         }
@@ -202,8 +213,8 @@ public class PromotionDAO {
                 pstmt.setString(1, promotion.promotionCode);
                 pstmt.setString(2, promotion.name);
                 pstmt.setString(3, promotion.type);
-                pstmt.setDouble(4, promotion.threshold);
-                pstmt.setDouble(5, promotion.discount);
+                pstmt.setBigDecimal(4, promotion.threshold);
+                pstmt.setBigDecimal(5, promotion.discount);
                 pstmt.setString(6, promotion.description);
                 pstmt.setBoolean(7, promotion.enabled);
                 pstmt.setLong(8, promotion.startDate.getTime());
@@ -226,8 +237,8 @@ public class PromotionDAO {
             rs.getString("promotion_code"),
             rs.getString("name"),
             rs.getString("type"),
-            rs.getDouble("threshold"),
-            rs.getDouble("discount"),
+            rs.getBigDecimal("threshold"),
+            rs.getBigDecimal("discount"),
             rs.getString("description"),
             rs.getBoolean("enabled"),
             new java.util.Date(rs.getLong("start_date")),

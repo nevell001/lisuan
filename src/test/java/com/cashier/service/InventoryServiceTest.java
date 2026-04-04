@@ -5,6 +5,7 @@ import com.cashier.util.DatabaseTestBase;
 import com.cashier.model.Product;
 import org.junit.jupiter.api.*;
 
+import java.math.BigDecimal;
 import java.util.List;
 import java.util.Map;
 import java.util.HashMap;
@@ -92,6 +93,26 @@ class InventoryServiceTest extends DatabaseTestBase {
 
     @Test
     @Order(4)
+    @DisplayName("测试批量更新库存 - 多商品失败时整体回滚")
+    void testBatchUpdateInventoryRollbackAcrossMultipleProducts() throws Exception {
+        Product secondProduct = createProduct("第二个测试商品", 12.0, 5);
+
+        Map<Integer, Integer> productUpdates = new java.util.LinkedHashMap<>();
+        productUpdates.put(testProduct.id, -10);
+        productUpdates.put(secondProduct.id, -10);
+
+        boolean success = InventoryService.batchUpdateInventory(productUpdates);
+
+        assertFalse(success);
+
+        Product firstUpdatedProduct = ProductDAO.findById(testProduct.id);
+        Product secondUpdatedProduct = ProductDAO.findById(secondProduct.id);
+        assertEquals(testProduct.quantity, firstUpdatedProduct.quantity);
+        assertEquals(secondProduct.quantity, secondUpdatedProduct.quantity);
+    }
+
+    @Test
+    @Order(5)
     @DisplayName("测试检查库存是否充足")
     void testCheckStockAvailable() throws Exception {
         // 充足库存
@@ -111,13 +132,13 @@ class InventoryServiceTest extends DatabaseTestBase {
         Product product = new Product();
         product.productCode = "P" + name.hashCode();
         product.name = name;
-        product.price = price;
+        product.price = BigDecimal.valueOf(price);
         product.quantity = quantity;
         product.category = "测试分类";
         product.barcode = "TEST" + name.hashCode();
         product.unit = "个";
         product.minStock = 10;
-        product.cost = price * 0.7;
+        product.cost = BigDecimal.valueOf(price).multiply(new BigDecimal("0.7"));
         product.version = 0;
 
         ProductDAO.insert(product);

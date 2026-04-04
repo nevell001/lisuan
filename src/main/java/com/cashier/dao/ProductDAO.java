@@ -52,20 +52,64 @@ public class ProductDAO {
      * 根据ID查找商品
      */
     public static Product findById(int id) throws SQLException {
+        try (Connection conn = DatabaseManager.getConnection()) {
+            return findByIdWithConnection(conn, id);
+        }
+    }
+
+    /**
+     * 使用指定连接根据ID查找商品
+     * @param conn 数据库连接
+     * @param id 商品ID
+     * @return 商品对象，不存在时返回 null
+     * @throws SQLException 数据库操作异常
+     */
+    public static Product findByIdWithConnection(Connection conn, int id) throws SQLException {
         String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
                      "brand, supplier, spec, min_stock, cost, version FROM products WHERE id = ?";
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                return mapRowToProduct(rs);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRowToProduct(rs);
+                }
             }
         }
         return null;
+    }
+
+    /**
+     * 使用指定连接批量查询商品
+     * @param conn 数据库连接
+     * @param ids 商品ID集合
+     * @return 商品映射（商品ID -> 商品对象）
+     * @throws SQLException 数据库操作异常
+     */
+    public static Map<Integer, Product> findByIdsWithConnection(Connection conn, Collection<Integer> ids) throws SQLException {
+        Map<Integer, Product> products = new HashMap<>();
+        if (ids == null || ids.isEmpty()) {
+            return products;
+        }
+
+        String placeholders = String.join(", ", Collections.nCopies(ids.size(), "?"));
+        String sql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
+                     "brand, supplier, spec, min_stock, cost, version FROM products WHERE id IN (" + placeholders + ")";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            int index = 1;
+            for (Integer id : ids) {
+                pstmt.setInt(index++, id);
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Product product = mapRowToProduct(rs);
+                    products.put(product.id, product);
+                }
+            }
+        }
+        return products;
     }
 
     /**
@@ -79,10 +123,10 @@ public class ProductDAO {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, name);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                return mapRowToProduct(rs);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRowToProduct(rs);
+                }
             }
         }
         return null;
@@ -99,10 +143,10 @@ public class ProductDAO {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, productCode);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                return mapRowToProduct(rs);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRowToProduct(rs);
+                }
             }
         }
         return null;
@@ -119,10 +163,10 @@ public class ProductDAO {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, barcode);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                return mapRowToProduct(rs);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRowToProduct(rs);
+                }
             }
         }
         return null;
@@ -172,7 +216,7 @@ public class ProductDAO {
 
             pstmt.setString(paramIndex++, product.productCode);
             pstmt.setString(paramIndex++, product.name);
-            pstmt.setDouble(paramIndex++, product.price);
+            pstmt.setBigDecimal(paramIndex++, product.price);
             pstmt.setInt(paramIndex++, product.quantity);
             pstmt.setString(paramIndex++, product.category);
             pstmt.setString(paramIndex++, product.barcode);
@@ -182,7 +226,7 @@ public class ProductDAO {
             pstmt.setString(paramIndex++, product.supplier);
             pstmt.setString(paramIndex++, product.spec);
             pstmt.setInt(paramIndex++, product.minStock);
-            pstmt.setDouble(paramIndex++, product.cost);
+            pstmt.setBigDecimal(paramIndex++, product.cost);
 
             int affectedRows = pstmt.executeUpdate();
             if (affectedRows > 0 && !useProvidedId) {
@@ -209,7 +253,7 @@ public class ProductDAO {
 
             pstmt.setString(1, product.productCode);
             pstmt.setString(2, product.name);
-            pstmt.setDouble(3, product.price);
+            pstmt.setBigDecimal(3, product.price);
             pstmt.setInt(4, product.quantity);
             pstmt.setString(5, product.category);
             pstmt.setString(6, product.barcode);
@@ -219,7 +263,7 @@ public class ProductDAO {
             pstmt.setString(10, product.supplier);
             pstmt.setString(11, product.spec);
             pstmt.setInt(12, product.minStock);
-            pstmt.setDouble(13, product.cost);
+            pstmt.setBigDecimal(13, product.cost);
             pstmt.setInt(14, product.id);
 
             return pstmt.executeUpdate() > 0;
@@ -242,7 +286,7 @@ public class ProductDAO {
 
             pstmt.setString(1, product.productCode);
             pstmt.setString(2, product.name);
-            pstmt.setDouble(3, product.price);
+            pstmt.setBigDecimal(3, product.price);
             pstmt.setInt(4, product.quantity);
             pstmt.setString(5, product.category);
             pstmt.setString(6, product.barcode);
@@ -252,7 +296,7 @@ public class ProductDAO {
             pstmt.setString(10, product.supplier);
             pstmt.setString(11, product.spec);
             pstmt.setInt(12, product.minStock);
-            pstmt.setDouble(13, product.cost);
+            pstmt.setBigDecimal(13, product.cost);
             pstmt.setInt(14, product.id);
             pstmt.setInt(15, product.version);
 
@@ -280,7 +324,7 @@ public class ProductDAO {
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, product.productCode);
             pstmt.setString(2, product.name);
-            pstmt.setDouble(3, product.price);
+            pstmt.setBigDecimal(3, product.price);
             pstmt.setInt(4, product.quantity);
             pstmt.setString(5, product.category);
             pstmt.setString(6, product.barcode);
@@ -290,7 +334,7 @@ public class ProductDAO {
             pstmt.setString(10, product.supplier);
             pstmt.setString(11, product.spec);
             pstmt.setInt(12, product.minStock);
-            pstmt.setDouble(13, product.cost);
+            pstmt.setBigDecimal(13, product.cost);
             pstmt.setInt(14, product.id);
             pstmt.setInt(15, product.version);
 
@@ -348,12 +392,13 @@ public class ProductDAO {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement("SELECT COUNT(*) FROM purchase_order_items WHERE product_id = ?")) {
             pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next() && rs.getInt(1) > 0) {
-                if (references.length() > 0) {
-                    references.append("、");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    if (references.length() > 0) {
+                        references.append("、");
+                    }
+                    references.append("采购订单明细");
                 }
-                references.append("采购订单明细");
             }
         }
 
@@ -361,12 +406,13 @@ public class ProductDAO {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement("SELECT COUNT(*) FROM purchase_inbound_items WHERE product_id = ?")) {
             pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next() && rs.getInt(1) > 0) {
-                if (references.length() > 0) {
-                    references.append("、");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    if (references.length() > 0) {
+                        references.append("、");
+                    }
+                    references.append("采购入库明细");
                 }
-                references.append("采购入库明细");
             }
         }
 
@@ -374,12 +420,13 @@ public class ProductDAO {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement("SELECT COUNT(*) FROM inventory_check_items WHERE product_id = ?")) {
             pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next() && rs.getInt(1) > 0) {
-                if (references.length() > 0) {
-                    references.append("、");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    if (references.length() > 0) {
+                        references.append("、");
+                    }
+                    references.append("库存盘点明细");
                 }
-                references.append("库存盘点明细");
             }
         }
 
@@ -449,10 +496,10 @@ public class ProductDAO {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setString(1, category);
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                products.add(mapRowToProduct(rs));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    products.add(mapRowToProduct(rs));
+                }
             }
         }
         return products;
@@ -475,10 +522,10 @@ public class ProductDAO {
             pstmt.setString(2, pattern);
             pstmt.setString(3, pattern);
             pstmt.setString(4, pattern);
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                products.add(mapRowToProduct(rs));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    products.add(mapRowToProduct(rs));
+                }
             }
         }
         return products;
@@ -501,7 +548,7 @@ public class ProductDAO {
             for (Product product : products) {
                 pstmt.setString(1, product.productCode);
                 pstmt.setString(2, product.name);
-                pstmt.setDouble(3, product.price);
+                pstmt.setBigDecimal(3, product.price);
                 pstmt.setInt(4, product.quantity);
                 pstmt.setString(5, product.category);
                 pstmt.setString(6, product.barcode);
@@ -511,7 +558,7 @@ public class ProductDAO {
                 pstmt.setString(10, product.supplier);
                 pstmt.setString(11, product.spec);
                 pstmt.setInt(12, product.minStock);
-                pstmt.setDouble(13, product.cost);
+                pstmt.setBigDecimal(13, product.cost);
                 pstmt.addBatch();
             }
 
@@ -538,7 +585,7 @@ public class ProductDAO {
             rs.getInt("id"),
             rs.getString("product_code"),
             rs.getString("name"),
-            rs.getDouble("price"),
+            rs.getBigDecimal("price"),
             rs.getInt("quantity"),
             rs.getString("category"),
             rs.getString("barcode"),
@@ -548,7 +595,7 @@ public class ProductDAO {
             rs.getString("supplier"),
             rs.getString("spec"),
             rs.getInt("min_stock"),
-            rs.getDouble("cost")
+            rs.getBigDecimal("cost")
         );
         product.version = rs.getInt("version");
         return product;

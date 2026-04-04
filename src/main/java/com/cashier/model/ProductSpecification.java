@@ -1,5 +1,8 @@
 package com.cashier.model;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
+
 /**
  * 商品规格关联模型类
  */
@@ -9,7 +12,7 @@ public class ProductSpecification {
     public int specificationId;     // 规格类型ID
     public int specificationValueId;// 规格值ID
     public String skuCode;          // SKU编码
-    public double priceAdjustment;  // 价格调整值（可为正数或负数）
+    public BigDecimal priceAdjustment;  // 价格调整值（可为正数或负数）
     public int quantity;            // 库存数量（如果不同规格有独立库存）
     public String barcode;          // 条形码（不同规格可能有不同条形码）
     public boolean enabled;          // 是否启用
@@ -17,11 +20,15 @@ public class ProductSpecification {
     public java.util.Date updateTime;
 
     public ProductSpecification() {
-        this.priceAdjustment = 0.0;
+        this.priceAdjustment = BigDecimal.ZERO;
         this.quantity = 0;
         this.enabled = true;
         this.createTime = new java.util.Date();
         this.updateTime = new java.util.Date();
+    }
+
+    private static BigDecimal defaultDecimal(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     // Getter方法
@@ -45,8 +52,8 @@ public class ProductSpecification {
         return skuCode;
     }
 
-    public double getPriceAdjustment() {
-        return priceAdjustment;
+    public BigDecimal getPriceAdjustment() {
+        return defaultDecimal(priceAdjustment);
     }
 
     public int getQuantity() {
@@ -90,8 +97,12 @@ public class ProductSpecification {
         this.skuCode = skuCode;
     }
 
+    public void setPriceAdjustment(BigDecimal priceAdjustment) {
+        this.priceAdjustment = defaultDecimal(priceAdjustment);
+    }
+
     public void setPriceAdjustment(double priceAdjustment) {
-        this.priceAdjustment = priceAdjustment;
+        this.priceAdjustment = BigDecimal.valueOf(priceAdjustment);
     }
 
     public void setQuantity(int quantity) {
@@ -125,10 +136,11 @@ public class ProductSpecification {
      * 获取价格调整文本
      */
     public String getPriceAdjustmentText() {
-        if (priceAdjustment > 0) {
-            return "+" + String.format("%.2f", priceAdjustment);
-        } else if (priceAdjustment < 0) {
-            return String.format("%.2f", priceAdjustment);
+        BigDecimal value = defaultDecimal(priceAdjustment);
+        if (value.compareTo(BigDecimal.ZERO) > 0) {
+            return "+" + value.setScale(2, RoundingMode.HALF_UP).toPlainString();
+        } else if (value.compareTo(BigDecimal.ZERO) < 0) {
+            return value.setScale(2, RoundingMode.HALF_UP).toPlainString();
         } else {
             return "0.00";
         }

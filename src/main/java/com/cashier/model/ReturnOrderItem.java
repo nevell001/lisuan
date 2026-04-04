@@ -1,5 +1,7 @@
 package com.cashier.model;
 
+import java.math.BigDecimal;
+
 /**
  * 退货订单明细模型类
  */
@@ -12,21 +14,26 @@ public class ReturnOrderItem {
     public String barcode;  // 条形码
     public String category;  // 分类
     public int returnQuantity;  // 退货数量
-    public double unitPrice;  // 单价
-    public double returnAmount;  // 退货金额（退货数量 * 单价）
+    public BigDecimal unitPrice;  // 单价
+    public BigDecimal returnAmount;  // 退货金额（退货数量 * 单价）
     public String reason;  // 退货原因（商品级别）
     public String condition;  // 商品状态：GOOD（完好）、DAMAGED（损坏）、OPENED（已拆封）
 
     public ReturnOrderItem() {
         this.returnQuantity = 0;
-        this.unitPrice = 0.0;
-        this.returnAmount = 0.0;
+        this.unitPrice = BigDecimal.ZERO;
+        this.returnAmount = BigDecimal.ZERO;
         this.condition = "GOOD";
     }
 
-    public void calculateAmount() {
-        this.returnAmount = this.returnQuantity * this.unitPrice;
+    private static BigDecimal defaultDecimal(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
+
+    public void calculateAmount() {
+        this.returnAmount = defaultDecimal(this.unitPrice).multiply(BigDecimal.valueOf(this.returnQuantity));
+    }
+
     // Getter 方法
     public int getId() {
         return id;
@@ -60,12 +67,12 @@ public class ReturnOrderItem {
         return returnQuantity;
     }
 
-    public double getUnitPrice() {
-        return unitPrice;
+    public BigDecimal getUnitPrice() {
+        return defaultDecimal(unitPrice);
     }
 
-    public double getReturnAmount() {
-        return returnAmount;
+    public BigDecimal getReturnAmount() {
+        return defaultDecimal(returnAmount);
     }
 
     public String getReason() {

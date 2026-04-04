@@ -1,5 +1,7 @@
 package com.cashier.model;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
@@ -8,8 +10,8 @@ public class Promotion {
     public String promotionCode;       // 促销编号（用户自定义编号）
     public String name;                  // 促销名称
     public String type;                  // 促销类型: "满减", "打折", "优惠券"
-    public double threshold;             // 满减/打折的门槛金额
-    public double discount;              // 折扣值（满减的减额，打折的折扣率，优惠券的面额）
+    public BigDecimal threshold;         // 满减/打折的门槛金额
+    public BigDecimal discount;          // 折扣值（满减的减额，打折的折扣率，优惠券的面额）
     public String description;           // 描述
     public boolean enabled;              // 是否启用
     public Date startDate;               // 开始日期
@@ -22,8 +24,8 @@ public class Promotion {
         this.promotionCode = "";  // 促销编号
         this.name = "";
         this.type = "满减";
-        this.threshold = 0;
-        this.discount = 0;
+        this.threshold = BigDecimal.ZERO;
+        this.discount = BigDecimal.ZERO;
         this.description = "";
         this.enabled = true;
         this.startDate = new Date();
@@ -32,70 +34,79 @@ public class Promotion {
         this.maxUsage = -1;
     }
 
-    public Promotion(String name, String type, double threshold, double discount, String description) {
+    public Promotion(String name, String type, BigDecimal threshold, BigDecimal discount, String description) {
         this();
         this.name = name;
         this.type = type;
-        this.threshold = threshold;
-        this.discount = discount;
+        this.threshold = defaultDecimal(threshold);
+        this.discount = defaultDecimal(discount);
         this.description = description;
+    }
+
+    public Promotion(String name, String type, double threshold, double discount, String description) {
+        this(name, type, BigDecimal.valueOf(threshold), BigDecimal.valueOf(discount), description);
+    }
+
+    public Promotion(int id, String name, String type, BigDecimal threshold, BigDecimal discount, String description, boolean enabled, Date startDate, Date endDate, int usageCount, int maxUsage) {
+        this.id = id;
+        this.name = name;
+        this.type = type;
+        this.threshold = defaultDecimal(threshold);
+        this.discount = defaultDecimal(discount);
+        this.description = description;
+        this.enabled = enabled;
+        this.startDate = startDate;
+        this.endDate = endDate;
+        this.usageCount = usageCount;
+        this.maxUsage = maxUsage;
     }
 
     public Promotion(int id, String name, String type, double threshold, double discount, String description, boolean enabled, Date startDate, Date endDate, int usageCount, int maxUsage) {
-        this.id = id;
-        this.name = name;
-        this.type = type;
-        this.threshold = threshold;
-        this.discount = discount;
-        this.description = description;
-        this.enabled = enabled;
-        this.startDate = startDate;
-        this.endDate = endDate;
-        this.usageCount = usageCount;
-        this.maxUsage = maxUsage;
+        this(id, name, type, BigDecimal.valueOf(threshold), BigDecimal.valueOf(discount), description, enabled, startDate, endDate, usageCount, maxUsage);
+    }
+
+    public Promotion(int id, String promotionCode, String name, String type, BigDecimal threshold, BigDecimal discount, String description, boolean enabled, Date startDate, Date endDate, int usageCount, int maxUsage) {
+        this(id, name, type, threshold, discount, description, enabled, startDate, endDate, usageCount, maxUsage);
+        this.promotionCode = promotionCode;
     }
 
     public Promotion(int id, String promotionCode, String name, String type, double threshold, double discount, String description, boolean enabled, Date startDate, Date endDate, int usageCount, int maxUsage) {
-        this.id = id;
-        this.promotionCode = promotionCode;
-        this.name = name;
-        this.type = type;
-        this.threshold = threshold;
-        this.discount = discount;
-        this.description = description;
-        this.enabled = enabled;
-        this.startDate = startDate;
-        this.endDate = endDate;
-        this.usageCount = usageCount;
-        this.maxUsage = maxUsage;
+        this(id, promotionCode, name, type, BigDecimal.valueOf(threshold), BigDecimal.valueOf(discount), description, enabled, startDate, endDate, usageCount, maxUsage);
+    }
+
+    private static BigDecimal defaultDecimal(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     // 计算折扣金额
-    public double calculateDiscount(double amount) {
+    public BigDecimal calculateDiscount(BigDecimal amount) {
+        BigDecimal safeAmount = defaultDecimal(amount);
         if (!enabled || !isValid()) {
-            return 0;
+            return BigDecimal.ZERO;
         }
 
         if (maxUsage > 0 && usageCount >= maxUsage) {
-            return 0;
+            return BigDecimal.ZERO;
         }
 
         switch (type) {
             case "满减":
-                if (amount >= threshold) {
-                    return discount;
+                if (safeAmount.compareTo(defaultDecimal(threshold)) >= 0) {
+                    return defaultDecimal(discount);
                 }
                 break;
             case "打折":
-                if (amount >= threshold) {
-                    return amount * (1 - discount);
+                if (safeAmount.compareTo(defaultDecimal(threshold)) >= 0) {
+                    return safeAmount.multiply(BigDecimal.ONE.subtract(defaultDecimal(discount)));
                 }
                 break;
             case "优惠券":
                 // 优惠券可以直接使用，不设门槛
-                return discount;
+                return defaultDecimal(discount);
+            default:
+                break;
         }
-        return 0;
+        return BigDecimal.ZERO;
     }
 
     // 检查促销是否有效
@@ -118,13 +129,13 @@ public class Promotion {
         switch (type) {
             case "满减":
                 return String.format("%s - 满%.2f减%.2f [%s] [%s] 使用:%d/%d",
-                    name, threshold, discount, status, validity, usageCount, maxUsage == -1 ? -1 : maxUsage);
+                    name, threshold.doubleValue(), discount.doubleValue(), status, validity, usageCount, maxUsage == -1 ? -1 : maxUsage);
             case "打折":
                 return String.format("%s - 满%.2f打%.0f折 [%s] [%s] 使用:%d/%d",
-                    name, threshold, discount * 10, status, validity, usageCount, maxUsage == -1 ? -1 : maxUsage);
+                    name, threshold.doubleValue(), discount.multiply(BigDecimal.TEN).doubleValue(), status, validity, usageCount, maxUsage == -1 ? -1 : maxUsage);
             case "优惠券":
                 return String.format("%s - 面额%.2f元 [%s] [%s] 使用:%d/%d",
-                    name, discount, status, validity, usageCount, maxUsage == -1 ? -1 : maxUsage);
+                    name, discount.doubleValue(), status, validity, usageCount, maxUsage == -1 ? -1 : maxUsage);
             default:
                 return name;
         }
@@ -147,12 +158,12 @@ public class Promotion {
         return type;
     }
 
-    public double getThreshold() {
-        return threshold;
+    public BigDecimal getThreshold() {
+        return defaultDecimal(threshold);
     }
 
-    public double getDiscount() {
-        return discount;
+    public BigDecimal getDiscount() {
+        return defaultDecimal(discount);
     }
 
     public String getDescription() {

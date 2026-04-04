@@ -5,6 +5,8 @@ import com.cashier.util.DatabaseTestBase;
 import com.cashier.model.*;
 import org.junit.jupiter.api.*;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
@@ -37,10 +39,10 @@ class ReturnServiceTest extends DatabaseTestBase {
         testMember = new Member();
         testMember.phone = "13800138000";
         testMember.name = "测试会员";
-        testMember.balance = 1000.0;
-        testMember.points = 100.0;
+        testMember.balance = BigDecimal.valueOf(1000.0);
+        testMember.points = BigDecimal.valueOf(100.0);
         testMember.level = "普通";
-        testMember.discount = 10.0;
+        testMember.discount = BigDecimal.TEN;
         MemberDAO.insert(testMember);
 
         // 创建测试商品
@@ -51,9 +53,9 @@ class ReturnServiceTest extends DatabaseTestBase {
         testTransaction = new Transaction();
         testTransaction.transactionId = "T202603140001";
         testTransaction.timestamp = "2026-03-14 12:00:00";
-        testTransaction.totalAmount = 30.0;
-        testTransaction.tax = 0.0;  // 添加 tax 字段
-        testTransaction.finalAmount = 30.0;
+        testTransaction.totalAmount = BigDecimal.valueOf(30.0);
+        testTransaction.tax = BigDecimal.ZERO;  // 添加 tax 字段
+        testTransaction.finalAmount = BigDecimal.valueOf(30.0);
         testTransaction.paymentMethod = "现金";
         testTransaction.operatorName = "测试操作员";
         testTransaction.operatorUsername = "test_operator";
@@ -72,7 +74,7 @@ class ReturnServiceTest extends DatabaseTestBase {
         ReturnOrder returnOrder = new ReturnOrder();
         returnOrder.originalTransactionId = testTransaction.transactionId;
         returnOrder.memberId = testMember.id;
-        returnOrder.totalAmount = 30.0;
+        returnOrder.totalAmount = BigDecimal.valueOf(30.0);
         returnOrder.paymentMethod = "CASH"; // 退款方式：CASH
         returnOrder.returnReason = "商品质量问题";
         returnOrder.operatorName = "测试操作员";
@@ -91,7 +93,7 @@ class ReturnServiceTest extends DatabaseTestBase {
         item2.unitPrice = testProduct2.price;
         item2.calculateAmount(); // 计算退货金额
         item2.returnQuantity = 1;
-        item2.returnAmount = 10.0;
+        item2.returnAmount = BigDecimal.valueOf(10.0);
         item2.reason = "不想要";
 
         List<ReturnOrderItem> items = new ArrayList<>();
@@ -107,7 +109,7 @@ class ReturnServiceTest extends DatabaseTestBase {
         ReturnOrder createdOrder = ReturnOrderDAO.findByReturnOrderId(returnOrder.returnOrderId);
         assertNotNull(createdOrder);
         assertEquals("PENDING", createdOrder.status);
-        assertEquals(30.0, createdOrder.totalAmount, 0.01);
+        assertAmountEquals(30.0, createdOrder.totalAmount);
 
         // 验证退货明细已创建
         List<ReturnOrderItem> createdItems = ReturnOrderItemDAO.findByReturnOrderId(returnOrder.returnOrderId);
@@ -120,7 +122,7 @@ class ReturnServiceTest extends DatabaseTestBase {
     void testCreateReturnOrderEmptyItems() {
         ReturnOrder returnOrder = new ReturnOrder();
         returnOrder.originalTransactionId = testTransaction.transactionId;
-        returnOrder.totalAmount = 0.0;
+        returnOrder.totalAmount = BigDecimal.ZERO;
         returnOrder.paymentMethod = "CASH";
         returnOrder.operatorName = "测试操作员";
 
@@ -207,7 +209,7 @@ class ReturnServiceTest extends DatabaseTestBase {
         ReturnOrder returnOrder = createAndApproveReturnOrder(50.0, "会员余额");
 
         // 获取初始余额
-        double initialBalance = testMember.balance;
+        BigDecimal initialBalance = testMember.balance;
 
         // 完成退货订单
         boolean success = ReturnService.completeReturnOrder(returnOrder.returnOrderId);
@@ -221,12 +223,12 @@ class ReturnServiceTest extends DatabaseTestBase {
 
         // 验证会员余额已增加
         Member updatedMember = MemberDAO.findByPhone(testMember.phone);
-        assertEquals(initialBalance + 50.0, updatedMember.balance, 0.01);
+        assertAmountEquals(initialBalance.add(BigDecimal.valueOf(50.0)), updatedMember.balance);
 
         // 验证充值记录已创建
         List<RechargeRecord> records = RechargeRecordDAO.findAll();
         assertEquals(1, records.size());
-        assertEquals(50.0, records.get(0).amount, 0.01);
+        assertAmountEquals(50.0, records.get(0).amount);
     }
 
     @Test
@@ -249,7 +251,7 @@ class ReturnServiceTest extends DatabaseTestBase {
 
         // 验证没有会员余额变化（非会员退货）
         Member updatedMember = MemberDAO.findByPhone(testMember.phone);
-        assertEquals(testMember.balance, updatedMember.balance, 0.01);
+        assertAmountEquals(testMember.balance, updatedMember.balance);
     }
 
     @Test
@@ -369,6 +371,81 @@ class ReturnServiceTest extends DatabaseTestBase {
         assertEquals(1, stats.completedOrders); // 1个已完成（order3）
     }
 
+    @Test
+    @Order(13)
+    @DisplayName("测试创建退货订单失败时主表与明细一起回滚")
+    void testCreateReturnOrderRollbackOnItemInsertFailure() {
+        ReturnOrder returnOrder = new ReturnOrder();
+        returnOrder.originalTransactionId = testTransaction.transactionId;
+        returnOrder.memberId = testMember.id;
+        returnOrder.totalAmount = BigDecimal.valueOf(10.0);
+        returnOrder.paymentMethod = "CASH";
+        returnOrder.returnReason = "测试回滚";
+        returnOrder.operatorName = "测试操作员";
+
+        ReturnOrderItem invalidItem = new ReturnOrderItem();
+        invalidItem.productId = testProduct1.id;
+        invalidItem.productName = null;
+        invalidItem.unitPrice = testProduct1.price;
+        invalidItem.returnQuantity = 1;
+        invalidItem.returnAmount = BigDecimal.valueOf(10.0);
+
+        boolean success = ReturnService.createReturnOrder(returnOrder, List.of(invalidItem));
+
+        assertFalse(success);
+        assertNotNull(returnOrder.returnOrderId);
+        assertNull(ReturnOrderDAO.findByReturnOrderId(returnOrder.returnOrderId));
+        assertTrue(ReturnOrderItemDAO.findByReturnOrderId(returnOrder.returnOrderId).isEmpty());
+    }
+
+    @Test
+    @Order(14)
+    @DisplayName("测试审批退货失败时状态、库存与日志一起回滚")
+    void testApproveReturnOrderRollbackOnOperationLogFailure() throws Exception {
+        ReturnOrder returnOrder = createTestReturnOrder(30.0);
+        int initialQuantity = ProductDAO.findById(testProduct1.id).quantity;
+
+        boolean success = ReturnService.approveReturnOrder(returnOrder.returnOrderId, null, "同意退货", true);
+
+        assertFalse(success);
+
+        ReturnOrder updatedOrder = ReturnOrderDAO.findByReturnOrderId(returnOrder.returnOrderId);
+        assertNotNull(updatedOrder);
+        assertEquals("PENDING", updatedOrder.status);
+        assertNull(updatedOrder.approvalDate);
+        assertEquals(initialQuantity, ProductDAO.findById(testProduct1.id).quantity);
+        assertTrue(OperationLogDAO.findAll().isEmpty());
+    }
+
+    @Test
+    @Order(15)
+    @DisplayName("测试完成退货失败时状态、会员余额与充值记录一起回滚")
+    void testCompleteReturnOrderRollbackOnRechargeRecordFailure() throws Exception {
+        ReturnOrder returnOrder = createAndApproveReturnOrder(50.0, "会员余额");
+        BigDecimal initialBalance = MemberDAO.findByPhone(testMember.phone).balance;
+
+        RechargeRecord existingRecord = new RechargeRecord();
+        existingRecord.recordId = returnOrder.returnOrderId;
+        existingRecord.memberPhone = testMember.phone;
+        existingRecord.memberName = testMember.name;
+        existingRecord.amount = BigDecimal.ONE;
+        existingRecord.paymentMethod = "会员余额";
+        existingRecord.operator = "预置记录";
+        existingRecord.timestamp = new Date();
+        RechargeRecordDAO.insert(existingRecord);
+
+        boolean success = ReturnService.completeReturnOrder(returnOrder.returnOrderId);
+
+        assertFalse(success);
+
+        ReturnOrder updatedOrder = ReturnOrderDAO.findByReturnOrderId(returnOrder.returnOrderId);
+        assertNotNull(updatedOrder);
+        assertEquals("APPROVED", updatedOrder.status);
+        assertNull(updatedOrder.completedDate);
+        assertAmountEquals(initialBalance, MemberDAO.findByPhone(testMember.phone).balance);
+        assertEquals(1, RechargeRecordDAO.findAll().size());
+    }
+
     /**
      * 辅助方法：创建测试退货订单
      */
@@ -376,7 +453,7 @@ class ReturnServiceTest extends DatabaseTestBase {
         ReturnOrder returnOrder = new ReturnOrder();
         returnOrder.originalTransactionId = testTransaction.transactionId;
         returnOrder.memberId = testMember.id;
-        returnOrder.totalAmount = amount;
+        returnOrder.totalAmount = BigDecimal.valueOf(amount);
         returnOrder.paymentMethod = "CASH";
         returnOrder.returnReason = "测试退货";
         returnOrder.operatorName = "测试操作员";
@@ -385,8 +462,8 @@ class ReturnServiceTest extends DatabaseTestBase {
         item.productId = testProduct1.id;
         item.productName = testProduct1.name;
         item.unitPrice = testProduct1.price;
-        item.returnQuantity = (int) (amount / testProduct1.price);
-        item.returnAmount = amount;
+        item.returnQuantity = BigDecimal.valueOf(amount).divide(testProduct1.price, 0, RoundingMode.DOWN).intValue();
+        item.returnAmount = BigDecimal.valueOf(amount);
 
         List<ReturnOrderItem> items = new ArrayList<>();
         items.add(item);
@@ -402,7 +479,7 @@ class ReturnServiceTest extends DatabaseTestBase {
         ReturnOrder returnOrder = new ReturnOrder();
         returnOrder.originalTransactionId = testTransaction.transactionId;
         returnOrder.memberId = 0; // 无会员
-        returnOrder.totalAmount = amount;
+        returnOrder.totalAmount = BigDecimal.valueOf(amount);
         returnOrder.paymentMethod = paymentMethod;
         returnOrder.returnReason = "测试退货";
         returnOrder.operatorName = "测试操作员";
@@ -411,8 +488,8 @@ class ReturnServiceTest extends DatabaseTestBase {
         item.productId = testProduct2.id;
         item.productName = testProduct2.name;
         item.unitPrice = testProduct2.price;
-        item.returnQuantity = (int) (amount / testProduct2.price);
-        item.returnAmount = amount;
+        item.returnQuantity = BigDecimal.valueOf(amount).divide(testProduct2.price, 0, RoundingMode.DOWN).intValue();
+        item.returnAmount = BigDecimal.valueOf(amount);
 
         List<ReturnOrderItem> items = new ArrayList<>();
         items.add(item);
@@ -428,7 +505,7 @@ class ReturnServiceTest extends DatabaseTestBase {
         ReturnOrder returnOrder = new ReturnOrder();
         returnOrder.originalTransactionId = testTransaction.transactionId;
         returnOrder.memberId = testMember.id;
-        returnOrder.totalAmount = amount;
+        returnOrder.totalAmount = BigDecimal.valueOf(amount);
         returnOrder.paymentMethod = paymentMethod;
         returnOrder.returnReason = "测试退货";
         returnOrder.operatorName = "测试操作员";
@@ -437,8 +514,8 @@ class ReturnServiceTest extends DatabaseTestBase {
         item.productId = testProduct2.id;
         item.productName = testProduct2.name;
         item.unitPrice = testProduct2.price;
-        item.returnQuantity = (int) (amount / testProduct2.price);
-        item.returnAmount = amount;
+        item.returnQuantity = BigDecimal.valueOf(amount).divide(testProduct2.price, 0, RoundingMode.DOWN).intValue();
+        item.returnAmount = BigDecimal.valueOf(amount);
 
         List<ReturnOrderItem> items = new ArrayList<>();
         items.add(item);
@@ -455,17 +532,25 @@ class ReturnServiceTest extends DatabaseTestBase {
         Product product = new Product();
         product.productCode = "P" + name.hashCode();
         product.name = name;
-        product.price = price;
+        product.price = BigDecimal.valueOf(price);
         product.quantity = quantity;
         product.category = "测试分类";
         product.barcode = "TEST" + name.hashCode();
         product.unit = "个";
         product.minStock = 10;
-        product.cost = price * 0.7;
+        product.cost = BigDecimal.valueOf(price).multiply(new BigDecimal("0.7"));
         product.version = 0;
 
         ProductDAO.insert(product);
         return ProductDAO.findByName(name);
+    }
+
+    private void assertAmountEquals(double expected, BigDecimal actual) {
+        assertAmountEquals(BigDecimal.valueOf(expected), actual);
+    }
+
+    private void assertAmountEquals(BigDecimal expected, BigDecimal actual) {
+        assertEquals(0, expected.compareTo(actual));
     }
 
 }

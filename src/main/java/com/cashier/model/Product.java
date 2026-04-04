@@ -1,10 +1,14 @@
 package com.cashier.model;
 
+import java.math.BigDecimal;
+
 public class Product {
+    private static final BigDecimal DEFAULT_COST_RATE = new BigDecimal("0.7");
+
     public int id;               // 商品ID（数据库自增主键）
     public String productCode;   // 商品编号（用户自定义编号）
     public String name;
-    public double price;
+    public BigDecimal price;
     public int quantity;
     public String category;
     public String barcode;        // 条形码
@@ -14,19 +18,21 @@ public class Product {
     public String supplier;       // 供应商
     public String spec;           // 规格
     public int minStock;         // 最低库存预警
-    public double cost;          // 成本价
+    public BigDecimal cost;      // 成本价
     public int version;          // 版本号（用于乐观锁）
 
     public Product() {
         this.id = 0;  // 默认ID为0，表示未保存到数据库
         this.productCode = "";  // 商品编号
+        this.price = BigDecimal.ZERO;
+        this.cost = BigDecimal.ZERO;
         this.version = 0;  // 默认版本号为0
     }
 
-    public Product(String name, double price, int quantity) {
+    public Product(String name, BigDecimal price, int quantity) {
         this();
         this.name = name;
-        this.price = price;
+        this.price = defaultDecimal(price);
         this.quantity = quantity;
         this.category = "默认分类";
         this.barcode = "";
@@ -36,15 +42,23 @@ public class Product {
         this.supplier = "";
         this.spec = "";
         this.minStock = 10;
-        this.cost = price * 0.7;  // 默认成本价为售价的70%
+        this.cost = this.price.multiply(DEFAULT_COST_RATE);  // 默认成本价为售价的70%
     }
 
-    public Product(String name, double price, int quantity, String category) {
+    public Product(String name, double price, int quantity) {
+        this(name, BigDecimal.valueOf(price), quantity);
+    }
+
+    public Product(String name, BigDecimal price, int quantity, String category) {
         this(name, price, quantity);
         this.category = category;
     }
 
-    public Product(String name, double price, int quantity, String category, String barcode, String unit, String description) {
+    public Product(String name, double price, int quantity, String category) {
+        this(name, BigDecimal.valueOf(price), quantity, category);
+    }
+
+    public Product(String name, BigDecimal price, int quantity, String category, String barcode, String unit, String description) {
         this(name, price, quantity, category);
         this.barcode = barcode;
         this.unit = unit;
@@ -53,40 +67,45 @@ public class Product {
         this.supplier = "";
         this.spec = "";
         this.minStock = 10;
-        this.cost = price * 0.7;
+        this.cost = this.price.multiply(DEFAULT_COST_RATE);
+    }
+
+    public Product(String name, double price, int quantity, String category, String barcode, String unit, String description) {
+        this(name, BigDecimal.valueOf(price), quantity, category, barcode, unit, description);
+    }
+
+    public Product(int id, String name, BigDecimal price, int quantity, String category, String barcode, String unit, String description, String brand, String supplier, String spec, int minStock, BigDecimal cost) {
+        this();
+        this.id = id;
+        this.name = name;
+        this.price = defaultDecimal(price);
+        this.quantity = quantity;
+        this.category = category;
+        this.barcode = barcode;
+        this.unit = unit;
+        this.description = description;
+        this.brand = brand;
+        this.supplier = supplier;
+        this.spec = spec;
+        this.minStock = minStock;
+        this.cost = defaultDecimal(cost);
     }
 
     public Product(int id, String name, double price, int quantity, String category, String barcode, String unit, String description, String brand, String supplier, String spec, int minStock, double cost) {
-        this.id = id;
-        this.name = name;
-        this.price = price;
-        this.quantity = quantity;
-        this.category = category;
-        this.barcode = barcode;
-        this.unit = unit;
-        this.description = description;
-        this.brand = brand;
-        this.supplier = supplier;
-        this.spec = spec;
-        this.minStock = minStock;
-        this.cost = cost;
+        this(id, name, BigDecimal.valueOf(price), quantity, category, barcode, unit, description, brand, supplier, spec, minStock, BigDecimal.valueOf(cost));
+    }
+
+    public Product(int id, String productCode, String name, BigDecimal price, int quantity, String category, String barcode, String unit, String description, String brand, String supplier, String spec, int minStock, BigDecimal cost) {
+        this(id, name, price, quantity, category, barcode, unit, description, brand, supplier, spec, minStock, cost);
+        this.productCode = productCode;
     }
 
     public Product(int id, String productCode, String name, double price, int quantity, String category, String barcode, String unit, String description, String brand, String supplier, String spec, int minStock, double cost) {
-        this.id = id;
-        this.productCode = productCode;
-        this.name = name;
-        this.price = price;
-        this.quantity = quantity;
-        this.category = category;
-        this.barcode = barcode;
-        this.unit = unit;
-        this.description = description;
-        this.brand = brand;
-        this.supplier = supplier;
-        this.spec = spec;
-        this.minStock = minStock;
-        this.cost = cost;
+        this(id, productCode, name, BigDecimal.valueOf(price), quantity, category, barcode, unit, description, brand, supplier, spec, minStock, BigDecimal.valueOf(cost));
+    }
+
+    private static BigDecimal defaultDecimal(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     // Getter方法
@@ -102,8 +121,8 @@ public class Product {
         return name;
     }
 
-    public double getPrice() {
-        return price;
+    public BigDecimal getPrice() {
+        return defaultDecimal(price);
     }
 
     public int getQuantity() {
@@ -142,7 +161,7 @@ public class Product {
         return minStock;
     }
 
-    public double getCost() {
-        return cost;
+    public BigDecimal getCost() {
+        return defaultDecimal(cost);
     }
 }

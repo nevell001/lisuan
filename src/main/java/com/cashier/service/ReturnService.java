@@ -2,10 +2,11 @@ package com.cashier.service;
 
 import com.cashier.dao.*;
 import com.cashier.model.*;
+import com.cashier.util.DatabaseManager;
 import com.cashier.util.LoggerFactoryUtil;
 import org.slf4j.Logger;
 
-import java.sql.Connection;
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.List;
@@ -20,137 +21,89 @@ public class ReturnService {
      * 创建退货订单（事务）
      */
     public static boolean createReturnOrder(ReturnOrder returnOrder, List<ReturnOrderItem> items) {
-        Connection conn = null;
         try {
-            conn = com.cashier.util.DatabaseManager.getConnection();
-            conn.setAutoCommit(false);
+            boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
+                returnOrder.returnOrderId = ReturnOrderDAO.generateNextReturnOrderId(conn);
+                returnOrder.status = "PENDING";
 
-            // 生成退货单号
-            returnOrder.returnOrderId = ReturnOrderDAO.generateNextReturnOrderId();
-            returnOrder.status = "PENDING";
-
-            // 设置退货订单明细的退货单号
-            if (items != null && !items.isEmpty()) {
-                for (ReturnOrderItem item : items) {
-                    item.returnOrderId = returnOrder.returnOrderId;
+                if (items != null && !items.isEmpty()) {
+                    for (ReturnOrderItem item : items) {
+                        item.returnOrderId = returnOrder.returnOrderId;
+                    }
                 }
-            }
 
-            // 插入退货订单
-            boolean result = ReturnOrderDAO.insert(returnOrder);
-            if (!result) {
-                conn.rollback();
-                return false;
-            }
-
-            // 批量插入退货订单明细
-            if (items != null && !items.isEmpty()) {
-                result = ReturnOrderItemDAO.batchInsert(items);
-                if (!result) {
-                    conn.rollback();
+                if (!ReturnOrderDAO.insertWithConnection(conn, returnOrder)) {
                     return false;
                 }
-            }
 
-            conn.commit();
-            logger.info("退货订单创建成功: {}", returnOrder.returnOrderId);
-            return true;
+                return items == null || items.isEmpty() || ReturnOrderItemDAO.batchInsertWithConnection(conn, items);
+            });
+
+            if (success) {
+                logger.info("退货订单创建成功: {}", returnOrder.returnOrderId);
+            }
+            return success;
         } catch (SQLException e) {
             logger.error("创建退货订单失败", e);
-            if (conn != null) {
-                try {
-                    conn.rollback();
-                } catch (SQLException ex) {
-                    logger.error("回滚事务失败", ex);
-                }
-            }
             return false;
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException e) {
-                    logger.error("关闭连接失败", e);
-                }
-            }
         }
     }
 
     /**
      * 审批退货订单（事务）
      */
-    public static boolean approveReturnOrder(String returnOrderId, String approverName, 
+    public static boolean approveReturnOrder(String returnOrderId, String approverName,
                                               String approvalComment, boolean approved) {
-        Connection conn = null;
         try {
-            conn = com.cashier.util.DatabaseManager.getConnection();
-            conn.setAutoCommit(false);
+            boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
+                ReturnOrder returnOrder = ReturnOrderDAO.findByReturnOrderIdWithConnection(conn, returnOrderId);
+                if (returnOrder == null) {
+                    return false;
+                }
 
-            // 查找退货订单
-            ReturnOrder returnOrder = ReturnOrderDAO.findByReturnOrderId(returnOrderId);
-            if (returnOrder == null) {
-                conn.rollback();
-                return false;
-            }
+                returnOrder.status = approved ? "APPROVED" : "REJECTED";
+                returnOrder.approverName = approverName;
+                returnOrder.approvalDate = new Date();
+                returnOrder.approvalComment = approvalComment;
 
-            // 更新退货订单状态
-            returnOrder.status = approved ? "APPROVED" : "REJECTED";
-            returnOrder.approverName = approverName;
-            returnOrder.approvalDate = new Date();
-            returnOrder.approvalComment = approvalComment;
+                if (!ReturnOrderDAO.updateWithConnection(conn, returnOrder)) {
+                    return false;
+                }
 
-            boolean result = ReturnOrderDAO.update(returnOrder);
-            if (!result) {
-                conn.rollback();
-                return false;
-            }
+                if (!approved) {
+                    return true;
+                }
 
-            // 如果审批通过，处理库存和退款
-            if (approved) {
-                List<ReturnOrderItem> items = ReturnOrderItemDAO.findByReturnOrderId(returnOrderId);
+                List<ReturnOrderItem> items = ReturnOrderItemDAO.findByReturnOrderIdWithConnection(conn, returnOrderId);
                 for (ReturnOrderItem item : items) {
-                    // 增加库存
-                    Product product = ProductDAO.findById(item.productId);
-                    if (product != null) {
-                        product.quantity += item.returnQuantity;
-                        ProductDAO.update(product);
+                    Product product = ProductDAO.findByIdWithConnection(conn, item.productId);
+                    if (product == null) {
+                        throw new SQLException("退货商品不存在: productId=" + item.productId);
+                    }
+
+                    product.quantity += item.returnQuantity;
+                    if (!ProductDAO.updateWithVersionWithConnection(conn, product)) {
+                        throw new SQLException("恢复退货库存失败: productId=" + item.productId);
                     }
                 }
 
-                // 记录操作日志
                 OperationLog log = new OperationLog();
                 log.username = approverName;
                 log.operation = "RETURN_APPROVAL";
-                log.details = String.format("审批退货单: %s, 金额: %.2f", 
+                log.details = String.format("审批退货单: %s, 金额: %.2f",
                     returnOrderId, returnOrder.totalAmount);
                 log.ipAddress = "localhost";
                 log.timestamp = new Date();
-                OperationLogDAO.insert(log);
-            }
+                return OperationLogDAO.insertWithConnection(conn, log);
+            });
 
-            conn.commit();
-            logger.info("退货订单审批成功: {}, 结果: {}", returnOrderId, approved ? "通过" : "拒绝");
-            return true;
+            if (success) {
+                logger.info("退货订单审批成功: {}, 结果: {}", returnOrderId, approved ? "通过" : "拒绝");
+            }
+            return success;
         } catch (SQLException e) {
             logger.error("审批退货订单失败", e);
-            if (conn != null) {
-                try {
-                    conn.rollback();
-                } catch (SQLException ex) {
-                    logger.error("回滚事务失败", ex);
-                }
-            }
             return false;
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException e) {
-                    logger.error("关闭连接失败", e);
-                }
-            }
         }
     }
 
@@ -158,76 +111,56 @@ public class ReturnService {
      * 完成退货订单（事务）
      */
     public static boolean completeReturnOrder(String returnOrderId) {
-        Connection conn = null;
         try {
-            conn = com.cashier.util.DatabaseManager.getConnection();
-            conn.setAutoCommit(false);
-
-            // 查找退货订单
-            ReturnOrder returnOrder = ReturnOrderDAO.findByReturnOrderId(returnOrderId);
-            if (returnOrder == null) {
-                conn.rollback();
-                return false;
-            }
-
-            // 只有已批准的退货单才能完成
-            if (!"APPROVED".equals(returnOrder.status)) {
-                conn.rollback();
-                return false;
-            }
-
-            // 更新退货订单状态
-            returnOrder.status = "COMPLETED";
-            returnOrder.completedDate = new Date();
-
-            boolean result = ReturnOrderDAO.update(returnOrder);
-            if (!result) {
-                conn.rollback();
-                return false;
-            }
-
-            // 会员退款（如果有的话）
-            if (returnOrder.memberId > 0) {
-                Member member = MemberDAO.findById(returnOrder.memberId);
-                if (member != null) {
-                    member.balance += returnOrder.totalAmount;
-                    MemberDAO.update(member);
-
-                    // 记录充值记录
-                    RechargeRecord record = new RechargeRecord();
-                    record.memberPhone = member.phone;
-                    record.memberName = member.name;
-                    record.amount = returnOrder.totalAmount;
-                    record.paymentMethod = returnOrder.paymentMethod;
-                    record.operator = returnOrder.operatorName;
-                    record.timestamp = new Date();
-                    record.recordId = returnOrderId; // 使用退货单号作为记录ID
-                    RechargeRecordDAO.insert(record);
+            boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
+                ReturnOrder returnOrder = ReturnOrderDAO.findByReturnOrderIdWithConnection(conn, returnOrderId);
+                if (returnOrder == null) {
+                    return false;
                 }
-            }
 
-            conn.commit();
-            logger.info("退货订单完成成功: {}", returnOrderId);
-            return true;
+                if (!"APPROVED".equals(returnOrder.status)) {
+                    return false;
+                }
+
+                returnOrder.status = "COMPLETED";
+                returnOrder.completedDate = new Date();
+
+                if (!ReturnOrderDAO.updateWithConnection(conn, returnOrder)) {
+                    return false;
+                }
+
+                if (returnOrder.memberId == null || returnOrder.memberId <= 0) {
+                    return true;
+                }
+
+                Member member = MemberDAO.findByIdWithConnection(conn, returnOrder.memberId);
+                if (member == null) {
+                    throw new SQLException("退货会员不存在: memberId=" + returnOrder.memberId);
+                }
+
+                member.balance = member.getBalance().add(returnOrder.getTotalAmount());
+                if (!MemberDAO.updateWithConnection(conn, member)) {
+                    throw new SQLException("更新退货会员余额失败: memberId=" + returnOrder.memberId);
+                }
+
+                RechargeRecord record = new RechargeRecord();
+                record.memberPhone = member.phone;
+                record.memberName = member.name;
+                record.amount = returnOrder.getTotalAmount();
+                record.paymentMethod = returnOrder.paymentMethod;
+                record.operator = returnOrder.operatorName;
+                record.timestamp = new Date();
+                record.recordId = returnOrderId;
+                return RechargeRecordDAO.insertWithConnection(conn, record);
+            });
+
+            if (success) {
+                logger.info("退货订单完成成功: {}", returnOrderId);
+            }
+            return success;
         } catch (SQLException e) {
             logger.error("完成退货订单失败", e);
-            if (conn != null) {
-                try {
-                    conn.rollback();
-                } catch (SQLException ex) {
-                    logger.error("回滚事务失败", ex);
-                }
-            }
             return false;
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException e) {
-                    logger.error("关闭连接失败", e);
-                }
-            }
         }
     }
 
@@ -274,7 +207,7 @@ public class ReturnService {
         stats.completedOrders = 0;
         
         for (ReturnOrder order : returnOrders) {
-            stats.totalReturnAmount += order.totalAmount;
+            stats.totalReturnAmount += order.getTotalAmount().doubleValue();
             
             switch (order.status) {
                 case "APPROVED":

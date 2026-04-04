@@ -18,26 +18,8 @@ public class ReturnOrderItemDAO {
      * 插入退货订单明细
      */
     public static boolean insert(ReturnOrderItem item) {
-        String sql = "INSERT INTO return_order_items (return_order_id, product_id, product_code, product_name, " +
-                "barcode, category, return_quantity, unit_price, return_amount, reason, `condition`) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-        try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, item.returnOrderId);
-            stmt.setInt(2, item.productId);
-            stmt.setString(3, item.productCode);
-            stmt.setString(4, item.productName);
-            stmt.setString(5, item.barcode);
-            stmt.setString(6, item.category);
-            stmt.setInt(7, item.returnQuantity);
-            stmt.setDouble(8, item.unitPrice);
-            stmt.setDouble(9, item.returnAmount);
-            stmt.setString(10, item.reason);
-            stmt.setString(11, item.condition);
-            
-            return stmt.executeUpdate() > 0;
+        try (Connection conn = com.cashier.util.DatabaseManager.getConnection()) {
+            return insertWithConnection(conn, item);
         } catch (SQLException e) {
             logger.error("插入退货订单明细失败", e);
             return false;
@@ -45,16 +27,59 @@ public class ReturnOrderItemDAO {
     }
 
     /**
-     * 批量插入退货订单明细
+     * 使用指定连接插入退货订单明细
+     * @param conn 数据库连接
+     * @param item 退货订单明细
+     * @return 插入是否成功
+     * @throws SQLException 数据库操作异常
      */
-    public static boolean batchInsert(List<ReturnOrderItem> items) {
+    public static boolean insertWithConnection(Connection conn, ReturnOrderItem item) throws SQLException {
         String sql = "INSERT INTO return_order_items (return_order_id, product_id, product_code, product_name, " +
                 "barcode, category, return_quantity, unit_price, return_amount, reason, `condition`) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, item.returnOrderId);
+            stmt.setInt(2, item.productId);
+            stmt.setString(3, item.productCode);
+            stmt.setString(4, item.productName);
+            stmt.setString(5, item.barcode);
+            stmt.setString(6, item.category);
+            stmt.setInt(7, item.returnQuantity);
+            stmt.setBigDecimal(8, item.unitPrice);
+            stmt.setBigDecimal(9, item.returnAmount);
+            stmt.setString(10, item.reason);
+            stmt.setString(11, item.condition);
+
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * 批量插入退货订单明细
+     */
+    public static boolean batchInsert(List<ReturnOrderItem> items) {
+        try (Connection conn = com.cashier.util.DatabaseManager.getConnection()) {
+            return batchInsertWithConnection(conn, items);
+        } catch (SQLException e) {
+            logger.error("批量插入退货订单明细失败", e);
+            return false;
+        }
+    }
+
+    /**
+     * 使用指定连接批量插入退货订单明细
+     * @param conn 数据库连接
+     * @param items 退货订单明细列表
+     * @return 插入是否成功
+     * @throws SQLException 数据库操作异常
+     */
+    public static boolean batchInsertWithConnection(Connection conn, List<ReturnOrderItem> items) throws SQLException {
+        String sql = "INSERT INTO return_order_items (return_order_id, product_id, product_code, product_name, " +
+                "barcode, category, return_quantity, unit_price, return_amount, reason, `condition`) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             for (ReturnOrderItem item : items) {
                 stmt.setString(1, item.returnOrderId);
                 stmt.setInt(2, item.productId);
@@ -63,18 +88,15 @@ public class ReturnOrderItemDAO {
                 stmt.setString(5, item.barcode);
                 stmt.setString(6, item.category);
                 stmt.setInt(7, item.returnQuantity);
-                stmt.setDouble(8, item.unitPrice);
-                stmt.setDouble(9, item.returnAmount);
+                stmt.setBigDecimal(8, item.unitPrice);
+                stmt.setBigDecimal(9, item.returnAmount);
                 stmt.setString(10, item.reason);
                 stmt.setString(11, item.condition);
                 stmt.addBatch();
             }
-            
+
             int[] results = stmt.executeBatch();
             return results.length > 0;
-        } catch (SQLException e) {
-            logger.error("批量插入退货订单明细失败", e);
-            return false;
         }
     }
 
@@ -95,8 +117,8 @@ public class ReturnOrderItemDAO {
             stmt.setString(4, item.barcode);
             stmt.setString(5, item.category);
             stmt.setInt(6, item.returnQuantity);
-            stmt.setDouble(7, item.unitPrice);
-            stmt.setDouble(8, item.returnAmount);
+            stmt.setBigDecimal(7, item.unitPrice);
+            stmt.setBigDecimal(8, item.returnAmount);
             stmt.setString(9, item.reason);
             stmt.setString(10, item.condition);
             stmt.setInt(11, item.id);
@@ -151,22 +173,35 @@ public class ReturnOrderItemDAO {
      * 根据退货单号查找所有明细
      */
     public static List<ReturnOrderItem> findByReturnOrderId(String returnOrderId) {
-        String sql = "SELECT * FROM return_order_items WHERE return_order_id = ?";
-        List<ReturnOrderItem> items = new ArrayList<>();
-        
-        try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
-             PreparedStatement stmt = conn.prepareStatement(sql)) {
-            
-            stmt.setString(1, returnOrderId);
-            ResultSet rs = stmt.executeQuery();
-            
-            while (rs.next()) {
-                items.add(mapRowToReturnOrderItem(rs));
-            }
+        try (Connection conn = com.cashier.util.DatabaseManager.getConnection()) {
+            return findByReturnOrderIdWithConnection(conn, returnOrderId);
         } catch (SQLException e) {
             logger.error("根据退货单号查找明细失败", e);
         }
-        
+
+        return new ArrayList<>();
+    }
+
+    /**
+     * 使用指定连接根据退货单号查找所有明细
+     * @param conn 数据库连接
+     * @param returnOrderId 退货单号
+     * @return 明细列表
+     * @throws SQLException 数据库操作异常
+     */
+    public static List<ReturnOrderItem> findByReturnOrderIdWithConnection(Connection conn, String returnOrderId) throws SQLException {
+        String sql = "SELECT * FROM return_order_items WHERE return_order_id = ?";
+        List<ReturnOrderItem> items = new ArrayList<>();
+
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, returnOrderId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    items.add(mapRowToReturnOrderItem(rs));
+                }
+            }
+        }
+
         return items;
     }
 
@@ -222,8 +257,8 @@ public class ReturnOrderItemDAO {
         item.barcode = rs.getString("barcode");
         item.category = rs.getString("category");
         item.returnQuantity = rs.getInt("return_quantity");
-        item.unitPrice = rs.getDouble("unit_price");
-        item.returnAmount = rs.getDouble("return_amount");
+        item.unitPrice = rs.getBigDecimal("unit_price");
+        item.returnAmount = rs.getBigDecimal("return_amount");
         item.reason = rs.getString("reason");
         item.condition = rs.getString("condition");
         

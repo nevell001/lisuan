@@ -110,7 +110,7 @@ public class RechargeRecordDAO {
             pstmt.setString(1, record.recordId);
             pstmt.setString(2, record.memberPhone);
             pstmt.setString(3, record.memberName);
-            pstmt.setDouble(4, record.amount);
+            pstmt.setBigDecimal(4, record.amount);
             pstmt.setString(5, record.paymentMethod);
             pstmt.setTimestamp(6, new Timestamp(record.timestamp.getTime()));
             pstmt.setString(7, record.operator);
@@ -135,7 +135,7 @@ public class RechargeRecordDAO {
             pstmt.setString(1, record.recordId);
             pstmt.setString(2, record.memberPhone);
             pstmt.setString(3, record.memberName);
-            pstmt.setDouble(4, record.amount);
+            pstmt.setBigDecimal(4, record.amount);
             pstmt.setString(5, record.paymentMethod);
             pstmt.setTimestamp(6, new Timestamp(record.timestamp.getTime()));
             pstmt.setString(7, record.operator);
@@ -159,7 +159,7 @@ public class RechargeRecordDAO {
                 pstmt.setString(1, record.recordId);
                 pstmt.setString(2, record.memberPhone);
                 pstmt.setString(3, record.memberName);
-                pstmt.setDouble(4, record.amount);
+                pstmt.setBigDecimal(4, record.amount);
                 pstmt.setString(5, record.paymentMethod);
                 pstmt.setTimestamp(6, new Timestamp(record.timestamp.getTime()));
                 pstmt.setString(7, record.operator);
@@ -178,7 +178,7 @@ public class RechargeRecordDAO {
         record.recordId = rs.getString("record_id");
         record.memberPhone = rs.getString("member_phone");
         record.memberName = rs.getString("member_name");
-        record.amount = rs.getDouble("amount");
+        record.amount = rs.getBigDecimal("amount");
         record.paymentMethod = rs.getString("payment_method");
         record.timestamp = rs.getTimestamp("timestamp");
         record.operator = rs.getString("operator");

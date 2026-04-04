@@ -2,14 +2,17 @@ package com.cashier.service;
 
 import com.cashier.dao.MemberDAO;
 import com.cashier.dao.ProductDAO;
+import com.cashier.dao.PromotionDAO;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.util.DatabaseTestBase;
 import com.cashier.model.CartItem;
 import com.cashier.model.Member;
 import com.cashier.model.Product;
+import com.cashier.model.Promotion;
 import com.cashier.model.Transaction;
 import org.junit.jupiter.api.*;
 
+import java.math.BigDecimal;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -43,10 +46,10 @@ class TransactionServiceTest extends DatabaseTestBase {
         testMember = new Member();
         testMember.phone = "13800138000";
         testMember.name = "测试会员";
-        testMember.balance = 1000.0;
-        testMember.points = 100.0;
+        testMember.balance = BigDecimal.valueOf(1000.0);
+        testMember.points = BigDecimal.valueOf(100.0);
         testMember.level = "普通";
-        testMember.discount = 10.0;
+        testMember.discount = BigDecimal.TEN;
         MemberDAO.insert(testMember);
 
         // 创建测试商品
@@ -84,8 +87,8 @@ class TransactionServiceTest extends DatabaseTestBase {
         assertTrue(result.success);
         assertNotNull(result.transaction);
         assertEquals("现金", result.transaction.paymentMethod);
-        assertEquals(40.0, result.transaction.totalAmount, 0.01); // 2*10 + 1*20
-        assertEquals(40.0, result.transaction.finalAmount, 0.01);
+        assertAmountEquals(40.0, result.transaction.totalAmount); // 2*10 + 1*20
+        assertAmountEquals(40.0, result.transaction.finalAmount);
     }
 
     @Test
@@ -93,7 +96,7 @@ class TransactionServiceTest extends DatabaseTestBase {
     @DisplayName("测试执行交易 - 有会员折扣")
     void testExecuteTransactionWithMember() throws Exception {
         // 设置会员折扣为9折
-        testMember.discount = 9.0;
+        testMember.discount = BigDecimal.valueOf(9.0);
         MemberDAO.update(testMember);
 
         // 执行交易
@@ -108,8 +111,8 @@ class TransactionServiceTest extends DatabaseTestBase {
 
         assertTrue(result.success);
         assertEquals("微信", result.transaction.paymentMethod);
-        assertEquals(40.0, result.transaction.totalAmount, 0.01);
-        assertEquals(36.0, result.transaction.finalAmount, 0.01); // 40 * 0.9
+        assertAmountEquals(40.0, result.transaction.totalAmount);
+        assertAmountEquals(36.0, result.transaction.finalAmount); // 40 * 0.9
         assertEquals(testMember.phone, result.transaction.memberPhone);
     }
 
@@ -146,10 +149,10 @@ class TransactionServiceTest extends DatabaseTestBase {
     @DisplayName("测试交易扣减会员余额")
     void testTransactionDeductMemberBalance() throws Exception {
         // 设置会员折扣
-        testMember.discount = 9.0;
+        testMember.discount = BigDecimal.valueOf(9.0);
         MemberDAO.update(testMember);
 
-        double initialBalance = testMember.balance;
+        BigDecimal initialBalance = testMember.balance;
         double finalAmount = 36.0; // 40 * 0.9
 
         // 执行交易
@@ -166,10 +169,10 @@ class TransactionServiceTest extends DatabaseTestBase {
 
         // 验证会员余额已扣减
         Member updatedMember = MemberDAO.findByPhone(testMember.phone);
-        assertEquals(initialBalance - finalAmount, updatedMember.balance, 0.01);
+        assertAmountEquals(initialBalance.subtract(BigDecimal.valueOf(finalAmount)), updatedMember.balance);
 
         // 验证会员积分已增加
-        assertEquals(100.0 + finalAmount * 10, updatedMember.points, 0.01);
+        assertAmountEquals(100.0 + finalAmount * 10, updatedMember.points);
     }
 
     @Test
@@ -191,7 +194,7 @@ class TransactionServiceTest extends DatabaseTestBase {
         // 检查交易结果
         if (result.success) {
             // 如果成功，验证金额为0
-            assertEquals(0.0, result.transaction.totalAmount, 0.01);
+            assertAmountEquals(0.0, result.transaction.totalAmount);
         } else {
             // 如果失败，验证有错误消息
             assertNotNull(result.message);
@@ -203,27 +206,115 @@ class TransactionServiceTest extends DatabaseTestBase {
     @Order(6)
     @DisplayName("测试计算总金额")
     void testCalculateTotalAmount() {
-        double total = TransactionService.calculateTotalAmount(testCartItems);
-        assertEquals(40.0, total, 0.01); // 2*10 + 1*20
+        BigDecimal total = TransactionService.calculateTotalAmount(testCartItems);
+        assertAmountEquals(40.0, total); // 2*10 + 1*20
     }
 
     @Test
     @Order(7)
     @DisplayName("测试计算最终金额 - 无会员")
     void testCalculateFinalAmountWithoutMember() {
-        double finalAmount = TransactionService.calculateFinalAmount(testCartItems, null);
-        assertEquals(40.0, finalAmount, 0.01);
+        BigDecimal finalAmount = TransactionService.calculateFinalAmount(testCartItems, null);
+        assertAmountEquals(40.0, finalAmount);
     }
 
     @Test
     @Order(8)
     @DisplayName("测试计算最终金额 - 有会员")
     void testCalculateFinalAmountWithMember() throws Exception {
-        testMember.discount = 9.0;
+        testMember.discount = BigDecimal.valueOf(9.0);
         MemberDAO.update(testMember);
 
-        double finalAmount = TransactionService.calculateFinalAmount(testCartItems, testMember);
-        assertEquals(36.0, finalAmount, 0.01); // 40 * 0.9
+        BigDecimal finalAmount = TransactionService.calculateFinalAmount(testCartItems, testMember);
+        assertAmountEquals(36.0, finalAmount); // 40 * 0.9
+    }
+
+    @Test
+    @Order(9)
+    @DisplayName("测试执行预构造交易时会原子增加促销使用次数")
+    void testExecutePreparedTransactionIncrementsPromotionUsage() throws Exception {
+        Promotion promotion = new Promotion();
+        promotion.name = "立减5元";
+        promotion.type = "满减";
+        promotion.threshold = BigDecimal.valueOf(30.0);
+        promotion.discount = BigDecimal.valueOf(5.0);
+        promotion.description = "测试促销";
+        promotion.enabled = true;
+        PromotionDAO.insert(promotion);
+
+        Transaction transaction = createPreparedTransaction("T-PROMO-001", "现金", BigDecimal.valueOf(35.0), null);
+
+        TransactionService.TransactionResult result = TransactionService.executeTransaction(
+            testCartItems,
+            null,
+            transaction,
+            inventory,
+            promotion
+        );
+
+        assertTrue(result.success);
+        assertNotNull(result.transaction);
+        assertEquals("T-PROMO-001", result.transaction.transactionId);
+        assertAmountEquals(35.0, result.transaction.finalAmount);
+
+        Promotion updatedPromotion = PromotionDAO.findById(promotion.id);
+        assertNotNull(updatedPromotion);
+        assertEquals(1, updatedPromotion.usageCount);
+        assertEquals(1, TransactionDAO.findAll().size());
+    }
+
+    @Test
+    @Order(10)
+    @DisplayName("测试促销次数更新失败时交易与库存一起回滚")
+    void testExecutePreparedTransactionRollbackOnPromotionUpdateFailure() throws Exception {
+        int initialProduct1Quantity = ProductDAO.findById(testProducts.get(0).id).quantity;
+        int initialProduct2Quantity = ProductDAO.findById(testProducts.get(1).id).quantity;
+
+        Promotion invalidPromotion = new Promotion();
+        invalidPromotion.id = Integer.MAX_VALUE;
+
+        Transaction transaction = createPreparedTransaction("T-PROMO-ROLLBACK", "现金", BigDecimal.valueOf(35.0), null);
+
+        TransactionService.TransactionResult result = TransactionService.executeTransaction(
+            testCartItems,
+            null,
+            transaction,
+            inventory,
+            invalidPromotion
+        );
+
+        assertFalse(result.success);
+        assertNull(result.transaction);
+        assertTrue(result.message.contains("更新促销使用次数失败"));
+        assertEquals(initialProduct1Quantity, ProductDAO.findById(testProducts.get(0).id).quantity);
+        assertEquals(initialProduct2Quantity, ProductDAO.findById(testProducts.get(1).id).quantity);
+        assertTrue(TransactionDAO.findAll().isEmpty());
+    }
+
+    @Test
+    @Order(11)
+    @DisplayName("测试会员交易在同一事务内更新等级与折扣")
+    void testExecuteTransactionUpdatesMemberLevelWithinTransaction() throws Exception {
+        testMember.points = BigDecimal.valueOf(995.0);
+        testMember.level = "普通";
+        testMember.discount = BigDecimal.TEN;
+        MemberDAO.update(testMember);
+
+        TransactionService.TransactionResult result = TransactionService.executeTransaction(
+            testCartItems,
+            testMember,
+            "会员余额",
+            40.0,
+            0.0,
+            inventory
+        );
+
+        assertTrue(result.success);
+        Member updatedMember = MemberDAO.findByPhone(testMember.phone);
+        assertEquals("银卡", updatedMember.level);
+        assertAmountEquals(9.5, updatedMember.discount);
+        assertEquals("银卡", testMember.level);
+        assertAmountEquals(9.5, testMember.discount);
     }
 
     /**
@@ -233,17 +324,56 @@ class TransactionServiceTest extends DatabaseTestBase {
         Product product = new Product();
         product.productCode = "P" + name.hashCode();
         product.name = name;
-        product.price = price;
+        product.price = BigDecimal.valueOf(price);
         product.quantity = quantity;
         product.category = "测试分类";
         product.barcode = "TEST" + name.hashCode();
         product.unit = "个";
         product.minStock = 10;
-        product.cost = price * 0.7;
+        product.cost = BigDecimal.valueOf(price).multiply(new BigDecimal("0.7"));
         product.version = 0;
 
         ProductDAO.insert(product);
         return ProductDAO.findByName(name);
     }
 
+    private Transaction createPreparedTransaction(String transactionId, String paymentMethod, BigDecimal finalAmount, Member member) {
+        Transaction transaction = new Transaction();
+        transaction.transactionId = transactionId;
+        transaction.timestamp = "2026-04-04 13:37:00";
+        transaction.totalAmount = finalAmount;
+        transaction.tax = BigDecimal.ZERO;
+        transaction.finalAmount = finalAmount;
+        transaction.paymentMethod = paymentMethod;
+        transaction.items = new ArrayList<>();
+
+        for (CartItem cartItem : testCartItems) {
+            Product product = new Product();
+            product.id = cartItem.product.id;
+            product.productCode = cartItem.product.productCode;
+            product.barcode = cartItem.product.barcode;
+            product.name = cartItem.product.name;
+            product.price = cartItem.product.price;
+            product.quantity = cartItem.quantity;
+            product.category = cartItem.product.category;
+            product.unit = cartItem.product.unit;
+            product.cost = cartItem.product.cost;
+            transaction.items.add(product);
+        }
+
+        if (member != null) {
+            transaction.memberPhone = member.phone;
+        }
+
+        return transaction;
     }
+
+    private void assertAmountEquals(double expected, BigDecimal actual) {
+        assertAmountEquals(BigDecimal.valueOf(expected), actual);
+    }
+
+    private void assertAmountEquals(BigDecimal expected, BigDecimal actual) {
+        assertEquals(0, expected.compareTo(actual));
+    }
+
+}

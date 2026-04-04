@@ -10,6 +10,7 @@ import javafx.stage.Stage;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -118,8 +119,8 @@ public class RechargeController {
         // 更新会员信息显示
         memberNameLabel.setText(member.name);
         memberPhoneLabel.setText(member.phone);
-        currentBalanceLabel.setText(String.format("¥%.2f", member.balance));
-        currentPointsLabel.setText(String.valueOf((int)member.points));
+        currentBalanceLabel.setText(String.format("¥%.2f", member.getBalance()));
+        currentPointsLabel.setText(String.valueOf(member.getPoints().intValue()));
 
         // 加载充值历史记录
         loadRechargeHistory();
@@ -161,7 +162,7 @@ public class RechargeController {
         try {
             String amountText = amountField.getText().trim();
             if (amountText.isEmpty()) {
-                newBalanceLabel.setText(String.format("¥%.2f", member.balance));
+                newBalanceLabel.setText(String.format("¥%.2f", member.getBalance()));
                 bonusPointsLabel.setText("0");
                 okButton.setDisable(true);
                 return;
@@ -169,22 +170,24 @@ public class RechargeController {
 
             double amount = Double.parseDouble(amountText);
             if (amount <= 0) {
-                newBalanceLabel.setText(String.format("¥%.2f", member.balance));
+                newBalanceLabel.setText(String.format("¥%.2f", member.getBalance()));
                 bonusPointsLabel.setText("0");
                 okButton.setDisable(true);
                 return;
             }
 
+            BigDecimal rechargeAmountDecimal = BigDecimal.valueOf(amount);
+
             // 计算赠送积分（1元=10积分）
-            int bonusPoints = (int)(amount * 10);
-            double newBalance = member.balance + amount;
+            int bonusPoints = rechargeAmountDecimal.multiply(BigDecimal.TEN).intValue();
+            BigDecimal newBalance = member.getBalance().add(rechargeAmountDecimal);
 
             newBalanceLabel.setText(String.format("¥%.2f", newBalance));
             bonusPointsLabel.setText(String.valueOf(bonusPoints));
             okButton.setDisable(false);
 
         } catch (NumberFormatException e) {
-            newBalanceLabel.setText(String.format("¥%.2f", member.balance));
+            newBalanceLabel.setText(String.format("¥%.2f", member.getBalance()));
             bonusPointsLabel.setText("0");
             okButton.setDisable(true);
         }
@@ -199,37 +202,10 @@ public class RechargeController {
             rechargeAmount = Double.parseDouble(amountField.getText().trim());
             String paymentMethod = paymentMethodComboBox.getSelectionModel().getSelectedItem();
 
-            // 更新会员余额和积分
-            member.balance += rechargeAmount;
-            member.points += (int)(rechargeAmount * 10);
-
-            // 保存会员信息
-            Map<String, Member> members = DataService.loadMembers();
-            members.put(member.phone, member);
-            DataService.saveMembers(members);
-
-            // 创建充值记录
-            String recordId = "REC" + new SimpleDateFormat("yyyyMMddHHmmss").format(new Date());
-            RechargeRecord record = new RechargeRecord(
-                recordId,
-                member.phone,
-                member.name,
-                rechargeAmount,
-                paymentMethod,
-                "系统"
-            );
-
-            // 保存充值记录
-            List<RechargeRecord> records = DataService.loadRechargeRecords();
-            records.add(record);
-            DataService.saveRechargeRecords(records);
-
-            // 充值成功后，检查并自动升级会员等级
-            try {
-                com.cashier.service.MemberService.updateMemberLevel(member);
-                logger.info("会员 {} 等级已更新，当前积分: {}", member.phone, member.points);
-            } catch (Exception e) {
-                logger.error("更新会员等级失败", e);
+            boolean success = com.cashier.service.MemberService.recharge(member, rechargeAmount, paymentMethod, "系统");
+            if (!success) {
+                showError("会员充值失败，请稍后重试。");
+                return;
             }
 
             okClicked = true;
@@ -283,6 +259,14 @@ public class RechargeController {
             alert.showAndWait();
             return false;
         }
+    }
+
+    private void showError(String message) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("错误");
+        alert.setHeaderText(null);
+        alert.setContentText(message);
+        alert.showAndWait();
     }
 
     /**

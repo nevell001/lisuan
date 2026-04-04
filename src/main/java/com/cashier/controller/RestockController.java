@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.fxml.FXML;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import javafx.scene.control.*;
 
@@ -111,7 +112,7 @@ public class RestockController {
                 afterStockLabel.setText(String.format("%d %s", afterStock, product.unit));
 
                 // 入库金额
-                double totalCost = product.cost * quantity;
+                double totalCost = product.getCost().multiply(BigDecimal.valueOf(quantity)).doubleValue();
                 totalCostLabel.setText(String.format("¥%.2f", totalCost));
             } else {
                 afterStockLabel.setText(String.format("%d %s", product.quantity, product.unit));

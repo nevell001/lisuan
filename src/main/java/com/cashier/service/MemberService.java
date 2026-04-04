@@ -8,7 +8,7 @@ import com.cashier.util.DatabaseManager;
 import com.cashier.util.LoggerFactoryUtil;
 import org.slf4j.Logger;
 
-import java.sql.Connection;
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -23,22 +23,22 @@ public class MemberService {
     /**
      * 会员等级配置
      */
-    private static final Map<String, Double> LEVEL_DISCOUNTS = new LinkedHashMap<>();
+    private static final Map<String, BigDecimal> LEVEL_DISCOUNTS = new LinkedHashMap<>();
     static {
-        LEVEL_DISCOUNTS.put("普通", 10.0);  // 不打折
-        LEVEL_DISCOUNTS.put("银卡", 9.5);   // 9.5折
-        LEVEL_DISCOUNTS.put("金卡", 9.0);   // 9折
-        LEVEL_DISCOUNTS.put("钻石", 8.5);   // 8.5折
+        LEVEL_DISCOUNTS.put("普通", new BigDecimal("10.0"));  // 不打折
+        LEVEL_DISCOUNTS.put("银卡", new BigDecimal("9.5"));   // 9.5折
+        LEVEL_DISCOUNTS.put("金卡", new BigDecimal("9.0"));   // 9折
+        LEVEL_DISCOUNTS.put("钻石", new BigDecimal("8.5"));   // 8.5折
     }
 
     /**
      * 等级升级所需积分
      */
-    private static final Map<String, Integer> LEVEL_POINTS = new LinkedHashMap<>();
+    private static final Map<String, BigDecimal> LEVEL_POINTS = new LinkedHashMap<>();
     static {
-        LEVEL_POINTS.put("银卡", 1000);
-        LEVEL_POINTS.put("金卡", 5000);
-        LEVEL_POINTS.put("钻石", 10000);
+        LEVEL_POINTS.put("银卡", new BigDecimal("1000"));
+        LEVEL_POINTS.put("金卡", new BigDecimal("5000"));
+        LEVEL_POINTS.put("钻石", new BigDecimal("10000"));
     }
 
     /**
@@ -64,56 +64,56 @@ public class MemberService {
      * @return 是否成功
      */
     public static boolean recharge(Member member, double amount, String paymentMethod, String operator) {
-        Connection conn = null;
+        BigDecimal rechargeAmount = BigDecimal.valueOf(amount);
+        BigDecimal bonusPoints = rechargeAmount.multiply(BigDecimal.TEN);
         try {
-            conn = DatabaseManager.getConnection();
-            DatabaseManager.beginTransaction(conn);
+            boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
+                // 获取最新会员信息
+                Member latestMember = MemberDAO.findByIdWithConnection(conn, member.id);
+                if (latestMember == null) {
+                    throw new SQLException("会员不存在");
+                }
 
-            // 获取最新会员信息
-            Member latestMember = MemberDAO.findById(member.id);
-            if (latestMember == null) {
-                throw new SQLException("会员不存在");
+                // 在同一事务内统一更新余额、积分和等级
+                latestMember.balance = latestMember.getBalance().add(rechargeAmount);
+                latestMember.points = latestMember.getPoints().add(bonusPoints);
+                latestMember.level = calculateLevel(latestMember.points);
+                latestMember.discount = LEVEL_DISCOUNTS.getOrDefault(latestMember.level, BigDecimal.TEN);
+                latestMember.discountRate = latestMember.discount;
+                if (!MemberDAO.updateWithConnection(conn, latestMember)) {
+                    throw new SQLException("更新会员信息失败");
+                }
+
+                // 创建充值记录
+                RechargeRecord record = new RechargeRecord();
+                record.recordId = generateRechargeRecordId();
+                record.memberPhone = latestMember.phone;
+                record.memberName = latestMember.name;
+                record.amount = rechargeAmount;
+                record.paymentMethod = paymentMethod;
+                record.operator = operator;
+                record.timestamp = new Date();
+
+                if (!RechargeRecordDAO.insertWithConnection(conn, record)) {
+                    throw new SQLException("创建充值记录失败");
+                }
+
+                // 更新传入的会员对象
+                member.balance = latestMember.balance;
+                member.points = latestMember.points;
+                member.level = latestMember.level;
+                member.discount = latestMember.discount;
+                member.discountRate = latestMember.discountRate;
+                return true;
+            });
+
+            if (success) {
+                logger.info("会员充值成功: phone={}, amount={}", member.phone, amount);
             }
-
-            // 更新余额
-            latestMember.balance += amount;
-            if (!MemberDAO.updateWithConnection(conn, latestMember)) {
-                throw new SQLException("更新会员余额失败");
-            }
-
-            // 创建充值记录
-            RechargeRecord record = new RechargeRecord();
-            record.memberPhone = latestMember.phone;
-            record.memberName = latestMember.name;
-            record.amount = amount;
-            record.paymentMethod = paymentMethod;
-            record.operator = operator;
-            record.timestamp = new Date();
-
-            RechargeRecordDAO.insertWithConnection(conn, record);
-
-            DatabaseManager.commitTransaction(conn);
-            logger.info("会员充值成功: phone={}, amount={}", member.phone, amount);
-
-            // 更新传入的会员对象
-            member.balance = latestMember.balance;
-            return true;
-
+            return success;
         } catch (SQLException e) {
-            if (conn != null) {
-                DatabaseManager.rollbackTransaction(conn);
-            }
             logger.error("会员充值失败: phone={}, amount={}", member.phone, amount, e);
             return false;
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException e) {
-                    logger.error("关闭数据库连接失败", e);
-                }
-            }
         }
     }
 
@@ -150,16 +150,21 @@ public class MemberService {
      * @param points 积分
      * @return 等级
      */
-    public static String calculateLevel(double points) {
-        if (points >= LEVEL_POINTS.get("钻石")) {
+    public static String calculateLevel(BigDecimal points) {
+        BigDecimal safePoints = points == null ? BigDecimal.ZERO : points;
+        if (safePoints.compareTo(LEVEL_POINTS.get("钻石")) >= 0) {
             return "钻石";
-        } else if (points >= LEVEL_POINTS.get("金卡")) {
+        } else if (safePoints.compareTo(LEVEL_POINTS.get("金卡")) >= 0) {
             return "金卡";
-        } else if (points >= LEVEL_POINTS.get("银卡")) {
+        } else if (safePoints.compareTo(LEVEL_POINTS.get("银卡")) >= 0) {
             return "银卡";
         } else {
             return "普通";
         }
+    }
+
+    public static String calculateLevel(double points) {
+        return calculateLevel(BigDecimal.valueOf(points));
     }
 
     /**
@@ -168,7 +173,11 @@ public class MemberService {
      * @return 折扣值（0-10，10表示不打折）
      */
     public static double getDiscountByLevel(String level) {
-        return LEVEL_DISCOUNTS.getOrDefault(level, 10.0);
+        return LEVEL_DISCOUNTS.getOrDefault(level, new BigDecimal("10.0")).doubleValue();
+    }
+
+    public static BigDecimal getDiscountByLevelDecimal(String level) {
+        return LEVEL_DISCOUNTS.getOrDefault(level, new BigDecimal("10.0"));
     }
 
     /**
@@ -180,7 +189,7 @@ public class MemberService {
     public static boolean checkBalanceSufficient(Member member, double amount) {
         try {
             Member latestMember = MemberDAO.findById(member.id);
-            return latestMember != null && latestMember.balance >= amount;
+            return latestMember != null && latestMember.getBalance().compareTo(BigDecimal.valueOf(amount)) >= 0;
         } catch (SQLException e) {
             logger.error("检查会员余额失败", e);
             return false;
@@ -197,9 +206,8 @@ public class MemberService {
         if (member == null) {
             return originalAmount;
         }
-        // 折扣值范围：0-10，10表示不打折，0表示免费
-        double discountRate = member.discount / 10.0;
-        return originalAmount * discountRate;
+        BigDecimal discountRate = member.getDiscount().divide(BigDecimal.TEN);
+        return BigDecimal.valueOf(originalAmount).multiply(discountRate).doubleValue();
     }
 
     /**
@@ -212,8 +220,8 @@ public class MemberService {
             List<Member> members = MemberDAO.findAll();
 
             int totalCount = members.size();
-            double totalBalance = members.stream().mapToDouble(m -> m.balance).sum();
-            double totalPoints = members.stream().mapToDouble(m -> m.points).sum();
+            double totalBalance = members.stream().map(Member::getBalance).mapToDouble(BigDecimal::doubleValue).sum();
+            double totalPoints = members.stream().map(Member::getPoints).mapToDouble(BigDecimal::doubleValue).sum();
 
             // 按等级统计
             Map<String, Integer> levelStats = new HashMap<>();
@@ -242,4 +250,10 @@ public class MemberService {
         config.put("levelPoints", LEVEL_POINTS);
         return config;
     }
+
+    private static String generateRechargeRecordId() {
+        return "REC" + new SimpleDateFormat("yyyyMMddHHmmssSSS").format(new Date())
+            + UUID.randomUUID().toString().replace("-", "").substring(0, 6).toUpperCase();
+    }
+
 }

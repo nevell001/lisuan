@@ -12,6 +12,7 @@ import java.sql.SQLException;
 import javafx.scene.control.*;
 import javafx.scene.chart.*;
 
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -319,34 +320,34 @@ public class StatisticsController {
         Map<Integer, Double> hourAmountMap = new HashMap<>();
 
         for (Transaction t : transactions) {
-            totalSales += t.finalAmount;
+            totalSales += t.getFinalAmount().doubleValue();
 
             // 支付方式统计
             switch (t.paymentMethod) {
                 case "现金":
-                    cashSales += t.finalAmount;
+                    cashSales += t.getFinalAmount().doubleValue();
                     break;
                 case "微信":
-                    wechatSales += t.finalAmount;
+                    wechatSales += t.getFinalAmount().doubleValue();
                     break;
                 case "支付宝":
-                    alipaySales += t.finalAmount;
+                    alipaySales += t.getFinalAmount().doubleValue();
                     break;
                 case "银行卡":
-                    cardSales += t.finalAmount;
+                    cardSales += t.getFinalAmount().doubleValue();
                     break;
             }
 
             // 会员统计
             if (t.memberPhone != null && !t.memberPhone.isEmpty()) {
-                memberSales += t.finalAmount;
+                memberSales += t.getFinalAmount().doubleValue();
             }
 
             // 商品统计
             if (t.items != null) {
                 for (var item : t.items) {
                     productCountMap.put(item.name, productCountMap.getOrDefault(item.name, 0) + item.quantity);
-                    productAmountMap.put(item.name, productAmountMap.getOrDefault(item.name, 0.0) + item.price * item.quantity);
+                    productAmountMap.put(item.name, productAmountMap.getOrDefault(item.name, 0.0) + item.getPrice().multiply(BigDecimal.valueOf(item.quantity)).doubleValue());
 
                     // 分类统计
                     String category = item.category;
@@ -354,7 +355,7 @@ public class StatisticsController {
                         category = "未分类";
                     }
                     categoryCountMap.put(category, categoryCountMap.getOrDefault(category, 0) + item.quantity);
-                    categoryAmountMap.put(category, categoryAmountMap.getOrDefault(category, 0.0) + item.price * item.quantity);
+                    categoryAmountMap.put(category, categoryAmountMap.getOrDefault(category, 0.0) + item.getPrice().multiply(BigDecimal.valueOf(item.quantity)).doubleValue());
                 }
             }
 
@@ -367,7 +368,7 @@ public class StatisticsController {
                 cal.setTime(date);
                 int hour = cal.get(Calendar.HOUR_OF_DAY);
                 hourCountMap.put(hour, hourCountMap.getOrDefault(hour, 0) + 1);
-                hourAmountMap.put(hour, hourAmountMap.getOrDefault(hour, 0.0) + t.finalAmount);
+                hourAmountMap.put(hour, hourAmountMap.getOrDefault(hour, 0.0) + t.getFinalAmount().doubleValue());
             } catch (Exception e) {
                 // 解析失败，跳过
             }
@@ -612,7 +613,7 @@ public class StatisticsController {
             try {
                 Date date = sdf.parse(t.timestamp);
                 String dateStr = sdf.format(date);
-                dailySalesMap.put(dateStr, dailySalesMap.getOrDefault(dateStr, 0.0) + t.finalAmount);
+                dailySalesMap.put(dateStr, dailySalesMap.getOrDefault(dateStr, 0.0) + t.getFinalAmount().doubleValue());
             } catch (Exception e) {
                 // 解析失败，跳过
             }

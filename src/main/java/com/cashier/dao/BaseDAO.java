@@ -29,10 +29,7 @@ public abstract class BaseDAO {
      * @throws SQLException 如果开始事务失败
      */
     protected void beginTransaction(Connection conn) throws SQLException {
-        if (conn != null) {
-            conn.setAutoCommit(false);
-            logger.debug("事务已开始");
-        }
+        DatabaseManager.beginTransaction(conn);
     }
 
     /**
@@ -41,11 +38,7 @@ public abstract class BaseDAO {
      * @throws SQLException 如果提交事务失败
      */
     protected void commitTransaction(Connection conn) throws SQLException {
-        if (conn != null && !conn.getAutoCommit()) {
-            conn.commit();
-            conn.setAutoCommit(true);
-            logger.debug("事务已提交");
-        }
+        DatabaseManager.commitTransaction(conn);
     }
 
     /**
@@ -53,17 +46,7 @@ public abstract class BaseDAO {
      * @param conn 数据库连接
      */
     protected void rollbackTransaction(Connection conn) {
-        if (conn != null) {
-            try {
-                if (!conn.getAutoCommit()) {
-                    conn.rollback();
-                    conn.setAutoCommit(true);
-                    logger.debug("事务已回滚");
-                }
-            } catch (SQLException e) {
-                logger.error("回滚事务失败", e);
-            }
-        }
+        DatabaseManager.rollbackTransaction(conn);
     }
 
     /**
@@ -74,16 +57,16 @@ public abstract class BaseDAO {
      * @throws SQLException 如果操作失败
      */
     protected <T> T executeInTransaction(TransactionOperation<T> operation) throws SQLException {
-        Connection conn = null;
-        try {
-            conn = getConnection();
+        try (Connection conn = getConnection()) {
             beginTransaction(conn);
-            T result = operation.execute(conn);
-            commitTransaction(conn);
-            return result;
-        } catch (SQLException e) {
-            rollbackTransaction(conn);
-            throw e;
+            try {
+                T result = operation.execute(conn);
+                commitTransaction(conn);
+                return result;
+            } catch (SQLException | RuntimeException e) {
+                rollbackTransaction(conn);
+                throw e;
+            }
         }
     }
 

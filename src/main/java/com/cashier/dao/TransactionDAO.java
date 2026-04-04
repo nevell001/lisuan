@@ -7,6 +7,7 @@ import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.*;
+import java.math.BigDecimal;
 import java.util.*;
 
 /**
@@ -20,48 +21,8 @@ public class TransactionDAO {
      * 插入新交易（包含明细）
      */
     public static boolean insert(Transaction transaction) throws SQLException {
-        try (Connection conn = DatabaseManager.getConnection()) {
-            conn.setAutoCommit(false);
-
-            // 插入交易主记录
-            String sql = "INSERT INTO transactions (transaction_id, timestamp, total_amount, tax, final_amount, " +
-                         "payment_method, member_phone, operator_username, operator_name) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
-
-            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                pstmt.setString(1, transaction.transactionId);
-                pstmt.setString(2, transaction.timestamp);
-                pstmt.setDouble(3, transaction.totalAmount);
-                pstmt.setDouble(4, transaction.tax);
-                pstmt.setDouble(5, transaction.finalAmount);
-                pstmt.setString(6, transaction.paymentMethod);
-                // 处理 member 和 operator 字段：空字符串转为 NULL
-                pstmt.setString(7, transaction.memberPhone != null && transaction.memberPhone.isEmpty() ? null : transaction.memberPhone);
-                pstmt.setString(8, transaction.operatorUsername != null && transaction.operatorUsername.isEmpty() ? null : transaction.operatorUsername);
-                pstmt.setString(9, transaction.operatorName != null && transaction.operatorName.isEmpty() ? null : transaction.operatorName);
-                pstmt.executeUpdate();
-            }
-
-            // 插入交易明细
-            String detailSql = "INSERT INTO transaction_items (transaction_id, product_id, product_code, product_name, price, quantity, subtotal) " +
-                              "VALUES (?, ?, ?, ?, ?, ?, ?)";
-
-            try (PreparedStatement pstmt = conn.prepareStatement(detailSql)) {
-                for (Product item : transaction.items) {
-                    pstmt.setString(1, transaction.transactionId);
-                    pstmt.setInt(2, item.id);
-                    pstmt.setString(3, item.productCode);
-                    pstmt.setString(4, item.name);
-                    pstmt.setDouble(5, item.price);
-                    pstmt.setInt(6, item.quantity);
-                    pstmt.setDouble(7, item.price * item.quantity);
-                    pstmt.addBatch();
-                }
-                pstmt.executeBatch();
-            }
-
-            conn.commit();
-            return true;
-
+        try {
+            return DatabaseManager.executeInTransaction(conn -> insertWithConnection(conn, transaction));
         } catch (SQLException e) {
             logger.error("插入交易失败: transactionId={}", transaction.transactionId, e);
             throw e;
@@ -83,9 +44,9 @@ public class TransactionDAO {
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, transaction.transactionId);
             pstmt.setString(2, transaction.timestamp);
-            pstmt.setDouble(3, transaction.totalAmount);
-            pstmt.setDouble(4, transaction.tax);
-            pstmt.setDouble(5, transaction.finalAmount);
+            pstmt.setBigDecimal(3, transaction.totalAmount);
+            pstmt.setBigDecimal(4, transaction.tax);
+            pstmt.setBigDecimal(5, transaction.finalAmount);
             pstmt.setString(6, transaction.paymentMethod);
             // 处理 member 和 operator 字段：空字符串转为 NULL
             pstmt.setString(7, transaction.memberPhone != null && transaction.memberPhone.isEmpty() ? null : transaction.memberPhone);
@@ -104,9 +65,9 @@ public class TransactionDAO {
                 pstmt.setInt(2, item.id);
                 pstmt.setString(3, item.productCode);
                 pstmt.setString(4, item.name);
-                pstmt.setDouble(5, item.price);
+                pstmt.setBigDecimal(5, item.price);
                 pstmt.setInt(6, item.quantity);
-                pstmt.setDouble(7, item.price * item.quantity);
+                pstmt.setBigDecimal(7, item.price.multiply(BigDecimal.valueOf(item.quantity)));
                 pstmt.addBatch();
             }
             pstmt.executeBatch();
@@ -132,9 +93,9 @@ public class TransactionDAO {
                 Transaction transaction = new Transaction();
                 transaction.transactionId = rs.getString("transaction_id");
                 transaction.timestamp = rs.getString("timestamp");
-                transaction.totalAmount = rs.getDouble("total_amount");
-                transaction.tax = rs.getDouble("tax");
-                transaction.finalAmount = rs.getDouble("final_amount");
+                transaction.totalAmount = rs.getBigDecimal("total_amount");
+                transaction.tax = rs.getBigDecimal("tax");
+                transaction.finalAmount = rs.getBigDecimal("final_amount");
                 transaction.paymentMethod = rs.getString("payment_method");
                 transaction.memberPhone = rs.getString("member_phone");
                 transaction.operatorUsername = rs.getString("operator_username");
@@ -168,7 +129,7 @@ public class TransactionDAO {
                 product.productCode = rs.getString("product_code");
                 product.barcode = rs.getString("barcode");
                 product.name = rs.getString("product_name");
-                product.price = rs.getDouble("price");
+                product.price = rs.getBigDecimal("price");
                 product.quantity = rs.getInt("quantity");
                 items.add(product);
             }
@@ -202,9 +163,9 @@ public class TransactionDAO {
                     Transaction transaction = new Transaction();
                     transaction.transactionId = rs.getString("transaction_id");
                     transaction.timestamp = rs.getString("timestamp");
-                    transaction.totalAmount = rs.getDouble("total_amount");
-                    transaction.tax = rs.getDouble("tax");
-                    transaction.finalAmount = rs.getDouble("final_amount");
+                    transaction.totalAmount = rs.getBigDecimal("total_amount");
+                    transaction.tax = rs.getBigDecimal("tax");
+                    transaction.finalAmount = rs.getBigDecimal("final_amount");
                     transaction.paymentMethod = rs.getString("payment_method");
                     transaction.memberPhone = rs.getString("member_phone");
                     transaction.operatorUsername = rs.getString("operator_username");
@@ -222,7 +183,7 @@ public class TransactionDAO {
                     product.productCode = rs.getString("product_code");
                     product.barcode = rs.getString("barcode");
                     product.name = rs.getString("product_name");
-                    product.price = rs.getDouble("price");
+                    product.price = rs.getBigDecimal("price");
                     product.quantity = rs.getInt("quantity");
                     transactionMap.get(transactionId).items.add(product);
                 }
@@ -260,9 +221,9 @@ public class TransactionDAO {
                     Transaction transaction = new Transaction();
                     transaction.transactionId = rs.getString("transaction_id");
                     transaction.timestamp = rs.getString("timestamp");
-                    transaction.totalAmount = rs.getDouble("total_amount");
-                    transaction.tax = rs.getDouble("tax");
-                    transaction.finalAmount = rs.getDouble("final_amount");
+                    transaction.totalAmount = rs.getBigDecimal("total_amount");
+                    transaction.tax = rs.getBigDecimal("tax");
+                    transaction.finalAmount = rs.getBigDecimal("final_amount");
                     transaction.paymentMethod = rs.getString("payment_method");
                     transaction.memberPhone = rs.getString("member_phone");
                     transaction.operatorUsername = rs.getString("operator_username");
@@ -280,7 +241,7 @@ public class TransactionDAO {
                     product.productCode = rs.getString("product_code");
                     product.barcode = rs.getString("barcode");
                     product.name = rs.getString("product_name");
-                    product.price = rs.getDouble("price");
+                    product.price = rs.getBigDecimal("price");
                     product.quantity = rs.getInt("quantity");
                     transactionMap.get(transactionId).items.add(product);
                 }
@@ -307,9 +268,9 @@ public class TransactionDAO {
                 Transaction transaction = new Transaction();
                 transaction.transactionId = rs.getString("transaction_id");
                 transaction.timestamp = rs.getString("timestamp");
-                transaction.totalAmount = rs.getDouble("total_amount");
-                transaction.tax = rs.getDouble("tax");
-                transaction.finalAmount = rs.getDouble("final_amount");
+                transaction.totalAmount = rs.getBigDecimal("total_amount");
+                transaction.tax = rs.getBigDecimal("tax");
+                transaction.finalAmount = rs.getBigDecimal("final_amount");
                 transaction.paymentMethod = rs.getString("payment_method");
                 transaction.memberPhone = rs.getString("member_phone");
                 transaction.operatorUsername = rs.getString("operator_username");
@@ -380,9 +341,9 @@ public class TransactionDAO {
                 for (Transaction transaction : transactions) {
                     pstmt.setString(1, transaction.transactionId);
                     pstmt.setString(2, transaction.timestamp);
-                    pstmt.setDouble(3, transaction.totalAmount);
-                    pstmt.setDouble(4, transaction.tax);
-                    pstmt.setDouble(5, transaction.finalAmount);
+                    pstmt.setBigDecimal(3, transaction.totalAmount);
+                    pstmt.setBigDecimal(4, transaction.tax);
+                    pstmt.setBigDecimal(5, transaction.finalAmount);
                     pstmt.setString(6, transaction.paymentMethod);
                     // 将空字符串转换为 NULL
                     String memberPhone = transaction.memberPhone;
@@ -406,9 +367,9 @@ public class TransactionDAO {
                     for (Product item : transaction.items) {
                         pstmt.setString(1, transaction.transactionId);
                         pstmt.setString(2, item.name);
-                        pstmt.setDouble(3, item.price);
+                        pstmt.setBigDecimal(3, item.price);
                         pstmt.setInt(4, item.quantity);
-                        pstmt.setDouble(5, item.price * item.quantity);
+                        pstmt.setBigDecimal(5, item.price.multiply(BigDecimal.valueOf(item.quantity)));
                         pstmt.addBatch();
                     }
                 }

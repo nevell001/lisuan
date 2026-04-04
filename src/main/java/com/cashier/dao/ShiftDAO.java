@@ -29,16 +29,16 @@ public class ShiftDAO {
             pstmt.setString(3, shift.operatorName);
             pstmt.setLong(4, shift.startTime.getTime());
             pstmt.setLong(5, shift.endTime.getTime());
-            pstmt.setDouble(6, shift.openingRevenue);
-            pstmt.setDouble(7, shift.closingRevenue);
-            pstmt.setDouble(8, shift.shiftRevenue);
+            pstmt.setBigDecimal(6, shift.openingRevenue);
+            pstmt.setBigDecimal(7, shift.closingRevenue);
+            pstmt.setBigDecimal(8, shift.shiftRevenue);
             pstmt.setInt(9, shift.openingTransactionCount);
             pstmt.setInt(10, shift.closingTransactionCount);
             pstmt.setInt(11, shift.shiftTransactionCount);
-            pstmt.setDouble(12, shift.cashRevenue);
-            pstmt.setDouble(13, shift.wechatRevenue);
-            pstmt.setDouble(14, shift.alipayRevenue);
-            pstmt.setDouble(15, shift.cardRevenue);
+            pstmt.setBigDecimal(12, shift.cashRevenue);
+            pstmt.setBigDecimal(13, shift.wechatRevenue);
+            pstmt.setBigDecimal(14, shift.alipayRevenue);
+            pstmt.setBigDecimal(15, shift.cardRevenue);
             pstmt.setString(16, shift.notes);
 
             return pstmt.executeUpdate() > 0;
@@ -58,14 +58,14 @@ public class ShiftDAO {
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
             pstmt.setLong(1, shift.endTime.getTime());
-            pstmt.setDouble(2, shift.closingRevenue);
-            pstmt.setDouble(3, shift.shiftRevenue);
+            pstmt.setBigDecimal(2, shift.closingRevenue);
+            pstmt.setBigDecimal(3, shift.shiftRevenue);
             pstmt.setInt(4, shift.closingTransactionCount);
             pstmt.setInt(5, shift.shiftTransactionCount);
-            pstmt.setDouble(6, shift.cashRevenue);
-            pstmt.setDouble(7, shift.wechatRevenue);
-            pstmt.setDouble(8, shift.alipayRevenue);
-            pstmt.setDouble(9, shift.cardRevenue);
+            pstmt.setBigDecimal(6, shift.cashRevenue);
+            pstmt.setBigDecimal(7, shift.wechatRevenue);
+            pstmt.setBigDecimal(8, shift.alipayRevenue);
+            pstmt.setBigDecimal(9, shift.cardRevenue);
             pstmt.setString(10, shift.notes);
             pstmt.setString(11, shift.shiftId);
 
@@ -210,16 +210,16 @@ public class ShiftDAO {
                 pstmt.setString(3, shift.operatorName);
                 pstmt.setLong(4, shift.startTime.getTime());
                 pstmt.setLong(5, shift.endTime.getTime());
-                pstmt.setDouble(6, shift.openingRevenue);
-                pstmt.setDouble(7, shift.closingRevenue);
-                pstmt.setDouble(8, shift.shiftRevenue);
+                pstmt.setBigDecimal(6, shift.openingRevenue);
+                pstmt.setBigDecimal(7, shift.closingRevenue);
+                pstmt.setBigDecimal(8, shift.shiftRevenue);
                 pstmt.setInt(9, shift.openingTransactionCount);
                 pstmt.setInt(10, shift.closingTransactionCount);
                 pstmt.setInt(11, shift.shiftTransactionCount);
-                pstmt.setDouble(12, shift.cashRevenue);
-                pstmt.setDouble(13, shift.wechatRevenue);
-                pstmt.setDouble(14, shift.alipayRevenue);
-                pstmt.setDouble(15, shift.cardRevenue);
+                pstmt.setBigDecimal(12, shift.cashRevenue);
+                pstmt.setBigDecimal(13, shift.wechatRevenue);
+                pstmt.setBigDecimal(14, shift.alipayRevenue);
+                pstmt.setBigDecimal(15, shift.cardRevenue);
                 pstmt.setString(16, shift.notes);
                 pstmt.addBatch();
             }
@@ -252,16 +252,16 @@ public class ShiftDAO {
             shift.endTime = new java.util.Date(endTime);
         }
 
-        shift.openingRevenue = rs.getDouble("opening_revenue");
-        shift.closingRevenue = rs.getDouble("closing_revenue");
-        shift.shiftRevenue = rs.getDouble("shift_revenue");
+        shift.openingRevenue = rs.getBigDecimal("opening_revenue");
+        shift.closingRevenue = rs.getBigDecimal("closing_revenue");
+        shift.shiftRevenue = rs.getBigDecimal("shift_revenue");
         shift.openingTransactionCount = rs.getInt("opening_transaction_count");
         shift.closingTransactionCount = rs.getInt("closing_transaction_count");
         shift.shiftTransactionCount = rs.getInt("shift_transaction_count");
-        shift.cashRevenue = rs.getDouble("cash_revenue");
-        shift.wechatRevenue = rs.getDouble("wechat_revenue");
-        shift.alipayRevenue = rs.getDouble("alipay_revenue");
-        shift.cardRevenue = rs.getDouble("card_revenue");
+        shift.cashRevenue = rs.getBigDecimal("cash_revenue");
+        shift.wechatRevenue = rs.getBigDecimal("wechat_revenue");
+        shift.alipayRevenue = rs.getBigDecimal("alipay_revenue");
+        shift.cardRevenue = rs.getBigDecimal("card_revenue");
         shift.notes = rs.getString("notes");
 
         return shift;

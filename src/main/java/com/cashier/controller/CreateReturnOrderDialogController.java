@@ -18,6 +18,7 @@ import javafx.stage.Stage;
 import javafx.util.Callback;
 import org.slf4j.Logger;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.ArrayList;
@@ -346,7 +347,7 @@ public class CreateReturnOrderDialogController {
             returnItem.productName = product.name;
             returnItem.originalQuantity = product.quantity;
             returnItem.returnQuantity = product.quantity;
-            returnItem.unitPrice = product.price;
+            returnItem.unitPrice = product.getPrice().doubleValue();
             returnItems.add(returnItem);
         }
 
@@ -497,8 +498,8 @@ public class CreateReturnOrderDialogController {
                 returnItem.productCode = item.productCode;
                 returnItem.productName = item.productName;
                 returnItem.returnQuantity = item.returnQuantity;
-                returnItem.unitPrice = item.unitPrice;
-                returnItem.returnAmount = item.getReturnAmount();
+                returnItem.unitPrice = BigDecimal.valueOf(item.unitPrice);
+                returnItem.returnAmount = BigDecimal.valueOf(item.getReturnAmount());
                 returnItem.condition = getConditionCode(item.condition);
                 returnItem.reason = item.reason;
                 returnItem.calculateAmount();
@@ -507,7 +508,9 @@ public class CreateReturnOrderDialogController {
         }
 
         // 计算总金额
-        returnOrder.totalAmount = items.stream().mapToDouble(i -> i.returnAmount).sum();
+        returnOrder.totalAmount = items.stream()
+            .map(ReturnOrderItem::getReturnAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
 
         // 保存退货订单
         boolean result = ReturnService.createReturnOrder(returnOrder, items);

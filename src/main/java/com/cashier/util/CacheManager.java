@@ -197,6 +197,17 @@ public class CacheManager {
     }
 
     /**
+     * 获取全部缓存商品（名称 -> 商品），仅在缓存有效时使用
+     * @return 商品名称到商品对象的不可变快照；缓存无效时返回空 Map
+     */
+    public static Map<String, Product> getAllCachedInventory() {
+        if (!isCacheValid()) {
+            return java.util.Collections.emptyMap();
+        }
+        return new java.util.HashMap<>(productNameCache);
+    }
+
+    /**
      * 预热缓存（在应用启动时调用）
      */
     public static void warmupCache() {

@@ -10,6 +10,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
+import java.math.BigDecimal;
 import java.io.File;
 import java.io.FileReader;
 import java.io.InputStreamReader;
@@ -383,7 +384,7 @@ public class ProductDataImporter {
 
         // 解析价格
         if (parts.length > 2) {
-            product.price = parseDouble(parts[2], 0.0);
+            product.price = parseBigDecimal(parts[2], BigDecimal.ZERO);
         }
 
         // 解析单位（添加验证和标准化）
@@ -438,7 +439,9 @@ public class ProductDataImporter {
         // 设置默认值（注意：库存数量设为 0，不调整库存）
         product.quantity = 0;  // 导入时不设置库存数量
         product.minStock = 10;
-        product.cost = product.price > 0 ? product.price * 0.7 : 0.0; // 默认成本价为售价的70%
+        product.cost = product.getPrice().compareTo(BigDecimal.ZERO) > 0
+            ? product.getPrice().multiply(new BigDecimal("0.7"))
+            : BigDecimal.ZERO; // 默认成本价为售价的70%
         product.description = "从基础数据导入";
 
         return product;
@@ -558,7 +561,7 @@ public class ProductDataImporter {
         if (parts.length > 5) {
             String priceStr = parts[5].trim();
             if (!priceStr.isEmpty() && !priceStr.equals("NULL")) {
-                product.price = parseDouble(priceStr, 0.0);
+                product.price = parseBigDecimal(priceStr, BigDecimal.ZERO);
             }
         }
 
@@ -588,7 +591,9 @@ public class ProductDataImporter {
         // 设置默认值（注意：库存数量设为 0，不调整库存）
         product.quantity = 0;  // 导入时不设置库存数量
         product.minStock = 10;
-        product.cost = product.price > 0 ? product.price * 0.7 : 0.0; // 默认成本价为售价的70%
+        product.cost = product.getPrice().compareTo(BigDecimal.ZERO) > 0
+            ? product.getPrice().multiply(new BigDecimal("0.7"))
+            : BigDecimal.ZERO; // 默认成本价为售价的70%
         product.description = "从EricLiuCN/barcode导入";
 
         return product;
@@ -693,6 +698,20 @@ public class ProductDataImporter {
         }
         try {
             return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 解析 BigDecimal 数值
+     */
+    private BigDecimal parseBigDecimal(String value, BigDecimal defaultValue) {
+        if (value == null || value.trim().isEmpty() || value.trim().equals("NULL")) {
+            return defaultValue;
+        }
+        try {
+            return new BigDecimal(value.trim());
         } catch (NumberFormatException e) {
             return defaultValue;
         }

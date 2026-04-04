@@ -1,5 +1,7 @@
 package com.cashier.model;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.Date;
 
 /**
@@ -13,7 +15,7 @@ public class ReturnOrder {
     public String memberName;  // 会员名称
     public Date returnDate;  // 退货日期
     public String returnReason;  // 退货原因
-    public double totalAmount;  // 退货总金额
+    public BigDecimal totalAmount;  // 退货总金额
     public String status;  // 状态：PENDING（待审批）、APPROVED（已批准）、REJECTED（已拒绝）、COMPLETED（已完成）
     public String paymentMethod;  // 退款方式：CASH（现金）、WECHAT（微信）、ALIPAY（支付宝）、CARD（银行卡）
     public String operatorName;  // 操作员
@@ -30,8 +32,13 @@ public class ReturnOrder {
         this.createTime = new Date();
         this.updateTime = new Date();
         this.status = "PENDING";
-        this.totalAmount = 0.0;
+        this.totalAmount = BigDecimal.ZERO;
     }
+
+    private static BigDecimal defaultDecimal(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
+    }
+
     // Getter 方法
     public int getId() {
         return id;
@@ -65,12 +72,12 @@ public class ReturnOrder {
         return returnReason;
     }
 
-    public double getTotalAmount() {
-        return totalAmount;
+    public BigDecimal getTotalAmount() {
+        return defaultDecimal(totalAmount);
     }
 
     public String getTotalAmountFormatted() {
-        return String.format("¥%.2f", totalAmount);
+        return "¥" + getTotalAmount().setScale(2, RoundingMode.HALF_UP).toPlainString();
     }
 
     public String getStatus() {

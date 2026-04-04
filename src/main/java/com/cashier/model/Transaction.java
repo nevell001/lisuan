@@ -1,14 +1,15 @@
 package com.cashier.model;
 
+import java.math.BigDecimal;
 import java.util.List;
 
 public class Transaction {
     public String transactionId;
     public String timestamp;
     public List<Product> items;
-    public double totalAmount;
-    public double tax;
-    public double finalAmount;
+    public BigDecimal totalAmount;
+    public BigDecimal tax;
+    public BigDecimal finalAmount;
     public String paymentMethod;  // 支付方式：现金、微信支付、支付宝、银行卡、组合支付
     public int memberId;         // 会员ID
     public String memberPhone;    // 会员手机号
@@ -20,35 +21,41 @@ public class Transaction {
         this.transactionId = "";
         this.timestamp = "";
         this.items = null;
-        this.totalAmount = 0.0;
-        this.tax = 0.0;
-        this.finalAmount = 0.0;
+        this.totalAmount = BigDecimal.ZERO;
+        this.tax = BigDecimal.ZERO;
+        this.finalAmount = BigDecimal.ZERO;
         this.paymentMethod = "";
         this.memberPhone = "";
         this.operatorUsername = "";
         this.operatorName = "";
     }
 
-    public Transaction(String transactionId, String timestamp, List<Product> items, double totalAmount, double tax, double finalAmount) {
+    public Transaction(String transactionId, String timestamp, List<Product> items, BigDecimal totalAmount, BigDecimal tax, BigDecimal finalAmount) {
         this.transactionId = transactionId;
         this.timestamp = timestamp;
         this.items = items;
-        this.totalAmount = totalAmount;
-        this.tax = tax;
-        this.finalAmount = finalAmount;
+        this.totalAmount = defaultDecimal(totalAmount);
+        this.tax = defaultDecimal(tax);
+        this.finalAmount = defaultDecimal(finalAmount);
         this.paymentMethod = "";
         this.memberPhone = "";
     }
 
-    public Transaction(String transactionId, String timestamp, List<Product> items, double totalAmount, double tax, double finalAmount, String paymentMethod) {
-        this.transactionId = transactionId;
-        this.timestamp = timestamp;
-        this.items = items;
-        this.totalAmount = totalAmount;
-        this.tax = tax;
-        this.finalAmount = finalAmount;
+    public Transaction(String transactionId, String timestamp, List<Product> items, double totalAmount, double tax, double finalAmount) {
+        this(transactionId, timestamp, items, BigDecimal.valueOf(totalAmount), BigDecimal.valueOf(tax), BigDecimal.valueOf(finalAmount));
+    }
+
+    public Transaction(String transactionId, String timestamp, List<Product> items, BigDecimal totalAmount, BigDecimal tax, BigDecimal finalAmount, String paymentMethod) {
+        this(transactionId, timestamp, items, totalAmount, tax, finalAmount);
         this.paymentMethod = paymentMethod;
-        this.memberPhone = "";
+    }
+
+    public Transaction(String transactionId, String timestamp, List<Product> items, double totalAmount, double tax, double finalAmount, String paymentMethod) {
+        this(transactionId, timestamp, items, BigDecimal.valueOf(totalAmount), BigDecimal.valueOf(tax), BigDecimal.valueOf(finalAmount), paymentMethod);
+    }
+
+    private static BigDecimal defaultDecimal(BigDecimal value) {
+        return value == null ? BigDecimal.ZERO : value;
     }
 
     // Getter方法
@@ -64,16 +71,16 @@ public class Transaction {
         return items;
     }
 
-    public double getTotalAmount() {
-        return totalAmount;
+    public BigDecimal getTotalAmount() {
+        return defaultDecimal(totalAmount);
     }
 
-    public double getTax() {
-        return tax;
+    public BigDecimal getTax() {
+        return defaultDecimal(tax);
     }
 
-    public double getFinalAmount() {
-        return finalAmount;
+    public BigDecimal getFinalAmount() {
+        return defaultDecimal(finalAmount);
     }
 
     public String getPaymentMethod() {

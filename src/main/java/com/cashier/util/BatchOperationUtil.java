@@ -20,11 +20,9 @@ public class BatchOperationUtil {
         if (params == null || params.isEmpty()) {
             return new int[0];
         }
-        
+
+        boolean managesTransaction = beginManagedTransactionIfNeeded(conn);
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            // 禁用自动提交
-            conn.setAutoCommit(false);
-            
             // 添加批次
             for (Object[] param : params) {
                 for (int i = 0; i < param.length; i++) {
@@ -35,21 +33,17 @@ public class BatchOperationUtil {
             
             // 执行批次
             int[] results = pstmt.executeBatch();
-            
-            // 提交事务
-            conn.commit();
+            commitIfManaged(conn, managesTransaction);
             
             logger.info("批量插入成功: {} 条记录", results.length);
             return results;
             
         } catch (SQLException e) {
-            // 回滚事务
-            conn.rollback();
+            rollbackIfManaged(conn, managesTransaction);
             logger.error("批量插入失败", e);
             throw e;
         } finally {
-            // 恢复自动提交
-            conn.setAutoCommit(true);
+            restoreAutoCommitIfManaged(conn, managesTransaction);
         }
     }
     
@@ -62,11 +56,9 @@ public class BatchOperationUtil {
         if (params == null || params.isEmpty()) {
             return new int[0];
         }
-        
+
+        boolean managesTransaction = beginManagedTransactionIfNeeded(conn);
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            // 禁用自动提交
-            conn.setAutoCommit(false);
-            
             // 添加批次
             for (Object[] param : params) {
                 for (int i = 0; i < param.length; i++) {
@@ -77,21 +69,17 @@ public class BatchOperationUtil {
             
             // 执行批次
             int[] results = pstmt.executeBatch();
-            
-            // 提交事务
-            conn.commit();
+            commitIfManaged(conn, managesTransaction);
             
             logger.info("批量更新成功: {} 条记录", results.length);
             return results;
             
         } catch (SQLException e) {
-            // 回滚事务
-            conn.rollback();
+            rollbackIfManaged(conn, managesTransaction);
             logger.error("批量更新失败", e);
             throw e;
         } finally {
-            // 恢复自动提交
-            conn.setAutoCommit(true);
+            restoreAutoCommitIfManaged(conn, managesTransaction);
         }
     }
     
@@ -165,23 +153,47 @@ public class BatchOperationUtil {
     public static <T> T executeInTransaction(Connection conn, TransactionFunction<T> function) 
         throws SQLException {
         
+        boolean managesTransaction = beginManagedTransactionIfNeeded(conn);
         try {
-            conn.setAutoCommit(false);
-            
             T result = function.execute();
-            
-            conn.commit();
+            commitIfManaged(conn, managesTransaction);
             return result;
             
-        } catch (SQLException e) {
-            conn.rollback();
-            logger.error("事务执行失败，已回滚", e);
+        } catch (SQLException | RuntimeException e) {
+            rollbackIfManaged(conn, managesTransaction);
+            logger.error("事务执行失败", e);
             throw e;
         } finally {
-            conn.setAutoCommit(true);
+            restoreAutoCommitIfManaged(conn, managesTransaction);
         }
     }
     
+    private static boolean beginManagedTransactionIfNeeded(Connection conn) throws SQLException {
+        if (conn.getAutoCommit()) {
+            conn.setAutoCommit(false);
+            return true;
+        }
+        return false;
+    }
+
+    private static void commitIfManaged(Connection conn, boolean managesTransaction) throws SQLException {
+        if (managesTransaction) {
+            conn.commit();
+        }
+    }
+
+    private static void rollbackIfManaged(Connection conn, boolean managesTransaction) throws SQLException {
+        if (managesTransaction) {
+            conn.rollback();
+        }
+    }
+
+    private static void restoreAutoCommitIfManaged(Connection conn, boolean managesTransaction) throws SQLException {
+        if (managesTransaction && !conn.getAutoCommit()) {
+            conn.setAutoCommit(true);
+        }
+    }
+
     /**
      * 事务函数接口
      */

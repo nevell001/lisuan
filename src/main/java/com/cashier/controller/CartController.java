@@ -7,6 +7,7 @@ import com.cashier.dao.TransactionDAO;
 import com.cashier.model.CartItem;
 import com.cashier.model.Promotion;
 import com.cashier.service.DataService;
+import com.cashier.service.TransactionService;
 import com.cashier.model.Member;
 import com.cashier.model.Product;
 import com.cashier.model.Transaction;
@@ -33,6 +34,8 @@ import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
 import java.io.IOException;
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
@@ -132,7 +135,7 @@ public class CartController {
     private Member currentMember;
     private User currentUser;
     private String orderNumber;
-    private double alreadyPaidAmount = 0.0; // 已支付金额
+    private BigDecimal alreadyPaidAmount = BigDecimal.ZERO; // 已支付金额
     private Promotion appliedPromotion; // 当前应用的促销
 
     /**
@@ -362,7 +365,7 @@ public class CartController {
         } else if (newQuantity <= item.product.quantity) {
             // 检查库存
             item.quantity = newQuantity;
-            item.subtotal = item.product.price * item.quantity;
+            item.updateSubtotal();
             cartList.set(cartList.indexOf(item), item); // 触发更新
         } else {
             showInfo("库存不足！当前库存: " + item.product.quantity);
@@ -647,7 +650,7 @@ public class CartController {
         if (member != null) {
             currentMember = member;
             memberInfoLabel.setText(String.format("会员: %s (余额: ¥%.2f, 积分: %d, 折扣: %.1f折)", 
-                member.name, member.balance, (int)member.points, member.discount));
+                member.name, member.balance, member.getPoints().intValue(), member.discount));
         } else {
             currentMember = null;
             memberInfoLabel.setText("未找到该会员");
@@ -666,52 +669,50 @@ public class CartController {
             return;
         }
 
-        // 检查是否有活跃班次
         if (!com.cashier.service.DataService.hasActiveShift()) {
             showError("当前没有开班，请先开班后再进行结算操作！");
             return;
         }
 
-        double finalAmount = getFinalAmount();
-        
-        // 创建现金支付对话框
-        Dialog<Double> dialog = new Dialog<>();
+        BigDecimal finalAmount = getFinalAmount();
+
+        Dialog<BigDecimal> dialog = new Dialog<>();
         dialog.setTitle("现金支付");
         dialog.setHeaderText(null);
-        
+
         GridPane grid = new GridPane();
         grid.setHgap(15);
         grid.setVgap(15);
         grid.setPadding(new javafx.geometry.Insets(25, 150, 15, 15));
-        
-        Label amountLabel = new Label(String.format("应付金额: ¥%.2f", finalAmount));
+
+        Label amountLabel = new Label(String.format("应付金额: ¥%.2f", finalAmount.doubleValue()));
         amountLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #F44336;");
-        
-        Label paidLabel = new Label(String.format("已支付: ¥%.2f", alreadyPaidAmount));
+
+        Label paidLabel = new Label(String.format("已支付: ¥%.2f", alreadyPaidAmount.doubleValue()));
         paidLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #4CAF50;");
-        
-        Label remainingLabel = new Label(String.format("还需支付: ¥%.2f", finalAmount - alreadyPaidAmount));
+
+        BigDecimal initialRemaining = finalAmount.subtract(alreadyPaidAmount);
+        Label remainingLabel = new Label(String.format("还需支付: ¥%.2f", initialRemaining.doubleValue()));
         remainingLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #F44336;");
-        
+
         TextField receivedField = new TextField();
         receivedField.setPromptText("请输入本次支付金额");
         receivedField.setPrefHeight(45);
         receivedField.setStyle("-fx-font-size: 18px;");
-        
+
         Label receivedLabel = new Label("本次支付: ");
         receivedLabel.setStyle("-fx-font-size: 18px;");
-        
+
         Label changeLabel = new Label("找零: ¥0.00");
         changeLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;");
-        
+
         grid.add(amountLabel, 0, 0, 2, 1);
         grid.add(paidLabel, 0, 1, 2, 1);
         grid.add(remainingLabel, 0, 2, 2, 1);
         grid.add(receivedLabel, 0, 3);
         grid.add(receivedField, 1, 3);
         grid.add(changeLabel, 0, 4, 2, 1);
-        
-        // 快捷金额按钮
+
         Button btn100 = new Button("¥100");
         btn100.setPrefSize(100, 60);
         btn100.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
@@ -754,40 +755,39 @@ public class CartController {
 
         HBox quickButtons = new HBox(10, btn100, btn50, btn20, btn10, btn5);
         grid.add(quickButtons, 0, 5, 2, 1);
-        
+
         dialog.getDialogPane().setContent(grid);
-        
+
         ButtonType okButtonType = new ButtonType("确认", ButtonBar.ButtonData.OK_DONE);
         dialog.getDialogPane().getButtonTypes().addAll(okButtonType, ButtonType.CANCEL);
-        
-        // 实时计算找零
+
         receivedField.textProperty().addListener((obs, oldVal, newVal) -> {
             try {
-                double received = Double.parseDouble(newVal.trim());
-                double totalPaid = alreadyPaidAmount + received;
-                double remaining = finalAmount - totalPaid;
-                if (remaining <= 0) {
-                    changeLabel.setText(String.format("找零: ¥%.2f", Math.abs(remaining)));
+                BigDecimal received = new BigDecimal(newVal.trim());
+                BigDecimal totalPaid = alreadyPaidAmount.add(received);
+                BigDecimal remaining = finalAmount.subtract(totalPaid);
+                if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+                    changeLabel.setText(String.format("找零: ¥%.2f", remaining.abs().doubleValue()));
                     changeLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;");
                 } else {
-                    changeLabel.setText(String.format("还需: ¥%.2f", remaining));
+                    changeLabel.setText(String.format("还需: ¥%.2f", remaining.doubleValue()));
                     changeLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #F44336;");
                 }
             } catch (NumberFormatException e) {
-                double remaining = finalAmount - alreadyPaidAmount;
-                if (remaining <= 0) {
+                BigDecimal remaining = finalAmount.subtract(alreadyPaidAmount);
+                if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
                     changeLabel.setText("找零: ¥0.00");
                 } else {
-                    changeLabel.setText(String.format("还需: ¥%.2f", remaining));
+                    changeLabel.setText(String.format("还需: ¥%.2f", remaining.doubleValue()));
                 }
             }
         });
-        
+
         dialog.setResultConverter(dialogButton -> {
             if (dialogButton == okButtonType) {
                 try {
-                    double received = Double.parseDouble(receivedField.getText().trim());
-                    if (received <= 0) {
+                    BigDecimal received = new BigDecimal(receivedField.getText().trim());
+                    if (received.compareTo(BigDecimal.ZERO) <= 0) {
                         showError("请输入有效的金额！");
                         return null;
                     }
@@ -799,13 +799,10 @@ public class CartController {
             }
             return null;
         });
-        
-        // 自动聚焦到输入框并设置按钮大小（合并后的处理）
+
         dialog.setOnShown(event -> {
-            // 聚焦到输入框
             javafx.application.Platform.runLater(receivedField::requestFocus);
-            
-            // 设置确认按钮大小
+
             Button okButton = (Button) dialog.getDialogPane().lookupButton(okButtonType);
             if (okButton != null) {
                 okButton.setPrefSize(120, 50);
@@ -817,20 +814,17 @@ public class CartController {
                 cancelButton.setStyle("-fx-font-size: 16px;");
             }
         });
-        
+
         dialog.showAndWait().ifPresent(receivedAmount -> {
-            double totalPaid = alreadyPaidAmount + receivedAmount;
-            double remaining = finalAmount - totalPaid;
-            
-            if (remaining <= 0) {
-                // 支付完成
-                executePayment("现金", totalPaid, Math.abs(remaining));
-                alreadyPaidAmount = 0.0; // 重置已支付金额
+            BigDecimal totalPaid = alreadyPaidAmount.add(receivedAmount);
+            BigDecimal remaining = finalAmount.subtract(totalPaid);
+
+            if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
+                executePayment("现金", totalPaid, remaining.abs());
+                alreadyPaidAmount = BigDecimal.ZERO;
             } else {
-                // 部分支付，继续
                 alreadyPaidAmount = totalPaid;
-                showInfo(String.format("已支付 ¥%.2f，还需支付 ¥%.2f", totalPaid, remaining));
-                // 重新打开现金支付对话框
+                showInfo(String.format("已支付 ¥%.2f，还需支付 ¥%.2f", totalPaid.doubleValue(), remaining.doubleValue()));
                 handleCashPayment();
             }
         });
@@ -866,117 +860,28 @@ public class CartController {
      * @param receivedAmount 实收金额（现金支付时使用）
      * @param changeAmount 找零金额（现金支付时使用）
      */
-    private void executePayment(String paymentMethod, double receivedAmount, double changeAmount) {
-        Connection conn = null;
+    private void executePayment(String paymentMethod, BigDecimal receivedAmount, BigDecimal changeAmount) {
         try {
-            // 获取数据库连接并开始事务
-            conn = com.cashier.util.DatabaseManager.getConnection();
-            com.cashier.util.DatabaseManager.beginTransaction(conn);
+            Transaction transaction = createTransaction(paymentMethod, receivedAmount.doubleValue(), changeAmount.doubleValue());
+            TransactionService.TransactionResult result = TransactionService.executeTransaction(
+                cartList,
+                currentMember,
+                transaction,
+                inventory,
+                appliedPromotion
+            );
 
-            // 检查并扣减库存
-            for (CartItem item : cartList) {
-                Product product = inventory.get(item.product.name);
-                if (product == null) {
-                    throw new SQLException("商品不存在: " + item.product.name);
-                }
-
-                // 从数据库获取最新库存
-                Product latestProduct = com.cashier.dao.ProductDAO.findById(product.id);
-                if (latestProduct == null) {
-                    throw new SQLException("商品不存在: " + item.product.name);
-                }
-
-                // 检查库存是否足够
-                if (latestProduct.quantity < item.quantity) {
-                    throw new SQLException("商品 " + item.product.name + " 库存不足！当前库存: " + latestProduct.quantity + ", 需要数量: " + item.quantity);
-                }
-
-                // 扣减库存
-                product.quantity = latestProduct.quantity - item.quantity;
-                product.version = latestProduct.version; // 用于乐观锁
-
-                // 更新数据库库存
-                if (!com.cashier.dao.ProductDAO.updateWithVersion(product)) {
-                    throw new SQLException("商品 " + item.product.name + " 库存更新失败，可能已被其他操作修改");
-                }
-
-                // 更新内存中的库存
-                inventory.put(item.product.name, product);
+            if (!result.success || result.transaction == null) {
+                showError(result.message != null ? result.message : "交易失败");
+                return;
             }
 
-            // 更新会员余额和积分
-            if (currentMember != null) {
-                double finalAmount = getFinalAmount();
-
-                // 从数据库获取最新会员信息
-                com.cashier.model.Member latestMember = com.cashier.dao.MemberDAO.findByPhone(currentMember.phone);
-                if (latestMember == null) {
-                    throw new SQLException("会员不存在: " + currentMember.phone);
-                }
-
-                // 检查余额是否足够
-                if (latestMember.balance < finalAmount) {
-                    throw new SQLException("会员余额不足！当前余额: " + latestMember.balance + ", 需要支付: " + finalAmount);
-                }
-
-                // 更新余额和积分
-                currentMember.balance = latestMember.balance - finalAmount;
-                currentMember.points = latestMember.points + (int)(finalAmount * 10);
-
-                // 更新数据库
-                if (!com.cashier.dao.MemberDAO.update(currentMember)) {
-                    throw new SQLException("更新会员信息失败");
-                }
-            }
-
-            // 创建交易记录
-            Transaction transaction = createTransaction(paymentMethod, receivedAmount, changeAmount);
-            saveTransactionWithConnection(conn, transaction);
-
-            // 增加促销使用次数
-            if (appliedPromotion != null) {
-                try {
-                    PromotionDAO.incrementUsage(appliedPromotion.id);
-                    logger.info("购物车促销 {} 使用次数已增加", appliedPromotion.name);
-                } catch (Exception e) {
-                    logger.error("购物车增加促销使用次数失败", e);
-                }
-            }
-
-            // 提交事务
-            com.cashier.util.DatabaseManager.commitTransaction(conn);
-            logger.info("交易成功完成，交易ID: {}", transaction.transactionId);
-
-            // 显示成功消息
-            showSuccess(paymentMethod, transaction, receivedAmount, changeAmount);
-
-            // 清空购物车
+            logger.info("交易成功完成，交易ID: {}", result.transaction.transactionId);
+            showSuccess(paymentMethod, result.transaction, receivedAmount.doubleValue(), changeAmount.doubleValue());
             clear();
-
-        } catch (SQLException e) {
-            // 回滚事务
-            if (conn != null) {
-                com.cashier.util.DatabaseManager.rollbackTransaction(conn);
-            }
-            logger.error("交易失败: " + e.getMessage(), e);
-            showError("交易失败: " + e.getMessage());
         } catch (Exception e) {
-            // 回滚事务
-            if (conn != null) {
-                com.cashier.util.DatabaseManager.rollbackTransaction(conn);
-            }
             logger.error("交易失败: " + e.getMessage(), e);
             showError("交易失败: " + e.getMessage());
-        } finally {
-            // 恢复自动提交
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException e) {
-                    logger.error("关闭数据库连接失败", e);
-                }
-            }
         }
     }
 
@@ -1001,10 +906,10 @@ public class CartController {
         alert.setTitle("确认支付");
         alert.setHeaderText(null);
         alert.setContentText(String.format("确定要使用%s支付 ¥%.2f 吗？",
-            paymentMethod, getFinalAmount()));
+            paymentMethod, getFinalAmount().doubleValue()));
 
         if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-            executePayment(paymentMethod, 0, 0);
+            executePayment(paymentMethod, BigDecimal.ZERO, BigDecimal.ZERO);
         }
     }
 
@@ -1056,7 +961,9 @@ public class CartController {
         // 实现税费计算：从系统设置中读取税率
         Map<String, String> settings = DataService.loadSettings();
         double taxRate = Double.parseDouble(settings.getOrDefault("taxRate", "0.0"));
-        transaction.tax = transaction.totalAmount * taxRate / 100.0;
+        transaction.tax = transaction.totalAmount
+            .multiply(BigDecimal.valueOf(taxRate))
+            .divide(BigDecimal.valueOf(100));
         transaction.finalAmount = getFinalAmount();
         transaction.paymentMethod = paymentMethod;
         
@@ -1070,16 +977,6 @@ public class CartController {
         transaction.operatorName = null;
         
         return transaction;
-    }
-
-    /**
-     * 保存交易记录（使用指定的数据库连接）
-     * @param conn 数据库连接
-     * @param transaction 交易记录
-     * @throws SQLException 如果保存失败
-     */
-    private void saveTransactionWithConnection(Connection conn, Transaction transaction) throws SQLException {
-        TransactionDAO.insertWithConnection(conn, transaction);
     }
 
     /**
@@ -1117,22 +1014,20 @@ public class CartController {
      */
     private void updateStatistics() {
         int totalQuantity = 0;
-        double totalAmount = 0.0;
+        BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (CartItem item : cartList) {
             totalQuantity += item.quantity;
-            totalAmount += item.subtotal;
+            totalAmount = totalAmount.add(item.subtotal);
         }
 
-// 计算折扣
-        double discountRate = 1.0;  // 默认不打折
+        BigDecimal discountRate = BigDecimal.ONE;  // 默认不打折
         if (currentMember != null) {
-            discountRate = currentMember.discountRate / 10.0;  // 将0-10的折扣值转换为0-1的折扣率
+            discountRate = currentMember.getDiscountRate().divide(BigDecimal.TEN);
         }
 
-        // 计算促销优惠
-        appliedPromotion = null;  // 重置当前应用的促销
-        double promotionDiscount = 0.0;
+        appliedPromotion = null;
+        BigDecimal promotionDiscount = BigDecimal.ZERO;
         try {
             List<Promotion> promotions = PromotionDAO.findActive();
             logger.info("购物车加载到 {} 个活跃促销", promotions.size());
@@ -1141,17 +1036,17 @@ public class CartController {
                 logger.info("购物车检查促销: {} (类型: {}, 门槛: {}, 优惠: {})", 
                     promotion.name, promotion.type, promotion.threshold, promotion.discount);
                 
-                double discount = promotion.calculateDiscount(totalAmount);
+                BigDecimal discount = promotion.calculateDiscount(totalAmount);
                 logger.info("购物车促销 {} 的折扣金额: {}", promotion.name, discount);
                 
-                if (discount > promotionDiscount) {
+                if (discount.compareTo(promotionDiscount) > 0) {
                     promotionDiscount = discount;
-                    appliedPromotion = promotion;  // 记录应用的促销
+                    appliedPromotion = promotion;
                     logger.info("购物车选择促销: {} (优惠金额: {})", promotion.name, discount);
                 }
             }
             
-            if (promotionDiscount > 0) {
+            if (promotionDiscount.compareTo(BigDecimal.ZERO) > 0) {
                 logger.info("购物车最终应用促销: {}，优惠金额: {}", 
                     appliedPromotion != null ? appliedPromotion.name : "无", promotionDiscount);
             }
@@ -1159,28 +1054,24 @@ public class CartController {
             logger.error("购物车加载促销数据失败", e);
         }
 
-        // 计算最终金额：先应用会员折扣，再减去促销优惠
-        double amountAfterMemberDiscount = totalAmount * discountRate;
-        double finalAmount = Math.max(0, amountAfterMemberDiscount - promotionDiscount);  // 应付金额不能为负数
-        
-        // 计算总优惠金额
-        double discountAmount = totalAmount - finalAmount;  // 优惠金额 = 原价 - 应付金额
+        BigDecimal amountAfterMemberDiscount = totalAmount.multiply(discountRate);
+        BigDecimal finalAmount = amountAfterMemberDiscount.subtract(promotionDiscount).max(BigDecimal.ZERO);
+        BigDecimal discountAmount = totalAmount.subtract(finalAmount);
 
         totalQuantityLabel.setText(String.valueOf(totalQuantity));
-        totalAmountLabel.setText(String.format("¥%.2f", totalAmount));
-        memberDiscountLabel.setText(String.format("%.1f折", currentMember != null ? currentMember.discountRate : 10));
+        totalAmountLabel.setText(String.format("¥%.2f", totalAmount.doubleValue()));
+        memberDiscountLabel.setText(String.format("%.1f折", currentMember != null ? currentMember.getDiscountRate().doubleValue() : 10.0));
         
-        // 显示优惠明细
-        if (promotionDiscount > 0 && appliedPromotion != null) {
+        if (promotionDiscount.compareTo(BigDecimal.ZERO) > 0 && appliedPromotion != null) {
             discountLabel.setText(String.format("-¥%.2f (促销: %s - ¥%.2f)", 
-                discountAmount, appliedPromotion.name, promotionDiscount));
-        } else if (promotionDiscount > 0) {
-            discountLabel.setText(String.format("-¥%.2f (促销: ¥%.2f)", discountAmount, promotionDiscount));
+                discountAmount.doubleValue(), appliedPromotion.name, promotionDiscount.doubleValue()));
+        } else if (promotionDiscount.compareTo(BigDecimal.ZERO) > 0) {
+            discountLabel.setText(String.format("-¥%.2f (促销: ¥%.2f)", discountAmount.doubleValue(), promotionDiscount.doubleValue()));
         } else {
-            discountLabel.setText(String.format("-¥%.2f", discountAmount));
+            discountLabel.setText(String.format("-¥%.2f", discountAmount.doubleValue()));
         }
         
-        finalAmountLabel.setText(String.format("¥%.2f", finalAmount));
+        finalAmountLabel.setText(String.format("¥%.2f", finalAmount.doubleValue()));
         
         // 更新支付按钮状态
         boolean hasItems = !cartList.isEmpty();
@@ -1259,10 +1150,10 @@ public class CartController {
      * 获取总金额
      * @return 总金额
      */
-    private double getTotalAmount() {
-        double total = 0.0;
+    private BigDecimal getTotalAmount() {
+        BigDecimal total = BigDecimal.ZERO;
         for (CartItem item : cartList) {
-            total += item.subtotal;
+            total = total.add(item.subtotal);
         }
         return total;
     }
@@ -1271,20 +1162,18 @@ public class CartController {
      * 获取最终金额
      * @return 最终金额（包含会员折扣和促销优惠）
      */
-    private double getFinalAmount() {
-        double totalAmount = getTotalAmount();
+    private BigDecimal getFinalAmount() {
+        BigDecimal totalAmount = getTotalAmount();
         
-        // 计算会员折扣
-        double discountRate = currentMember != null ? currentMember.discountRate / 10.0 : 1.0;
-        double amountAfterMemberDiscount = totalAmount * discountRate;
+        BigDecimal discountRate = currentMember != null ? currentMember.getDiscountRate().divide(BigDecimal.TEN) : BigDecimal.ONE;
+        BigDecimal amountAfterMemberDiscount = totalAmount.multiply(discountRate);
         
-        // 计算促销优惠
-        double promotionDiscount = 0.0;
+        BigDecimal promotionDiscount = BigDecimal.ZERO;
         try {
             List<Promotion> promotions = PromotionDAO.findActive();
             for (Promotion promotion : promotions) {
-                double discount = promotion.calculateDiscount(totalAmount);
-                if (discount > promotionDiscount) {
+                BigDecimal discount = promotion.calculateDiscount(totalAmount);
+                if (discount.compareTo(promotionDiscount) > 0) {
                     promotionDiscount = discount;
                 }
             }
@@ -1292,8 +1181,7 @@ public class CartController {
             logger.error("加载促销数据失败", e);
         }
         
-        // 返回最终金额：会员折扣后减去促销优惠
-        return Math.max(0, amountAfterMemberDiscount - promotionDiscount);
+        return amountAfterMemberDiscount.subtract(promotionDiscount).max(BigDecimal.ZERO);
     }
 
     /**
@@ -1312,7 +1200,7 @@ public class CartController {
             "商品数量: %d",
             transaction.transactionId,
             paymentMethod,
-            getFinalAmount(),
+            getFinalAmount().doubleValue(),
             cartList.size()
         );
         
@@ -1452,7 +1340,7 @@ public class CartController {
         cartList.clear();
 
         // 重置已支付金额
-        alreadyPaidAmount = 0.0;
+        alreadyPaidAmount = BigDecimal.ZERO;
 
         // 清除会员信息
         currentMember = null;

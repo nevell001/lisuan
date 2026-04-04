@@ -8,6 +8,7 @@ import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -184,9 +185,9 @@ public class TransactionController {
     private void updateStatistics() {
         countLabel.setText("交易数量: " + transactionList.size());
 
-        double total = 0.0;
+        BigDecimal total = BigDecimal.ZERO;
         for (Transaction t : transactionList) {
-            total += t.finalAmount;
+            total = total.add(t.getFinalAmount());
         }
         totalAmountLabel.setText(String.format("总金额: ¥%.2f", total));
     }
@@ -232,7 +233,7 @@ public class TransactionController {
                     i + 1,
                     item.name,
                     item.quantity,
-                    item.price * item.quantity
+                    item.getPrice().multiply(BigDecimal.valueOf(item.quantity)).doubleValue()
                 ));
             }
         } else {

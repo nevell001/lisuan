@@ -718,7 +718,7 @@ public class PurchaseOrderController {
                         item.productId = selected.id;
                         item.productName = selected.name != null ? selected.name : "";
                         item.quantity = 1;
-                        item.unitPrice = selected.cost > 0 ? BigDecimal.valueOf(selected.cost) : BigDecimal.valueOf(selected.price);
+                        item.unitPrice = selected.getCost().compareTo(BigDecimal.ZERO) > 0 ? selected.getCost() : selected.getPrice();
                         item.totalPrice = item.unitPrice.multiply(BigDecimal.valueOf(item.quantity));
                         item.inboundQuantity = 0;
                         

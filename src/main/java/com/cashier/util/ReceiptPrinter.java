@@ -7,6 +7,7 @@ import com.cashier.model.ReturnOrder;
 import com.cashier.model.ReturnOrderItem;
 
 import java.io.File;
+import java.math.BigDecimal;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDateTime;
@@ -127,7 +128,7 @@ public class ReceiptPrinter {
 
         // 金额汇总
         sb.append(String.format("%35s %10.2f\n", "商品总额:", transaction.totalAmount));
-        if (transaction.tax > 0) {
+        if (transaction.tax.compareTo(BigDecimal.ZERO) > 0) {
             sb.append(String.format("%35s %10.2f\n", "税费:", transaction.tax));
         }
         sb.append("----------------------------------------\n");
@@ -139,8 +140,8 @@ public class ReceiptPrinter {
         sb.append(String.format("支付方式: %s\n", paymentMethod));
 
         // 会员折扣（如果有）
-        if (member != null && member.discount < 10.0) {
-            sb.append(String.format("会员折扣: %.1f折\n", member.discount));
+        if (member != null && member.getDiscount().compareTo(BigDecimal.TEN) < 0) {
+            sb.append(String.format("会员折扣: %.1f折\n", member.getDiscount()));
         }
 
         sb.append("\n");

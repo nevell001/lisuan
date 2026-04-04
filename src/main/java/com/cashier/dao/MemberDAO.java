@@ -17,36 +17,58 @@ public class MemberDAO {
      * 根据ID查找会员
      */
     public static Member findById(int id) throws SQLException {
-            String sql = "SELECT id, member_code, phone, name, points, level, discount, balance, birthday FROM members WHERE id = ?";
-    
-            try (Connection conn = DatabaseManager.getConnection();
-                 PreparedStatement pstmt = conn.prepareStatement(sql)) {
-    
-                pstmt.setInt(1, id);
-                ResultSet rs = pstmt.executeQuery();
-    
+        try (Connection conn = DatabaseManager.getConnection()) {
+            return findByIdWithConnection(conn, id);
+        }
+    }
+
+    /**
+     * 使用指定连接根据ID查找会员
+     * @param conn 数据库连接
+     * @param id 会员ID
+     * @return 会员对象，不存在时返回 null
+     * @throws SQLException 数据库操作异常
+     */
+    public static Member findByIdWithConnection(Connection conn, int id) throws SQLException {
+        String sql = "SELECT id, member_code, phone, name, points, level, discount, balance, birthday FROM members WHERE id = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return mapRowToMember(rs);
                 }
             }
-    
-            return null;
         }
+
+        return null;
+    }
 
     /**
      * 根据手机号查找会员
      */
     public static Member findByPhone(String phone) throws SQLException {
+        try (Connection conn = DatabaseManager.getConnection()) {
+            return findByPhoneWithConnection(conn, phone);
+        }
+    }
+
+    /**
+     * 使用指定连接根据手机号查找会员
+     * @param conn 数据库连接
+     * @param phone 手机号
+     * @return 会员对象，不存在时返回 null
+     * @throws SQLException 数据库操作异常
+     */
+    public static Member findByPhoneWithConnection(Connection conn, String phone) throws SQLException {
         String sql = "SELECT id, member_code, phone, name, points, level, discount, balance, birthday FROM members WHERE phone = ?";
 
-        try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, phone);
-            ResultSet rs = pstmt.executeQuery();
-
-            if (rs.next()) {
-                return mapRowToMember(rs);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRowToMember(rs);
+                }
             }
         }
         return null;
@@ -104,10 +126,10 @@ public class MemberDAO {
             pstmt.setString(paramIndex++, member.memberCode);
             pstmt.setString(paramIndex++, member.phone);
             pstmt.setString(paramIndex++, member.name);
-            pstmt.setDouble(paramIndex++, member.points);
+            pstmt.setBigDecimal(paramIndex++, member.points);
             pstmt.setString(paramIndex++, member.level);
-            pstmt.setDouble(paramIndex++, member.discount);
-            pstmt.setDouble(paramIndex++, member.balance);
+            pstmt.setBigDecimal(paramIndex++, member.discount);
+            pstmt.setBigDecimal(paramIndex++, member.balance);
             pstmt.setString(paramIndex++, member.birthday);
 
             int affectedRows = pstmt.executeUpdate();
@@ -168,10 +190,10 @@ public class MemberDAO {
             pstmt.setString(1, member.memberCode);
             pstmt.setString(2, member.phone);
             pstmt.setString(3, member.name);
-            pstmt.setDouble(4, member.points);
+            pstmt.setBigDecimal(4, member.points);
             pstmt.setString(5, member.level);
-            pstmt.setDouble(6, member.discount);
-            pstmt.setDouble(7, member.balance);
+            pstmt.setBigDecimal(6, member.discount);
+            pstmt.setBigDecimal(7, member.balance);
             pstmt.setString(8, member.birthday);
             pstmt.setInt(9, member.id);
 
@@ -194,10 +216,10 @@ public class MemberDAO {
             pstmt.setString(1, member.memberCode);
             pstmt.setString(2, member.phone);
             pstmt.setString(3, member.name);
-            pstmt.setDouble(4, member.points);
+            pstmt.setBigDecimal(4, member.points);
             pstmt.setString(5, member.level);
-            pstmt.setDouble(6, member.discount);
-            pstmt.setDouble(7, member.balance);
+            pstmt.setBigDecimal(6, member.discount);
+            pstmt.setBigDecimal(7, member.balance);
             pstmt.setString(8, member.birthday);
             pstmt.setInt(9, member.id);
 
@@ -242,7 +264,7 @@ public class MemberDAO {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setDouble(1, delta);
+            pstmt.setBigDecimal(1, java.math.BigDecimal.valueOf(delta));
             pstmt.setInt(2, id);
             return pstmt.executeUpdate() > 0;
         }
@@ -257,7 +279,7 @@ public class MemberDAO {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setDouble(1, delta);
+            pstmt.setBigDecimal(1, java.math.BigDecimal.valueOf(delta));
             pstmt.setString(2, phone);
             return pstmt.executeUpdate() > 0;
         }
@@ -272,7 +294,7 @@ public class MemberDAO {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setDouble(1, delta);
+            pstmt.setBigDecimal(1, java.math.BigDecimal.valueOf(delta));
             pstmt.setInt(2, id);
             return pstmt.executeUpdate() > 0;
         }
@@ -287,7 +309,7 @@ public class MemberDAO {
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
 
-            pstmt.setDouble(1, delta);
+            pstmt.setBigDecimal(1, java.math.BigDecimal.valueOf(delta));
             pstmt.setString(2, phone);
             return pstmt.executeUpdate() > 0;
         }
@@ -350,10 +372,10 @@ public class MemberDAO {
             for (Member member : members) {
                 pstmt.setString(1, member.phone);
                 pstmt.setString(2, member.name);
-                pstmt.setDouble(3, member.points);
+                pstmt.setBigDecimal(3, member.points);
                 pstmt.setString(4, member.level);
-                pstmt.setDouble(5, member.discount);
-                pstmt.setDouble(6, member.balance);
+                pstmt.setBigDecimal(5, member.discount);
+                pstmt.setBigDecimal(6, member.balance);
                 pstmt.setString(7, member.birthday);
                 pstmt.addBatch();
             }
@@ -371,11 +393,11 @@ public class MemberDAO {
         member.memberCode = rs.getString("member_code");
         member.phone = rs.getString("phone");
         member.name = rs.getString("name");
-        member.points = rs.getDouble("points");
+        member.points = rs.getBigDecimal("points");
         member.level = rs.getString("level");
-        member.discount = rs.getDouble("discount");
+        member.discount = rs.getBigDecimal("discount");
         member.discountRate = member.discount;
-        member.balance = rs.getDouble("balance");
+        member.balance = rs.getBigDecimal("balance");
         member.birthday = rs.getString("birthday");
         return member;
     }

@@ -13,6 +13,7 @@ import javafx.scene.layout.GridPane;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
+import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
 import java.util.List;
 import java.time.LocalDate;
@@ -298,13 +299,13 @@ public class PromotionController {
                     }
 
                     // 解析数字字段
-                    double threshold = Double.parseDouble(thresholdText);
-                    double discount = Double.parseDouble(discountText);
+                    BigDecimal threshold = new BigDecimal(thresholdText);
+                    BigDecimal discount = new BigDecimal(discountText);
 
-                    if (threshold < 0) {
+                    if (threshold.compareTo(BigDecimal.ZERO) < 0) {
                         throw new IllegalArgumentException("门槛金额不能为负数");
                     }
-                    if (discount < 0) {
+                    if (discount.compareTo(BigDecimal.ZERO) < 0) {
                         throw new IllegalArgumentException("折扣值不能为负数");
                     }
 

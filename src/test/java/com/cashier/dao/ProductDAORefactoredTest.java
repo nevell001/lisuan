@@ -5,6 +5,7 @@ import com.cashier.model.Product;
 import com.cashier.util.DatabaseTestBase;
 import org.junit.jupiter.api.*;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.List;
@@ -35,12 +36,12 @@ public class ProductDAORefactoredTest extends DatabaseTestBase {
             Product p = new Product();
             p.productCode = "TEST" + String.format("%03d", i);
             p.name = "测试商品" + i;
-            p.price = 10.0 * i;
+            p.price = BigDecimal.valueOf(10.0 * i);
             p.quantity = 100;
             p.category = "测试分类";
             p.unit = "个";
             p.minStock = 10;
-            p.cost = 5.0 * i;
+            p.cost = BigDecimal.valueOf(5.0 * i);
             testProducts.add(p);
         }
         
@@ -72,12 +73,12 @@ public class ProductDAORefactoredTest extends DatabaseTestBase {
         Product product = new Product();
         product.productCode = "CRUD001";
         product.name = "CRUD测试商品";
-        product.price = 99.99;
+        product.price = BigDecimal.valueOf(99.99);
         product.quantity = 50;
         product.category = "测试";
         product.unit = "件";
         product.minStock = 5;
-        product.cost = 50.0;
+        product.cost = BigDecimal.valueOf(50.0);
         
         boolean inserted = productDAO.insert(product);
         assertTrue(inserted);
@@ -91,7 +92,7 @@ public class ProductDAORefactoredTest extends DatabaseTestBase {
         
         // 更新
         found.name = "CRUD测试商品-已更新";
-        found.price = 199.99;
+        found.price = BigDecimal.valueOf(199.99);
         boolean updated = productDAO.update(found);
         assertTrue(updated);
         assertEquals(found.version, 1, "更新后版本号应该增加");
@@ -99,7 +100,7 @@ public class ProductDAORefactoredTest extends DatabaseTestBase {
         // 验证更新
         Product updatedProduct = productDAO.findById(product.id);
         assertEquals("CRUD测试商品-已更新", updatedProduct.name);
-        assertEquals(199.99, updatedProduct.price, 0.01);
+        assertEquals(199.99, updatedProduct.price.doubleValue(), 0.01);
         
         // 删除
         boolean deleted = productDAO.delete(product.id);
@@ -118,12 +119,12 @@ public class ProductDAORefactoredTest extends DatabaseTestBase {
         Product product = new Product();
         product.productCode = "LOCK001";
         product.name = "乐观锁测试";
-        product.price = 100.0;
+        product.price = BigDecimal.valueOf(100.0);
         product.quantity = 10;
         product.category = "测试";
         product.unit = "个";
         product.minStock = 1;
-        product.cost = 50.0;
+        product.cost = BigDecimal.valueOf(50.0);
         
         productDAO.insert(product);
         assertEquals(0, product.version);
@@ -158,12 +159,12 @@ public class ProductDAORefactoredTest extends DatabaseTestBase {
         Product product = new Product();
         product.productCode = "COUNT001";
         product.name = "计数测试";
-        product.price = 10.0;
+        product.price = BigDecimal.valueOf(10.0);
         product.quantity = 10;
         product.category = "测试";
         product.unit = "个";
         product.minStock = 1;
-        product.cost = 5.0;
+        product.cost = BigDecimal.valueOf(5.0);
         
         productDAO.insert(product);
         

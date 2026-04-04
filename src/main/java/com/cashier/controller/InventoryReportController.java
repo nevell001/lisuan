@@ -13,6 +13,7 @@ import javafx.scene.chart.*;
 import javafx.scene.control.*;
 import javafx.scene.layout.*;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -424,7 +425,7 @@ public class InventoryReportController {
             }
 
             totalProducts++;
-            double stockValue = product.quantity * product.cost;
+            double stockValue = product.getCost().multiply(BigDecimal.valueOf(product.quantity)).doubleValue();
             totalStockValue += stockValue;
 
             // 统计销售数量

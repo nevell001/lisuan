@@ -19,6 +19,8 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -266,7 +268,7 @@ public class CheckoutController {
         if (member != null) {
             currentMember = member;
             memberInfoLabel.setText(String.format("会员: %s (余额: ¥%.2f, 积分: %d)", 
-                member.name, member.balance, member.points));
+                member.name, member.getBalance(), member.getPoints().intValue()));
         } else {
             currentMember = null;
             memberInfoLabel.setText("未找到该会员");
@@ -280,22 +282,22 @@ public class CheckoutController {
      */
     private void updateStatistics() {
         int totalQuantity = 0;
-        double totalAmount = 0.0;
+        BigDecimal totalAmount = BigDecimal.ZERO;
 
         for (CartItem item : cartList) {
             totalQuantity += item.quantity;
-            totalAmount += item.subtotal;
+            totalAmount = totalAmount.add(item.subtotal);
         }
 
         // 计算会员折扣
-        double discountRate = 1.0;  // 默认不打折
+        BigDecimal discountRate = BigDecimal.ONE;  // 默认不打折
         if (currentMember != null) {
-            discountRate = currentMember.discountRate / 10.0;  // 将0-10的折扣值转换为0-1的折扣率
+            discountRate = currentMember.getDiscountRate().divide(BigDecimal.TEN);  // 将0-10的折扣值转换为0-1的折扣率
         }
 
         // 计算促销优惠
         appliedPromotion = null;  // 重置当前应用的促销
-        double promotionDiscount = 0.0;
+        BigDecimal promotionDiscount = BigDecimal.ZERO;
         try {
             // 如果用户手动选择了优惠券，使用优惠券
             if (appliedCoupon != null) {
@@ -317,17 +319,17 @@ public class CheckoutController {
                         promotion.name, promotion.type, promotion.threshold, promotion.discount,
                         promotion.enabled, promotion.startDate, promotion.endDate);
 
-                    double discount = promotion.calculateDiscount(totalAmount);
+                    BigDecimal discount = promotion.calculateDiscount(totalAmount);
                     logger.info("促销 {} 的折扣金额: {}", promotion.name, discount);
 
-                    if (discount > promotionDiscount) {
+                    if (discount.compareTo(promotionDiscount) > 0) {
                         promotionDiscount = discount;
                         appliedPromotion = promotion;  // 记录应用的促销
                         logger.info("选择促销: {} (优惠金额: {})", promotion.name, discount);
                     }
                 }
 
-                if (promotionDiscount > 0) {
+                if (promotionDiscount.compareTo(BigDecimal.ZERO) > 0) {
                     logger.info("最终应用促销: {}，优惠金额: {}",
                         appliedPromotion != null ? appliedPromotion.name : "无", promotionDiscount);
                 }
@@ -337,22 +339,25 @@ public class CheckoutController {
         }
 
         // 计算最终金额：先应用会员折扣，再减去促销优惠
-        double amountAfterMemberDiscount = totalAmount * discountRate;
-        double finalAmount = Math.max(0, amountAfterMemberDiscount - promotionDiscount);  // 应付金额不能为负数
+        BigDecimal amountAfterMemberDiscount = totalAmount.multiply(discountRate);
+        BigDecimal finalAmount = amountAfterMemberDiscount.subtract(promotionDiscount);
+        if (finalAmount.compareTo(BigDecimal.ZERO) < 0) {
+            finalAmount = BigDecimal.ZERO;
+        }
 
         // 计算总优惠金额
-        double totalDiscountAmount = totalAmount - finalAmount;  // 优惠金额 = 原价 - 应付金额
+        BigDecimal totalDiscountAmount = totalAmount.subtract(finalAmount);  // 优惠金额 = 原价 - 应付金额
 
         totalQuantityLabel.setText(String.valueOf(totalQuantity));
         totalAmountLabel.setText(String.format("¥%.2f", totalAmount));
-        memberDiscountLabel.setText(String.format("%.1f折", currentMember != null ? currentMember.discountRate : 10));
+        memberDiscountLabel.setText(String.format("%.1f折", currentMember != null ? currentMember.getDiscountRate() : BigDecimal.TEN));
 
         // 显示优惠明细
-        if (promotionDiscount > 0 && appliedPromotion != null) {
+        if (promotionDiscount.compareTo(BigDecimal.ZERO) > 0 && appliedPromotion != null) {
             String promotionType = "优惠券".equals(appliedPromotion.type) ? "优惠券" : "促销";
             discountLabel.setText(String.format("-¥%.2f (%s: %s - ¥%.2f)",
                 totalDiscountAmount, promotionType, appliedPromotion.name, promotionDiscount));
-        } else if (promotionDiscount > 0) {
+        } else if (promotionDiscount.compareTo(BigDecimal.ZERO) > 0) {
             discountLabel.setText(String.format("-¥%.2f (促销: ¥%.2f)", totalDiscountAmount, promotionDiscount));
         } else {
             discountLabel.setText(String.format("-¥%.2f", totalDiscountAmount));
@@ -422,9 +427,10 @@ public class CheckoutController {
         // 更新会员余额和积分
         if (currentMember != null) {
             Map<String, Member> members = DataService.loadMembers();
-            double finalAmount = getFinalAmount();
-            currentMember.balance -= finalAmount;
-            currentMember.points += (int)(finalAmount * 10); // 1元=10积分
+            BigDecimal finalAmount = getFinalAmount();
+            currentMember.balance = currentMember.getBalance().subtract(finalAmount);
+            currentMember.points = currentMember.getPoints()
+                .add(finalAmount.multiply(BigDecimal.TEN).setScale(0, RoundingMode.DOWN)); // 1元=10积分
             members.put(currentMember.phone, currentMember);
             DataService.saveMembers(members);
         }
@@ -494,13 +500,17 @@ public class CheckoutController {
         
         // 将合并后的商品列表添加到交易中
         transaction.items.addAll(productMap.values());
-        
-                transaction.totalAmount = getFinalAmount();  // 使用最终金额（包含优惠）
-                
-                // 实现税费计算：从系统设置中读取税率
-                Map<String, String> settings = DataService.loadSettings();
-                double taxRate = Double.parseDouble(settings.getOrDefault("taxRate", "0.0"));
-                transaction.tax = transaction.totalAmount * taxRate / 100.0;        transaction.paymentMethod = paymentMethod;
+
+        transaction.totalAmount = getFinalAmount();  // 使用最终金额（包含优惠）
+        transaction.finalAmount = getFinalAmount();
+
+        // 实现税费计算：从系统设置中读取税率
+        Map<String, String> settings = DataService.loadSettings();
+        double taxRate = Double.parseDouble(settings.getOrDefault("taxRate", "0.0"));
+        transaction.tax = transaction.totalAmount
+            .multiply(BigDecimal.valueOf(taxRate))
+            .divide(BigDecimal.valueOf(100));
+        transaction.paymentMethod = paymentMethod;
         
         if (currentMember != null) {
             transaction.memberPhone = currentMember.phone;
@@ -609,10 +619,10 @@ public class CheckoutController {
      * 获取总金额
      * @return 总金额
      */
-    private double getTotalAmount() {
-        double total = 0.0;
+    private BigDecimal getTotalAmount() {
+        BigDecimal total = BigDecimal.ZERO;
         for (CartItem item : cartList) {
-            total += item.subtotal;
+            total = total.add(item.subtotal);
         }
         return total;
     }
@@ -621,29 +631,30 @@ public class CheckoutController {
      * 获取最终金额
      * @return 最终金额（包含会员折扣和促销优惠）
      */
-    private double getFinalAmount() {
-        double totalAmount = getTotalAmount();
-        
+    private BigDecimal getFinalAmount() {
+        BigDecimal totalAmount = getTotalAmount();
+
         // 计算会员折扣
-        double discountRate = currentMember != null ? currentMember.discountRate / 10.0 : 1.0;
-        double amountAfterMemberDiscount = totalAmount * discountRate;
-        
+        BigDecimal discountRate = currentMember != null ? currentMember.getDiscountRate().divide(BigDecimal.TEN) : BigDecimal.ONE;
+        BigDecimal amountAfterMemberDiscount = totalAmount.multiply(discountRate);
+
         // 计算促销优惠
-        double promotionDiscount = 0.0;
+        BigDecimal promotionDiscount = BigDecimal.ZERO;
         try {
             List<Promotion> promotions = PromotionDAO.findActive();
             for (Promotion promotion : promotions) {
-                double discount = promotion.calculateDiscount(totalAmount);
-                if (discount > promotionDiscount) {
+                BigDecimal discount = promotion.calculateDiscount(totalAmount);
+                if (discount.compareTo(promotionDiscount) > 0) {
                     promotionDiscount = discount;
                 }
             }
         } catch (Exception e) {
             logger.error("加载促销数据失败", e);
         }
-        
+
         // 返回最终金额：会员折扣后减去促销优惠
-        return Math.max(0, amountAfterMemberDiscount - promotionDiscount);
+        BigDecimal finalAmount = amountAfterMemberDiscount.subtract(promotionDiscount);
+        return finalAmount.compareTo(BigDecimal.ZERO) < 0 ? BigDecimal.ZERO : finalAmount;
     }
 
     /**

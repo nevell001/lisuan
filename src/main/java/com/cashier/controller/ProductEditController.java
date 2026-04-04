@@ -13,6 +13,7 @@ import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.fxml.FXML;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import javafx.scene.control.*;
 import javafx.stage.Stage;
@@ -366,7 +367,9 @@ public class ProductEditController {
                             product.brand = brandField.getText() != null ? brandField.getText().trim() : "";
                             product.supplier = supplierComboBox.getSelectionModel().getSelectedItem();
                             product.spec = specField.getText() != null ? specField.getText().trim() : "";
-                            product.cost = costField.getText() != null && !costField.getText().trim().isEmpty() ? Double.parseDouble(costField.getText().trim()) : product.price * 0.7;
+                            product.cost = costField.getText() != null && !costField.getText().trim().isEmpty()
+                                ? new BigDecimal(costField.getText().trim())
+                                : product.getPrice().multiply(new BigDecimal("0.7"));
             
                             // 检查商品名称是否已存在
                             Product existingProduct = ProductDAO.findByName(product.name);
@@ -399,7 +402,7 @@ public class ProductEditController {
                             logger.info("编辑现有商品，商品ID: {}, 原名称: {}", product.id, product.name);
                             
                             product.name = nameField.getText().trim();
-                            product.price = Double.parseDouble(priceField.getText().trim());
+                            product.price = new BigDecimal(priceField.getText().trim());
             
                             // 更新商品编号（如果不是自动生成）
                             if (!autoCodeCheckBox.isSelected()) {
@@ -429,7 +432,9 @@ public class ProductEditController {
                             product.brand = brandField.getText() != null ? brandField.getText().trim() : "";
                             product.supplier = supplierComboBox.getSelectionModel().getSelectedItem();
                             product.spec = specField.getText() != null ? specField.getText().trim() : "";
-                            product.cost = costField.getText() != null && !costField.getText().trim().isEmpty() ? Double.parseDouble(costField.getText().trim()) : product.price * 0.7;
+                            product.cost = costField.getText() != null && !costField.getText().trim().isEmpty()
+                                ? new BigDecimal(costField.getText().trim())
+                                : product.getPrice().multiply(new BigDecimal("0.7"));
                             logger.info("准备更新商品到数据库: id={}, name={}, price={}", product.id, product.name, product.price);
                             
                             // 更新数据库
@@ -560,7 +565,7 @@ public class ProductEditController {
         specField.setText(product.spec != null ? product.spec : "");
         brandField.setText(product.brand != null ? product.brand : "");
         descriptionField.setText(product.description != null ? product.description : "");
-        costField.setText(product.cost > 0 ? String.valueOf(product.cost) : "");
+        costField.setText(product.getCost().compareTo(BigDecimal.ZERO) > 0 ? String.valueOf(product.getCost()) : "");
         
         if (product.category != null && !product.category.isEmpty()) {
             categoryComboBox.getSelectionModel().select(product.category);

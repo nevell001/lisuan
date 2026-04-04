@@ -1,5 +1,7 @@
 package com.cashier.model;
 
+import java.math.BigDecimal;
+
 /**
  * 购物车项类
  * 表示购物车中的商品项
@@ -7,19 +9,21 @@ package com.cashier.model;
 public class CartItem {
     public Product product;  // 商品对象
     public int quantity;     // 数量
-    public double subtotal;  // 小计
+    public BigDecimal subtotal;  // 小计
 
     public CartItem(Product product, int quantity) {
         this.product = product;
         this.quantity = quantity;
-        this.subtotal = product.price * quantity;
+        this.subtotal = BigDecimal.ZERO;
+        updateSubtotal();
     }
 
     /**
      * 更新小计
      */
     public void updateSubtotal() {
-        this.subtotal = product.price * quantity;
+        BigDecimal price = product != null && product.price != null ? product.price : BigDecimal.ZERO;
+        this.subtotal = price.multiply(BigDecimal.valueOf(quantity));
     }
 
     /**

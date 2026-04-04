@@ -6,11 +6,8 @@ import com.cashier.util.DatabaseManager;
 import com.cashier.util.LoggerFactoryUtil;
 import org.slf4j.Logger;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.math.BigDecimal;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -26,25 +23,25 @@ public class InventoryService {
      * @return 库存数据映射（商品名称 -> 商品对象）
      */
     public static Map<String, Product> loadAllInventory() {
+        // 缓存有效时直接从缓存返回，无需查数据库
+        if (com.cashier.util.CacheManager.isCacheValid()) {
+            Map<String, Product> cached = com.cashier.util.CacheManager.getAllCachedInventory();
+            if (!cached.isEmpty()) {
+                logger.info("从缓存加载 {} 个商品", cached.size());
+                return cached;
+            }
+        }
+
+        // 缓存失效或为空，从数据库加载并写入缓存
         Map<String, Product> inventory = new HashMap<>();
         try {
-            // 先检查缓存
-            if (com.cashier.util.CacheManager.isCacheValid()) {
-                List<Product> products = ProductDAO.findAll();
-                for (Product product : products) {
-                    inventory.put(product.name, product);
-                }
-                logger.info("从数据库加载 {} 个商品", inventory.size());
-            } else {
-                // 缓存失效，刷新缓存
-                logger.info("缓存已失效，刷新缓存...");
-                List<Product> products = ProductDAO.findAll();
-                for (Product product : products) {
-                    inventory.put(product.name, product);
-                }
-                com.cashier.util.CacheManager.batchAddToCache(products);
-                logger.info("从数据库加载 {} 个商品并更新缓存", inventory.size());
+            logger.info("缓存未命中，从数据库加载库存...");
+            List<Product> products = ProductDAO.findAll();
+            for (Product product : products) {
+                inventory.put(product.name, product);
             }
+            com.cashier.util.CacheManager.batchAddToCache(products);
+            logger.info("从数据库加载 {} 个商品并写入缓存", inventory.size());
         } catch (SQLException e) {
             logger.error("加载库存数据失败", e);
         }
@@ -104,104 +101,39 @@ public class InventoryService {
             return true;
         }
 
-        Connection conn = null;
         try {
-            conn = DatabaseManager.getConnection();
-            DatabaseManager.beginTransaction(conn);
+            boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
+                Map<Integer, Product> productsMap = ProductDAO.findByIdsWithConnection(conn, productUpdates.keySet());
 
-            // 先批量查询所有需要更新的商品（使用同一连接）
-            List<Integer> productIds = new ArrayList<>(productUpdates.keySet());
-            Map<Integer, Product> productsMap = new HashMap<>();
+                for (Map.Entry<Integer, Integer> entry : productUpdates.entrySet()) {
+                    int productId = entry.getKey();
+                    int quantityChange = entry.getValue();
+                    Product product = productsMap.get(productId);
 
-            String querySql = "SELECT id, product_code, name, price, quantity, category, barcode, unit, description, " +
-                             "brand, supplier, spec, min_stock, cost, version FROM products WHERE id = ?";
-            try (PreparedStatement pstmt = conn.prepareStatement(querySql)) {
-                for (Integer productId : productIds) {
-                    pstmt.setInt(1, productId);
-                    try (ResultSet rs = pstmt.executeQuery()) {
-                        if (rs.next()) {
-                            Product product = new Product();
-                            product.id = rs.getInt("id");
-                            product.productCode = rs.getString("product_code");
-                            product.name = rs.getString("name");
-                            product.price = rs.getDouble("price");
-                            product.quantity = rs.getInt("quantity");
-                            product.category = rs.getString("category");
-                            product.barcode = rs.getString("barcode");
-                            product.unit = rs.getString("unit");
-                            product.description = rs.getString("description");
-                            product.brand = rs.getString("brand");
-                            product.supplier = rs.getString("supplier");
-                            product.spec = rs.getString("spec");
-                            product.minStock = rs.getInt("min_stock");
-                            product.cost = rs.getDouble("cost");
-                            product.version = rs.getInt("version");
-                            productsMap.put(productId, product);
-                        } else {
-                            throw new SQLException("商品不存在，ID: " + productId);
-                        }
+                    if (product == null) {
+                        throw new SQLException("商品不存在，ID: " + productId);
+                    }
+
+                    if (quantityChange < 0 && product.quantity < Math.abs(quantityChange)) {
+                        throw new SQLException("商品 " + product.name + " 库存不足！当前库存: " + product.quantity + ", 需要扣减: " + Math.abs(quantityChange));
+                    }
+
+                    product.quantity += quantityChange;
+                    if (!ProductDAO.updateWithVersionWithConnection(conn, product)) {
+                        throw new SQLException("商品 " + product.name + " 库存更新失败，可能已被其他操作修改");
                     }
                 }
+                return true;
+            });
+
+            if (success) {
+                com.cashier.util.CacheManager.clearCache();
+                logger.info("批量更新库存成功，共更新 {} 个商品", productUpdates.size());
             }
-
-            // 构建批量更新SQL（使用 CASE WHEN 语句）
-            StringBuilder sql = new StringBuilder("UPDATE products SET quantity = CASE id ");
-            StringBuilder whereClause = new StringBuilder(" WHERE id IN (");
-
-            int index = 0;
-            for (Map.Entry<Integer, Integer> entry : productUpdates.entrySet()) {
-                int productId = entry.getKey();
-                int quantityChange = entry.getValue();
-                Product product = productsMap.get(productId);
-
-                // 检查库存是否足够
-                if (quantityChange < 0 && product.quantity < Math.abs(quantityChange)) {
-                    throw new SQLException("商品 " + product.name + " 库存不足！当前库存: " + product.quantity + ", 需要扣减: " + Math.abs(quantityChange));
-                }
-
-                sql.append("WHEN ").append(productId).append(" THEN quantity + ").append(quantityChange);
-
-                if (index > 0) {
-                    whereClause.append(", ");
-                }
-                whereClause.append(productId);
-                index++;
-            }
-
-            sql.append(" END, version = version + 1").append(whereClause).append(")");
-
-            // 执行批量更新
-            String finalSql = sql.toString();
-            logger.debug("批量更新SQL: {}", finalSql);
-
-            try (Statement stmt = conn.createStatement()) {
-                int affectedRows = stmt.executeUpdate(finalSql);
-                logger.info("批量更新库存完成，影响 {} 行", affectedRows);
-            }
-
-            DatabaseManager.commitTransaction(conn);
-            
-            // 清除缓存，强制下次从数据库重新加载
-            com.cashier.util.CacheManager.clearCache();
-            
-            logger.info("批量更新库存成功，共更新 {} 个商品", productUpdates.size());
-            return true;
-
+            return success;
         } catch (SQLException e) {
-            if (conn != null) {
-                DatabaseManager.rollbackTransaction(conn);
-            }
-            logger.error("批量更新库存失败, SQL错误: {}", e.getMessage(), e);
+            logger.error("批量更新库存失败: {}", e.getMessage(), e);
             return false;
-        } finally {
-            if (conn != null) {
-                try {
-                    conn.setAutoCommit(true);
-                    conn.close();
-                } catch (SQLException e) {
-                    logger.error("关闭数据库连接失败", e);
-                }
-            }
         }
     }
 
@@ -215,7 +147,10 @@ public class InventoryService {
 
         int totalProducts = inventory.size();
         int totalQuantity = inventory.values().stream().mapToInt(p -> p.quantity).sum();
-        double totalValue = inventory.values().stream().mapToDouble(p -> p.quantity * p.cost).sum();
+        BigDecimal totalValueDecimal = inventory.values().stream()
+                .map(p -> p.getCost().multiply(BigDecimal.valueOf(p.quantity)))
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        double totalValue = totalValueDecimal.doubleValue();
         int lowStockCount = (int) inventory.values().stream().filter(p -> p.quantity <= p.minStock).count();
         int outOfStockCount = (int) inventory.values().stream().filter(p -> p.quantity <= 0).count();
 
@@ -269,4 +204,5 @@ public class InventoryService {
             return null;
         }
     }
+
 }

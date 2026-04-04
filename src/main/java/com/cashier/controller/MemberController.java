@@ -102,7 +102,7 @@ public class MemberController {
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         levelColumn.setCellValueFactory(new PropertyValueFactory<>("level"));
         pointsColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(String.valueOf((int)cellData.getValue().points)));
+            new SimpleStringProperty(String.valueOf(cellData.getValue().getPoints().intValue())));
         balanceColumn.setCellValueFactory(cellData -> 
             new SimpleStringProperty(String.format("%.2f", cellData.getValue().balance)));
         discountColumn.setCellValueFactory(cellData ->

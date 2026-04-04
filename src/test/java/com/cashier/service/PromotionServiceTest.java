@@ -8,6 +8,7 @@ import com.cashier.model.Product;
 import com.cashier.model.Promotion;
 import org.junit.jupiter.api.*;
 
+import java.math.BigDecimal;
 import java.util.*;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -51,8 +52,8 @@ class PromotionServiceTest extends DatabaseTestBase {
         Promotion promotion = new Promotion();
         promotion.name = "满200减20";
         promotion.type = "FULL_REDUCTION";
-        promotion.threshold = 200.0;
-        promotion.discount = 20.0;
+        promotion.threshold = BigDecimal.valueOf(200.0);
+        promotion.discount = BigDecimal.valueOf(20.0);
         promotion.description = "满200元减20元";
         promotion.enabled = true;
 
@@ -65,8 +66,8 @@ class PromotionServiceTest extends DatabaseTestBase {
         assertNotNull(createdPromotion);
         assertEquals("满200减20", createdPromotion.name);
         assertEquals("FULL_REDUCTION", createdPromotion.type);
-        assertEquals(200.0, createdPromotion.threshold, 0.01);
-        assertEquals(20.0, createdPromotion.discount, 0.01);
+        assertEquals(200.0, createdPromotion.threshold.doubleValue(), 0.01);
+        assertEquals(20.0, createdPromotion.discount.doubleValue(), 0.01);
     }
 
     @Test
@@ -76,8 +77,8 @@ class PromotionServiceTest extends DatabaseTestBase {
         Promotion promotion = new Promotion();
         promotion.name = "全场8折";
         promotion.type = "PERCENTAGE_DISCOUNT";
-        promotion.threshold = 0.0;
-        promotion.discount = 0.2; // 8折相当于减免20%
+        promotion.threshold = BigDecimal.ZERO;
+        promotion.discount = new BigDecimal("0.2"); // 8折相当于减免20%
         promotion.description = "全场商品享受8折优惠";
         promotion.enabled = true;
 
@@ -90,8 +91,8 @@ class PromotionServiceTest extends DatabaseTestBase {
         assertNotNull(createdPromotion);
         assertEquals("全场8折", createdPromotion.name);
         assertEquals("PERCENTAGE_DISCOUNT", createdPromotion.type);
-        assertEquals(0.0, createdPromotion.threshold, 0.01);
-        assertEquals(0.2, createdPromotion.discount, 0.01);
+        assertEquals(0.0, createdPromotion.threshold.doubleValue(), 0.01);
+        assertEquals(0.2, createdPromotion.discount.doubleValue(), 0.01);
     }
 
     @Test
@@ -278,8 +279,8 @@ class PromotionServiceTest extends DatabaseTestBase {
      * 辅助方法：计算满减优惠
      */
     private double calculateFullReductionDiscount(double totalAmount, Promotion promotion) {
-        if (totalAmount >= promotion.threshold) {
-            return promotion.discount;
+        if (BigDecimal.valueOf(totalAmount).compareTo(promotion.threshold) >= 0) {
+            return promotion.discount.doubleValue();
         }
         return 0.0;
     }
@@ -288,7 +289,7 @@ class PromotionServiceTest extends DatabaseTestBase {
      * 辅助方法：计算百分比折扣
      */
     private double calculatePercentageDiscount(double totalAmount, Promotion promotion) {
-        return totalAmount * promotion.discount;
+        return BigDecimal.valueOf(totalAmount).multiply(promotion.discount).doubleValue();
     }
 
     /**
@@ -299,8 +300,8 @@ class PromotionServiceTest extends DatabaseTestBase {
         promotion.promotionCode = "PROMO_" + System.currentTimeMillis() + "_" + name.hashCode();  // 设置唯一的促销编码
         promotion.name = name;
         promotion.type = type;
-        promotion.threshold = threshold;
-        promotion.discount = discount;
+        promotion.threshold = BigDecimal.valueOf(threshold);
+        promotion.discount = BigDecimal.valueOf(discount);
         promotion.description = "测试促销：" + name;
         promotion.enabled = true;
         promotion.usageCount = 0;
@@ -317,13 +318,13 @@ class PromotionServiceTest extends DatabaseTestBase {
         Product product = new Product();
         product.productCode = "P" + name.hashCode();
         product.name = name;
-        product.price = price;
+        product.price = BigDecimal.valueOf(price);
         product.quantity = quantity;
         product.category = "测试分类";
         product.barcode = "TEST" + name.hashCode();
         product.unit = "个";
         product.minStock = 10;
-        product.cost = price * 0.7;
+        product.cost = BigDecimal.valueOf(price).multiply(new BigDecimal("0.7"));
         product.version = 0;
 
         ProductDAO.insert(product);

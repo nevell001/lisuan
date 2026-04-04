@@ -9,6 +9,7 @@ import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
@@ -206,13 +207,13 @@ public class ShiftController {
     private void updateStatistics() {
         countLabel.setText("班次数量: " + shiftList.size());
 
-        double totalRevenue = 0.0;
+        BigDecimal totalRevenue = BigDecimal.ZERO;
         int totalTransaction = 0;
 
         for (Shift s : shiftList) {
             // 只统计有效的正数数据，忽略负数或无效数据
-            if (s.shiftRevenue > 0) {
-                totalRevenue += s.shiftRevenue;
+            if (s.getShiftRevenue().compareTo(BigDecimal.ZERO) > 0) {
+                totalRevenue = totalRevenue.add(s.getShiftRevenue());
             }
             if (s.shiftTransactionCount > 0) {
                 totalTransaction += s.shiftTransactionCount;
@@ -259,32 +260,32 @@ public class ShiftController {
      * 更新支付方式饼图
      */
     private void updatePaymentMethodPieChart(ObservableList<Shift> shifts) {
-        double totalCash = 0.0;
-        double totalWechat = 0.0;
-        double totalAlipay = 0.0;
-        double totalCard = 0.0;
+        BigDecimal totalCash = BigDecimal.ZERO;
+        BigDecimal totalWechat = BigDecimal.ZERO;
+        BigDecimal totalAlipay = BigDecimal.ZERO;
+        BigDecimal totalCard = BigDecimal.ZERO;
 
         for (Shift shift : shifts) {
-            totalCash += shift.cashRevenue > 0 ? shift.cashRevenue : 0;
-            totalWechat += shift.wechatRevenue > 0 ? shift.wechatRevenue : 0;
-            totalAlipay += shift.alipayRevenue > 0 ? shift.alipayRevenue : 0;
-            totalCard += shift.cardRevenue > 0 ? shift.cardRevenue : 0;
+            totalCash = totalCash.add(shift.getCashRevenue().compareTo(BigDecimal.ZERO) > 0 ? shift.getCashRevenue() : BigDecimal.ZERO);
+            totalWechat = totalWechat.add(shift.getWechatRevenue().compareTo(BigDecimal.ZERO) > 0 ? shift.getWechatRevenue() : BigDecimal.ZERO);
+            totalAlipay = totalAlipay.add(shift.getAlipayRevenue().compareTo(BigDecimal.ZERO) > 0 ? shift.getAlipayRevenue() : BigDecimal.ZERO);
+            totalCard = totalCard.add(shift.getCardRevenue().compareTo(BigDecimal.ZERO) > 0 ? shift.getCardRevenue() : BigDecimal.ZERO);
         }
 
         javafx.collections.ObservableList<javafx.scene.chart.PieChart.Data> pieChartData =
             javafx.collections.FXCollections.observableArrayList();
 
-        if (totalCash > 0) {
-            pieChartData.add(new javafx.scene.chart.PieChart.Data("现金", totalCash));
+        if (totalCash.compareTo(BigDecimal.ZERO) > 0) {
+            pieChartData.add(new javafx.scene.chart.PieChart.Data("现金", totalCash.doubleValue()));
         }
-        if (totalWechat > 0) {
-            pieChartData.add(new javafx.scene.chart.PieChart.Data("微信", totalWechat));
+        if (totalWechat.compareTo(BigDecimal.ZERO) > 0) {
+            pieChartData.add(new javafx.scene.chart.PieChart.Data("微信", totalWechat.doubleValue()));
         }
-        if (totalAlipay > 0) {
-            pieChartData.add(new javafx.scene.chart.PieChart.Data("支付宝", totalAlipay));
+        if (totalAlipay.compareTo(BigDecimal.ZERO) > 0) {
+            pieChartData.add(new javafx.scene.chart.PieChart.Data("支付宝", totalAlipay.doubleValue()));
         }
-        if (totalCard > 0) {
-            pieChartData.add(new javafx.scene.chart.PieChart.Data("银行卡", totalCard));
+        if (totalCard.compareTo(BigDecimal.ZERO) > 0) {
+            pieChartData.add(new javafx.scene.chart.PieChart.Data("银行卡", totalCard.doubleValue()));
         }
 
         paymentMethodPieChart.setData(pieChartData);
@@ -583,11 +584,11 @@ public class ShiftController {
                 return;
             }
 
-            double totalRevenue = 0.0;
+            BigDecimal totalRevenue = BigDecimal.ZERO;
             int totalTransactions = transactions.size();
 
             for (Transaction t : transactions) {
-                totalRevenue += t.finalAmount;
+                totalRevenue = totalRevenue.add(t.getFinalAmount());
             }
 
             // 生成班次ID
@@ -671,28 +672,28 @@ try {
             // 筛选本班次的交易记录（在班次开始时间之后的交易）
             java.text.SimpleDateFormat sdf = new java.text.SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
             List<Transaction> shiftTransactions = new java.util.ArrayList<>();
-            double cashRevenue = 0.0;
-            double wechatRevenue = 0.0;
-            double alipayRevenue = 0.0;
-            double cardRevenue = 0.0;
-            double totalRevenue = 0.0;
+            BigDecimal cashRevenue = BigDecimal.ZERO;
+            BigDecimal wechatRevenue = BigDecimal.ZERO;
+            BigDecimal alipayRevenue = BigDecimal.ZERO;
+            BigDecimal cardRevenue = BigDecimal.ZERO;
+            BigDecimal totalRevenue = BigDecimal.ZERO;
 
             for (Transaction t : allTransactions) {
                 try {
                     java.util.Date transactionTime = sdf.parse(t.timestamp);
                     if (transactionTime.after(activeShift.startTime) || transactionTime.equals(activeShift.startTime)) {
                         shiftTransactions.add(t);
-                        totalRevenue += t.finalAmount;
+                        totalRevenue = totalRevenue.add(t.getFinalAmount());
 
                         // 按支付方式分类统计
                         if ("现金".equals(t.paymentMethod)) {
-                            cashRevenue += t.finalAmount;
+                            cashRevenue = cashRevenue.add(t.getFinalAmount());
                         } else if ("微信".equals(t.paymentMethod)) {
-                            wechatRevenue += t.finalAmount;
+                            wechatRevenue = wechatRevenue.add(t.getFinalAmount());
                         } else if ("支付宝".equals(t.paymentMethod)) {
-                            alipayRevenue += t.finalAmount;
+                            alipayRevenue = alipayRevenue.add(t.getFinalAmount());
                         } else if ("银行卡".equals(t.paymentMethod)) {
-                            cardRevenue += t.finalAmount;
+                            cardRevenue = cardRevenue.add(t.getFinalAmount());
                         }
                     }
                 } catch (Exception e) {
@@ -702,7 +703,7 @@ try {
 
             // 结束班次
             // 计算班次结束时的累计总营业额和总交易数
-            double closingRevenue = activeShift.openingRevenue + totalRevenue;
+            BigDecimal closingRevenue = activeShift.getOpeningRevenue().add(totalRevenue);
             int closingTransactionCount = activeShift.openingTransactionCount + shiftTransactions.size();
             activeShift.endShift(closingRevenue, closingTransactionCount, cashRevenue, wechatRevenue, alipayRevenue, cardRevenue);
 

@@ -20,6 +20,7 @@ import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.*;
 
+import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.time.LocalDate;
@@ -460,12 +461,12 @@ public class ProfitReportController {
                             // 优先使用实际采购成本（加权平均）
                             if (productActualCostMap.containsKey(item.name)) {
                                 cost = productActualCostMap.get(item.name);
-                            } else if (product != null && product.cost > 0) {
+                            } else if (product != null && product.getCost().compareTo(BigDecimal.ZERO) > 0) {
                                 // 使用商品成本价
-                                cost = product.cost;
+                                cost = product.getCost().doubleValue();
                             } else {
                                 // 默认成本为售价的70%（仅用于没有采购记录的商品）
-                                cost = item.price * 0.7;
+                                cost = item.getPrice().multiply(BigDecimal.valueOf(0.7)).doubleValue();
                             }
 
                             String category = product != null && product.category != null ? product.category : "未分类";
@@ -476,7 +477,7 @@ public class ProfitReportController {
                                 continue;
                             }
 
-                            double revenue = item.price * item.quantity;
+                            double revenue = item.getPrice().multiply(BigDecimal.valueOf(item.quantity)).doubleValue();
                             double itemCost = cost * item.quantity;
                             double profit = revenue - itemCost;
 

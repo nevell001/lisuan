@@ -9,6 +9,8 @@ import com.cashier.model.Member;
 import com.cashier.model.Product;
 import org.junit.jupiter.api.*;
 
+import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -42,10 +44,10 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         testMember = new Member();
         testMember.phone = "13800138000";
         testMember.name = "测试会员";
-        testMember.balance = 1000.0;
-        testMember.points = 100.0;
+        testMember.balance = BigDecimal.valueOf(1000.0);
+        testMember.points = BigDecimal.valueOf(100.0);
         testMember.level = "普通";
-        testMember.discount = 10.0;
+        testMember.discount = BigDecimal.TEN;
         MemberDAO.insert(testMember);
 
         // 创建测试商品
@@ -156,7 +158,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
             cartItems,
             null,
             "现金",
-            (initialQuantity + 10) * testProduct.price,
+            testProduct.price.multiply(BigDecimal.valueOf(initialQuantity + 10L)).doubleValue(),
             0.0,
             inventory
         );
@@ -189,8 +191,8 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         // 空购物车应该成功但金额为0
         assertTrue(result.success);
         assertNotNull(result.transaction);
-        assertEquals(0.0, result.transaction.totalAmount, 0.01);
-        assertEquals(0.0, result.transaction.finalAmount, 0.01);
+        assertAmountEquals(0.0, result.transaction.totalAmount);
+        assertAmountEquals(0.0, result.transaction.finalAmount);
     }
 
     @Test
@@ -198,21 +200,21 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
     @DisplayName("测试会员余额不足")
     void testInsufficientMemberBalance() throws Exception {
         // 设置会员折扣
-        testMember.discount = 9.0;
+        testMember.discount = BigDecimal.valueOf(9.0);
         MemberDAO.update(testMember);
 
         List<CartItem> cartItems = new ArrayList<>();
         cartItems.add(new CartItem(testProduct, 120)); // 120 * 10 = 1200, 打9折后 1080 > 1000 余额
 
-        double totalAmount = 120 * testProduct.price;
-        double discountedAmount = totalAmount * 0.9;
+        BigDecimal totalAmount = testProduct.price.multiply(BigDecimal.valueOf(120));
+        BigDecimal discountedAmount = totalAmount.multiply(new BigDecimal("0.9"));
 
         // 会员余额不足 (需要1080，但只有1000)
         TransactionService.TransactionResult result = TransactionService.executeTransaction(
             cartItems,
             testMember,
             "会员余额",
-            discountedAmount,
+            discountedAmount.doubleValue(),
             0.0,
             inventory
         );
@@ -223,7 +225,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
 
         // 验证余额没有变化
         Member updatedMember = MemberDAO.findByPhone(testMember.phone);
-        assertEquals(testMember.balance, updatedMember.balance, 0.01);
+        assertAmountEquals(testMember.balance, updatedMember.balance);
     }
 
     @Test
@@ -277,7 +279,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         List<CartItem> cartItems = new ArrayList<>();
         cartItems.add(new CartItem(testProduct, 3));
 
-        double totalAmount = 3 * testProduct.price;
+        BigDecimal totalAmount = testProduct.price.multiply(BigDecimal.valueOf(3));
 
         TransactionService.TransactionResult result = TransactionService.executeTransaction(
             cartItems,
@@ -289,7 +291,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         );
 
         assertTrue(result.success);
-        assertEquals(totalAmount, result.transaction.totalAmount, 0.01);
+        assertAmountEquals(totalAmount, result.transaction.totalAmount);
         // Transaction模型没有cashReceived和cashChange字段，这些在实际业务逻辑中处理
     }
 
@@ -322,21 +324,21 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
     @DisplayName("测试会员积分更新")
     void testMemberPointsUpdate() throws Exception {
         // 设置会员折扣
-        testMember.discount = 9.0;
+        testMember.discount = BigDecimal.valueOf(9.0);
         MemberDAO.update(testMember);
 
-        double initialPoints = testMember.points;
+        BigDecimal initialPoints = testMember.points;
 
         List<CartItem> cartItems = new ArrayList<>();
         cartItems.add(new CartItem(testProduct, 5));
 
-        double finalAmount = 5 * testProduct.price * 0.9;
+        BigDecimal finalAmount = testProduct.price.multiply(BigDecimal.valueOf(5)).multiply(new BigDecimal("0.9"));
 
         TransactionService.TransactionResult result = TransactionService.executeTransaction(
             cartItems,
             testMember,
             "现金",
-            finalAmount,
+            finalAmount.doubleValue(),
             0.0,
             inventory
         );
@@ -345,8 +347,8 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
 
         // 验证会员积分已更新（每消费1元积10分）
         Member updatedMember = MemberDAO.findByPhone(testMember.phone);
-        double expectedPoints = initialPoints + finalAmount * 10;
-        assertEquals(expectedPoints, updatedMember.points, 0.01);
+        BigDecimal expectedPoints = initialPoints.add(finalAmount.multiply(BigDecimal.TEN).setScale(0, RoundingMode.DOWN));
+        assertAmountEquals(expectedPoints, updatedMember.points);
     }
 
     @Test
@@ -361,19 +363,19 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         cartItems.add(new CartItem(testProduct, 3));
         cartItems.add(new CartItem(product2, 2));
 
-        double expectedTotal = 3 * testProduct.price + 2 * product2.price;
+        BigDecimal expectedTotal = testProduct.price.multiply(BigDecimal.valueOf(3)).add(product2.price.multiply(BigDecimal.valueOf(2)));
 
         TransactionService.TransactionResult result = TransactionService.executeTransaction(
             cartItems,
             null,
             "现金",
-            expectedTotal,
+            expectedTotal.doubleValue(),
             0.0,
             inventory
         );
 
         assertTrue(result.success);
-        assertEquals(expectedTotal, result.transaction.totalAmount, 0.01);
+        assertAmountEquals(expectedTotal, result.transaction.totalAmount);
 
         // 验证两个商品的库存都已扣减
         Product updatedProduct1 = ProductDAO.findById(testProduct.id);
@@ -398,7 +400,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
             cartItems,
             null,
             "现金",
-            60 * testProduct.price + 25 * product2.price,
+            testProduct.price.multiply(BigDecimal.valueOf(60)).add(product2.price.multiply(BigDecimal.valueOf(25))).doubleValue(),
             0.0,
             inventory
         );
@@ -419,17 +421,25 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         Product product = new Product();
         product.productCode = "P" + name.hashCode();
         product.name = name;
-        product.price = price;
+        product.price = BigDecimal.valueOf(price);
         product.quantity = quantity;
         product.category = "测试分类";
         product.barcode = "TEST" + name.hashCode();
         product.unit = "个";
         product.minStock = 10;
-        product.cost = price * 0.7;
+        product.cost = BigDecimal.valueOf(price).multiply(new BigDecimal("0.7"));
         product.version = 0;
 
         ProductDAO.insert(product);
         return ProductDAO.findByName(name);
+    }
+
+    private void assertAmountEquals(double expected, BigDecimal actual) {
+        assertAmountEquals(BigDecimal.valueOf(expected), actual);
+    }
+
+    private void assertAmountEquals(BigDecimal expected, BigDecimal actual) {
+        assertEquals(0, expected.compareTo(actual));
     }
 
 }
