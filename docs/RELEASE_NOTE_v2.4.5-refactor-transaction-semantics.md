@@ -43,7 +43,22 @@
 
 ## 回归验证
 
-定向测试已通过，共 55/55：
+全量 `mvn test` 已于 2026-04-04 再跑通过，共 122/122：
+
+- `PasswordUtilTest` 10/10
+- `BatchOperationUtilTest` 3/3
+- `UserDAOTest` 12/12
+- `BaseDAOTest` 3/3
+- `ProductDAOTest` 12/12
+- `ProductDAORefactoredTest` 5/5
+- `TransactionConcurrencyTest` 11/11
+- `PromotionServiceTest` 14/14
+- `InventoryServiceTest` 5/5
+- `TransactionServiceTest` 11/11
+- `MemberServiceTest` 21/21
+- `ReturnServiceTest` 15/15
+
+其中，事务重构直接相关的定向验证为 55/55：
 
 - `BaseDAOTest` 3/3
 - `TransactionServiceTest` 11/11
@@ -89,4 +104,4 @@
 
 1. 继续把静态 DAO/Service 向接口化、实例化方向推进
 2. 逐步减少 Controller 对 Model 公有字段的直接拼装
-3. 在下一轮稳定后补跑一次全量 `mvn test`，形成完整回归基线
+3. 以后每轮事务或金额相关重构前后，都补跑一次全量 `mvn test`，沿用当前 122/122 基线做对比
