@@ -22,9 +22,43 @@ services:
       timeout: 10s
       retries: 10
       start_period: 60s
+    networks:
+      - cashier-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: cashier-prometheus
+    restart: unless-stopped
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+    ports:
+      - "0.0.0.0:9090:9090"
+    networks:
+      - cashier-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: cashier-grafana
+    restart: unless-stopped
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_USERS_ALLOW_SIGN_UP: "false"
+    volumes:
+      - grafana-data:/var/lib/grafana
+      - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
+    ports:
+      - "0.0.0.0:3000:3000"
+    networks:
+      - cashier-network
 
 volumes:
   cashier-mysql-data:
+    driver: local
+  prometheus-data:
+    driver: local
+  grafana-data:
     driver: local
 
 networks:

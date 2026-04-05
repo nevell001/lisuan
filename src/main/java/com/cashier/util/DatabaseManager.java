@@ -10,6 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Map;
 import java.util.Properties;
 
 /**
@@ -975,12 +976,12 @@ public class DatabaseManager {
     private static boolean backupViaDocker(File backupFile) throws Exception {
         String containerPath = "/tmp/" + backupFile.getName();
         
-        // 构建 docker exec 命令
+        // 构建 docker exec 命令 - 使用环境变量传递密码
         String[] command = {
-            "docker", "exec", "cashier-mysql",
+            "docker", "exec", "-e", "MYSQL_PWD=" + dbPassword,
+            "cashier-mysql",
             "mysqldump",
             "-u" + dbUsername,
-            "-p" + dbPassword,
             "--single-transaction",
             "--routines",
             "--triggers",
@@ -1029,22 +1030,25 @@ public class DatabaseManager {
      * 使用本地命令执行备份
      */
     private static boolean backupViaLocalCommand(File backupFile) throws Exception {
-        // 构建 mysqldump 命令
-        String[] command = {
+        // 构建 mysqldump 命令 - 使用环境变量传递密码
+        ProcessBuilder pb = new ProcessBuilder(
             "mysqldump",
             "--host=" + getHostFromUrl(dbUrl),
             "--port=" + getPortFromUrl(dbUrl),
             "--user=" + dbUsername,
-            "--password=" + dbPassword,
             "--result-file=" + backupFile.getAbsolutePath(),
             "--single-transaction",
             "--routines",
             "--triggers",
             "cashier_system"
-        };
+        );
+        
+        // 设置环境变量传递密码
+        Map<String, String> env = pb.environment();
+        env.put("MYSQL_PWD", dbPassword);
 
         logger.info("执行本地备份命令...");
-        Process process = Runtime.getRuntime().exec(command);
+        Process process = pb.start();
         int exitCode = process.waitFor();
 
         if (exitCode == 0) {
@@ -1101,11 +1105,12 @@ public class DatabaseManager {
             return false;
         }
 
-        // 构建 docker exec 命令 - 使用 bash 在容器内执行重定向
+        // 构建 docker exec 命令 - 使用环境变量传递密码
         String[] command = {
-            "docker", "exec", "cashier-mysql",
+            "docker", "exec", "-e", "MYSQL_PWD=" + dbPassword,
+            "cashier-mysql",
             "bash", "-c",
-            "mysql -u" + dbUsername + " -p" + dbPassword + " cashier_system < " + containerPath
+            "mysql -u" + dbUsername + " cashier_system < " + containerPath
         };
 
         logger.info("执行 Docker 恢复命令...");
@@ -1146,22 +1151,24 @@ public class DatabaseManager {
      * 使用本地命令执行恢复
      */
     private static boolean restoreViaLocalCommand(File backupFile) throws Exception {
-        // 构建 mysql 命令
-        String[] command = {
+        // 构建 mysql 命令 - 使用环境变量传递密码
+        ProcessBuilder pb = new ProcessBuilder(
             "mysql",
             "--host=" + getHostFromUrl(dbUrl),
             "--port=" + getPortFromUrl(dbUrl),
             "--user=" + dbUsername,
-            "--password=" + dbPassword,
             "cashier_system"
-        };
+        );
+        
+        // 设置环境变量传递密码
+        Map<String, String> env = pb.environment();
+        env.put("MYSQL_PWD", dbPassword);
 
-        logger.info("执行本地恢复命令...");
-
-        // 使用 ProcessBuilder 重定向输入
-        ProcessBuilder pb = new ProcessBuilder(command);
+        // 重定向输入
         pb.redirectInput(ProcessBuilder.Redirect.from(backupFile));
         pb.redirectErrorStream(true);
+
+        logger.info("执行本地恢复命令...");
 
         Process process = pb.start();
 

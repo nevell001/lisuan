@@ -1,7 +1,7 @@
 package com.cashier.scanner;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
@@ -12,7 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
  */
 public class ScannerManager {
     
-    private static final Logger logger = LoggerFactory.getLogger(ScannerManager.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(ScannerManager.class);
     
     /**
      * 单例实例

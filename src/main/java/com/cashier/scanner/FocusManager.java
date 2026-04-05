@@ -1,7 +1,7 @@
 package com.cashier.scanner;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -12,7 +12,7 @@ import java.util.List;
  */
 public class FocusManager {
     
-    private static final Logger logger = LoggerFactory.getLogger(FocusManager.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(FocusManager.class);
     
     /**
      * 注册的焦点目标

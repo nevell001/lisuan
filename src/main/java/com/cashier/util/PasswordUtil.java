@@ -2,14 +2,14 @@ package com.cashier.util;
 
 import at.favre.lib.crypto.bcrypt.BCrypt;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 /**
  * 密码加密工具类
  * 使用 BCrypt 算法进行密码加密
  */
 public class PasswordUtil {
-    private static final Logger logger = LoggerFactory.getLogger(PasswordUtil.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(PasswordUtil.class);
 
     /**
      * 加密密码

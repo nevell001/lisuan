@@ -5,7 +5,7 @@
 **当前版本**: v2.4.5 | **最新更新**: 2026-03-14
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
-![JavaFX](https://img.shields.io/badge/JavaFX-17.0.8-blue)
+![JavaFX](https://img.shields.io/badge/JavaFX-17.0.12-blue)
 ![Maven](https://img.shields.io/badge/Maven-3.8+-red)
 ![License](https://img.shields.io/badge/License-MulanPSL2-blue)
 
@@ -299,14 +299,15 @@ mvn test
 
 ### 技术栈
 
-- **前端框架**: JavaFX 17.0.8
+- **前端框架**: JavaFX 17.0.12
 - **构建工具**: Maven 3.8+
 - **编程语言**: Java 17
 - **数据库**: MySQL 8.4
 - **连接池**: HikariCP 5.1.0
 - **MySQL JDBC**: mysql-connector-j 8.4.0
-- **数据导出**: Apache POI 5.2.5 (Excel) + Apache PDFBox 2.0.31 (PDF)
+- **数据导出**: Apache POI 5.2.5 (Excel) + Apache PDFBox 2.0.32 (PDF)
 - **测试框架**: JUnit 5 + TestFX + H2 Database
+- **监控**: Prometheus + Grafana
 
 ## 🔧 故障排除
 

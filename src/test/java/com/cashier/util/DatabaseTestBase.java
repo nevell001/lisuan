@@ -5,16 +5,19 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.io.*;
 import java.sql.*;
 import java.util.Properties;
+import org.slf4j.Logger;
+import com.cashier.util.LoggerFactoryUtil;
 
 /**
  * 数据库测试基类
- * 提供H2内存数据库的初始化和清理功能
+ * 提供测试数据库的初始化和清理功能
  */
 public abstract class DatabaseTestBase {
 
     private static final String TEST_CONFIG_PATH = "src/test/resources/database.properties";
     private static HikariDataSource testDataSource;
     private static boolean initialized = false;
+    private static final Logger logger = LoggerFactoryUtil.getLogger(DatabaseTestBase.class);
 
     /**
      * 检查测试数据库是否已初始化
@@ -74,7 +77,7 @@ public abstract class DatabaseTestBase {
             DatabaseManager.setTestConnection(testDataSource);
 
             initialized = true;
-            System.out.println("测试数据库初始化成功");
+            logger.info("测试数据库初始化成功");
 
         } catch (Exception e) {
             throw new SQLException("测试数据库初始化失败", e);
@@ -402,9 +405,9 @@ public abstract class DatabaseTestBase {
             try {
                 testDataSource.close();
                 initialized = false;
-                System.out.println("测试数据库已关闭");
+                logger.info("测试数据库已关闭");
             } catch (Exception e) {
-                System.err.println("关闭测试数据库失败: " + e.getMessage());
+                logger.error("关闭测试数据库失败: {}", e.getMessage(), e);
             }
         }
     }
@@ -415,10 +418,10 @@ public abstract class DatabaseTestBase {
     protected static void clearTestData() throws SQLException {
         // 检查数据源是否关闭，如果关闭则重新初始化
         if (testDataSource == null || testDataSource.isClosed()) {
-            System.out.println("测试数据源已关闭，重新初始化...");
+            logger.info("测试数据源已关闭，重新初始化...");
             initialized = false;
             initTestDatabase();
-            System.out.println("重新初始化完成");
+            logger.info("重新初始化完成");
         }
 
         // 从连接池获取连接来清空数据

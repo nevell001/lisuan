@@ -1,7 +1,7 @@
 package com.cashier.scanner;
 
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import com.cashier.util.LoggerFactoryUtil;
 
 import java.util.*;
 import java.util.concurrent.CopyOnWriteArrayList;
@@ -12,7 +12,7 @@ import java.util.concurrent.CopyOnWriteArrayList;
  */
 public class USBHIDScannerDevice implements ScannerDevice {
     
-    private static final Logger logger = LoggerFactory.getLogger(USBHIDScannerDevice.class);
+    private static final Logger logger = LoggerFactoryUtil.getLogger(USBHIDScannerDevice.class);
     
     private final String deviceId;
     private final String deviceName;
