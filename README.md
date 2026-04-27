@@ -2,7 +2,7 @@
 
 一个功能完整的收银系统，使用 JavaFX 17 开发，提供现代化的图形化界面。
 
-**当前版本**: v2.4.5 | **最新更新**: 2026-04-05
+**当前版本**: v2.4.6 | **最新更新**: 2026-04-27
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.12-blue)
@@ -108,7 +108,7 @@ mvn javafx:run
 **打包后运行**：
 ```bash
 mvn clean package
-java -jar target/cashier-system-fx-2.4.5.jar
+java -jar target/cashier-system-fx-2.4.6-jar-with-dependencies.jar
 ```
 
 ### 访问监控服务
@@ -140,6 +140,12 @@ java -jar target/cashier-system-fx-2.4.5.jar
 - **钻石会员**: 10000+积分（8.5折）
 
 ## 🎯 最近更新
+
+### v2.4.6 (2026-04-27) - 安全优化
+- 🔒 **优化 SQL 查询并移除安全隐患**
+  - 重构 SQL 查询语句，提升性能和安全性
+  - 移除潜在的安全漏洞
+  - 升级版本至 v2.4.6
 
 ### v2.4.5-fix-javafx-plugin (2026-04-05) - 修复
 - 🔧 **修复 javafx-maven-plugin 版本问题**
