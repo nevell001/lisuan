@@ -139,7 +139,7 @@ public class ReturnOrderDAO {
      * 根据 ID 查找退货订单
      */
     public static ReturnOrder findById(int id) {
-        String sql = "SELECT * FROM return_orders WHERE id = ?";
+        String sql = "SELECT id, return_order_id, original_transaction_id, member_id, member_name, return_date, return_reason, total_amount, status, payment_method, operator_name, approver_name, approval_date, approval_comment, completed_date, notes, create_time, update_time FROM return_orders WHERE id = ?";
         
         try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -178,7 +178,7 @@ public class ReturnOrderDAO {
      * @throws SQLException 数据库操作异常
      */
     public static ReturnOrder findByReturnOrderIdWithConnection(Connection conn, String returnOrderId) throws SQLException {
-        String sql = "SELECT * FROM return_orders WHERE return_order_id = ?";
+        String sql = "SELECT id, return_order_id, original_transaction_id, member_id, member_name, return_date, return_reason, total_amount, status, payment_method, operator_name, approver_name, approval_date, approval_comment, completed_date, notes, create_time, update_time FROM return_orders WHERE return_order_id = ?";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, returnOrderId);
@@ -196,7 +196,7 @@ public class ReturnOrderDAO {
      * 查找所有退货订单
      */
     public static List<ReturnOrder> findAll() {
-        String sql = "SELECT * FROM return_orders ORDER BY create_time DESC";
+        String sql = "SELECT id, return_order_id, original_transaction_id, member_id, member_name, return_date, return_reason, total_amount, status, payment_method, operator_name, approver_name, approval_date, approval_comment, completed_date, notes, create_time, update_time FROM return_orders ORDER BY create_time DESC";
         List<ReturnOrder> returnOrders = new ArrayList<>();
         
         try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
@@ -217,7 +217,7 @@ public class ReturnOrderDAO {
      * 根据状态查找退货订单
      */
     public static List<ReturnOrder> findByStatus(String status) {
-        String sql = "SELECT * FROM return_orders WHERE status = ? ORDER BY create_time DESC";
+        String sql = "SELECT id, return_order_id, original_transaction_id, member_id, member_name, return_date, return_reason, total_amount, status, payment_method, operator_name, approver_name, approval_date, approval_comment, completed_date, notes, create_time, update_time FROM return_orders WHERE status = ? ORDER BY create_time DESC";
         List<ReturnOrder> returnOrders = new ArrayList<>();
         
         try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
@@ -240,7 +240,7 @@ public class ReturnOrderDAO {
      * 根据会员ID查找退货订单
      */
     public static List<ReturnOrder> findByMemberId(int memberId) {
-        String sql = "SELECT * FROM return_orders WHERE member_id = ? ORDER BY create_time DESC";
+        String sql = "SELECT id, return_order_id, original_transaction_id, member_id, member_name, return_date, return_reason, total_amount, status, payment_method, operator_name, approver_name, approval_date, approval_comment, completed_date, notes, create_time, update_time FROM return_orders WHERE member_id = ? ORDER BY create_time DESC";
         List<ReturnOrder> returnOrders = new ArrayList<>();
         
         try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
@@ -263,7 +263,7 @@ public class ReturnOrderDAO {
      * 根据日期范围查找退货订单
      */
     public static List<ReturnOrder> findByDateRange(Date startDate, Date endDate) {
-        String sql = "SELECT * FROM return_orders WHERE return_date BETWEEN ? AND ? ORDER BY return_date DESC";
+        String sql = "SELECT id, return_order_id, original_transaction_id, member_id, member_name, return_date, return_reason, total_amount, status, payment_method, operator_name, approver_name, approval_date, approval_comment, completed_date, notes, create_time, update_time FROM return_orders WHERE return_date BETWEEN ? AND ? ORDER BY return_date DESC";
         List<ReturnOrder> returnOrders = new ArrayList<>();
 
         try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
@@ -287,7 +287,7 @@ public class ReturnOrderDAO {
      * 根据原交易ID查找退货订单（不包括已拒绝的）
      */
     public static List<ReturnOrder> findByOriginalTransactionId(String transactionId) {
-        String sql = "SELECT * FROM return_orders WHERE original_transaction_id = ? AND status != 'REJECTED' ORDER BY create_time DESC";
+        String sql = "SELECT id, return_order_id, original_transaction_id, member_id, member_name, return_date, return_reason, total_amount, status, payment_method, operator_name, approver_name, approval_date, approval_comment, completed_date, notes, create_time, update_time FROM return_orders WHERE original_transaction_id = ? AND status != 'REJECTED' ORDER BY create_time DESC";
         List<ReturnOrder> returnOrders = new ArrayList<>();
 
         try (Connection conn = com.cashier.util.DatabaseManager.getConnection();

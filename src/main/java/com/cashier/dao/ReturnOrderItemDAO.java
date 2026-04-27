@@ -151,7 +151,7 @@ public class ReturnOrderItemDAO {
      * 根据 ID 查找退货订单明细
      */
     public static ReturnOrderItem findById(int id) {
-        String sql = "SELECT * FROM return_order_items WHERE id = ?";
+        String sql = "SELECT id, return_order_id, product_id, product_code, product_name, barcode, category, return_quantity, unit_price, return_amount, reason, condition FROM return_order_items WHERE id = ?";
         
         try (Connection conn = com.cashier.util.DatabaseManager.getConnection();
              PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -190,7 +190,7 @@ public class ReturnOrderItemDAO {
      * @throws SQLException 数据库操作异常
      */
     public static List<ReturnOrderItem> findByReturnOrderIdWithConnection(Connection conn, String returnOrderId) throws SQLException {
-        String sql = "SELECT * FROM return_order_items WHERE return_order_id = ?";
+        String sql = "SELECT id, return_order_id, product_id, product_code, product_name, barcode, category, return_quantity, unit_price, return_amount, reason, condition FROM return_order_items WHERE return_order_id = ?";
         List<ReturnOrderItem> items = new ArrayList<>();
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {

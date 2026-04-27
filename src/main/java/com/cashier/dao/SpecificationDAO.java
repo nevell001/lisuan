@@ -91,7 +91,7 @@ public class SpecificationDAO {
      * 根据ID查找规格类型
      */
     public static Specification findById(int id) throws SQLException {
-        String sql = "SELECT * FROM specifications WHERE id = ?";
+        String sql = "SELECT id, name, code, type, description, sort_order, enabled, create_time, update_time FROM specifications WHERE id = ?";
         
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -112,7 +112,7 @@ public class SpecificationDAO {
      * 查找所有规格类型
      */
     public static List<Specification> findAll() throws SQLException {
-        String sql = "SELECT * FROM specifications ORDER BY sort_order ASC, id ASC";
+        String sql = "SELECT id, name, code, type, description, sort_order, enabled, create_time, update_time FROM specifications ORDER BY sort_order ASC, id ASC";
         
         List<Specification> specifications = new ArrayList<>();
         
@@ -132,7 +132,7 @@ public class SpecificationDAO {
      * 根据类型查找规格类型
      */
     public static List<Specification> findByType(String type) throws SQLException {
-        String sql = "SELECT * FROM specifications WHERE type = ? ORDER BY sort_order ASC, id ASC";
+        String sql = "SELECT id, name, code, type, description, sort_order, enabled, create_time, update_time FROM specifications WHERE type = ? ORDER BY sort_order ASC, id ASC";
         
         List<Specification> specifications = new ArrayList<>();
         
@@ -155,7 +155,7 @@ public class SpecificationDAO {
      * 查找启用的规格类型
      */
     public static List<Specification> findEnabled() throws SQLException {
-        String sql = "SELECT * FROM specifications WHERE enabled = true ORDER BY sort_order ASC, id ASC";
+        String sql = "SELECT id, name, code, type, description, sort_order, enabled, create_time, update_time FROM specifications WHERE enabled = true ORDER BY sort_order ASC, id ASC";
         
         List<Specification> specifications = new ArrayList<>();
         

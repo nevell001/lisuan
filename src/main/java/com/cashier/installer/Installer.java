@@ -15,7 +15,7 @@ import java.util.logging.Logger;
  */
 public class Installer {
     private static final Logger LOGGER = Logger.getLogger(Installer.class.getName());
-    private static final String APP_VERSION = "2.4.5";
+    private static final String APP_VERSION = "2.4.6";
     private static final String DB_NAME = "cashier_system";
     
     private JFrame frame;
@@ -29,7 +29,7 @@ public class Installer {
     private String dbHost = "localhost";
     private String dbPort = "3306";
     private String dbUsername = "root";
-    private String dbPassword = "RootPassword123!";
+    private String dbPassword = "";
     
     public static void main(String[] args) {
         try {
@@ -303,7 +303,7 @@ public class Installer {
         gbc.gridx = 0; gbc.gridy = 3;
         panel.add(new JLabel("密码:"), gbc);
         gbc.gridx = 1;
-        JPasswordField passwordField = new JPasswordField("RootPassword123!", 20);
+        JPasswordField passwordField = new JPasswordField(20);
         panel.add(passwordField, gbc);
         
         int result = JOptionPane.showConfirmDialog(frame, panel, 
@@ -340,10 +340,6 @@ public class Installer {
                 log("安装失败: " + e.getMessage());
                 // 记录堆栈跟踪信息到日志
                 LOGGER.log(Level.SEVERE, "安装失败", e);
-                StringWriter sw = new StringWriter();
-                PrintWriter pw = new PrintWriter(sw);
-                e.printStackTrace(pw);
-                log(sw.toString());
 
                 SwingUtilities.invokeLater(() -> {
                     JOptionPane.showMessageDialog(frame,
@@ -422,7 +418,7 @@ public class Installer {
             
             // Import sample data
             log("  导入示例数据...");
-            executeCommand("docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 " + DB_NAME + " < docker/mysql-init/03-sample-data.sql", new File("."));
+            executeCommand("docker exec cashier-mysql mysql -uroot -p" + dbPassword + " --default-character-set=utf8mb4 " + DB_NAME + " < docker/mysql-init/00-init-complete.sql", new File("."));
             
         } else {
             // Use local MySQL
