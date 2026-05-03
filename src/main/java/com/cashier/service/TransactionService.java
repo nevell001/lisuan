@@ -23,16 +23,32 @@ public class TransactionService {
      * 交易结果
      */
     public static class TransactionResult {
-        public boolean success;
-        public String transactionId;
-        public String message;
-        public Transaction transaction;
+        private boolean success;
+        private String transactionId;
+        private String message;
+        private Transaction transaction;
 
         public TransactionResult(boolean success, String transactionId, String message, Transaction transaction) {
             this.success = success;
             this.transactionId = transactionId;
             this.message = message;
             this.transaction = transaction;
+        }
+
+        public boolean isSuccess() {
+            return success;
+        }
+
+        public String getTransactionId() {
+            return transactionId;
+        }
+
+        public String getMessage() {
+            return message;
+        }
+
+        public Transaction getTransaction() {
+            return transaction;
         }
     }
 

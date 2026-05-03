@@ -9,6 +9,7 @@ import com.cashier.util.LoggerFactoryUtil;
 import org.slf4j.Logger;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.*;
@@ -206,7 +207,7 @@ public class MemberService {
         if (member == null) {
             return originalAmount;
         }
-        BigDecimal discountRate = member.getDiscount().divide(BigDecimal.TEN);
+        BigDecimal discountRate = member.getDiscount().divide(BigDecimal.TEN, 4, RoundingMode.HALF_UP);
         return BigDecimal.valueOf(originalAmount).multiply(discountRate).doubleValue();
     }
 

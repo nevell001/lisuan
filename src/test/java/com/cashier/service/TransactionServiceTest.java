@@ -84,11 +84,11 @@ class TransactionServiceTest extends DatabaseTestBase {
             inventory
         );
 
-        assertTrue(result.success);
-        assertNotNull(result.transaction);
-        assertEquals("现金", result.transaction.paymentMethod);
-        assertAmountEquals(40.0, result.transaction.totalAmount); // 2*10 + 1*20
-        assertAmountEquals(40.0, result.transaction.finalAmount);
+        assertTrue(result.isSuccess());
+        assertNotNull(result.getTransaction());
+        assertEquals("现金", result.getTransaction().paymentMethod);
+        assertAmountEquals(40.0, result.getTransaction().totalAmount); // 2*10 + 1*20
+        assertAmountEquals(40.0, result.getTransaction().finalAmount);
     }
 
     @Test
@@ -109,11 +109,11 @@ class TransactionServiceTest extends DatabaseTestBase {
             inventory
         );
 
-        assertTrue(result.success);
-        assertEquals("微信", result.transaction.paymentMethod);
-        assertAmountEquals(40.0, result.transaction.totalAmount);
-        assertAmountEquals(36.0, result.transaction.finalAmount); // 40 * 0.9
-        assertEquals(testMember.phone, result.transaction.memberPhone);
+        assertTrue(result.isSuccess());
+        assertEquals("微信", result.getTransaction().paymentMethod);
+        assertAmountEquals(40.0, result.getTransaction().totalAmount);
+        assertAmountEquals(36.0, result.getTransaction().finalAmount); // 40 * 0.9
+        assertEquals(testMember.phone, result.getTransaction().memberPhone);
     }
 
     @Test
@@ -134,7 +134,7 @@ class TransactionServiceTest extends DatabaseTestBase {
             inventory
         );
 
-        assertTrue(result.success);
+        assertTrue(result.isSuccess());
 
         // 验证库存已扣减
         Product updatedProduct1 = ProductDAO.findByName("商品1");
@@ -165,7 +165,7 @@ class TransactionServiceTest extends DatabaseTestBase {
             inventory
         );
 
-        assertTrue(result.success);
+        assertTrue(result.isSuccess());
 
         // 验证会员余额已扣减
         Member updatedMember = MemberDAO.findByPhone(testMember.phone);
@@ -192,13 +192,13 @@ class TransactionServiceTest extends DatabaseTestBase {
         );
 
         // 检查交易结果
-        if (result.success) {
+        if (result.isSuccess()) {
             // 如果成功，验证金额为0
-            assertAmountEquals(0.0, result.transaction.totalAmount);
+            assertAmountEquals(0.0, result.getTransaction().totalAmount);
         } else {
             // 如果失败，验证有错误消息
-            assertNotNull(result.message);
-            assertFalse(result.message.isEmpty());
+            assertNotNull(result.getMessage());
+            assertFalse(result.getMessage().isEmpty());
         }
     }
 
@@ -252,10 +252,10 @@ class TransactionServiceTest extends DatabaseTestBase {
             promotion
         );
 
-        assertTrue(result.success);
-        assertNotNull(result.transaction);
-        assertEquals("T-PROMO-001", result.transaction.transactionId);
-        assertAmountEquals(35.0, result.transaction.finalAmount);
+        assertTrue(result.isSuccess());
+        assertNotNull(result.getTransaction());
+        assertEquals("T-PROMO-001", result.getTransaction().transactionId);
+        assertAmountEquals(35.0, result.getTransaction().finalAmount);
 
         Promotion updatedPromotion = PromotionDAO.findById(promotion.id);
         assertNotNull(updatedPromotion);
@@ -283,9 +283,9 @@ class TransactionServiceTest extends DatabaseTestBase {
             invalidPromotion
         );
 
-        assertFalse(result.success);
-        assertNull(result.transaction);
-        assertTrue(result.message.contains("更新促销使用次数失败"));
+        assertFalse(result.isSuccess());
+        assertNull(result.getTransaction());
+        assertTrue(result.getMessage().contains("更新促销使用次数失败"));
         assertEquals(initialProduct1Quantity, ProductDAO.findById(testProducts.get(0).id).quantity);
         assertEquals(initialProduct2Quantity, ProductDAO.findById(testProducts.get(1).id).quantity);
         assertTrue(TransactionDAO.findAll().isEmpty());
@@ -309,7 +309,7 @@ class TransactionServiceTest extends DatabaseTestBase {
             inventory
         );
 
-        assertTrue(result.success);
+        assertTrue(result.isSuccess());
         Member updatedMember = MemberDAO.findByPhone(testMember.phone);
         assertEquals("银卡", updatedMember.level);
         assertAmountEquals(9.5, updatedMember.discount);

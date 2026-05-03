@@ -15,6 +15,7 @@ import java.util.TimerTask;
  */
 public class BackupService {
     private static final Logger logger = LoggerFactoryUtil.getLogger(BackupService.class);
+    private static final int MAX_BACKUP_FILES = 30;
     private static BackupService instance;
 
     private Timer backupTimer;
@@ -116,7 +117,7 @@ public class BackupService {
             File[] sqlFiles = backupDir.listFiles((dir, name) ->
                 name.startsWith("cashier_system_") && name.endsWith(".sql"));
 
-            if (sqlFiles == null || sqlFiles.length <= 30) {
+            if (sqlFiles == null || sqlFiles.length <= MAX_BACKUP_FILES) {
                 return;
             }
 
@@ -124,8 +125,8 @@ public class BackupService {
             java.util.Arrays.sort(sqlFiles, (a, b) ->
                 Long.compare(a.lastModified(), b.lastModified()));
 
-            // 删除最旧的文件，保留最近 30 个
-            int filesToDelete = sqlFiles.length - 30;
+            // 删除最旧的文件，保留最近 MAX_BACKUP_FILES 个
+            int filesToDelete = sqlFiles.length - MAX_BACKUP_FILES;
             for (int i = 0; i < filesToDelete; i++) {
                 boolean deleted = sqlFiles[i].delete();
                 logger.info("删除旧备份文件: {} ({})", sqlFiles[i].getName(), deleted ? "成功" : "失败");

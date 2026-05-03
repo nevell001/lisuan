@@ -10,6 +10,7 @@ import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.Locale;
 
 /**
  * 库存服务类
@@ -71,11 +72,11 @@ public class InventoryService {
             return new ArrayList<>(inventory.values());
         }
 
-        String lowerKeyword = keyword.toLowerCase().trim();
+        String lowerKeyword = keyword.toLowerCase(Locale.ROOT).trim();
         return inventory.values().stream()
-                .filter(p -> p.name.toLowerCase().contains(lowerKeyword) ||
-                          p.barcode.toLowerCase().contains(lowerKeyword) ||
-                          (p.productCode != null && p.productCode.toLowerCase().contains(lowerKeyword)))
+                .filter(p -> p.name.toLowerCase(Locale.ROOT).contains(lowerKeyword) ||
+                          p.barcode.toLowerCase(Locale.ROOT).contains(lowerKeyword) ||
+                          (p.productCode != null && p.productCode.toLowerCase(Locale.ROOT).contains(lowerKeyword)))
                 .collect(Collectors.toList());
     }
 

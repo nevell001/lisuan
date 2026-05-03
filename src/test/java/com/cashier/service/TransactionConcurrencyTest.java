@@ -80,7 +80,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
             inventory
         );
 
-        assertTrue(result.success);
+        assertTrue(result.isSuccess());
 
         // 验证版本号已更新
         Product updatedProduct = ProductDAO.findById(testProduct.id);
@@ -108,7 +108,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
             inventory
         );
 
-        assertTrue(result1.success);
+        assertTrue(result1.isSuccess());
 
         // 验证版本号已更新
         Product productAfterFirstTx = ProductDAO.findById(testProduct.id);
@@ -135,7 +135,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
 
         // 由于我们无法真正模拟并发冲突，这里只验证第二次交易成功
         // 在实际环境中，如果version不匹配会失败
-        assertTrue(result2.success);
+        assertTrue(result2.isSuccess());
 
         // 验证版本号再次更新
         Product productAfterSecondTx = ProductDAO.findById(testProduct.id);
@@ -164,9 +164,9 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         );
 
         // 应该失败
-        assertFalse(result.success);
-        assertNotNull(result.message);
-        assertTrue(result.message.contains("库存不足") || result.message.contains("不够"));
+        assertFalse(result.isSuccess());
+        assertNotNull(result.getMessage());
+        assertTrue(result.getMessage().contains("库存不足") || result.getMessage().contains("不够"));
 
         // 验证库存没有变化
         Product updatedProduct = ProductDAO.findById(testProduct.id);
@@ -189,10 +189,10 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         );
 
         // 空购物车应该成功但金额为0
-        assertTrue(result.success);
-        assertNotNull(result.transaction);
-        assertAmountEquals(0.0, result.transaction.totalAmount);
-        assertAmountEquals(0.0, result.transaction.finalAmount);
+        assertTrue(result.isSuccess());
+        assertNotNull(result.getTransaction());
+        assertAmountEquals(0.0, result.getTransaction().totalAmount);
+        assertAmountEquals(0.0, result.getTransaction().finalAmount);
     }
 
     @Test
@@ -220,8 +220,8 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         );
 
         // 应该失败
-        assertFalse(result.success);
-        assertNotNull(result.message);
+        assertFalse(result.isSuccess());
+        assertNotNull(result.getMessage());
 
         // 验证余额没有变化
         Member updatedMember = MemberDAO.findByPhone(testMember.phone);
@@ -244,8 +244,8 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
             0.0,
             inventory
         );
-        assertTrue(result1.success);
-        assertEquals("现金", result1.transaction.paymentMethod);
+        assertTrue(result1.isSuccess());
+        assertEquals("现金", result1.getTransaction().paymentMethod);
 
         // 测试微信支付
         TransactionService.TransactionResult result2 = TransactionService.executeTransaction(
@@ -256,8 +256,8 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
             0.0,
             inventory
         );
-        assertTrue(result2.success);
-        assertEquals("微信", result2.transaction.paymentMethod);
+        assertTrue(result2.isSuccess());
+        assertEquals("微信", result2.getTransaction().paymentMethod);
 
         // 测试支付宝支付
         TransactionService.TransactionResult result3 = TransactionService.executeTransaction(
@@ -268,8 +268,8 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
             0.0,
             inventory
         );
-        assertTrue(result3.success);
-        assertEquals("支付宝", result3.transaction.paymentMethod);
+        assertTrue(result3.isSuccess());
+        assertEquals("支付宝", result3.getTransaction().paymentMethod);
     }
 
     @Test
@@ -290,8 +290,8 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
             inventory
         );
 
-        assertTrue(result.success);
-        assertAmountEquals(totalAmount, result.transaction.totalAmount);
+        assertTrue(result.isSuccess());
+        assertAmountEquals(totalAmount, result.getTransaction().totalAmount);
         // Transaction模型没有cashReceived和cashChange字段，这些在实际业务逻辑中处理
     }
 
@@ -311,12 +311,12 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
             inventory
         );
 
-        assertTrue(result.success);
-        assertNotNull(result.transactionId);
+        assertTrue(result.isSuccess());
+        assertNotNull(result.getTransactionId());
 
         // 验证交易ID格式（ORD + 时间戳）
-        assertTrue(result.transactionId.startsWith("ORD"));
-        assertTrue(result.transactionId.length() > 10);
+        assertTrue(result.getTransactionId().startsWith("ORD"));
+        assertTrue(result.getTransactionId().length() > 10);
     }
 
     @Test
@@ -343,7 +343,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
             inventory
         );
 
-        assertTrue(result.success);
+        assertTrue(result.isSuccess());
 
         // 验证会员积分已更新（每消费1元积10分）
         Member updatedMember = MemberDAO.findByPhone(testMember.phone);
@@ -374,8 +374,8 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
             inventory
         );
 
-        assertTrue(result.success);
-        assertAmountEquals(expectedTotal, result.transaction.totalAmount);
+        assertTrue(result.isSuccess());
+        assertAmountEquals(expectedTotal, result.getTransaction().totalAmount);
 
         // 验证两个商品的库存都已扣减
         Product updatedProduct1 = ProductDAO.findById(testProduct.id);
@@ -405,7 +405,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
             inventory
         );
 
-        assertTrue(result.success);
+        assertTrue(result.isSuccess());
 
         // 验证两个商品的库存都已正确扣减
         Product updatedProduct1 = ProductDAO.findById(testProduct.id);

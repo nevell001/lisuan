@@ -871,13 +871,13 @@ public class CartController {
                 appliedPromotion
             );
 
-            if (!result.success || result.transaction == null) {
-                showError(result.message != null ? result.message : "交易失败");
+            if (!result.isSuccess() || result.getTransaction() == null) {
+                showError(result.getMessage() != null ? result.getMessage() : "交易失败");
                 return;
             }
 
-            logger.info("交易成功完成，交易ID: {}", result.transaction.transactionId);
-            showSuccess(paymentMethod, result.transaction, receivedAmount.doubleValue(), changeAmount.doubleValue());
+            logger.info("交易成功完成，交易ID: {}", result.getTransaction().transactionId);
+            showSuccess(paymentMethod, result.getTransaction(), receivedAmount.doubleValue(), changeAmount.doubleValue());
             clear();
         } catch (Exception e) {
             logger.error("交易失败: " + e.getMessage(), e);
