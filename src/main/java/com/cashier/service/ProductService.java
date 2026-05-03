@@ -39,6 +39,9 @@ public class ProductService {
      * @return 分页结果
      */
     public PageResult<Product> getProductsByPage(int pageNum, int pageSize) {
+        if (pageNum <= 0 || pageSize <= 0) {
+            throw BusinessException.validationFailed("pageNum/pageSize", "页码和每页大小必须大于0");
+        }
         try {
             return productDAO.findAll(pageNum, pageSize);
         } catch (SQLException e) {
@@ -89,7 +92,7 @@ public class ProductService {
             if (!success) {
                 throw DatabaseException.insertFailed("products", null);
             }
-            logger.info("创建商品成功: {}", product.name);
+            logger.info("创建商品成功: {}", product.getName());
             return product;
         } catch (SQLException e) {
             logger.error("创建商品失败", e);
@@ -108,7 +111,7 @@ public class ProductService {
             if (!success) {
                 throw BusinessException.validationFailed("version", "商品已被其他用户修改，请刷新后重试");
             }
-            logger.info("更新商品成功: {}", product.name);
+            logger.info("更新商品成功: {}", product.getName());
             return product;
         } catch (SQLException e) {
             logger.error("更新商品失败", e);
@@ -136,14 +139,16 @@ public class ProductService {
     /**
      * 批量导入商品（带事务）
      * @param products 商品列表
+     * @return 成功导入的数量
      */
-    public void batchImportProducts(List<Product> products) {
+    public int batchImportProducts(List<Product> products) {
         if (products == null || products.isEmpty()) {
-            return;
+            return 0;
         }
         try {
             productDAO.batchInsert(products);
             logger.info("批量导入商品成功, 数量: {}", products.size());
+            return products.size();
         } catch (SQLException e) {
             logger.error("批量导入商品失败", e);
             throw DatabaseException.transactionFailed("batch insert products", e);
