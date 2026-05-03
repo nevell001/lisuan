@@ -1,5 +1,6 @@
 package com.cashier.util;
 
+import com.cashier.exception.DatabaseException;
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 import org.slf4j.Logger;
@@ -102,18 +103,21 @@ public class DatabaseManager {
                 logger.info("已加载数据库配置: {}", CONFIG_FILE);
             } catch (IOException e) {
                 logger.error("加载配置文件失败: {}", e.getMessage(), e);
-                throw new RuntimeException("无法加载数据库配置文件: " + CONFIG_FILE, e);
+                throw DatabaseException.connectionFailed(e);
             }
         } else {
             // 配置文件不存在，创建默认配置文件模板
             logger.info("配置文件不存在，创建默认配置文件模板");
             saveDefaultConfigTemplate();
-            throw new RuntimeException("数据库配置文件不存在: " + CONFIG_FILE + "\n" +
+            throw new DatabaseException(
+                "数据库配置文件不存在: " + CONFIG_FILE + "\n" +
                 "请先配置数据库连接信息：\n" +
                 "1. 编辑 config/database.properties 文件\n" +
                 "2. 设置正确的数据库 URL、用户名和密码\n" +
                 "3. 或者设置环境变量 CASHER_DB_PASSWORD 来避免明文存储密码\n" +
-                "4. 然后重新启动应用");
+                "4. 然后重新启动应用",
+                DatabaseException.DbErrorType.CONNECTION_FAILED
+            );
         }
 
         // 验证必需的配置项
@@ -132,11 +136,14 @@ public class DatabaseManager {
         if (dbUrl == null || dbUrl.isEmpty() ||
             dbUsername == null || dbUsername.isEmpty() ||
             dbPassword == null || dbPassword.isEmpty()) {
-            throw new RuntimeException("数据库配置不完整！\n" +
+            throw new DatabaseException(
+                "数据库配置不完整！\n" +
                 "请配置以下参数：\n" +
                 "- db.url (数据库连接URL)\n" +
                 "- db.username (数据库用户名)\n" +
-                "- db.password (数据库密码，或设置环境变量 CASHER_DB_PASSWORD)");
+                "- db.password (数据库密码，或设置环境变量 CASHER_DB_PASSWORD)",
+                DatabaseException.DbErrorType.CONNECTION_FAILED
+            );
         }
 
         try {

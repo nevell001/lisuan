@@ -153,9 +153,9 @@ public class LoginController {
                 // 更新最后登录时间到数据库
                 UserDAO.updateLastLoginTimeByUsername(username);
 
-                // 保存记住的密码
+                // 保存记住的用户名（不保存密码）
                 if (rememberMeCheckBox.isSelected()) {
-                    saveCredentials(username, password);
+                    saveCredentials(username, true);
                 } else {
                     clearSavedCredentials();
                 }
@@ -468,30 +468,30 @@ public class LoginController {
     }
 
     /**
-     * 保存记住的密码
+     * 保存记住的用户名（不保存密码，出于安全考虑）
      * @param username 用户名
-     * @param password 密码
+     * @param remember 是否记住
      */
-    private void saveCredentials(String username, String password) {
+    private void saveCredentials(String username, boolean remember) {
         try {
             File configFile = new File(CONFIG_FILE);
             configFile.getParentFile().mkdirs();
 
             Properties props = new Properties();
             props.setProperty("username", username);
-            props.setProperty("password", password);
-            props.setProperty("remember", "true");
+            props.setProperty("remember", String.valueOf(remember));
+            // 安全改进：不再保存密码，只保存用户名
 
             try (OutputStream output = new FileOutputStream(configFile)) {
-                props.store(output, "Login Configuration");
+                props.store(output, "Login Configuration - Password NOT stored for security");
             }
         } catch (IOException e) {
-            logger.error("保存凭据失败", e);
+            logger.error("保存用户名失败", e);
         }
     }
 
     /**
-     * 加载保存的凭据
+     * 加载保存的用户名（不加载密码）
      */
     private void loadSavedCredentials() {
         try {
@@ -508,11 +508,12 @@ public class LoginController {
             String remember = props.getProperty("remember", "false");
             if ("true".equals(remember)) {
                 usernameField.setText(props.getProperty("username", ""));
-                passwordField.setText(props.getProperty("password", ""));
+                // 安全改进：不自动填充密码，用户需要手动输入
+                passwordField.setText("");
                 rememberMeCheckBox.setSelected(true);
             }
         } catch (IOException e) {
-            logger.error("加载凭据失败", e);
+            logger.error("加载用户名失败", e);
         }
     }
 

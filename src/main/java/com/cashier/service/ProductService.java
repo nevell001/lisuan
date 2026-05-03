@@ -1,6 +1,8 @@
 package com.cashier.service;
 
 import com.cashier.dao.ProductDAORefactored;
+import com.cashier.exception.BusinessException;
+import com.cashier.exception.DatabaseException;
 import com.cashier.model.PageResult;
 import com.cashier.model.Product;
 import com.cashier.util.LoggerFactoryUtil;
@@ -41,7 +43,7 @@ public class ProductService {
             return productDAO.findAll(pageNum, pageSize);
         } catch (SQLException e) {
             logger.error("分页查询商品失败", e);
-            throw new RuntimeException("查询商品失败", e);
+            throw DatabaseException.queryFailed("SELECT products", e);
         }
     }
 
@@ -54,7 +56,7 @@ public class ProductService {
             return productDAO.findAll();
         } catch (SQLException e) {
             logger.error("查询所有商品失败", e);
-            throw new RuntimeException("查询商品失败", e);
+            throw DatabaseException.queryFailed("SELECT all products", e);
         }
     }
 
@@ -65,10 +67,14 @@ public class ProductService {
      */
     public Product getProductById(int id) {
         try {
-            return productDAO.findById(id);
+            Product product = productDAO.findById(id);
+            if (product == null) {
+                throw BusinessException.productNotFound(String.valueOf(id));
+            }
+            return product;
         } catch (SQLException e) {
             logger.error("查询商品失败, id={}", id, e);
-            throw new RuntimeException("查询商品失败", e);
+            throw DatabaseException.queryFailed("SELECT product by id", e);
         }
     }
 
@@ -81,13 +87,13 @@ public class ProductService {
         try {
             boolean success = productDAO.insert(product);
             if (!success) {
-                throw new RuntimeException("创建商品失败");
+                throw DatabaseException.insertFailed("products", null);
             }
             logger.info("创建商品成功: {}", product.name);
             return product;
         } catch (SQLException e) {
             logger.error("创建商品失败", e);
-            throw new RuntimeException("创建商品失败: " + e.getMessage(), e);
+            throw DatabaseException.insertFailed("products", e);
         }
     }
 
@@ -100,13 +106,13 @@ public class ProductService {
         try {
             boolean success = productDAO.update(product);
             if (!success) {
-                throw new RuntimeException("更新商品失败，可能商品已被其他用户修改");
+                throw BusinessException.validationFailed("version", "商品已被其他用户修改，请刷新后重试");
             }
             logger.info("更新商品成功: {}", product.name);
             return product;
         } catch (SQLException e) {
             logger.error("更新商品失败", e);
-            throw new RuntimeException("更新商品失败: " + e.getMessage(), e);
+            throw DatabaseException.updateFailed("products", e);
         }
     }
 
@@ -118,12 +124,12 @@ public class ProductService {
         try {
             boolean success = productDAO.delete(id);
             if (!success) {
-                throw new RuntimeException("删除商品失败");
+                throw BusinessException.productNotFound(String.valueOf(id));
             }
             logger.info("删除商品成功: id={}", id);
         } catch (SQLException e) {
             logger.error("删除商品失败, id={}", id, e);
-            throw new RuntimeException("删除商品失败: " + e.getMessage(), e);
+            throw new DatabaseException("删除商品失败", DatabaseException.DbErrorType.DELETE_FAILED, e);
         }
     }
 
@@ -140,7 +146,7 @@ public class ProductService {
             logger.info("批量导入商品成功, 数量: {}", products.size());
         } catch (SQLException e) {
             logger.error("批量导入商品失败", e);
-            throw new RuntimeException("批量导入商品失败: " + e.getMessage(), e);
+            throw DatabaseException.transactionFailed("batch insert products", e);
         }
     }
 
@@ -153,7 +159,7 @@ public class ProductService {
             return productDAO.count();
         } catch (SQLException e) {
             logger.error("获取商品数量失败", e);
-            throw new RuntimeException("获取商品数量失败", e);
+            throw DatabaseException.queryFailed("SELECT count", e);
         }
     }
 }
