@@ -1,17 +1,20 @@
+# Docker Compose 配置示例
+# 复制此文件为 docker-compose.yml 并填入实际密码
+
 services:
   mysql:
     image: mysql:8.4
     container_name: cashier-mysql
     restart: unless-stopped
     environment:
-      MYSQL_ROOT_PASSWORD: RootPassword123!
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
       MYSQL_DATABASE: cashier_system
       TZ: Asia/Shanghai
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_unicode_ci
     command: --mysql-native-password=ON --bind-address=0.0.0.0 --skip-name-resolve
     ports:
-      - "0.0.0.0:3306:3306"
+      - "127.0.0.1:3306:3306"  # 仅本机访问
     volumes:
       - cashier-mysql-data:/var/lib/mysql
       - ./docker/mysql-init/00-init-complete.sql:/docker-entrypoint-initdb.d/00-init-complete.sql:ro
@@ -33,7 +36,7 @@ services:
       - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
       - prometheus-data:/prometheus
     ports:
-      - "0.0.0.0:9090:9090"
+      - "127.0.0.1:9090:9090"  # 仅本机访问
     networks:
       - cashier-network
 
@@ -42,14 +45,14 @@ services:
     container_name: cashier-grafana
     restart: unless-stopped
     environment:
-      GF_SECURITY_ADMIN_USER: admin
-      GF_SECURITY_ADMIN_PASSWORD: admin123
+      GF_SECURITY_ADMIN_USER: ${GRAFANA_ADMIN_USER:-admin}
+      GF_SECURITY_ADMIN_PASSWORD: ${GRAFANA_ADMIN_PASSWORD}
       GF_USERS_ALLOW_SIGN_UP: "false"
     volumes:
       - grafana-data:/var/lib/grafana
       - ./docker/grafana/provisioning:/etc/grafana/provisioning:ro
     ports:
-      - "0.0.0.0:3000:3000"
+      - "127.0.0.1:3000:3000"  # 仅本机访问
     networks:
       - cashier-network
 
