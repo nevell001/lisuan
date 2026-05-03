@@ -163,7 +163,9 @@ public class ExportUtil {
     private static PDFont loadChineseFont(PDDocument document) throws IOException {
         // 1. 尝试从项目资源加载中文字体
         String[] resourcePaths = {
+            "/fonts/NotoSansSC-Regular.otf",
             "/fonts/NotoSansSC-Regular.ttf",
+            "/com/cashier/fonts/NotoSansSC-Regular.otf",
             "/com/cashier/fonts/NotoSansSC-Regular.ttf"
         };
 
@@ -233,8 +235,10 @@ public class ExportUtil {
                 windir + "\\Fonts\\simkai.ttf"     // 楷体
             };
         } else {
-            // Linux 系统字体路径
+            // Linux 系统字体路径（优先使用单独的 TTF 文件）
             systemFontPaths = new String[]{
+                "/usr/share/fonts/truetype/lxgw-wenkai/LXGWWenKai-Regular.ttf",
+                "/usr/share/fonts/truetype/arphic-gkai00mp/gkai00mp.ttf",
                 "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
                 "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
                 "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
