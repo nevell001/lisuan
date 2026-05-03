@@ -275,28 +275,37 @@ public class TransactionService {
      * @param endDate 结束日期
      * @return 统计信息
      */
-    public static Map<String, Object> getTransactionStatistics(String startDate, String endDate) {
-        Map<String, Object> stats = new HashMap<>();
+    public static TransactionStatistics getTransactionStatistics(String startDate, String endDate) {
         try {
             List<Transaction> transactions = TransactionDAO.findByDateRange(startDate, endDate);
 
             BigDecimal totalAmount = BigDecimal.ZERO;
-            int totalCount = transactions.size();
-            Map<String, Double> paymentMethodStats = new HashMap<>();
+            int totalTransactions = transactions.size();
+            int totalItems = 0;
+            int cashCount = 0;
+            int memberCount = 0;
 
             for (Transaction t : transactions) {
                 totalAmount = totalAmount.add(t.getFinalAmount());
-                paymentMethodStats.merge(t.paymentMethod, t.getFinalAmount().doubleValue(), Double::sum);
+
+                if (t.items != null) {
+                    totalItems += t.items.size();
+                }
+
+                if ("CASH".equals(t.paymentMethod)) {
+                    cashCount++;
+                }
+
+                if (t.memberId > 0) {
+                    memberCount++;
+                }
             }
 
-            stats.put("totalAmount", totalAmount.doubleValue());
-            stats.put("totalCount", totalCount);
-            stats.put("averageAmount", totalCount > 0 ? totalAmount.divide(BigDecimal.valueOf(totalCount), 2, RoundingMode.HALF_UP).doubleValue() : 0.0);
-            stats.put("paymentMethodStats", paymentMethodStats);
+            return new TransactionStatistics(totalTransactions, totalAmount, totalItems, cashCount, memberCount);
 
         } catch (SQLException e) {
             logger.error("获取交易统计失败", e);
+            return new TransactionStatistics(0, BigDecimal.ZERO, 0, 0, 0);
         }
-        return stats;
     }
 }

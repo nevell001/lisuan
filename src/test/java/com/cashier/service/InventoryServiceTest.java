@@ -45,9 +45,9 @@ class InventoryServiceTest extends DatabaseTestBase {
         // 扣减库存
         Map<Integer, Integer> productUpdates = new HashMap<>();
         productUpdates.put(testProduct.id, -deductQuantity);
-        boolean success = InventoryService.batchUpdateInventory(productUpdates);
+        int count = InventoryService.batchUpdateInventory(productUpdates);
 
-        assertTrue(success);
+        assertTrue(count > 0);
 
         // 验证库存已扣减
         Product updatedProduct = ProductDAO.findById(testProduct.id);
@@ -63,9 +63,9 @@ class InventoryServiceTest extends DatabaseTestBase {
         // 扣减库存（应该失败）
         Map<Integer, Integer> productUpdates = new HashMap<>();
         productUpdates.put(testProduct.id, -deductQuantity);
-        boolean success = InventoryService.batchUpdateInventory(productUpdates);
+        int count = InventoryService.batchUpdateInventory(productUpdates);
 
-        assertFalse(success);
+        assertEquals(0, count);
 
         // 验证库存未变化
         Product updatedProduct = ProductDAO.findById(testProduct.id);
@@ -82,9 +82,9 @@ class InventoryServiceTest extends DatabaseTestBase {
         // 增加库存
         Map<Integer, Integer> productUpdates = new HashMap<>();
         productUpdates.put(testProduct.id, increaseQuantity);
-        boolean success = InventoryService.batchUpdateInventory(productUpdates);
+        int count = InventoryService.batchUpdateInventory(productUpdates);
 
-        assertTrue(success);
+        assertTrue(count > 0);
 
         // 验证库存已增加
         Product updatedProduct = ProductDAO.findById(testProduct.id);
@@ -101,9 +101,9 @@ class InventoryServiceTest extends DatabaseTestBase {
         productUpdates.put(testProduct.id, -10);
         productUpdates.put(secondProduct.id, -10);
 
-        boolean success = InventoryService.batchUpdateInventory(productUpdates);
+        int count = InventoryService.batchUpdateInventory(productUpdates);
 
-        assertFalse(success);
+        assertEquals(0, count);
 
         Product firstUpdatedProduct = ProductDAO.findById(testProduct.id);
         Product secondUpdatedProduct = ProductDAO.findById(secondProduct.id);

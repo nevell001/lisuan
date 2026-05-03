@@ -89,17 +89,21 @@ public class BackupService {
 
     /**
      * 执行备份
+     * @return true表示备份成功
+     * @throws RuntimeException 备份失败时抛出异常
      */
-    private void performBackup(String backupPath) {
+    private boolean performBackup(String backupPath) {
         try {
             logger.info("开始执行自动备份...");
             DataService.backupData(backupPath);
             logger.info("自动备份成功");
 
-            // 清理旧备份文件（保留最近 30 个）
+            // 清理旧备份文件
             cleanOldBackups(backupPath);
+            return true;
         } catch (Exception e) {
             logger.error("自动备份失败", e);
+            throw new RuntimeException("备份失败: " + e.getMessage(), e);
         }
     }
 

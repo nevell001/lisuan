@@ -1,6 +1,7 @@
 package com.cashier.service;
 
 import com.cashier.dao.ProductDAO;
+import com.cashier.model.InventoryStatistics;
 import com.cashier.model.Product;
 import com.cashier.util.DatabaseManager;
 import com.cashier.util.LoggerFactoryUtil;
@@ -95,11 +96,11 @@ public class InventoryService {
     /**
      * 批量更新库存（优化版 - 使用批量SQL）
      * @param productUpdates 商品更新列表（商品ID -> 更新数量）
-     * @return 是否成功
+     * @return 成功更新的商品数量，失败返回0
      */
-    public static boolean batchUpdateInventory(Map<Integer, Integer> productUpdates) {
+    public static int batchUpdateInventory(Map<Integer, Integer> productUpdates) {
         if (productUpdates == null || productUpdates.isEmpty()) {
-            return true;
+            return 0;
         }
 
         try {
@@ -130,11 +131,12 @@ public class InventoryService {
             if (success) {
                 com.cashier.util.CacheManager.clearCache();
                 logger.info("批量更新库存成功，共更新 {} 个商品", productUpdates.size());
+                return productUpdates.size();
             }
-            return success;
+            return 0;
         } catch (SQLException e) {
             logger.error("批量更新库存失败: {}", e.getMessage(), e);
-            return false;
+            return 0;
         }
     }
 
@@ -143,34 +145,15 @@ public class InventoryService {
      * @param inventory 库存数据
      * @return 统计信息
      */
-    public static Map<String, Object> getInventoryStatistics(Map<String, Product> inventory) {
-        Map<String, Object> stats = new HashMap<>();
-
+    public static InventoryStatistics getInventoryStatistics(Map<String, Product> inventory) {
         int totalProducts = inventory.size();
         int totalQuantity = inventory.values().stream().mapToInt(p -> p.quantity).sum();
-        BigDecimal totalValueDecimal = inventory.values().stream()
+        BigDecimal totalValue = inventory.values().stream()
                 .map(p -> p.getCost().multiply(BigDecimal.valueOf(p.quantity)))
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
-        double totalValue = totalValueDecimal.doubleValue();
         int lowStockCount = (int) inventory.values().stream().filter(p -> p.quantity <= p.minStock).count();
-        int outOfStockCount = (int) inventory.values().stream().filter(p -> p.quantity <= 0).count();
 
-        stats.put("totalProducts", totalProducts);
-        stats.put("totalQuantity", totalQuantity);
-        stats.put("totalValue", totalValue);
-        stats.put("lowStockCount", lowStockCount);
-        stats.put("outOfStockCount", outOfStockCount);
-
-        // 按分类统计
-        Map<String, Integer> categoryStats = new HashMap<>();
-        for (Product product : inventory.values()) {
-            if (product.category != null && !product.category.isEmpty()) {
-                categoryStats.merge(product.category, product.quantity, Integer::sum);
-            }
-        }
-        stats.put("categoryStats", categoryStats);
-
-        return stats;
+        return new InventoryStatistics(totalProducts, lowStockCount, totalQuantity, totalValue);
     }
 
     /**
