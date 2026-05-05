@@ -201,6 +201,14 @@ public class ApiServer {
         app.post("/api/backup/{backupId}/restore", BackupApiController::restoreBackup);
         app.get("/api/backup/{backupId}/download", BackupApiController::downloadBackup);
         
+        // 国际化管理
+        app.get("/api/i18n/locale", I18nApiController::getCurrentLocale);
+        app.put("/api/i18n/locale", I18nApiController::setLocale);
+        app.get("/api/i18n/locales", I18nApiController::getAvailableLocales);
+        app.get("/api/i18n/messages", I18nApiController::getMessage);
+        app.get("/api/i18n/messages/all", I18nApiController::getAllMessages);
+        app.get("/api/i18n/messages/locale/{locale}", I18nApiController::getMessagesForLocale);
+        
         // WebSocket 同步端点
         app.ws("/ws/sync", ws -> {
             ws.onConnect(SyncWebSocketHandler::onConnect);
