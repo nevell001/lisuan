@@ -35,7 +35,24 @@ public enum SyncEventType {
     SYNC_REQUEST,             // 同步请求
     SYNC_RESPONSE,            // 同步响应
     
+    // 发票事件
+    INVOICE_CREATED,          // 发票创建
+    INVOICE_PRINTED,          // 发票打印
+    INVOICE_VOIDED,           // 发票作废
+    
     // 心跳
     PING,
-    PONG
+    PONG;
+    
+    /**
+     * 从字符串获取事件类型
+     */
+    public static SyncEventType fromName(String name) {
+        for (SyncEventType type : values()) {
+            if (type.name().equals(name)) {
+                return type;
+            }
+        }
+        return null;
+    }
 }

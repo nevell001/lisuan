@@ -142,6 +142,18 @@ public class ApiServer {
         app.put("/api/settings/{key}", SettingsApiController::set);
         app.delete("/api/settings/{key}", SettingsApiController::delete);
         
+        // 发票管理
+        app.get("/api/invoices", InvoiceApiController::list);
+        app.get("/api/invoices/stats", InvoiceApiController::stats);
+        app.get("/api/invoices/{id}", InvoiceApiController::get);
+        app.get("/api/invoices/transaction/{transactionId}", InvoiceApiController::getByTransaction);
+        app.post("/api/invoices/from-transaction", InvoiceApiController::createFromTransaction);
+        app.post("/api/invoices/manual", InvoiceApiController::createManual);
+        app.post("/api/invoices/{id}/void", InvoiceApiController::voidInvoice);
+        app.post("/api/invoices/{id}/print", InvoiceApiController::recordPrint);
+        app.get("/api/invoices/seller-info", InvoiceApiController::getSellerInfo);
+        app.put("/api/invoices/seller-info", InvoiceApiController::setSellerInfo);
+        
         // 用户管理（管理员）
         app.get("/api/users", UserApiController::list);
         app.get("/api/users/{id}", UserApiController::get);
