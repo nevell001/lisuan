@@ -15,7 +15,7 @@ import java.util.logging.Logger;
  */
 public class Installer {
     private static final Logger LOGGER = Logger.getLogger(Installer.class.getName());
-    private static final String APP_VERSION = "2.4.6";
+    private static final String APP_VERSION = "2.5.0";
     private static final String DB_NAME = "cashier_system";
     
     private JFrame frame;
