@@ -2,6 +2,8 @@ package com.cashier.api;
 
 import com.cashier.api.controller.*;
 import com.cashier.api.middleware.AuthMiddleware;
+import com.cashier.api.sync.SyncWebSocketHandler;
+import com.cashier.api.sync.SyncManager;
 import com.cashier.dao.UserDAO;
 import com.cashier.model.User;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -146,6 +148,23 @@ public class ApiServer {
         app.post("/api/users", UserApiController::create);
         app.put("/api/users/{id}", UserApiController::update);
         app.delete("/api/users/{id}", UserApiController::delete);
+        
+        // WebSocket 同步端点
+        app.ws("/ws/sync", ws -> {
+            ws.onConnect(SyncWebSocketHandler::onConnect);
+            ws.onClose(SyncWebSocketHandler::onClose);
+            ws.onMessage(SyncWebSocketHandler::onMessage);
+            ws.onError(SyncWebSocketHandler::onError);
+        });
+        
+        // WebSocket 状态查询 API
+        app.get("/api/sync/status", ctx -> {
+            ctx.json(Map.of(
+                "success", true,
+                "onlineTerminals", SyncManager.getInstance().getOnlineCount(),
+                "terminals", SyncManager.getInstance().getOnlineTerminals()
+            ));
+        });
         
         // 全局异常处理
         app.exception(Exception.class, (e, ctx) -> {
