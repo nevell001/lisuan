@@ -55,6 +55,12 @@ public enum SyncEventType {
     PAYMENT_REFUND,           // 支付退款
     PAYMENT_ORDER_CLOSED,     // 订单关闭
     
+    // 备份事件
+    BACKUP_SUCCESS,           // 备份成功
+    BACKUP_FAILED,            // 备份失败
+    BACKUP_RESTORED,          // 备份恢复
+    BACKUP_CLEANED,           // 备份清理
+    
     // 心跳
     PING,
     PONG;

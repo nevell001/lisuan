@@ -190,6 +190,17 @@ public class ApiServer {
         app.get("/api/payment/config", PaymentApiController::getConfig);
         app.put("/api/payment/config", PaymentApiController::setConfig);
         
+        // 云备份管理
+        app.post("/api/backup/execute", BackupApiController::executeBackup);
+        app.post("/api/backup/cleanup", BackupApiController::cleanupBackups);
+        app.get("/api/backup/list", BackupApiController::listBackups);
+        app.get("/api/backup/stats", BackupApiController::getStats);
+        app.get("/api/backup/config", BackupApiController::getConfig);
+        app.put("/api/backup/config", BackupApiController::updateConfig);
+        app.get("/api/backup/{backupId}", BackupApiController::getBackup);
+        app.post("/api/backup/{backupId}/restore", BackupApiController::restoreBackup);
+        app.get("/api/backup/{backupId}/download", BackupApiController::downloadBackup);
+        
         // WebSocket 同步端点
         app.ws("/ws/sync", ws -> {
             ws.onConnect(SyncWebSocketHandler::onConnect);
