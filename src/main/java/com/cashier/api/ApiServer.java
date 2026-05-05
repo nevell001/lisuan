@@ -161,6 +161,23 @@ public class ApiServer {
         app.put("/api/users/{id}", UserApiController::update);
         app.delete("/api/users/{id}", UserApiController::delete);
         
+        // 打印机管理
+        app.get("/api/printers", PrintApiController::listPrinters);
+        app.get("/api/printers/connected", PrintApiController::getConnectedPrinters);
+        app.get("/api/printers/discover", PrintApiController::discoverPrinters);
+        app.get("/api/printers/history", PrintApiController::getPrintHistory);
+        app.get("/api/printers/{id}", PrintApiController::getPrinter);
+        app.get("/api/printers/{id}/status", PrintApiController::checkPrinterStatus);
+        app.post("/api/printers/add", PrintApiController::addPrinter);
+        app.post("/api/printers/{id}/connect", PrintApiController::connectPrinter);
+        app.post("/api/printers/{id}/disconnect", PrintApiController::disconnectPrinter);
+        app.post("/api/printers/{id}/set-default", PrintApiController::setDefaultPrinter);
+        app.post("/api/printers/{id}/test", PrintApiController::printTest);
+        app.post("/api/printers/{id}/receipt", PrintApiController::printReceipt);
+        app.post("/api/printers/{id}/invoice/{invoiceId}", PrintApiController::printInvoice);
+        app.post("/api/printers/{id}/cashdrawer", PrintApiController::openCashDrawer);
+        app.delete("/api/printers/{id}", PrintApiController::removePrinter);
+        
         // WebSocket 同步端点
         app.ws("/ws/sync", ws -> {
             ws.onConnect(SyncWebSocketHandler::onConnect);

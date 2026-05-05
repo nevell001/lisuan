@@ -40,6 +40,14 @@ public enum SyncEventType {
     INVOICE_PRINTED,          // 发票打印
     INVOICE_VOIDED,           // 发票作废
     
+    // 打印机事件
+    PRINTER_ADDED,            // 打印机添加
+    PRINTER_CONNECTED,        // 打印机连接
+    PRINTER_DISCONNECTED,     // 打印机断开
+    PRINTER_REMOVED,          // 打印机删除
+    PRINT_TASK_COMPLETED,     // 打印任务完成
+    PRINT_TASK_FAILED,        // 打印任务失败
+    
     // 心跳
     PING,
     PONG;
