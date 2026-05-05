@@ -178,6 +178,18 @@ public class ApiServer {
         app.post("/api/printers/{id}/cashdrawer", PrintApiController::openCashDrawer);
         app.delete("/api/printers/{id}", PrintApiController::removePrinter);
         
+        // 电子支付管理
+        app.post("/api/payment/create", PaymentApiController::createPayment);
+        app.get("/api/payment/{paymentId}/status", PaymentApiController::queryStatus);
+        app.get("/api/payment/transaction/{transactionId}", PaymentApiController::getByTransaction);
+        app.post("/api/payment/notify/{channel}", PaymentApiController::handleNotify);
+        app.post("/api/payment/{paymentId}/refund", PaymentApiController::applyRefund);
+        app.get("/api/payment/waiting", PaymentApiController::getWaitingOrders);
+        app.post("/api/payment/close-expired", PaymentApiController::closeExpired);
+        app.get("/api/payment/stats/daily", PaymentApiController::getDailyStats);
+        app.get("/api/payment/config", PaymentApiController::getConfig);
+        app.put("/api/payment/config", PaymentApiController::setConfig);
+        
         // WebSocket 同步端点
         app.ws("/ws/sync", ws -> {
             ws.onConnect(SyncWebSocketHandler::onConnect);

@@ -48,6 +48,13 @@ public enum SyncEventType {
     PRINT_TASK_COMPLETED,     // 打印任务完成
     PRINT_TASK_FAILED,        // 打印任务失败
     
+    // 支付事件
+    PAYMENT_ORDER_CREATED,    // 支付订单创建
+    PAYMENT_SUCCESS,          // 支付成功
+    PAYMENT_FAILED,           // 支付失败
+    PAYMENT_REFUND,           // 支付退款
+    PAYMENT_ORDER_CLOSED,     // 订单关闭
+    
     // 心跳
     PING,
     PONG;
