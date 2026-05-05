@@ -1,57 +1,57 @@
 package com.cashier.api.controller;
 
-import com.cashier.api.ApiServer;
 import com.cashier.util.DatabaseManager;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
-import com.cashier.util.LoggerFactoryUtil;
+import org.slf4j.LoggerFactory;
 
-import java.sql.Connection;
-import java.sql.PreparedStatement;
-import java.sql.ResultSet;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * 健康检查控制器
+ * 健康检查接口
  */
 public class HealthController {
-    private static final Logger logger = LoggerFactoryUtil.getLogger(HealthController.class);
+    private static final Logger logger = LoggerFactory.getLogger(HealthController.class);
     
     /**
-     * 健康检查
+     * 基础健康检查
+     * GET /api/health
      */
-    public static void health(Context ctx) {
-        HealthInfo health = new HealthInfo();
-        health.status = "ok";
-        health.timestamp = System.currentTimeMillis();
-        
-        // 检查数据库连接
-        try {
-            Connection conn = DatabaseManager.getConnection();
-            PreparedStatement ps = conn.prepareStatement("SELECT 1");
-            ResultSet rs = ps.executeQuery();
-            if (rs.next()) {
-                health.database = "connected";
-            }
-            rs.close();
-            ps.close();
-            conn.close();
-        } catch (Exception e) {
-            health.database = "error: " + e.getMessage();
-            health.status = "degraded";
-            logger.warn("健康检查: 数据库连接异常", e);
-        }
-        
-        // 检查 API 服务器状态
-        health.apiServer = DatabaseManager.isInitialized() ? "running" : "not initialized";
-        
-        ctx.json(health);
+    public static void check(Context ctx) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "ok");
+        result.put("service", "cashier-api");
+        result.put("timestamp", System.currentTimeMillis());
+        ctx.json(result);
     }
     
-    public static class HealthInfo {
-        public String status;
-        public long timestamp;
-        public String database;
-        public String apiServer;
+    /**
+     * 详细健康检查
+     * GET /api/health/detail
+     */
+    public static void detail(Context ctx) {
+        Map<String, Object> result = new HashMap<>();
+        result.put("status", "ok");
+        result.put("service", "cashier-api");
+        result.put("timestamp", System.currentTimeMillis());
+        
+        // 检查数据库
+        try {
+            boolean dbOk = DatabaseManager.getConnection() != null;
+            result.put("database", dbOk ? "connected" : "disconnected");
+        } catch (Exception e) {
+            result.put("database", "error: " + e.getMessage());
+        }
+        
+        // 检查内存
+        Runtime runtime = Runtime.getRuntime();
+        long usedMemory = runtime.totalMemory() - runtime.freeMemory();
+        result.put("memory_used_mb", usedMemory / 1024 / 1024);
+        result.put("memory_total_mb", runtime.totalMemory() / 1024 / 1024);
+        result.put("memory_max_mb", runtime.maxMemory() / 1024 / 1024);
+        
+        ctx.json(result);
     }
 }

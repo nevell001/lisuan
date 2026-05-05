@@ -1,0 +1,20 @@
+# API 服务器配置
+# ⚠️ 生产环境请修改相关配置！
+
+# API 服务器开关
+api.enabled=true
+
+# API 端口
+api.port=8080
+
+# API 主机绑定（生产环境建议改为具体IP）
+api.host=0.0.0.0
+
+# CORS 允许的来源（生产环境请限制为具体域名）
+cors.allowed.origins=*
+
+# Token 过期时间（小时）
+token.expire.hours=24
+
+# Token 密钥（⚠️ 请修改为您的密钥！）
+token.secret=your_secret_key_change_this_in_production

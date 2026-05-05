@@ -254,6 +254,14 @@ public class CashierSystemFXApplication extends Application {
                 logger.error("停止自动备份服务时发生错误", e);
             }
 
+            // 停止 REST API 服务器
+            try {
+                com.cashier.api.ApiServer.getInstance().stop();
+                logger.info("REST API 服务器已停止");
+            } catch (Exception e) {
+                logger.error("停止 REST API 服务器时发生错误", e);
+            }
+
             logger.info("系统服务已关闭");
         } catch (Exception e) {
             logger.error("关闭系统服务时发生错误", e);
@@ -375,6 +383,16 @@ public class CashierSystemFXApplication extends Application {
                 logger.error("启动自动备份服务失败", e);
             }
 
+            // 启动 REST API 服务器
+            try {
+                com.cashier.api.ApiServer apiServer = com.cashier.api.ApiServer.getInstance();
+                int apiPort = com.cashier.api.ApiConfig.getPort();
+                apiServer.start(apiPort);
+                logger.info("REST API 服务器已启动，端口: {}", apiPort);
+            } catch (Exception e) {
+                logger.error("启动 REST API 服务器失败", e);
+            }
+
         } catch (IOException e) {
             logger.error("加载主界面失败", e);
         }
@@ -398,6 +416,14 @@ public class CashierSystemFXApplication extends Application {
             logger.info("自动备份服务已停止");
         } catch (Exception e) {
             logger.error("停止自动备份服务时发生错误", e);
+        }
+
+        // 停止 REST API 服务器
+        try {
+            com.cashier.api.ApiServer.getInstance().stop();
+            logger.info("REST API 服务器已停止");
+        } catch (Exception e) {
+            logger.error("停止 REST API 服务器时发生错误", e);
         }
 
         this.currentUser = null;

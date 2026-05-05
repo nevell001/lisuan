@@ -1,168 +1,136 @@
 package com.cashier.api.controller;
 
 import com.cashier.api.ApiServer;
-import com.cashier.api.middleware.AuthMiddleware;
 import com.cashier.dao.UserDAO;
 import com.cashier.model.User;
-import com.cashier.util.PasswordUtil;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
-import com.cashier.util.LoggerFactoryUtil;
+import org.slf4j.LoggerFactory;
 
-import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
- * 认证控制器
- * 处理登录、Token 刷新、注销等
+ * 认证接口
  */
 public class AuthController {
-    private static final Logger logger = LoggerFactoryUtil.getLogger(AuthController.class);
+    private static final Logger logger = LoggerFactory.getLogger(AuthController.class);
     
     /**
      * 登录
+     * POST /api/auth/login
      */
     public static void login(Context ctx) {
-        LoginRequest request = ctx.bodyAsClass(LoginRequest.class);
-        
-        if (request.username == null || request.username.isEmpty()) {
-            ctx.status(HttpStatus.BAD_REQUEST)
-               .json(new ApiServer.ApiError(400, "用户名不能为空"));
-            return;
-        }
-        
-        if (request.password == null || request.password.isEmpty()) {
-            ctx.status(HttpStatus.BAD_REQUEST)
-               .json(new ApiServer.ApiError(400, "密码不能为空"));
-            return;
-        }
-        
         try {
-            User user = UserDAO.findByUsername(request.username);
+            LoginRequest request = ctx.bodyAsClass(LoginRequest.class);
+            
+            if (request.username == null || request.password == null) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of("success", false, "message", "用户名和密码不能为空"));
+                return;
+            }
+            
+            User user = UserDAO.authenticate(request.username, request.password);
             
             if (user == null) {
                 ctx.status(HttpStatus.UNAUTHORIZED)
-                   .json(new ApiServer.ApiError(401, "用户不存在"));
+                   .json(Map.of("success", false, "message", "用户名或密码错误"));
                 return;
             }
             
             if (!user.active) {
                 ctx.status(HttpStatus.UNAUTHORIZED)
-                   .json(new ApiServer.ApiError(401, "用户已禁用"));
+                   .json(Map.of("success", false, "message", "用户已被禁用"));
                 return;
             }
             
-            // 验证密码
-            if (!PasswordUtil.verifyPassword(request.password, user.password, user.username)) {
-                ctx.status(HttpStatus.UNAUTHORIZED)
-                   .json(new ApiServer.ApiError(401, "密码错误"));
-                return;
-            }
+            // 生成 Token
+            String token = ApiServer.getInstance().generateToken(user);
             
-            // 创建会话
-            String token = AuthMiddleware.createSession(user);
-            
-            // 更新登录时间
+            // 更新最后登录时间
             UserDAO.updateLastLoginTime(user.id);
             
-            LoginResponse response = new LoginResponse();
-            response.token = token;
-            response.user = toUserInfo(user);
-            response.expiresIn = 24 * 60 * 60; // 24小时
+            user.password = null;
             
-            logger.info("API 登录成功: {}", user.username);
-            ctx.json(new ApiServer.ApiSuccess<>("登录成功", response));
-            
-        } catch (SQLException e) {
-            logger.error("登录失败: {}", e.getMessage(), e);
+            logger.info("用户登录: {}", user.username);
+            ctx.json(Map.of(
+                "success", true,
+                "token", token,
+                "user", user,
+                "message", "登录成功"
+            ));
+        } catch (Exception e) {
+            logger.error("登录失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(new ApiServer.ApiError(500, "登录失败: " + e.getMessage()));
+               .json(Map.of("success", false, "message", "登录失败: " + e.getMessage()));
         }
     }
     
     /**
      * 刷新 Token
+     * POST /api/auth/refresh
      */
-    public static void refreshToken(Context ctx) {
-        String oldToken = ctx.header("Authorization");
-        if (oldToken != null && oldToken.startsWith("Bearer ")) {
-            oldToken = oldToken.substring(7);
-        }
-        
-        AuthMiddleware.SessionInfo session = AuthMiddleware.getSession(oldToken);
-        if (session == null || session.isExpired()) {
+    public static void refresh(Context ctx) {
+        String token = ctx.header("Authorization");
+        if (token == null || !token.startsWith("Bearer ")) {
             ctx.status(HttpStatus.UNAUTHORIZED)
-               .json(new ApiServer.ApiError(401, "Token 无效或已过期"));
+               .json(Map.of("success", false, "message", "缺少认证 Token"));
             return;
         }
         
-        // 创建新 Token
-        String newToken = AuthMiddleware.createSession(session.user);
-        AuthMiddleware.destroySession(oldToken);
+        token = token.substring(7);
         
-        LoginResponse response = new LoginResponse();
-        response.token = newToken;
-        response.user = toUserInfo(session.user);
-        response.expiresIn = 24 * 60 * 60;
-        
-        ctx.json(new ApiServer.ApiSuccess<>("Token 已刷新", response));
+        try {
+            User user = ApiServer.getInstance().validateToken(token);
+            if (user == null) {
+                ctx.status(HttpStatus.UNAUTHORIZED)
+                   .json(Map.of("success", false, "message", "Token 无效或已过期"));
+                return;
+            }
+            
+            String newToken = ApiServer.getInstance().generateToken(user);
+            ctx.json(Map.of("success", true, "token", newToken));
+        } catch (Exception e) {
+            ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
+               .json(Map.of("success", false, "message", "Token 刷新失败"));
+        }
     }
     
     /**
      * 注销
+     * POST /api/auth/logout
      */
     public static void logout(Context ctx) {
-        String token = ctx.attribute("token");
-        if (token != null) {
-            AuthMiddleware.destroySession(token);
+        String token = ctx.header("Authorization");
+        if (token != null && token.startsWith("Bearer ")) {
+            token = token.substring(7);
+            ApiServer.getInstance().invalidateToken(token);
         }
-        ctx.json(new ApiServer.ApiSuccess<>("已注销", null));
+        ctx.json(Map.of("success", true, "message", "已注销"));
     }
     
     /**
      * 获取当前用户信息
+     * GET /api/auth/me
      */
     public static void getCurrentUser(Context ctx) {
-        User user = ctx.attribute("user");
+        User user = ctx.attribute("currentUser");
         if (user == null) {
             ctx.status(HttpStatus.UNAUTHORIZED)
-               .json(new ApiServer.ApiError(401, "未认证"));
+               .json(Map.of("success", false, "message", "未登录"));
             return;
         }
         
-        ctx.json(new ApiServer.ApiSuccess<>(toUserInfo(user)));
+        user.password = null;
+        ctx.json(Map.of("success", true, "user", user));
     }
     
     /**
-     * 转换为用户信息（去除敏感字段）
+     * 登录请求
      */
-    private static UserInfo toUserInfo(User user) {
-        UserInfo info = new UserInfo();
-        info.id = user.id;
-        info.username = user.username;
-        info.name = user.name;
-        info.role = user.role;
-        info.active = user.active;
-        return info;
-    }
-    
-    // DTO 类
     public static class LoginRequest {
         public String username;
         public String password;
-    }
-    
-    public static class LoginResponse {
-        public String token;
-        public UserInfo user;
-        public int expiresIn;
-    }
-    
-    public static class UserInfo {
-        public int id;
-        public String username;
-        public String name;
-        public String role;
-        public boolean active;
     }
 }
