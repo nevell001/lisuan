@@ -41,7 +41,7 @@ docker-compose stop
 docker-compose restart
 ```
 
-## 默认配置
+## 配置说明
 
 | 项目 | 值 |
 |-----|---|
@@ -49,8 +49,10 @@ docker-compose restart
 | 端口 | 3306 |
 | 数据库 | cashier_system |
 | 用户名 | cashier |
-| 密码 | YourStrongPassword123! |
-| Root 密码 | RootPassword123! |
+| 密码 | ⚠️ 请修改为您的密码 |
+| Root 密码 | ⚠️ 请修改为您的密码 |
+
+> **安全提示**: 请在 `docker-compose.yml` 和 `mysql-init/` 目录中的 SQL 脚本中修改默认密码！
 
 ## 访问服务
 
@@ -62,7 +64,7 @@ docker-compose restart
     - 端口: 3306
     - 数据库: cashier_system
     - 用户名: cashier
-    - 密码: YourStrongPassword123!
+    - 密码: (您设置的密码)
 
 ## 数据持久化
 
@@ -72,15 +74,15 @@ docker-compose restart
 
 ```bash
 # 备份到 docker/mysql-backup 目录
-docker exec cashier-mysql mysqldump -u root -pRootPassword123! cashier_system > docker/mysql-backup/backup_$(date +%Y%m%d).sql
+docker exec cashier-mysql mysqldump -u root -pYOUR_ROOT_PASSWORD cashier_system > docker/mysql-backup/backup_$(date +%Y%m%d).sql
 
 # 恢复备份
-docker exec -i cashier-mysql mysql -u root -pRootPassword123! cashier_system < docker/mysql-backup/backup_20250203.sql
+docker exec -i cashier-mysql mysql -u root -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-backup/backup_20250203.sql
 ```
 
 ## 配置文件
 
-- **docker-compose.yml**: Docker Compose 配置
+- **docker-compose.yml.example**: Docker Compose 配置示例（复制为 docker-compose.yml）
 - **docker/my.cnf**: MySQL 配置文件
 - **docker/mysql-init/**: 初始化 SQL 脚本
 - **docker/mysql-backup/**: 备份文件目录

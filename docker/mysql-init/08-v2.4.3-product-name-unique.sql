@@ -4,7 +4,7 @@
 -- 更新日期: 2026-03-07
 -- 说明: 为 products 表的 name 字段添加 UNIQUE 约束
 --
--- 使用方法: docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < 08-v2.4.3-product-name-unique.sql
+-- 使用方法: docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD --default-character-set=utf8mb4 cashier_system < 08-v2.4.3-product-name-unique.sql
 --
 -- 注意事项:
 -- 1. 执行此脚本前，请先检查并处理重复的商品名称

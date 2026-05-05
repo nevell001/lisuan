@@ -4,7 +4,7 @@
 -- 更新日期: 2026-03-08
 -- 说明: 修复促销表结构，添加 promotion_code 字段，修复日期字段类型问题
 --
--- 使用方法: docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < 09-v2.4.3-fix-promotions.sql
+-- 使用方法: docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD --default-character-set=utf8mb4 cashier_system < 09-v2.4.3-fix-promotions.sql
 -- ============================================
 
 SET NAMES utf8mb4;

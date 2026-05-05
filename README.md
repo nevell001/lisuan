@@ -57,10 +57,7 @@
 - 操作日志完整记录
 - 密码 BCrypt 加密存储
 
-### 📊 监控和告警
-- **Prometheus 监控** - 系统性能和数据库监控
-- **Grafana 仪表盘** - 可视化监控数据
-- **实时告警** - 系统异常和性能问题告警
+
 
 ## 🚀 快速开始
 
@@ -84,9 +81,6 @@ cd hello
 ```bash
 # 启动 MySQL 数据库
 docker-compose up -d mysql
-
-# 启动监控服务（可选）
-docker-compose up -d prometheus grafana
 ```
 
 **使用本地 MySQL**：
@@ -111,9 +105,7 @@ mvn clean package
 java -jar target/cashier-system-fx-2.4.6-jar-with-dependencies.jar
 ```
 
-### 访问监控服务
-- **Prometheus**: http://localhost:9090
-- **Grafana**: http://localhost:3000 (用户名: admin, 密码: admin123)
+
 
 ### 默认账户
 - **用户名**: `admin`
@@ -209,7 +201,6 @@ hello/
 - **连接池**: HikariCP 5.1.0
 - **数据导出**: Apache POI 5.2.5 (Excel) + Apache PDFBox 2.0.32 (PDF)
 - **测试框架**: JUnit 5 + TestFX + H2 Database
-- **监控**: Prometheus + Grafana
 
 ## 🔧 故障排除
 
@@ -241,6 +232,3 @@ hello/
 - 代码仓库: https://gitee.com/nevell/hello.git
 - 问题反馈: https://gitee.com/nevell/hello/issues
 
----
-
-**注意**: 本项目仅供学习和参考使用，不建议直接用于生产环境。

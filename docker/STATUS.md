@@ -56,7 +56,7 @@
 docker exec -it cashier-mysql bash
 
 # 连接MySQL
-mysql --socket=/var/run/mysqld/mysqld.sock -u cashier -pYourStrongPassword123!
+mysql --socket=/var/run/mysqld/mysqld.sock -u cashier -pYOUR_PASSWORD
 
 # 查看数据库
 SHOW DATABASES;
@@ -72,7 +72,7 @@ SHOW TABLES;
    - 端口: 3306
    - 数据库: cashier_system
    - 用户名: cashier
-   - 密码: YourStrongPassword123!
+   - 密码: (请修改您的密码)
 
 ### 2. 启动收银系统
 
@@ -100,8 +100,8 @@ java -jar target/cashier-system-fx.jar
 | **端口** | `3306` |
 | **数据库** | `cashier_system` |
 | **用户名** | `cashier` |
-| **密码** | `YourStrongPassword123!` |
-| **Root 密码** | `RootPassword123!` |
+| **密码** | (请修改 YOUR_CASHIER_PASSWORD_HERE) |
+| **Root 密码** | (请修改 YOUR_ROOT_PASSWORD_HERE) |
 
 ---
 
@@ -190,7 +190,7 @@ docker compose up -d
 docker ps | grep cashier
 
 # 测试连接
-docker exec cashier-mysql mysql --socket=/var/run/mysqld/mysqld.sock -u cashier -pYourStrongPassword123! -e "SELECT 1"
+docker exec cashier-mysql mysql --socket=/var/run/mysqld/mysqld.sock -u cashier -pYOUR_PASSWORD -e "SELECT 1"
 
 # 启动应用
 mvn javafx:run
@@ -220,7 +220,7 @@ docker logs -f cashier-mysql
 **解决方案**:
 ```bash
 # 重置cashier用户密码
-docker exec cashier-mysql mysql --socket=/var/run/mysqld/mysqld.sock -u root -pRootPassword123! <<EOF
+docker exec cashier-mysql mysql --socket=/var/run/mysqld/mysqld.sock -u root -pYOUR_ROOT_PASSWORD <<EOF
 ALTER USER 'cashier'@'%' IDENTIFIED BY 'YourNewPassword123!';
 FLUSH PRIVILEGES;
 EOF

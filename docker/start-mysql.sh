@@ -89,7 +89,7 @@ if docker ps | grep -q "cashier-mysql"; then
     echo -e "  端口: ${GREEN}3306${NC}"
     echo -e "  数据库: ${GREEN}cashier_system${NC}"
     echo -e "  用户名: ${GREEN}cashier${NC}"
-    echo -e "  密码: ${GREEN}YourStrongPassword123!${NC}"
+    echo -e "  密码: ${YELLOW}(请修改为您设置的密码)${NC}"
     echo ""
     echo "管理工具："
     echo -e "  推荐: DBeaver (${GREEN}https://dbeaver.io/download/${NC})"

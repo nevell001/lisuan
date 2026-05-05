@@ -54,13 +54,32 @@ else
     echo -e "${GREEN}✓ MySQL 容器已运行${NC}"
 fi
 
-# MySQL 配置
-MYSQL_ROOT_PASSWORD="RootPassword123!"
+# MySQL 配置 - ⚠️ 请修改以下密码！
+# 可以通过环境变量覆盖：
+#   export MYSQL_ROOT_PASSWORD="your_root_password"
+#   export MYSQL_PASSWORD="your_app_password"
+MYSQL_ROOT_PASSWORD="${MYSQL_ROOT_PASSWORD:-YOUR_ROOT_PASSWORD_HERE}"
 MYSQL_HOST="localhost"
 MYSQL_PORT="3306"
 MYSQL_DATABASE="cashier_system"
 MYSQL_USER="cashier"
-MYSQL_PASSWORD="YourStrongPassword123!"
+MYSQL_PASSWORD="${MYSQL_PASSWORD:-YOUR_CASHIER_PASSWORD_HERE}"
+
+# 检查是否使用了默认密码
+if [[ "$MYSQL_ROOT_PASSWORD" == "YOUR_ROOT_PASSWORD_HERE" ]] || [[ "$MYSQL_PASSWORD" == "YOUR_CASHIER_PASSWORD_HERE" ]]; then
+    echo ""
+    echo -e "${YELLOW}⚠️  安全警告：您正在使用默认密码占位符！${NC}"
+    echo -e "${YELLOW}   请设置环境变量或在脚本中修改密码：${NC}"
+    echo "   export MYSQL_ROOT_PASSWORD='your_secure_password'"
+    echo "   export MYSQL_PASSWORD='your_secure_password'"
+    echo ""
+    read -p "是否继续？(y/N) " -n 1 -r
+    echo
+    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+        echo "已取消操作"
+        exit 1
+    fi
+fi
 
 echo ""
 echo "========================================="
@@ -120,7 +139,7 @@ echo "配置信息："
 echo "  - 数据库主机: ${MYSQL_HOST}:${MYSQL_PORT}"
 echo "  - 数据库名称: ${MYSQL_DATABASE}"
 echo "  - 应用用户: ${MYSQL_USER}"
-echo "  - 密码: ${MYSQL_PASSWORD}"
+echo "  - 密码: (已配置)"
 
 echo ""
 echo "========================================="
@@ -145,8 +164,8 @@ echo "现在可以启动应用了："
 echo "  ./start.sh"
 echo ""
 echo "提示："
-echo "  - root 用户密码: ${MYSQL_ROOT_PASSWORD}"
+echo "  - root 用户密码: (请使用您设置的密码)"
 echo "  - 应用用户: ${MYSQL_USER}"
-echo "  - 应用密码: ${MYSQL_PASSWORD}"
+echo "  - 应用密码: (请使用您设置的密码)"
 echo "  - 推荐工具: DBeaver (https://dbeaver.io/download/)"
 echo ""

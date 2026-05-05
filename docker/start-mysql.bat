@@ -83,7 +83,7 @@ echo   Host: localhost
 echo   Port: 3306
 echo   Database: cashier_system
 echo   Username: cashier
-echo   Password: YourStrongPassword123!
+echo   Password: (请修改您的密码)
 echo.
 echo Management tools:
 echo   Recommended: DBeaver (https://dbeaver.io/download/)

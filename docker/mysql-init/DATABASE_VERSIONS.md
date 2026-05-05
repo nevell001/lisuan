@@ -25,7 +25,7 @@
 **推荐使用**：`00-init-complete.sql`
 
 ```bash
-docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/00-init-complete.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD --default-character-set=utf8mb4 cashier_system < docker/mysql-init/00-init-complete.sql
 ```
 
 **特点**：
@@ -48,7 +48,7 @@ docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-se
 
 **步骤 1：检查重复的商品名称**
 ```bash
-docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/08-v2.4.3-product-name-unique.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD --default-character-set=utf8mb4 cashier_system < docker/mysql-init/08-v2.4.3-product-name-unique.sql
 ```
 
 脚本会显示重复的商品名称列表，请根据实际情况进行处理：
@@ -75,7 +75,7 @@ command: --mysql-native-password=ON --bind-address=0.0.0.0 --skip-name-resolve
 
 2. 重新初始化数据库（如需要）：
 ```bash
-docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/00-init-complete.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD --default-character-set=utf8mb4 cashier_system < docker/mysql-init/00-init-complete.sql
 ```
 
 **从 v2.4.1 升级到 v2.4.2**
@@ -85,22 +85,22 @@ docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-se
 **从 v2.4.0 升级到 v2.4.1**
 
 ```bash
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
 ```
 
 **从 v2.3.1 升级到 v2.4.1**
 
 ```bash
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
 ```
 
 **从 v2.3.0 升级到 v2.4.1**
 
 ```bash
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/04-v2.3.1-updates.sql
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-init/04-v2.3.1-updates.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
 ```
 
 **特点**：
@@ -118,7 +118,7 @@ docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docke
 > **重要**：v2.4.3 版本修复了促销管理功能无法保存的问题，必须执行此脚本才能正常使用促销管理功能。
 
 ```bash
-docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/09-v2.4.3-fix-promotions.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD --default-character-set=utf8mb4 cashier_system < docker/mysql-init/09-v2.4.3-fix-promotions.sql
 ```
 
 **问题说明**：
@@ -143,7 +143,7 @@ DESC promotions;
 **检查交易明细重复记录**
 
 ```bash
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/07-fix-transaction-items.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-init/07-fix-transaction-items.sql
 ```
 
 **特点**：
@@ -156,7 +156,7 @@ docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docke
 ### 修复历史数据
 
 ```bash
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/07-fix-transaction-items.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-init/07-fix-transaction-items.sql
 ```
 
 注意：此脚本仅用于检查和诊断，不会自动修复数据。
@@ -238,22 +238,22 @@ SELECT '=== v{version} 数据库变更完成 ===' AS status;
 # 推荐使用完整初始化脚本（简单快速）
 ./install.sh
 # 或
-docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < docker/mysql-init/00-init-complete.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD --default-character-set=utf8mb4 cashier_system < docker/mysql-init/00-init-complete.sql
 ```
 
 ### 生产环境
 
 ```bash
 # 1. 备份数据库（必须！）
-docker exec cashier-mysql mysqldump -uroot -pRootPassword123! cashier_system > backup_$(date +%Y%m%d_%H%M%S).sql
+docker exec cashier-mysql mysqldump -uroot -pYOUR_ROOT_PASSWORD cashier_system > backup_$(date +%Y%m%d_%H%M%S).sql
 
 # 2. 执行增量升级（按顺序）
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/04-v2.3.1-updates.sql
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-init/04-v2.3.1-updates.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
 
 # 3. 验证升级结果
-docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system -e "DESC transaction_items;"
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system -e "DESC transaction_items;"
 ```
 
 ### 回滚策略
@@ -261,7 +261,7 @@ docker exec cashier-mysql mysql -uroot -pRootPassword123! cashier_system -e "DES
 **如果升级失败，可以恢复备份**：
 
 ```bash
-docker exec -i cashier-mysql mysql -uroot -pRootPassword123! cashier_system < backup_20260301_220000.sql
+docker exec -i cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < backup_20260301_220000.sql
 ```
 
 ---

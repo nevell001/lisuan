@@ -2,7 +2,7 @@
 -- 收银系统 MySQL 完整初始化脚本
 -- ============================================
 -- 此脚本整合了用户创建、表结构初始化和示例数据
--- 使用方法: docker exec cashier-mysql mysql -uroot -pRootPassword123! --default-character-set=utf8mb4 cashier_system < 00-init-complete.sql
+-- 使用方法: docker exec cashier-mysql mysql -uroot -pYOUR_PASSWORD --default-character-set=utf8mb4 cashier_system < 00-init-complete.sql
 -- 
 -- 版本: v2.4.3
 -- 更新日期: 2026-03-07
@@ -38,8 +38,9 @@ USE cashier_system;
 -- 注意：通过 docker-compose.yml 环境变量创建的用户可能权限不足
 -- 这个脚本确保用户有完整的权限
 
-CREATE USER IF NOT EXISTS 'cashier'@'%' IDENTIFIED BY 'YourStrongPassword123!';
-CREATE USER IF NOT EXISTS 'cashier'@'localhost' IDENTIFIED BY 'YourStrongPassword123!';
+-- ⚠️ 安全警告：请将 'YOUR_CASHIER_PASSWORD_HERE' 替换为您的实际密码！
+CREATE USER IF NOT EXISTS 'cashier'@'%' IDENTIFIED BY 'YOUR_CASHIER_PASSWORD_HERE';
+CREATE USER IF NOT EXISTS 'cashier'@'localhost' IDENTIFIED BY 'YOUR_CASHIER_PASSWORD_HERE';
 
 -- 2. 授予所有权限
 GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'%';
