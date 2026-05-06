@@ -26,7 +26,7 @@ APP_VERSION=$(grep -E "^[[:space:]]*<version>[^<]+</version>[[:space:]]*$" pom.x
 
 # Fallback if version not found
 if [ -z "$APP_VERSION" ]; then
-    APP_VERSION="2.4.5"
+    APP_VERSION="2.5.0"
 fi
 MAIN_CLASS="com.cashier.CashierSystemFXApplication"
 CONFIG_FILE="config/jvm.config"

@@ -6,7 +6,7 @@
 
 set -e
 
-APP_VERSION="2.4.2"
+APP_VERSION="2.5.0"
 DB_TYPE="none"
 DB_HOST="localhost"
 DB_PORT="3306"
@@ -155,7 +155,7 @@ if [ "$DB_TYPE" == "docker" ]; then
 
         echo "[Docker] Initializing database with complete schema..."
         docker exec cashier-mysql mysql -uroot -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null || true
-        echo "[Done] Database initialization completed (v2.4.5)"
+        echo "[Done] Database initialization completed (v2.5.0)"
         echo "[Note] Tables will be created automatically when you start the application"
         echo ""
     fi
@@ -194,7 +194,7 @@ if [ "$DB_TYPE" == "local" ]; then
             echo "[Local MySQL] Initializing database with complete schema..."
             mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null || true
 
-            echo "[Done] Database initialization completed (v2.4.5)"
+            echo "[Done] Database initialization completed (v2.5.0)"
             echo ""
         else
             echo "[Error] Failed to connect to MySQL"

@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 
 REM ============================================
 REM   Cashier System Start Script (Enhanced)
-REM   Version 2.4.5
+REM   Version 2.5.0
 REM ============================================
 
 set "APP_NAME=Cashier System"
@@ -14,7 +14,7 @@ for /f "tokens=2 delims=<>" %%a in ('findstr /R "<version>" pom.xml ^| findstr /
     goto :version_found
 )
 :version_found
-if "%APP_VERSION%"=="" set "APP_VERSION=2.4.5"
+if "%APP_VERSION%"=="" set "APP_VERSION=2.5.0"
 set "APP_DIR=%~dp0"
 set "MAIN_CLASS=com.cashier.CashierSystemFXApplication"
 set "CONFIG_FILE=%APP_DIR%\config\jvm.config"
