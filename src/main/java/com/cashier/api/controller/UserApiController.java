@@ -4,6 +4,7 @@ import com.cashier.api.ApiServer;
 import com.cashier.api.middleware.AuthMiddleware;
 import com.cashier.dao.UserDAO;
 import com.cashier.model.User;
+import com.cashier.util.PasswordUtil;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
@@ -107,7 +108,7 @@ public class UserApiController {
             
             User user = new User();
             user.username = request.username;
-            user.password = request.password; // TODO: 加密存储
+            user.password = PasswordUtil.hashPassword(request.password);
             user.name = request.name != null ? request.name : request.username;
             user.role = request.role != null ? request.role : "收银员";
             user.email = request.email != null ? request.email : "";
@@ -146,7 +147,7 @@ public class UserApiController {
             
             if (request.name != null) user.name = request.name;
             if (request.password != null && !request.password.isEmpty()) {
-                user.password = request.password; // TODO: 加密存储
+                user.password = PasswordUtil.hashPassword(request.password);
             }
             if (request.role != null) user.role = request.role;
             if (request.email != null) user.email = request.email;

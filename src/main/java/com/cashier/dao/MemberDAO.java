@@ -271,6 +271,19 @@ public class MemberDAO {
     }
 
     /**
+     * 更新会员积分（带 Connection，用于事务）
+     */
+    public static boolean updatePointsWithConnection(Connection conn, int id, double delta) throws SQLException {
+        String sql = "UPDATE members SET points = points + ? WHERE id = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setBigDecimal(1, java.math.BigDecimal.valueOf(delta));
+            pstmt.setInt(2, id);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
      * 根据手机号更新会员积分（兼容旧代码）
      */
     public static boolean updatePointsByPhone(String phone, double delta) throws SQLException {

@@ -1,15 +1,19 @@
 package com.cashier.api.controller;
 
 import com.cashier.api.ApiServer;
-import com.cashier.dao.TransactionDAO;
-import com.cashier.model.Transaction;
-import com.cashier.service.TransactionService;
+import com.cashier.dao.*;
+import com.cashier.model.*;
+import com.cashier.service.ReturnService;
+import com.cashier.util.DatabaseManager;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
+import java.sql.Connection;
+import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
@@ -133,18 +137,121 @@ public class TransactionApiController {
                 return;
             }
             
-            // TODO: 实现退货逻辑
-            // 1. 恢复库存
-            // 2. 创建退款记录
-            // 3. 更新会员积分
+            // 检查是否已退款
+            if ("REFUNDED".equals(transaction.status)) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of("success", false, "message", "该交易已退款"));
+                return;
+            }
             
-            logger.info("交易退款: {}", transactionId);
-            ctx.json(Map.of("success", true, "message", "退款成功", "transactionId", transactionId));
+            // 执行退款事务
+            boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
+                try {
+                    // 1. 创建退货订单
+                    ReturnOrder returnOrder = new ReturnOrder();
+                    returnOrder.originalTransactionId = transactionId;
+                    returnOrder.memberId = transaction.memberId > 0 ? transaction.memberId : null;
+                    returnOrder.memberName = transaction.memberName;
+                    returnOrder.totalAmount = transaction.finalAmount != null ? transaction.finalAmount : BigDecimal.ZERO;
+                    returnOrder.returnReason = "API退款";
+                    returnOrder.paymentMethod = mapPaymentMethodToRefund(transaction.paymentMethod);
+                    returnOrder.operatorName = transaction.operatorName;
+                    returnOrder.status = "COMPLETED"; // 直接完成，无需审批
+                    
+                    // 生成退货单号并插入
+                    returnOrder.returnOrderId = ReturnOrderDAO.generateNextReturnOrderId(conn);
+                    if (!ReturnOrderDAO.insertWithConnection(conn, returnOrder)) {
+                        return false;
+                    }
+                    
+                    // 2. 创建退货明细并恢复库存
+                    if (transaction.items != null && !transaction.items.isEmpty()) {
+                        List<ReturnOrderItem> returnItems = new ArrayList<>();
+                        for (Product product : transaction.items) {
+                            ReturnOrderItem item = new ReturnOrderItem();
+                            item.returnOrderId = returnOrder.returnOrderId;
+                            item.productId = product.id;
+                            item.productCode = product.productCode;
+                            item.productName = product.name;
+                            item.barcode = product.barcode;
+                            item.category = product.category;
+                            item.returnQuantity = product.quantity;
+                            item.unitPrice = product.price != null ? product.price : BigDecimal.ZERO;
+                            item.returnAmount = item.unitPrice.multiply(BigDecimal.valueOf(item.returnQuantity));
+                            item.condition = "GOOD";
+                            returnItems.add(item);
+                            
+                            // 恢复库存
+                            ProductDAO.updateQuantityWithConnection(conn, product.id, product.quantity);
+                        }
+                        
+                        if (!ReturnOrderItemDAO.batchInsertWithConnection(conn, returnItems)) {
+                            return false;
+                        }
+                    }
+                    
+                    // 3. 扣减会员积分（如果有会员）
+                    if (transaction.memberId > 0 && transaction.finalAmount != null) {
+                        // 积分按消费金额的 1% 计算，退货时扣减
+                        double pointsToDeduct = transaction.finalAmount.divide(BigDecimal.valueOf(100), 2, RoundingMode.DOWN).doubleValue();
+                        MemberDAO.updatePointsWithConnection(conn, transaction.memberId, -pointsToDeduct);
+                        
+                        // 重新计算会员等级
+                        Member member = MemberDAO.findByIdWithConnection(conn, transaction.memberId);
+                        if (member != null) {
+                            String newLevel = calculateMemberLevel(member.points);
+                            member.level = newLevel;
+                            MemberDAO.updateWithConnection(conn, member);
+                        }
+                    }
+                    
+                    // 4. 更新原交易状态
+                    TransactionDAO.updateStatusWithConnection(conn, transactionId, "REFUNDED");
+                    
+                    return true;
+                } catch (SQLException e) {
+                    logger.error("退款事务执行失败", e);
+                    throw e;
+                }
+            });
+            
+            if (success) {
+                logger.info("交易退款成功: {} - 金额: {}", transactionId, transaction.finalAmount);
+                ctx.json(Map.of("success", true, "message", "退款成功", 
+                    "transactionId", transactionId,
+                    "refundAmount", transaction.finalAmount));
+            } else {
+                ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                   .json(Map.of("success", false, "message", "退款处理失败"));
+            }
         } catch (Exception e) {
             logger.error("交易退款失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
                .json(Map.of("success", false, "message", "交易退款失败: " + e.getMessage()));
         }
+    }
+    
+    /**
+     * 映射支付方式到退款方式
+     */
+    private static String mapPaymentMethodToRefund(String paymentMethod) {
+        if (paymentMethod == null) return "CASH";
+        if (paymentMethod.contains("微信")) return "WECHAT";
+        if (paymentMethod.contains("支付宝")) return "ALIPAY";
+        if (paymentMethod.contains("银行卡") || paymentMethod.contains("刷卡")) return "CARD";
+        return "CASH";
+    }
+    
+    /**
+     * 根据积分计算会员等级
+     */
+    private static String calculateMemberLevel(BigDecimal points) {
+        if (points == null) points = BigDecimal.ZERO;
+        double p = points.doubleValue();
+        if (p >= 10000) return "钻石会员";
+        if (p >= 5000) return "金卡会员";
+        if (p >= 2000) return "银卡会员";
+        return "普通会员";
     }
     
     /**

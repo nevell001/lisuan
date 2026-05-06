@@ -398,4 +398,17 @@ public class TransactionDAO {
             }
         }
     }
+
+    /**
+     * 更新交易状态（带 Connection，用于事务）
+     */
+    public static boolean updateStatusWithConnection(Connection conn, String transactionId, String status) throws SQLException {
+        String sql = "UPDATE transactions SET status = ? WHERE transaction_id = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, status);
+            pstmt.setString(2, transactionId);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
 }

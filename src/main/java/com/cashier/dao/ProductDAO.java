@@ -449,6 +449,19 @@ public class ProductDAO {
     }
 
     /**
+     * 更新商品库存（带 Connection，用于事务）
+     */
+    public static boolean updateQuantityWithConnection(Connection conn, int id, int delta) throws SQLException {
+        String sql = "UPDATE products SET quantity = quantity + ? WHERE id = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, delta);
+            pstmt.setInt(2, id);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
      * 根据名称更新商品库存（兼容旧代码）
      */
     public static boolean updateQuantityByName(String name, int delta) throws SQLException {

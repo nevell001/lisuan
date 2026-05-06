@@ -16,6 +16,7 @@ public class Transaction {
     public String memberName;     // 会员姓名
     public String operatorUsername; // 操作员用户名
     public String operatorName;    // 操作员姓名
+    public String status;          // 交易状态：NORMAL（正常）、REFUNDED（已退款）
 
     public Transaction() {
         this.transactionId = "";
