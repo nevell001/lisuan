@@ -5,15 +5,21 @@ import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
+import javafx.scene.image.Image;
+import javafx.scene.image.ImageView;
 import javafx.scene.layout.VBox;
 import javafx.stage.DirectoryChooser;
+import javafx.stage.FileChooser;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import java.io.File;
+import java.nio.file.Files;
+import java.nio.file.StandardCopyOption;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 
 /**
  * 系统设置控制器
@@ -21,6 +27,8 @@ import java.util.Map;
  */
 public class SettingsController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(SettingsController.class);
+
+    private com.cashier.model.User currentUser;
 
     @FXML
     private TabPane settingsTabPane;
@@ -37,9 +45,6 @@ public class SettingsController {
 
     @FXML
     private TextField taxRateField;
-
-    @FXML
-    private ComboBox<String> currencyComboBox;
 
     @FXML
     private ComboBox<String> languageComboBox;
@@ -59,6 +64,18 @@ public class SettingsController {
 
     @FXML
     private CheckBox printLogoCheckBox;
+
+    @FXML
+    private TextField logoPathField;
+
+    @FXML
+    private ImageView logoPreviewImage;
+
+    @FXML
+    private Label logoPreviewPlaceholder;
+
+    @FXML
+    private Label logoInfoLabel;
 
     @FXML
     private CheckBox printBarcodeCheckBox;
@@ -135,19 +152,13 @@ public class SettingsController {
     private void initialize() {
         logger.info("SettingsController: 初始化系统设置...");
 
-        // 初始化货币下拉框
-        currencyComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
-            "CNY (人民币)",
-            "USD (美元)",
-            "EUR (欧元)"
-        ));
-        currencyComboBox.getSelectionModel().select(0);
-
         // 初始化语言下拉框
         languageComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
             "简体中文",
+            "繁體中文",
             "English",
-            "繁體中文"
+            "日本語",
+            "한국어"
         ));
         languageComboBox.getSelectionModel().select(0);
 
@@ -200,6 +211,18 @@ public class SettingsController {
     }
 
     /**
+     * 设置当前用户
+     * @param user 当前用户
+     */
+    public void setCurrentUser(com.cashier.model.User user) {
+        this.currentUser = user;
+        // 用户设置后重新加载设置
+        if (user != null) {
+            loadSettings();
+        }
+    }
+
+    /**
      * 加载设置
      */
     private void loadSettings() {
@@ -219,6 +242,16 @@ public class SettingsController {
         printLogoCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("printLogo", "true")));
         printBarcodeCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("printBarcode", "true")));
 
+        // 加载 Logo 路径
+        String logoPath = settings.getOrDefault("logoPath", "");
+        logoPathField.setText(logoPath);
+        if (!logoPath.isEmpty()) {
+            File logoFile = new File(logoPath);
+            if (logoFile.exists()) {
+                loadLogoPreview(logoFile);
+            }
+        }
+
         // 加载备份设置
         autoBackupCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("autoBackup", "false")));
         backupPathField.setText(settings.getOrDefault("backupPath", ""));
@@ -226,14 +259,29 @@ public class SettingsController {
         // 加载安全设置
         autoLogoutCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("autoLogout", "true")));
         passwordComplexityCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("passwordComplexity", "true")));
-        
+
         // 加载主题偏好
         String savedThemeCode = DataService.loadThemePreference();
         String savedThemeName = convertThemeCodeToName(savedThemeCode);
         themeComboBox.getSelectionModel().select(savedThemeName);
 
-        logger.info("SettingsController: 设置加载完成，当前主题: {}", savedThemeCode);
+        // 加载语言偏好 - 从数据库加载当前用户的语言偏好
+        String username = (currentUser != null) ? currentUser.username : "default";
+        String savedLanguage = DataService.loadLanguagePreference(username);
+        String savedLanguageName = convertLanguageTagToName(savedLanguage);
+        languageComboBox.getSelectionModel().select(savedLanguageName);
+
+        // 记录初始加载时的语言，用于检测变化
+        initialLanguage = savedLanguage;
+
+        // 初始化 I18nManager 的语言
+        applyLanguageSetting(savedLanguage);
+
+        logger.info("SettingsController: 设置加载完成，当前主题: {}, 当前语言: {}, 用户: {}", savedThemeCode, savedLanguage, username);
     }
+
+    /** 初始加载时的语言（用于检测变化） */
+    private String initialLanguage = null;
 
     /**
      * 处理保存基本设置
@@ -241,16 +289,81 @@ public class SettingsController {
     @FXML
     private void handleSaveBasicSettings() {
         if (validateBasicSettings()) {
+            // 检查语言是否变化（与初始加载时的语言对比）
+            String selectedLanguage = languageComboBox.getSelectionModel().getSelectedItem();
+            String newLanguageTag = selectedLanguage != null ? convertLanguageNameToTag(selectedLanguage) : "zh-CN";
+            boolean languageChanged = !newLanguageTag.equals(initialLanguage);
+
             saveSettings();
-            
+
             // 应用主题设置
             String selectedTheme = themeComboBox.getSelectionModel().getSelectedItem();
             if (selectedTheme != null) {
                 String themeCode = convertThemeNameToCode(selectedTheme);
                 applyThemeToCurrentScene(themeCode);
             }
-            
-            showSuccess("基本设置保存成功！");
+
+            // 应用语言设置
+            if (selectedLanguage != null) {
+                applyLanguageSetting(newLanguageTag);
+            }
+
+            if (languageChanged) {
+                // 语言已更改，提示用户重启
+                showLanguageRestartDialog();
+            } else {
+                showSuccess("基本设置保存成功！");
+            }
+        }
+    }
+
+    /**
+     * 显示语言重启对话框
+     */
+    private void showLanguageRestartDialog() {
+        Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
+        alert.setTitle("语言已更改");
+        alert.setHeaderText(null);
+        alert.setContentText("语言设置已保存，需要重启应用才能生效。\n\n是否立即重启？");
+
+        ButtonType restartButton = new ButtonType("立即重启", ButtonBar.ButtonData.OK_DONE);
+        ButtonType laterButton = new ButtonType("稍后重启", ButtonBar.ButtonData.CANCEL_CLOSE);
+        alert.getButtonTypes().setAll(restartButton, laterButton);
+
+        logger.info("显示语言重启对话框，等待用户选择...");
+
+        Optional<ButtonType> result = alert.showAndWait();
+        logger.info("用户选择: {}", result.map(bt -> bt.getText()).orElse("无"));
+
+        result.ifPresent(buttonType -> {
+            if (buttonType.equals(restartButton)) {
+                // 重启应用
+                logger.info("用户选择立即重启，开始重启应用...");
+                restartApplication();
+            } else {
+                logger.info("用户选择稍后重启");
+            }
+        });
+    }
+
+    /**
+     * 重启应用程序
+     */
+    private void restartApplication() {
+        try {
+            logger.info("正在重启应用...");
+            com.cashier.CashierSystemFXApplication app = com.cashier.CashierSystemFXApplication.getInstance();
+            if (app == null) {
+                logger.error("无法获取应用实例");
+                showError("重启应用失败：无法获取应用实例");
+                return;
+            }
+            logger.info("调用 logoutToLoginView 返回登录界面...");
+            app.logoutToLoginView(); // 回到登录界面，语言已更改
+            logger.info("重启应用完成");
+        } catch (Exception e) {
+            logger.error("重启应用失败", e);
+            showError("重启应用失败: " + e.getMessage());
         }
     }
 
@@ -293,6 +406,69 @@ public class SettingsController {
                 return "IntelliJ主题";
             default:
                 return "浅色主题";
+        }
+    }
+
+    /**
+     * 将语言名称转换为语言标签
+     * @param languageName 语言名称
+     * @return 语言标签
+     */
+    private String convertLanguageNameToTag(String languageName) {
+        if (languageName == null) {
+            return "zh-CN";
+        }
+        switch (languageName) {
+            case "简体中文":
+                return "zh-CN";
+            case "繁體中文":
+                return "zh-TW";
+            case "English":
+                return "en";
+            case "日本語":
+                return "ja";
+            case "한국어":
+                return "ko";
+            default:
+                return "zh-CN";
+        }
+    }
+
+    /**
+     * 将语言标签转换为语言名称
+     * @param languageTag 语言标签
+     * @return 语言名称
+     */
+    private String convertLanguageTagToName(String languageTag) {
+        if (languageTag == null) {
+            return "简体中文";
+        }
+        switch (languageTag) {
+            case "zh-CN":
+                return "简体中文";
+            case "zh-TW":
+                return "繁體中文";
+            case "en":
+                return "English";
+            case "ja":
+                return "日本語";
+            case "ko":
+                return "한국어";
+            default:
+                return "简体中文";
+        }
+    }
+
+    /**
+     * 应用语言设置
+     * @param languageTag 语言标签
+     */
+    private void applyLanguageSetting(String languageTag) {
+        try {
+            com.cashier.i18n.I18nManager.getInstance().setLocale(languageTag);
+            logger.info("语言已切换到: {}, I18nManager 当前语言标签: {}", languageTag, com.cashier.i18n.I18nManager.getInstance().getCurrentLanguageTag());
+        } catch (Exception e) {
+            logger.error("语言切换失败: {}", languageTag, e);
         }
     }
 
@@ -345,7 +521,7 @@ public class SettingsController {
     private void handleBrowseBackupPath() {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         directoryChooser.setTitle("选择备份目录");
-        
+
         // 设置初始目录
         String currentPath = backupPathField.getText().trim();
         if (!currentPath.isEmpty()) {
@@ -354,11 +530,123 @@ public class SettingsController {
                 directoryChooser.setInitialDirectory(initialDir);
             }
         }
-        
+
         File selectedDirectory = directoryChooser.showDialog(backupPathField.getScene().getWindow());
         if (selectedDirectory != null) {
             backupPathField.setText(selectedDirectory.getAbsolutePath());
         }
+    }
+
+    /**
+     * 处理选择 Logo 图片
+     */
+    @FXML
+    private void handleSelectLogo() {
+        FileChooser fileChooser = new FileChooser();
+        fileChooser.setTitle("选择 Logo 图片");
+
+        // 设置文件过滤器
+        FileChooser.ExtensionFilter imageFilter = new FileChooser.ExtensionFilter(
+            "图片文件 (*.png, *.jpg, *.jpeg, *.gif, *.bmp)",
+            "*.png", "*.PNG", "*.jpg", "*.JPG", "*.jpeg", "*.JPEG", "*.gif", "*.GIF", "*.bmp", "*.BMP"
+        );
+        fileChooser.getExtensionFilters().add(imageFilter);
+
+        // 设置初始目录
+        String currentPath = logoPathField.getText().trim();
+        if (!currentPath.isEmpty()) {
+            File currentFile = new File(currentPath);
+            if (currentFile.exists() && currentFile.getParentFile() != null) {
+                fileChooser.setInitialDirectory(currentFile.getParentFile());
+            }
+        }
+
+        File selectedFile = fileChooser.showOpenDialog(logoPathField.getScene().getWindow());
+        if (selectedFile != null) {
+            // 复制 Logo 到项目目录
+            copyLogoToProject(selectedFile);
+        }
+    }
+
+    /**
+     * 处理清除 Logo
+     */
+    @FXML
+    private void handleClearLogo() {
+        logoPathField.clear();
+        logoPreviewImage.setImage(null);
+        logoPreviewPlaceholder.setVisible(true);
+        logoInfoLabel.setText("建议尺寸: 200x200 像素");
+        printLogoCheckBox.setSelected(false);
+    }
+
+    /**
+     * 复制 Logo 到项目目录
+     */
+    private void copyLogoToProject(File sourceFile) {
+        try {
+            // 创建 logo 目录（如果不存在）
+            File logoDir = new File("logos");
+            if (!logoDir.exists()) {
+                logoDir.mkdirs();
+            }
+
+            // 目标文件路径
+            String extension = getFileExtension(sourceFile.getName());
+            String targetFileName = "store_logo" + extension;
+            File targetFile = new File(logoDir, targetFileName);
+
+            // 复制文件
+            Files.copy(sourceFile.toPath(), targetFile.toPath(), StandardCopyOption.REPLACE_EXISTING);
+
+            // 更新 UI
+            String relativePath = "logos/" + targetFileName;
+            logoPathField.setText(relativePath);
+            loadLogoPreview(targetFile);
+
+            showSuccess("Logo 已添加到项目");
+
+        } catch (Exception e) {
+            logger.error("复制 Logo 文件失败", e);
+            showError("添加 Logo 失败: " + e.getMessage());
+        }
+    }
+
+    /**
+     * 加载 Logo 预览
+     */
+    private void loadLogoPreview(File logoFile) {
+        if (logoFile != null && logoFile.exists()) {
+            try {
+                Image logoImage = new Image(logoFile.toURI().toString());
+                logoPreviewImage.setImage(logoImage);
+                logoPreviewPlaceholder.setVisible(false);
+
+                // 更新信息标签
+                int width = (int) logoImage.getWidth();
+                int height = (int) logoImage.getHeight();
+                logoInfoLabel.setText(String.format("当前尺寸: %dx%d 像素", width, height));
+
+            } catch (Exception e) {
+                logger.error("加载 Logo 预览失败", e);
+                logoPreviewPlaceholder.setVisible(true);
+            }
+        } else {
+            logoPreviewImage.setImage(null);
+            logoPreviewPlaceholder.setVisible(true);
+            logoInfoLabel.setText("建议尺寸: 200x200 像素");
+        }
+    }
+
+    /**
+     * 获取文件扩展名
+     */
+    private String getFileExtension(String fileName) {
+        int lastDotIndex = fileName.lastIndexOf('.');
+        if (lastDotIndex > 0 && lastDotIndex < fileName.length() - 1) {
+            return fileName.substring(lastDotIndex);
+        }
+        return ".png"; // 默认扩展名
     }
 
     /**
@@ -531,7 +819,6 @@ public class SettingsController {
         settings.put("storeAddress", storeAddressField.getText().trim());
         settings.put("storePhone", storePhoneField.getText().trim());
         settings.put("taxRate", taxRateField.getText().trim());
-        settings.put("currency", currencyComboBox.getSelectionModel().getSelectedItem());
         settings.put("language", languageComboBox.getSelectionModel().getSelectedItem());
         settings.put("theme", themeComboBox.getSelectionModel().getSelectedItem());
         
@@ -540,6 +827,7 @@ public class SettingsController {
         settings.put("printerName", printerNameField.getText().trim());
         settings.put("paperSize", paperSizeComboBox.getSelectionModel().getSelectedItem());
         settings.put("printLogo", String.valueOf(printLogoCheckBox.isSelected()));
+        settings.put("logoPath", logoPathField.getText().trim());
         settings.put("printBarcode", String.valueOf(printBarcodeCheckBox.isSelected()));
         
         // 备份设置
@@ -559,14 +847,20 @@ public class SettingsController {
             Double.parseDouble(settings.getOrDefault("taxRate", "0.0")),
             0
         );
-        
-            // 保存主题偏好
-            String themeName = settings.getOrDefault("theme", "浅色主题");
-            String themeCode = convertThemeNameToCode(themeName);
-            DataService.saveThemePreference(themeCode);
-        
-            logger.info("SettingsController: 设置保存成功，主题: {}", themeCode);
-        }
+
+        // 保存主题偏好
+        String themeName = settings.getOrDefault("theme", "浅色主题");
+        String themeCode = convertThemeNameToCode(themeName);
+        DataService.saveThemePreference(themeCode);
+
+        // 保存语言偏好 - 保存到当前用户
+        String languageName = settings.getOrDefault("language", "简体中文");
+        String languageTag = convertLanguageNameToTag(languageName);
+        String username = (currentUser != null) ? currentUser.username : "default";
+        DataService.saveLanguagePreference(username, languageTag);
+
+        logger.info("SettingsController: 设置保存成功，主题: {}, 语言: {}, 用户: {}", themeCode, languageTag, username);
+    }
     /**
      * 显示成功消息
      * @param message 消息内容

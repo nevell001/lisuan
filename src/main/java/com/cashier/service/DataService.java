@@ -316,6 +316,43 @@ public class DataService {
     }
 
     /**
+     * 加载语言偏好
+     */
+    public static String loadLanguagePreference() {
+        return loadLanguagePreference("default");
+    }
+
+    /**
+     * 加载指定用户的语言偏好
+     */
+    public static String loadLanguagePreference(String username) {
+        try {
+            return LanguagePreferenceDAO.getLanguagePreference(username);
+        } catch (SQLException e) {
+            logger.error("加载语言偏好失败", e);
+            return "zh-CN"; // 默认简体中文
+        }
+    }
+
+    /**
+     * 保存语言偏好
+     */
+    public static void saveLanguagePreference(String languageTag) {
+        saveLanguagePreference("default", languageTag);
+    }
+
+    /**
+     * 保存指定用户的语言偏好
+     */
+    public static void saveLanguagePreference(String username, String languageTag) {
+        try {
+            LanguagePreferenceDAO.setLanguagePreference(username, languageTag);
+        } catch (SQLException e) {
+            logger.error("保存语言偏好失败", e);
+        }
+    }
+
+    /**
      * 检查是否有活跃班次
      */
     public static boolean hasActiveShift() {

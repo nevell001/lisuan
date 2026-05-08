@@ -18,21 +18,21 @@
 
         <!-- 操作按钮 -->
         <Button fx:id="approveButton"
-                text="审批通过"
+                text="%purchase_approval.approve"
                 onAction="#handleApprove"
                 prefWidth="100"
                 disable="true"
                 styleClass="success-button"/>
 
         <Button fx:id="rejectButton"
-                text="审批拒绝"
+                text="%purchase_approval.reject"
                 onAction="#handleReject"
                 prefWidth="100"
                 disable="true"
                 styleClass="danger-button"/>
 
         <Button fx:id="viewDetailButton"
-                text="查看详情"
+                text="%purchase_approval.view_detail"
                 onAction="#handleViewDetail"
                 prefWidth="100"
                 disable="true"
@@ -41,18 +41,18 @@
         <Separator orientation="VERTICAL"/>
 
         <!-- 搜索 -->
-        <Label text="搜索:"/>
+        <Label text="%purchase_approval.search_label"/>
         <TextField fx:id="searchField"
-                  promptText="输入订单号或供应商"
+                  promptText="%purchase_approval.search_hint"
                   prefWidth="200"
                   onAction="#handleSearch"/>
 
-        <Button text="搜索"
+        <Button text="%purchase_approval.search"
                 onAction="#handleSearch"
                 prefWidth="60"
                 styleClass="secondary-button"/>
 
-        <Button text="刷新"
+        <Button text="%purchase_approval.refresh"
                 onAction="#handleRefresh"
                 prefWidth="60"
                 styleClass="secondary-button"/>
@@ -60,8 +60,8 @@
         <Region HBox.hgrow="ALWAYS"/>
 
         <!-- 统计信息 -->
-        <Label fx:id="countLabel" text="当前显示: 0 条" style="-fx-text-fill: #757575;"/>
-        <Label fx:id="pendingCountLabel" text="待审批: 0 条" style="-fx-text-fill: #f44336; -fx-font-weight: bold;"/>
+        <Label fx:id="countLabel" text="%purchase_approval.current_display" style="-fx-text-fill: #757575;"/>
+        <Label fx:id="pendingCountLabel" text="%purchase_approval.pending_count" style="-fx-text-fill: #f44336; -fx-font-weight: bold;"/>
     </HBox>
 
     <!-- 待审批订单表格 -->
@@ -69,14 +69,14 @@
               VBox.vgrow="ALWAYS"
               styleClass="purchase-approval-table">
         <columns>
-            <TableColumn fx:id="orderNoColumn" text="订单号" prefWidth="150"/>
-            <TableColumn fx:id="supplierColumn" text="供应商" prefWidth="200"/>
-            <TableColumn fx:id="purchaseDateColumn" text="采购日期" prefWidth="100"/>
-            <TableColumn fx:id="totalAmountColumn" text="总金额(元)" prefWidth="100"/>
-            <TableColumn fx:id="purchaserColumn" text="采购人" prefWidth="100"/>
+            <TableColumn fx:id="orderNoColumn" text="%purchase_approval.order_no" prefWidth="150"/>
+            <TableColumn fx:id="supplierColumn" text="%purchase_approval.supplier" prefWidth="200"/>
+            <TableColumn fx:id="purchaseDateColumn" text="%purchase_approval.purchase_date" prefWidth="100"/>
+            <TableColumn fx:id="totalAmountColumn" text="%purchase_approval.total_amount" prefWidth="100"/>
+            <TableColumn fx:id="purchaserColumn" text="%purchase_approval.purchaser" prefWidth="100"/>
         </columns>
         <placeholder>
-            <Label text="暂无待审批订单" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
+            <Label text="%purchase_approval.no_data" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
         </placeholder>
     </TableView>
 

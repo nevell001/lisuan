@@ -293,13 +293,39 @@ public class NetworkPrinterDevice implements PrinterDevice {
      * 打印 Logo（如果配置了）
      */
     private void printLogo() throws IOException {
-        // TODO: 实现Logo打印（需要位图数据）
-        // 这里发送居中对齐指令
-        sendESCPOSCommand(EscPosUtils.ALIGN_CENTER);
-        outputStream.write("收银系统".getBytes("GBK"));
-        outputStream.write(EscPosUtils.LINE_FEED);
-        outputStream.write(EscPosUtils.LINE_FEED);
-        sendESCPOSCommand(EscPosUtils.ALIGN_LEFT);
+        // 尝试从配置获取 Logo 路径
+        String logoPath = configuration.get("logoPath");
+
+        if (logoPath != null && !logoPath.isEmpty()) {
+            // 尝试加载图片 Logo
+            byte[] logoData = LogoPrinter.loadLogoFromFile(logoPath, paperWidth);
+            if (logoData != null) {
+                byte[] fullCommand = LogoPrinter.generateLogoPrintCommand(logoData, true);
+                if (fullCommand.length > 0) {
+                    outputStream.write(fullCommand);
+                    logger.debug("已打印图片 Logo: {}", logoPath);
+                    return;
+                }
+            }
+        }
+
+        // 尝试从资源加载默认 Logo
+        byte[] resourceLogo = LogoPrinter.loadLogoFromResource("images/logo.png", paperWidth);
+        if (resourceLogo != null) {
+            byte[] fullCommand = LogoPrinter.generateLogoPrintCommand(resourceLogo, true);
+            if (fullCommand.length > 0) {
+                outputStream.write(fullCommand);
+                logger.debug("已打印默认资源 Logo");
+                return;
+            }
+        }
+
+        // 如果没有图片 Logo，使用文本 Logo 作为备用
+        byte[] textLogo = LogoPrinter.createTextLogo("收银系统");
+        if (textLogo != null) {
+            outputStream.write(textLogo);
+            logger.debug("已打印文本 Logo");
+        }
     }
     
     @Override

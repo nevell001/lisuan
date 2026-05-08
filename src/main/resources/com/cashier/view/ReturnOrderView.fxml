@@ -15,84 +15,84 @@
 
     <!-- 顶部工具栏 -->
     <HBox spacing="10" alignment="CENTER_LEFT">
-        <Button text="创建退货" onAction="#handleCreateReturn" styleClass="primary-button" prefWidth="100"/>
-        <TextField fx:id="searchField" prefWidth="200" promptText="搜索退货单号或会员名"/>
+        <Button text="%return_order_list.create" onAction="#handleCreateReturn" styleClass="primary-button" prefWidth="100"/>
+        <TextField fx:id="searchField" prefWidth="200" promptText="%return_order_list.search_hint"/>
         <ComboBox fx:id="statusFilter" prefWidth="120"/>
-        <DatePicker fx:id="startDatePicker" prefWidth="150" promptText="开始日期"/>
-        <DatePicker fx:id="endDatePicker" prefWidth="150" promptText="结束日期"/>
-        <Button text="搜索" onAction="#handleSearch" styleClass="primary-button"/>
-        <Button text="刷新" onAction="#handleRefresh"/>
-        <Button text="导出" onAction="#handleExport" styleClass="success-button"/>
+        <DatePicker fx:id="startDatePicker" prefWidth="150" promptText="%return_order_list.date_from"/>
+        <DatePicker fx:id="endDatePicker" prefWidth="150" promptText="%return_order_list.date_to"/>
+        <Button text="%return_order_list.search" onAction="#handleSearch" styleClass="primary-button"/>
+        <Button text="%return_order_list.refresh" onAction="#handleRefresh"/>
+        <Button text="%return_order_list.export" onAction="#handleExport" styleClass="success-button"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Label text="退货订单管理" styleClass="title-label" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+        <Label text="%return_order_list.title" styleClass="title-label" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
     </HBox>
 
     <SplitPane dividerPositions="0.6" VBox.vgrow="ALWAYS">
         <!-- 左侧：退货订单列表 -->
         <TableView fx:id="returnOrderTable" VBox.vgrow="ALWAYS">
             <columns>
-                <TableColumn fx:id="returnOrderIdColumn" text="退货单号" prefWidth="150"/>
-                <TableColumn fx:id="memberNameColumn" text="会员名称" prefWidth="100"/>
-                <TableColumn fx:id="returnDateColumn" text="退货日期" prefWidth="150"/>
-                <TableColumn fx:id="totalAmountColumn" text="退货金额" prefWidth="100"/>
-                <TableColumn fx:id="statusColumn" text="状态" prefWidth="80"/>
-                <TableColumn fx:id="operatorNameColumn" text="操作员" prefWidth="80"/>
+                <TableColumn fx:id="returnOrderIdColumn" text="%return_order_list.return_id" prefWidth="150"/>
+                <TableColumn fx:id="memberNameColumn" text="%return_order_list.member_name" prefWidth="100"/>
+                <TableColumn fx:id="returnDateColumn" text="%return_order_list.return_date" prefWidth="150"/>
+                <TableColumn fx:id="totalAmountColumn" text="%return_order_list.total_amount" prefWidth="100"/>
+                <TableColumn fx:id="statusColumn" text="%return_order_list.status" prefWidth="80"/>
+                <TableColumn fx:id="operatorNameColumn" text="%return_order_list.operator" prefWidth="80"/>
             </columns>
         </TableView>
 
         <!-- 右侧：退货订单详情 -->
         <VBox spacing="10">
-            <Label text="退货订单详情" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
-            
+            <Label text="%return_order_list.detail_title" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+
             <!-- 订单基本信息 -->
             <GridPane hgap="10" vgap="5">
-                <Label text="退货单号:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                <Label text="%return_order_list.return_id_label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                 <Label fx:id="returnOrderIdLabel" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                
-                <Label text="会员名称:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+
+                <Label text="%return_order_list.member_name_label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                 <Label fx:id="memberNameLabel" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                
-                <Label text="退货金额:" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+
+                <Label text="%return_order_list.total_amount_label" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
                 <Label fx:id="totalAmountLabel" GridPane.columnIndex="3" GridPane.rowIndex="0" style="-fx-text-fill: red; -fx-font-weight: bold;"/>
-                
-                <Label text="状态:" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+
+                <Label text="%return_order_list.status_label" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
                 <Label fx:id="statusLabel" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
-                
-                <Label text="操作员:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+
+                <Label text="%return_order_list.operator_label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
                 <Label fx:id="operatorNameLabel" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                
-                <Label text="退货日期:" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+
+                <Label text="%return_order_list.return_date_label" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
                 <Label fx:id="returnDateLabel" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
             </GridPane>
 
             <!-- 退货原因 -->
             <VBox spacing="5">
-                <Label text="退货原因:"/>
+                <Label text="%return_order_list.reason_label"/>
                 <TextArea fx:id="returnReasonTextArea" prefRowCount="2" editable="false" wrapText="true"/>
             </VBox>
 
             <!-- 备注 -->
             <VBox spacing="5">
-                <Label text="备注:"/>
+                <Label text="%return_order_list.notes_label"/>
                 <TextArea fx:id="notesTextArea" prefRowCount="2" editable="false" wrapText="true"/>
             </VBox>
 
             <!-- 退货明细 -->
             <VBox spacing="5" VBox.vgrow="ALWAYS">
                 <HBox spacing="10" alignment="CENTER_LEFT">
-                    <Label text="退货明细" style="-fx-font-weight: bold;"/>
-                    <Button text="查看原交易" onAction="#handleViewOriginalTransaction" prefWidth="120"/>
-                    <Button text="打印退货单据" onAction="#handlePrintReturnReceipt" styleClass="primary-button" prefWidth="140"/>
-                    <Button text="完成退货" onAction="#handleCompleteReturn" styleClass="success-button" prefWidth="120"/>
+                    <Label text="%return_order_list.item_title" style="-fx-font-weight: bold;"/>
+                    <Button text="%return_order_list.view_original" onAction="#handleViewOriginalTransaction" prefWidth="120"/>
+                    <Button text="%return_order_list.print_receipt" onAction="#handlePrintReturnReceipt" styleClass="primary-button" prefWidth="140"/>
+                    <Button text="%return_order_list.complete" onAction="#handleCompleteReturn" styleClass="success-button" prefWidth="120"/>
                 </HBox>
                 <TableView fx:id="itemTable" VBox.vgrow="ALWAYS">
                     <columns>
-                        <TableColumn fx:id="productCodeColumn" text="商品编号" prefWidth="100"/>
-                        <TableColumn fx:id="productNameColumn" text="商品名称" prefWidth="150"/>
-                        <TableColumn fx:id="returnQuantityColumn" text="退货数量" prefWidth="80"/>
-                        <TableColumn fx:id="unitPriceColumn" text="单价" prefWidth="80"/>
-                        <TableColumn fx:id="returnAmountColumn" text="退货金额" prefWidth="100"/>
-                        <TableColumn fx:id="conditionColumn" text="商品状态" prefWidth="80"/>
+                        <TableColumn fx:id="productCodeColumn" text="%return_order.product_code" prefWidth="100"/>
+                        <TableColumn fx:id="productNameColumn" text="%return_order.product_name" prefWidth="150"/>
+                        <TableColumn fx:id="returnQuantityColumn" text="%return_order.return_quantity" prefWidth="80"/>
+                        <TableColumn fx:id="unitPriceColumn" text="%return_order.unit_price" prefWidth="80"/>
+                        <TableColumn fx:id="returnAmountColumn" text="%return_order.return_amount" prefWidth="100"/>
+                        <TableColumn fx:id="conditionColumn" text="%return_order.condition" prefWidth="80"/>
                     </columns>
                 </TableView>
             </VBox>

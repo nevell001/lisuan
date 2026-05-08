@@ -18,30 +18,30 @@
         </padding>
 
         <!-- 时间范围选择 -->
-        <Label text="时间范围:"/>
+        <Label text="%purchase_report.time_range"/>
         <ComboBox fx:id="timeRangeComboBox" prefWidth="120"/>
 
-        <Label text="开始日期:"/>
+        <Label text="%purchase_report.start_date"/>
         <DatePicker fx:id="startDatePicker" prefWidth="150"/>
 
-        <Label text="结束日期:"/>
+        <Label text="%purchase_report.end_date"/>
         <DatePicker fx:id="endDatePicker" prefWidth="150"/>
 
-        <Label text="供应商:"/>
+        <Label text="%purchase_report.supplier_label"/>
         <ComboBox fx:id="supplierComboBox" prefWidth="200"/>
 
         <Region HBox.hgrow="ALWAYS"/>
 
         <!-- 操作按钮 -->
         <Button fx:id="queryButton"
-                text="查询"
+                text="%purchase_report.query"
                 onAction="#handleQuery"
                 prefWidth="100"
                 prefHeight="35"
                 styleClass="primary-button"/>
 
         <Button fx:id="exportButton"
-                text="导出"
+                text="%purchase_report.export"
                 onAction="#handleExport"
                 prefWidth="100"
                 prefHeight="35"
@@ -62,7 +62,7 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <Label text="总订单数" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label text="%purchase_report.total_orders" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
                     <Label fx:id="totalOrdersLabel" text="0" style="-fx-text-fill: #3F51B5; -fx-font-size: 22px; -fx-font-weight: bold;"/>
                 </VBox>
 
@@ -70,7 +70,7 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <Label text="总金额" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label text="%purchase_report.total_amount" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
                     <Label fx:id="totalAmountLabel" text="¥0.00" style="-fx-text-fill: #4CAF50; -fx-font-size: 22px; -fx-font-weight: bold;"/>
                 </VBox>
 
@@ -78,7 +78,7 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <Label text="总数量" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label text="%purchase_report.total_quantity" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
                     <Label fx:id="totalQuantityLabel" text="0" style="-fx-text-fill: #FF9800; -fx-font-size: 22px; -fx-font-weight: bold;"/>
                 </VBox>
 
@@ -86,7 +86,7 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <Label text="平均订单金额" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label text="%purchase_report.avg_order_amount" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
                     <Label fx:id="avgOrderAmountLabel" text="¥0.00" style="-fx-text-fill: #9C27B0; -fx-font-size: 22px; -fx-font-weight: bold;"/>
                 </VBox>
 
@@ -95,7 +95,7 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <Label text="待审批订单" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label text="%purchase_report.pending_orders" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
                     <Label fx:id="pendingOrdersLabel" text="0" style="-fx-text-fill: #F44336; -fx-font-size: 22px; -fx-font-weight: bold;"/>
                 </VBox>
 
@@ -103,7 +103,7 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <Label text="已审批订单" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label text="%purchase_report.approved_orders" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
                     <Label fx:id="approvedOrdersLabel" text="0" style="-fx-text-fill: #2196F3; -fx-font-size: 22px; -fx-font-weight: bold;"/>
                 </VBox>
 
@@ -111,7 +111,7 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <Label text="已完成订单" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label text="%purchase_report.completed_orders" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
                     <Label fx:id="completedOrdersLabel" text="0" style="-fx-text-fill: #00BCD4; -fx-font-size: 22px; -fx-font-weight: bold;"/>
                 </VBox>
             </GridPane>
@@ -134,7 +134,7 @@
                     <padding>
                         <Insets top="12" right="12" bottom="12" left="12"/>
                     </padding>
-                    <Label text="订单状态分布" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    <Label text="%purchase_report.status_distribution" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
                     <PieChart fx:id="statusPieChart" VBox.vgrow="ALWAYS" legendSide="RIGHT"/>
                 </VBox>
 
@@ -143,13 +143,13 @@
                     <padding>
                         <Insets top="12" right="12" bottom="12" left="12"/>
                     </padding>
-                    <Label text="采购金额趋势" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
+                    <Label text="%purchase_report.amount_trend" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
                     <LineChart fx:id="amountTrendLineChart" VBox.vgrow="ALWAYS">
                         <xAxis>
-                            <CategoryAxis label="日期"/>
+                            <CategoryAxis label="%purchase_report.date_axis"/>
                         </xAxis>
                         <yAxis>
-                            <NumberAxis label="金额（元）"/>
+                            <NumberAxis label="%purchase_report.amount_axis"/>
                         </yAxis>
                     </LineChart>
                 </VBox>
@@ -159,13 +159,13 @@
                     <padding>
                         <Insets top="12" right="12" bottom="12" left="12"/>
                     </padding>
-                    <Label text="供应商采购对比" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #FF9800;"/>
+                    <Label text="%purchase_report.supplier_comparison" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #FF9800;"/>
                     <BarChart fx:id="supplierComparisonBarChart" VBox.vgrow="ALWAYS">
                         <xAxis>
-                            <CategoryAxis label="供应商"/>
+                            <CategoryAxis label="%purchase_report.supplier_axis"/>
                         </xAxis>
                         <yAxis>
-                            <NumberAxis label="金额（元）"/>
+                            <NumberAxis label="%purchase_report.amount_axis"/>
                         </yAxis>
                     </BarChart>
                 </VBox>
@@ -177,54 +177,54 @@
             <padding>
                 <Insets top="5" right="10" bottom="5" left="10"/>
             </padding>
-            
+
             <!-- 采购订单明细 Tab -->
-            <Tab text="采购订单明细">
+            <Tab text="%purchase_report.tab_orders">
                 <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
                     <padding>
                         <Insets top="5" right="10" bottom="5" left="10"/>
                     </padding>
                     <TableView fx:id="orderTable" VBox.vgrow="ALWAYS">
                         <columns>
-                            <TableColumn fx:id="orderNoColumn" text="订单编号" prefWidth="150"/>
-                            <TableColumn fx:id="supplierColumn" text="供应商" prefWidth="200"/>
-                            <TableColumn fx:id="dateColumn" text="订单日期" prefWidth="120"/>
-                            <TableColumn fx:id="amountColumn" text="订单金额" prefWidth="120"/>
-                            <TableColumn fx:id="quantityColumn" text="商品数量" prefWidth="100"/>
-                            <TableColumn fx:id="statusColumn" text="状态" prefWidth="100"/>
+                            <TableColumn fx:id="orderNoColumn" text="%purchase_report.order_no" prefWidth="150"/>
+                            <TableColumn fx:id="supplierColumn" text="%purchase_report.supplier" prefWidth="200"/>
+                            <TableColumn fx:id="dateColumn" text="%purchase_report.order_date" prefWidth="120"/>
+                            <TableColumn fx:id="amountColumn" text="%purchase_report.order_amount" prefWidth="120"/>
+                            <TableColumn fx:id="quantityColumn" text="%purchase_report.product_quantity" prefWidth="100"/>
+                            <TableColumn fx:id="statusColumn" text="%purchase_report.status" prefWidth="100"/>
                         </columns>
                     </TableView>
                 </ScrollPane>
             </Tab>
 
             <!-- 供应商采购排名 Tab -->
-            <Tab text="供应商采购排名">
+            <Tab text="%purchase_report.tab_suppliers">
                 <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
                     <padding>
                         <Insets top="5" right="10" bottom="5" left="10"/>
                     </padding>
                     <TableView fx:id="supplierRankTable" VBox.vgrow="ALWAYS">
                         <columns>
-                            <TableColumn fx:id="rankColumn" text="排名" prefWidth="80"/>
-                            <TableColumn fx:id="supplierNameColumn" text="供应商名称" prefWidth="200"/>
-                            <TableColumn fx:id="orderCountColumn" text="订单数" prefWidth="100"/>
-                            <TableColumn fx:id="supplierAmountColumn" text="采购金额" prefWidth="150"/>
+                            <TableColumn fx:id="rankColumn" text="%purchase_report.rank" prefWidth="80"/>
+                            <TableColumn fx:id="supplierNameColumn" text="%purchase_report.supplier_name" prefWidth="200"/>
+                            <TableColumn fx:id="orderCountColumn" text="%purchase_report.order_count" prefWidth="100"/>
+                            <TableColumn fx:id="supplierAmountColumn" text="%purchase_report.supplier_amount" prefWidth="150"/>
                         </columns>
                     </TableView>
                 </ScrollPane>
             </Tab>
 
             <!-- 分类采购统计 Tab -->
-            <Tab text="分类采购统计">
+            <Tab text="%purchase_report.tab_category">
                 <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
                     <padding>
                         <Insets top="5" right="10" bottom="5" left="10"/>
                     </padding>
                     <TableView fx:id="categoryTable" VBox.vgrow="ALWAYS">
                         <columns>
-                            <TableColumn fx:id="categoryColumn" text="分类" prefWidth="150"/>
-                            <TableColumn fx:id="categoryQuantityColumn" text="采购数量" prefWidth="100"/>
-                            <TableColumn fx:id="categoryAmountColumn" text="采购金额" prefWidth="150"/>
+                            <TableColumn fx:id="categoryColumn" text="%purchase_report.category" prefWidth="150"/>
+                            <TableColumn fx:id="categoryQuantityColumn" text="%purchase_report.category_quantity" prefWidth="100"/>
+                            <TableColumn fx:id="categoryAmountColumn" text="%purchase_report.category_amount" prefWidth="150"/>
                         </columns>
                     </TableView>
                 </ScrollPane>

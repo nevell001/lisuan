@@ -18,13 +18,13 @@
                 <Insets top="10" right="10" bottom="5" left="10"/>
             </padding>
 
-            <Label text="开始日期:"/>
+            <Label text="%transaction.date_from"/>
             <DatePicker fx:id="startDatePicker" prefWidth="150"/>
 
-            <Label text="结束日期:"/>
+            <Label text="%transaction.date_to"/>
             <DatePicker fx:id="endDatePicker" prefWidth="150"/>
 
-            <Label text="支付方式:"/>
+            <Label text="%transaction.payment_method"/>
             <ComboBox fx:id="paymentMethodComboBox" prefWidth="100"/>
         </HBox>
 
@@ -34,18 +34,18 @@
                 <Insets top="5" right="10" bottom="10" left="10"/>
             </padding>
 
-            <Label text="搜索:"/>
+            <Label text="%transaction.search_label"/>
             <TextField fx:id="searchField"
-                      promptText="订单号或会员手机号"
+                      promptText="%transaction.search_hint"
                       prefWidth="200"
                       onAction="#handleSearch"/>
 
-            <Button text="搜索"
+            <Button text="%transaction.search_button"
                     onAction="#handleSearch"
                     prefWidth="60"
                     styleClass="secondary-button"/>
 
-            <Button text="清除"
+            <Button text="%common.clear"
                     onAction="#handleClearSearch"
                     prefWidth="60"
                     styleClass="secondary-button"/>
@@ -53,25 +53,25 @@
             <Region HBox.hgrow="ALWAYS"/>
 
             <Button fx:id="viewDetailButton"
-                    text="查看详情"
+                    text="%transaction.view_detail"
                     onAction="#handleViewDetail"
                     prefWidth="100"
                     styleClass="primary-button"/>
 
             <Button fx:id="createReturnButton"
-                    text="创建退货"
+                    text="%transaction.create_return"
                     onAction="#handleCreateReturn"
                     prefWidth="100"
                     styleClass="warning-button"/>
 
             <Button fx:id="exportButton"
-                    text="导出"
+                    text="%transaction.export"
                     onAction="#handleExport"
                     prefWidth="60"
                     styleClass="secondary-button"/>
 
             <Button fx:id="refreshButton"
-                    text="刷新"
+                    text="%transaction.refresh_button"
                     onAction="#handleRefresh"
                     prefWidth="60"
                     styleClass="secondary-button"/>
@@ -83,8 +83,8 @@
         <padding>
             <Insets top="5" right="10" bottom="5" left="10"/>
         </padding>
-        <Label fx:id="countLabel" text="交易数量: 0" style="-fx-font-size: 13px; -fx-text-fill: #757575;"/>
-        <Label fx:id="totalAmountLabel" text="总金额: ¥0.00" style="-fx-font-size: 13px; -fx-text-fill: #4CAF50; -fx-font-weight: bold;"/>
+        <Label fx:id="countLabel" text="%transaction.count" style="-fx-font-size: 13px; -fx-text-fill: #757575;"/>
+        <Label fx:id="totalAmountLabel" text="%transaction.total_amount" style="-fx-font-size: 13px; -fx-text-fill: #4CAF50; -fx-font-weight: bold;"/>
     </HBox>
 
     <!-- 交易记录表格 -->
@@ -92,15 +92,15 @@
               VBox.vgrow="ALWAYS"
               styleClass="transaction-table">
         <columns>
-            <TableColumn fx:id="transactionIdColumn" text="订单号" prefWidth="150"/>
-            <TableColumn fx:id="timestampColumn" text="交易时间" prefWidth="160"/>
-            <TableColumn fx:id="itemsColumn" text="商品" prefWidth="250"/>
-            <TableColumn fx:id="amountColumn" text="金额(元)" prefWidth="100"/>
-            <TableColumn fx:id="paymentColumn" text="支付方式" prefWidth="80"/>
-            <TableColumn fx:id="memberColumn" text="会员" prefWidth="120"/>
+            <TableColumn fx:id="transactionIdColumn" text="%transaction.order_id" prefWidth="150"/>
+            <TableColumn fx:id="timestampColumn" text="%transaction.time_column" prefWidth="160"/>
+            <TableColumn fx:id="itemsColumn" text="%transaction.items_column" prefWidth="250"/>
+            <TableColumn fx:id="amountColumn" text="%transaction.amount_column" prefWidth="100"/>
+            <TableColumn fx:id="paymentColumn" text="%transaction.payment_column" prefWidth="80"/>
+            <TableColumn fx:id="memberColumn" text="%transaction.member_column" prefWidth="120"/>
         </columns>
         <placeholder>
-            <Label text="暂无交易记录" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
+            <Label text="%transaction.no_data" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
         </placeholder>
     </TableView>
 

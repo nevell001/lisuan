@@ -3,6 +3,7 @@ package com.cashier.controller;
 import com.cashier.dao.*;
 import com.cashier.model.*;
 import com.cashier.service.ReturnService;
+import com.cashier.util.CurrencyUtil;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.beans.property.BooleanProperty;
 import javafx.beans.property.SimpleBooleanProperty;
@@ -226,13 +227,13 @@ public class CreateReturnOrderDialogController {
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    setText(String.format("¥%.2f", item));
+                    setText(CurrencyUtil.format(item));
                 }
             }
         });
 
         // 退货金额
-        returnAmountColumn.setCellValueFactory(cellData -> 
+        returnAmountColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.ReadOnlyObjectWrapper<>(cellData.getValue().getReturnAmount()));
         returnAmountColumn.setCellFactory(column -> new TableCell<ReturnItem, Double>() {
             @Override
@@ -241,7 +242,7 @@ public class CreateReturnOrderDialogController {
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    setText(String.format("¥%.2f", item));
+                    setText(CurrencyUtil.format(item));
                 }
             }
         });
@@ -322,7 +323,7 @@ public class CreateReturnOrderDialogController {
 
         // 显示原交易信息
         transactionIdLabel.setText(transaction.transactionId);
-        transactionAmountLabel.setText(String.format("¥%.2f", transaction.finalAmount));
+        transactionAmountLabel.setText(CurrencyUtil.format(transaction.finalAmount.doubleValue()));
         transactionDateLabel.setText(transaction.timestamp);  // timestamp已经是格式化的字符串
         paymentMethodLabel.setText(transaction.getPaymentMethodText());
         memberNameLabel.setText(transaction.memberName != null ? transaction.memberName : "无");
@@ -365,7 +366,7 @@ public class CreateReturnOrderDialogController {
                 total += item.getReturnAmount();
             }
         }
-        totalReturnAmountLabel.setText(String.format("¥%.2f", total));
+        totalReturnAmountLabel.setText(CurrencyUtil.format(total));
     }
 
     /**

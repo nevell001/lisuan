@@ -3,6 +3,7 @@ package com.cashier.controller;
 import com.cashier.dao.*;
 import com.cashier.model.*;
 import com.cashier.service.ReturnService;
+import com.cashier.util.CurrencyUtil;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -113,7 +114,7 @@ public class ReturnApprovalController {
                 } else {
                     try {
                         double amount = Double.parseDouble(item);
-                        setText(String.format("¥%.2f", amount));
+                        setText(CurrencyUtil.format(amount));
                         setStyle("-fx-font-weight: bold; -fx-text-fill: red;");
                     } catch (Exception e) {
                         setText(item);
@@ -141,7 +142,7 @@ public class ReturnApprovalController {
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    setText(String.format("¥%.2f", item));
+                    setText(CurrencyUtil.format(item));
                 }
             }
         });
@@ -153,7 +154,7 @@ public class ReturnApprovalController {
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    setText(String.format("¥%.2f", item));
+                    setText(CurrencyUtil.format(item));
                     setStyle("-fx-font-weight: bold;");
                 }
             }
@@ -204,7 +205,7 @@ public class ReturnApprovalController {
 
         returnOrderIdLabel.setText(order.returnOrderId);
         memberNameLabel.setText(order.memberName != null ? order.memberName : "无");
-        totalAmountLabel.setText(String.format("¥%.2f", order.totalAmount));
+        totalAmountLabel.setText(CurrencyUtil.format(order.totalAmount.doubleValue()));
         returnDateLabel.setText(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(order.returnDate));
         operatorNameLabel.setText(order.operatorName);
         returnReasonTextArea.setText(order.returnReason != null ? order.returnReason : "");

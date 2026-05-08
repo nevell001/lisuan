@@ -19,16 +19,16 @@
                 <Insets top="10" right="10" bottom="5" left="10"/>
             </padding>
 
-            <Label text="时间范围:"/>
+            <Label text="%inventory_report.time_range"/>
             <ComboBox fx:id="timeRangeComboBox" prefWidth="120"/>
 
-            <Label text="开始日期:"/>
+            <Label text="%inventory_report.start_date"/>
             <DatePicker fx:id="startDatePicker" prefWidth="150"/>
 
-            <Label text="结束日期:"/>
+            <Label text="%inventory_report.end_date"/>
             <DatePicker fx:id="endDatePicker" prefWidth="150"/>
 
-            <Label text="分类:"/>
+            <Label text="%inventory_report.category_label"/>
             <ComboBox fx:id="categoryComboBox" prefWidth="150"/>
         </HBox>
 
@@ -38,26 +38,26 @@
                 <Insets top="5" right="10" bottom="10" left="10"/>
             </padding>
 
-            <Label text="周转率阈值:"/>
+            <Label text="%inventory_report.turnover_threshold"/>
             <TextField fx:id="turnoverThresholdField" prefWidth="80" promptText="1.0"/>
 
-            <Label text="滞销阈值:"/>
+            <Label text="%inventory_report.slow_sales_threshold"/>
             <TextField fx:id="slowSalesThresholdField" prefWidth="80" promptText="10"/>
 
-            <Label text="库存天数:"/>
+            <Label text="%inventory_report.inventory_days"/>
             <TextField fx:id="inventoryDaysField" prefWidth="80" promptText="90"/>
 
             <Separator orientation="VERTICAL"/>
 
             <Button fx:id="queryButton"
-                    text="查询"
+                    text="%inventory_report.query"
                     onAction="#handleQuery"
                     prefWidth="100"
                     prefHeight="35"
                     styleClass="primary-button"/>
 
             <Button fx:id="exportButton"
-                    text="导出"
+                    text="%inventory_report.export"
                     onAction="#handleExport"
                     prefWidth="100"
                     prefHeight="35"
@@ -79,7 +79,7 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <Label text="总商品数" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label text="%inventory_report.total_products" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
                     <Label fx:id="totalProductsLabel" text="0" style="-fx-text-fill: #3F51B5; -fx-font-size: 22px; -fx-font-weight: bold;"/>
                 </VBox>
 
@@ -87,7 +87,7 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <Label text="总库存价值" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label text="%inventory_report.total_stock_value" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
                     <Label fx:id="totalStockValueLabel" text="¥0.00" style="-fx-text-fill: #4CAF50; -fx-font-size: 22px; -fx-font-weight: bold;"/>
                 </VBox>
 
@@ -95,7 +95,7 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <Label text="平均周转率" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label text="%inventory_report.avg_turnover_rate" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
                     <Label fx:id="avgTurnoverRateLabel" text="0.00" style="-fx-text-fill: #FF9800; -fx-font-size: 22px; -fx-font-weight: bold;"/>
                 </VBox>
 
@@ -104,7 +104,7 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <Label text="库存不足" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label text="%inventory_report.low_stock" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
                     <Label fx:id="lowStockCountLabel" text="0" style="-fx-text-fill: #F44336; -fx-font-size: 22px; -fx-font-weight: bold;"/>
                 </VBox>
 
@@ -112,7 +112,7 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <Label text="滞销商品" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label text="%inventory_report.slow_sales" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
                     <Label fx:id="slowSalesCountLabel" text="0" style="-fx-text-fill: #9C27B0; -fx-font-size: 22px; -fx-font-weight: bold;"/>
                 </VBox>
 
@@ -120,7 +120,7 @@
                     <padding>
                         <Insets top="10" right="10" bottom="10" left="10"/>
                     </padding>
-                    <Label text="积压商品" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
+                    <Label text="%inventory_report.overstock" style="-fx-text-fill: #757575; -fx-font-size: 11px;"/>
                     <Label fx:id="overstockCountLabel" text="0" style="-fx-text-fill: #00BCD4; -fx-font-size: 22px; -fx-font-weight: bold;"/>
                 </VBox>
             </GridPane>
@@ -143,7 +143,7 @@
                     <padding>
                         <Insets top="12" right="12" bottom="12" left="12"/>
                     </padding>
-                    <Label text="库存状态分布" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                    <Label text="%inventory_report.stock_status" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
                     <PieChart fx:id="stockStatusPieChart" VBox.vgrow="ALWAYS" legendSide="RIGHT"/>
                 </VBox>
 
@@ -152,13 +152,13 @@
                     <padding>
                         <Insets top="12" right="12" bottom="12" left="12"/>
                     </padding>
-                    <Label text="库存周转率分析" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
+                    <Label text="%inventory_report.turnover_analysis" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
                     <BarChart fx:id="turnoverRateBarChart" VBox.vgrow="ALWAYS">
                         <xAxis>
-                            <CategoryAxis label="商品"/>
+                            <CategoryAxis label="%inventory_report.product_axis"/>
                         </xAxis>
                         <yAxis>
-                            <NumberAxis label="周转率"/>
+                            <NumberAxis label="%inventory_report.turnover_axis"/>
                         </yAxis>
                     </BarChart>
                 </VBox>
@@ -168,13 +168,13 @@
                     <padding>
                         <Insets top="12" right="12" bottom="12" left="12"/>
                     </padding>
-                    <Label text="分类库存价值" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #FF9800;"/>
+                    <Label text="%inventory_report.category_stock_value" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #FF9800;"/>
                     <BarChart fx:id="categoryStockValueBarChart" VBox.vgrow="ALWAYS">
                         <xAxis>
-                            <CategoryAxis label="分类"/>
+                            <CategoryAxis label="%product.category"/>
                         </xAxis>
                         <yAxis>
-                            <NumberAxis label="库存价值（元）"/>
+                            <NumberAxis label="%inventory_report.stock_value_axis"/>
                         </yAxis>
                     </BarChart>
                 </VBox>
@@ -188,57 +188,57 @@
             </padding>
             
             <!-- 库存预警列表 Tab -->
-            <Tab text="库存预警列表">
+            <Tab text="%inventory_report.tab_alert">
                 <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
                     <padding>
                         <Insets top="5" right="10" bottom="5" left="10"/>
                     </padding>
                     <TableView fx:id="productTable" VBox.vgrow="ALWAYS">
                         <columns>
-                            <TableColumn fx:id="productNameColumn" text="商品名称" prefWidth="200"/>
-                            <TableColumn fx:id="categoryColumn" text="分类" prefWidth="100"/>
-                            <TableColumn fx:id="currentStockColumn" text="当前库存" prefWidth="100"/>
-                            <TableColumn fx:id="stockValueColumn" text="库存价值" prefWidth="120"/>
-                            <TableColumn fx:id="salesQuantityColumn" text="销售数量" prefWidth="100"/>
-                            <TableColumn fx:id="turnoverRateColumn" text="周转率" prefWidth="100"/>
-                            <TableColumn fx:id="inventoryDaysColumn" text="库存天数" prefWidth="100"/>
-                            <TableColumn fx:id="statusColumn" text="状态" prefWidth="100"/>
+                            <TableColumn fx:id="productNameColumn" text="%product.name" prefWidth="200"/>
+                            <TableColumn fx:id="categoryColumn" text="%product.category" prefWidth="100"/>
+                            <TableColumn fx:id="currentStockColumn" text="%inventory_report.current_stock" prefWidth="100"/>
+                            <TableColumn fx:id="stockValueColumn" text="%inventory_report.stock_value" prefWidth="120"/>
+                            <TableColumn fx:id="salesQuantityColumn" text="%inventory_report.sales_quantity" prefWidth="100"/>
+                            <TableColumn fx:id="turnoverRateColumn" text="%inventory_report.turnover_rate" prefWidth="100"/>
+                            <TableColumn fx:id="inventoryDaysColumn" text="%inventory_report.inventory_days_column" prefWidth="100"/>
+                            <TableColumn fx:id="statusColumn" text="%inventory_report.status" prefWidth="100"/>
                         </columns>
                     </TableView>
                 </ScrollPane>
             </Tab>
 
             <!-- 滞销商品列表 Tab -->
-            <Tab text="滞销商品列表">
+            <Tab text="%inventory_report.tab_slow_sales">
                 <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
                     <padding>
                         <Insets top="5" right="10" bottom="5" left="10"/>
                     </padding>
                     <TableView fx:id="slowSalesTable" VBox.vgrow="ALWAYS">
                         <columns>
-                            <TableColumn fx:id="slowProductNameColumn" text="商品名称" prefWidth="200"/>
-                            <TableColumn fx:id="slowCategoryColumn" text="分类" prefWidth="100"/>
-                            <TableColumn fx:id="currentStockColumn2" text="当前库存" prefWidth="100"/>
-                            <TableColumn fx:id="salesQuantityColumn2" text="销售数量" prefWidth="100"/>
-                            <TableColumn fx:id="lastSaleDateColumn" text="最后销售日期" prefWidth="120"/>
+                            <TableColumn fx:id="slowProductNameColumn" text="%product.name" prefWidth="200"/>
+                            <TableColumn fx:id="slowCategoryColumn" text="%product.category" prefWidth="100"/>
+                            <TableColumn fx:id="currentStockColumn2" text="%inventory_report.current_stock" prefWidth="100"/>
+                            <TableColumn fx:id="salesQuantityColumn2" text="%inventory_report.sales_quantity" prefWidth="100"/>
+                            <TableColumn fx:id="lastSaleDateColumn" text="%inventory_report.last_sale_date" prefWidth="120"/>
                         </columns>
                     </TableView>
                 </ScrollPane>
             </Tab>
 
             <!-- 积压商品列表 Tab -->
-            <Tab text="积压商品列表">
+            <Tab text="%inventory_report.tab_overstock">
                 <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS">
                     <padding>
                         <Insets top="5" right="10" bottom="5" left="10"/>
                     </padding>
                     <TableView fx:id="overstockTable" VBox.vgrow="ALWAYS">
                         <columns>
-                            <TableColumn fx:id="overstockProductNameColumn" text="商品名称" prefWidth="200"/>
-                            <TableColumn fx:id="overstockCategoryColumn" text="分类" prefWidth="100"/>
-                            <TableColumn fx:id="overstockQuantityColumn" text="库存数量" prefWidth="100"/>
-                            <TableColumn fx:id="overstockValueColumn" text="库存价值" prefWidth="120"/>
-                            <TableColumn fx:id="overstockDaysColumn" text="库存天数" prefWidth="100"/>
+                            <TableColumn fx:id="overstockProductNameColumn" text="%product.name" prefWidth="200"/>
+                            <TableColumn fx:id="overstockCategoryColumn" text="%product.category" prefWidth="100"/>
+                            <TableColumn fx:id="overstockQuantityColumn" text="%inventory_report.overstock_quantity" prefWidth="100"/>
+                            <TableColumn fx:id="overstockValueColumn" text="%inventory_report.overstock_value" prefWidth="120"/>
+                            <TableColumn fx:id="overstockDaysColumn" text="%inventory_report.overstock_days" prefWidth="100"/>
                         </columns>
                     </TableView>
                 </ScrollPane>

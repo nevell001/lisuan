@@ -12,6 +12,7 @@ import com.cashier.model.Member;
 import com.cashier.model.Product;
 import com.cashier.model.Transaction;
 import com.cashier.model.User;
+import com.cashier.util.CurrencyUtil;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -649,8 +650,8 @@ public class CartController {
 
         if (member != null) {
             currentMember = member;
-            memberInfoLabel.setText(String.format("会员: %s (余额: ¥%.2f, 积分: %d, 折扣: %.1f折)", 
-                member.name, member.balance, member.getPoints().intValue(), member.discount));
+            memberInfoLabel.setText(String.format("会员: %s (余额: %s, 积分: %d, 折扣: %.1f折)",
+                member.name, CurrencyUtil.format(member.balance.doubleValue()), member.getPoints().intValue(), member.discount));
         } else {
             currentMember = null;
             memberInfoLabel.setText("未找到该会员");
@@ -685,14 +686,14 @@ public class CartController {
         grid.setVgap(15);
         grid.setPadding(new javafx.geometry.Insets(25, 150, 15, 15));
 
-        Label amountLabel = new Label(String.format("应付金额: ¥%.2f", finalAmount.doubleValue()));
+        Label amountLabel = new Label("应付金额: " + CurrencyUtil.format(finalAmount.doubleValue()));
         amountLabel.setStyle("-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #F44336;");
 
-        Label paidLabel = new Label(String.format("已支付: ¥%.2f", alreadyPaidAmount.doubleValue()));
+        Label paidLabel = new Label("已支付: " + CurrencyUtil.format(alreadyPaidAmount.doubleValue()));
         paidLabel.setStyle("-fx-font-size: 18px; -fx-text-fill: #4CAF50;");
 
         BigDecimal initialRemaining = finalAmount.subtract(alreadyPaidAmount);
-        Label remainingLabel = new Label(String.format("还需支付: ¥%.2f", initialRemaining.doubleValue()));
+        Label remainingLabel = new Label("还需支付: " + CurrencyUtil.format(initialRemaining.doubleValue()));
         remainingLabel.setStyle("-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #F44336;");
 
         TextField receivedField = new TextField();
@@ -713,7 +714,8 @@ public class CartController {
         grid.add(receivedField, 1, 3);
         grid.add(changeLabel, 0, 4, 2, 1);
 
-        Button btn100 = new Button("¥100");
+        String symbol = CurrencyUtil.getSymbol();
+        Button btn100 = new Button(symbol + "100");
         btn100.setPrefSize(100, 60);
         btn100.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
         btn100.setOnAction(e -> {
@@ -721,7 +723,7 @@ public class CartController {
             receivedField.requestFocus();
         });
 
-        Button btn50 = new Button("¥50");
+        Button btn50 = new Button(symbol + "50");
         btn50.setPrefSize(100, 60);
         btn50.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
         btn50.setOnAction(e -> {
@@ -729,7 +731,7 @@ public class CartController {
             receivedField.requestFocus();
         });
 
-        Button btn20 = new Button("¥20");
+        Button btn20 = new Button(symbol + "20");
         btn20.setPrefSize(100, 60);
         btn20.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
         btn20.setOnAction(e -> {
@@ -737,7 +739,7 @@ public class CartController {
             receivedField.requestFocus();
         });
 
-        Button btn10 = new Button("¥10");
+        Button btn10 = new Button(symbol + "10");
         btn10.setPrefSize(100, 60);
         btn10.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
         btn10.setOnAction(e -> {
@@ -745,7 +747,7 @@ public class CartController {
             receivedField.requestFocus();
         });
 
-        Button btn5 = new Button("¥5");
+        Button btn5 = new Button(symbol + "5");
         btn5.setPrefSize(100, 60);
         btn5.setStyle("-fx-font-size: 18px; -fx-font-weight: bold;");
         btn5.setOnAction(e -> {
@@ -767,18 +769,18 @@ public class CartController {
                 BigDecimal totalPaid = alreadyPaidAmount.add(received);
                 BigDecimal remaining = finalAmount.subtract(totalPaid);
                 if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
-                    changeLabel.setText(String.format("找零: ¥%.2f", remaining.abs().doubleValue()));
+                    changeLabel.setText("找零: " + CurrencyUtil.format(remaining.abs().doubleValue()));
                     changeLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;");
                 } else {
-                    changeLabel.setText(String.format("还需: ¥%.2f", remaining.doubleValue()));
+                    changeLabel.setText("还需: " + CurrencyUtil.format(remaining.doubleValue()));
                     changeLabel.setStyle("-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #F44336;");
                 }
             } catch (NumberFormatException e) {
                 BigDecimal remaining = finalAmount.subtract(alreadyPaidAmount);
                 if (remaining.compareTo(BigDecimal.ZERO) <= 0) {
-                    changeLabel.setText("找零: ¥0.00");
+                    changeLabel.setText("找零: " + CurrencyUtil.format(0));
                 } else {
-                    changeLabel.setText(String.format("还需: ¥%.2f", remaining.doubleValue()));
+                    changeLabel.setText("还需: " + CurrencyUtil.format(remaining.doubleValue()));
                 }
             }
         });
@@ -824,7 +826,7 @@ public class CartController {
                 alreadyPaidAmount = BigDecimal.ZERO;
             } else {
                 alreadyPaidAmount = totalPaid;
-                showInfo(String.format("已支付 ¥%.2f，还需支付 ¥%.2f", totalPaid.doubleValue(), remaining.doubleValue()));
+                showInfo("已支付 " + CurrencyUtil.format(totalPaid.doubleValue()) + "，还需支付 " + CurrencyUtil.format(remaining.doubleValue()));
                 handleCashPayment();
             }
         });
@@ -905,8 +907,8 @@ public class CartController {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle("确认支付");
         alert.setHeaderText(null);
-        alert.setContentText(String.format("确定要使用%s支付 ¥%.2f 吗？",
-            paymentMethod, getFinalAmount().doubleValue()));
+        alert.setContentText(String.format("确定要使用%s支付 %s 吗？",
+            paymentMethod, CurrencyUtil.format(getFinalAmount().doubleValue())));
 
         if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
             executePayment(paymentMethod, BigDecimal.ZERO, BigDecimal.ZERO);
@@ -1059,19 +1061,21 @@ public class CartController {
         BigDecimal discountAmount = totalAmount.subtract(finalAmount);
 
         totalQuantityLabel.setText(String.valueOf(totalQuantity));
-        totalAmountLabel.setText(String.format("¥%.2f", totalAmount.doubleValue()));
+        totalAmountLabel.setText(CurrencyUtil.format(totalAmount.doubleValue()));
         memberDiscountLabel.setText(String.format("%.1f折", currentMember != null ? currentMember.getDiscountRate().doubleValue() : 10.0));
         
         if (promotionDiscount.compareTo(BigDecimal.ZERO) > 0 && appliedPromotion != null) {
-            discountLabel.setText(String.format("-¥%.2f (促销: %s - ¥%.2f)", 
-                discountAmount.doubleValue(), appliedPromotion.name, promotionDiscount.doubleValue()));
+            discountLabel.setText(String.format("-%s (促销: %s - %s)",
+                CurrencyUtil.format(discountAmount.doubleValue()), appliedPromotion.name, CurrencyUtil.format(promotionDiscount.doubleValue())));
         } else if (promotionDiscount.compareTo(BigDecimal.ZERO) > 0) {
-            discountLabel.setText(String.format("-¥%.2f (促销: ¥%.2f)", discountAmount.doubleValue(), promotionDiscount.doubleValue()));
+            discountLabel.setText(String.format("-%s (促销: %s)",
+                CurrencyUtil.format(discountAmount.doubleValue()), CurrencyUtil.format(promotionDiscount.doubleValue())));
         } else {
-            discountLabel.setText(String.format("-¥%.2f", discountAmount.doubleValue()));
+            discountLabel.setText(CurrencyUtil.format(discountAmount.doubleValue()));
+            discountLabel.setText("-" + discountLabel.getText());
         }
         
-        finalAmountLabel.setText(String.format("¥%.2f", finalAmount.doubleValue()));
+        finalAmountLabel.setText(CurrencyUtil.format(finalAmount.doubleValue()));
         
         // 更新支付按钮状态
         boolean hasItems = !cartList.isEmpty();
@@ -1196,21 +1200,21 @@ public class CartController {
             "支付成功！\n\n" +
             "订单号: %s\n" +
             "支付方式: %s\n" +
-            "应付金额: ¥%.2f\n" +
+            "应付金额: %s\n" +
             "商品数量: %d",
             transaction.transactionId,
             paymentMethod,
-            getFinalAmount().doubleValue(),
+            CurrencyUtil.format(getFinalAmount().doubleValue()),
             cartList.size()
         );
-        
+
         // 如果是现金支付，显示实收和找零
         if ("现金".equals(paymentMethod)) {
             message += String.format(
-                "\n实收金额: ¥%.2f\n" +
-                "找零: ¥%.2f",
-                receivedAmount,
-                changeAmount
+                "\n实收金额: %s\n" +
+                "找零: %s",
+                CurrencyUtil.format(receivedAmount),
+                CurrencyUtil.format(changeAmount)
             );
         }
         

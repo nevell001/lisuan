@@ -3,6 +3,7 @@ package com.cashier.controller;
 import com.cashier.service.DataService;
 import com.cashier.model.Member;
 import com.cashier.model.RechargeRecord;
+import com.cashier.util.CurrencyUtil;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -95,8 +96,8 @@ public class RechargeController {
      */
     private void setupHistoryTableColumns() {
         dateColumn.setCellValueFactory(new PropertyValueFactory<>("timestamp"));
-        amountColumn.setCellValueFactory(cellData -> 
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%.2f", cellData.getValue().amount)));
+        amountColumn.setCellValueFactory(cellData ->
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().amount.doubleValue())));
         paymentColumn.setCellValueFactory(new PropertyValueFactory<>("paymentMethod"));
         operatorColumn.setCellValueFactory(new PropertyValueFactory<>("operator"));
     }
@@ -119,7 +120,7 @@ public class RechargeController {
         // 更新会员信息显示
         memberNameLabel.setText(member.name);
         memberPhoneLabel.setText(member.phone);
-        currentBalanceLabel.setText(String.format("¥%.2f", member.getBalance()));
+        currentBalanceLabel.setText(CurrencyUtil.format(member.getBalance().doubleValue()));
         currentPointsLabel.setText(String.valueOf(member.getPoints().intValue()));
 
         // 加载充值历史记录
@@ -162,7 +163,7 @@ public class RechargeController {
         try {
             String amountText = amountField.getText().trim();
             if (amountText.isEmpty()) {
-                newBalanceLabel.setText(String.format("¥%.2f", member.getBalance()));
+                newBalanceLabel.setText(CurrencyUtil.format(member.getBalance().doubleValue()));
                 bonusPointsLabel.setText("0");
                 okButton.setDisable(true);
                 return;
@@ -170,7 +171,7 @@ public class RechargeController {
 
             double amount = Double.parseDouble(amountText);
             if (amount <= 0) {
-                newBalanceLabel.setText(String.format("¥%.2f", member.getBalance()));
+                newBalanceLabel.setText(CurrencyUtil.format(member.getBalance().doubleValue()));
                 bonusPointsLabel.setText("0");
                 okButton.setDisable(true);
                 return;
@@ -182,12 +183,12 @@ public class RechargeController {
             int bonusPoints = rechargeAmountDecimal.multiply(BigDecimal.TEN).intValue();
             BigDecimal newBalance = member.getBalance().add(rechargeAmountDecimal);
 
-            newBalanceLabel.setText(String.format("¥%.2f", newBalance));
+            newBalanceLabel.setText(CurrencyUtil.format(newBalance.doubleValue()));
             bonusPointsLabel.setText(String.valueOf(bonusPoints));
             okButton.setDisable(false);
 
         } catch (NumberFormatException e) {
-            newBalanceLabel.setText(String.format("¥%.2f", member.getBalance()));
+            newBalanceLabel.setText(CurrencyUtil.format(member.getBalance().doubleValue()));
             bonusPointsLabel.setText("0");
             okButton.setDisable(true);
         }

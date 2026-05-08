@@ -6,6 +6,7 @@ import com.cashier.dao.UnitDAO;
 import com.cashier.model.Category;
 import com.cashier.model.Product;
 import com.cashier.model.Unit;
+import com.cashier.util.FXMLUtils;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
@@ -231,8 +232,7 @@ public class InventoryController {
     private void handleAddProduct() {
         try {
             // 加载商品编辑对话框
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/ProductEditView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/ProductEditView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
@@ -280,8 +280,7 @@ public class InventoryController {
         if (selected != null) {
             try {
                 // 加载商品编辑对话框
-                FXMLLoader loader = new FXMLLoader();
-                loader.setLocation(getClass().getResource("/com/cashier/view/ProductEditView.fxml"));
+                FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/ProductEditView.fxml");
                 VBox root = loader.load();
 
                 // 获取控制器
@@ -355,8 +354,7 @@ public class InventoryController {
         if (selected != null) {
             try {
                 // 加载快速入库对话框
-                FXMLLoader loader = new FXMLLoader();
-                loader.setLocation(getClass().getResource("/com/cashier/view/RestockView.fxml"));
+                FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/RestockView.fxml");
                 VBox root = loader.load();
 
                 // 获取控制器

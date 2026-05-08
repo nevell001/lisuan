@@ -2,6 +2,7 @@ package com.cashier.controller;
 
 import com.cashier.dao.ProductDAO;
 import com.cashier.model.Product;
+import com.cashier.util.CurrencyUtil;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
@@ -113,10 +114,10 @@ public class RestockController {
 
                 // 入库金额
                 double totalCost = product.getCost().multiply(BigDecimal.valueOf(quantity)).doubleValue();
-                totalCostLabel.setText(String.format("¥%.2f", totalCost));
+                totalCostLabel.setText(CurrencyUtil.format(totalCost));
             } else {
                 afterStockLabel.setText(String.format("%d %s", product.quantity, product.unit));
-                totalCostLabel.setText("¥0.00");
+                totalCostLabel.setText(CurrencyUtil.format(0));
             }
         } catch (NumberFormatException e) {
             afterStockLabel.setText("-");

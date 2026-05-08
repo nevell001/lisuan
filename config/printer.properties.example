@@ -34,6 +34,24 @@ print.quality=normal
 copies=1
 
 # ============================================
+# Logo 打印设置
+# ============================================
+# 是否打印 Logo
+print.logo=true
+
+# Logo 图片路径（支持 PNG, JPG, GIF 等格式）
+# 留空则使用默认文本 Logo
+# 路径可以是:
+#   - 绝对路径: /path/to/logo.png
+#   - 相对路径: images/logo.png
+#   - 资源路径: images/logos/app-icon.png (自动从 resources 目录加载)
+logo.path=
+
+# Logo 打印位置
+# 可选值: center（居中）, left（左对齐）, right（右对齐）
+logo.alignment=center
+
+# ============================================
 # 小票格式
 # ============================================
 # 小票宽度（字符数，用于格式化）
@@ -84,6 +102,18 @@ thermal.print.barcode=false
 
 # 是否打印二维码
 thermal.print.qrcode=false
+
+# ============================================
+# 网络打印机设置（ESC/POS 热敏打印机）
+# ============================================
+# 网络打印机 IP 地址
+network.printer.ip=
+
+# 网络打印机端口（默认 9100）
+network.printer.port=9100
+
+# 网络打印机超时时间（毫秒）
+network.printer.timeout=5000
 
 # ============================================
 # 打印机命令（高级用户使用）

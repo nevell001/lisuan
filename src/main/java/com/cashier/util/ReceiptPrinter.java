@@ -5,6 +5,8 @@ import com.cashier.model.Member;
 import com.cashier.model.Transaction;
 import com.cashier.model.ReturnOrder;
 import com.cashier.model.ReturnOrderItem;
+import com.cashier.printer.PrinterManager;
+import com.cashier.printer.PrintTask;
 
 import java.io.File;
 import java.math.BigDecimal;
@@ -12,7 +14,6 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.Date;
 import java.util.List;
 import org.slf4j.Logger;
 
@@ -75,8 +76,12 @@ public class ReceiptPrinter {
     private static String generateReceiptContent(Transaction transaction, List<CartItem> cartItems, Member member) {
         StringBuilder sb = new StringBuilder();
 
-        // 店铺信息
+        // 店铺信息（带 Logo）
         sb.append("========================================\n");
+        sb.append("              ╔═══╗                    \n");
+        sb.append("              ║收银║                    \n");
+        sb.append("              ║系统║                    \n");
+        sb.append("              ╚═══╝                    \n");
         sb.append("           收银系统小票\n");
         sb.append("========================================\n\n");
 
@@ -434,5 +439,124 @@ public class ReceiptPrinter {
             logger.error("生成退货单据失败: {}", e.getMessage(), e);
             return null;
         }
+    }
+
+    /**
+     * 使用网络打印机打印小票（支持位图 Logo）
+     * @param transaction 交易信息
+     * @param cartItems 购物车商品列表
+     * @param member 会员信息（可选）
+     * @param printerId 打印机ID（可选，null 使用默认）
+     * @return 是否打印成功
+     */
+    public static boolean printReceiptWithPrinter(Transaction transaction, List<CartItem> cartItems, Member member, String printerId) {
+        PrinterManager printerManager = PrinterManager.getInstance();
+
+        try {
+            // 构建小票内容（ESC/POS 格式）
+            StringBuilder content = new StringBuilder();
+
+            // 添加 Logo（通过 PrintTask 参数控制）
+            // 打印机会自动调用 printLogo()
+
+            // 店铺名称
+            content.append(new String(EscPosUtils.ALIGN_CENTER));
+            content.append(new String(EscPosUtils.DOUBLE_HEIGHT_WIDTH_ON));
+            content.append("收银系统\n");
+            content.append(new String(EscPosUtils.FONT_NORMAL));
+            content.append(new String(EscPosUtils.ALIGN_LEFT));
+            content.append(new String(EscPosUtils.LINE_FEED));
+
+            // 分隔线
+            content.append("========================================\n");
+
+            // 交易信息
+            content.append(String.format("订单号: %s\n", transaction.transactionId));
+            content.append(String.format("时间: %s\n", transaction.timestamp));
+            content.append("收银员: 系统\n");
+
+            // 会员信息
+            if (member != null) {
+                content.append("----------------------------------------\n");
+                content.append(String.format("会员: %s\n", member.name));
+                content.append(String.format("手机: %s\n", member.phone));
+                content.append(String.format("积分: %d\n", member.points));
+                content.append("----------------------------------------\n");
+            }
+
+            content.append("\n商品列表:\n");
+            content.append("----------------------------------------\n");
+
+            // 商品列表
+            for (CartItem item : cartItems) {
+                String name = item.product.name;
+                if (name.length() > 16) {
+                    name = name.substring(0, 15) + "~";
+                }
+                content.append(String.format("%-16s x%d  ¥%.2f\n", name, item.quantity, item.product.price));
+                content.append(String.format("                  小计: ¥%.2f\n", item.subtotal));
+            }
+
+            content.append("----------------------------------------\n");
+            content.append(String.format("商品总额: ¥%.2f\n", transaction.totalAmount));
+            if (transaction.tax.compareTo(BigDecimal.ZERO) > 0) {
+                content.append(String.format("税费: ¥%.2f\n", transaction.tax));
+            }
+            content.append("----------------------------------------\n");
+            content.append(String.format("实付金额: ¥%.2f\n", transaction.finalAmount));
+            content.append("========================================\n");
+
+            // 支付方式
+            String paymentMethod = getPaymentMethodDisplayName(transaction.paymentMethod);
+            content.append(String.format("支付方式: %s\n", paymentMethod));
+
+            // 会员折扣
+            if (member != null && member.getDiscount().compareTo(BigDecimal.TEN) < 0) {
+                content.append(String.format("会员折扣: %.1f折\n", member.getDiscount()));
+            }
+
+            content.append("\n");
+            content.append("谢谢惠顾！欢迎再次光临！\n");
+            content.append("========================================\n");
+
+            // 创建打印任务
+            PrintTask task = new PrintTask(
+                "receipt_" + transaction.transactionId,
+                "销售小票",
+                com.cashier.printer.PrintTaskType.RECEIPT,
+                content.toString(),
+                1,    // 份数
+                true, // 打印 Logo
+                false, // 不打开钱箱
+                true,  // 切纸
+                false  // 不需要预览
+            );
+
+            // 执行打印
+            if (printerId != null && !printerId.isEmpty()) {
+                com.cashier.printer.PrinterDevice printer = printerManager.getDevice(printerId);
+                if (printer != null) {
+                    return printer.print(task);
+                }
+            }
+
+            // 使用默认打印机
+            return printerManager.print(task);
+
+        } catch (Exception e) {
+            logger.error("网络打印机打印小票失败: {}", e.getMessage(), e);
+            return false;
+        }
+    }
+
+    /**
+     * ESC/POS 指令快捷访问
+     */
+    private static class EscPosUtils {
+        public static final byte[] ALIGN_CENTER = {0x1B, 0x61, 0x01};
+        public static final byte[] ALIGN_LEFT = {0x1B, 0x61, 0x00};
+        public static final byte[] DOUBLE_HEIGHT_WIDTH_ON = {0x1B, 0x21, 0x30};
+        public static final byte[] FONT_NORMAL = {0x1B, 0x21, 0x00};
+        public static final byte[] LINE_FEED = {0x0A};
     }
 }

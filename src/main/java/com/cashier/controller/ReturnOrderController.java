@@ -3,6 +3,7 @@ package com.cashier.controller;
 import com.cashier.dao.*;
 import com.cashier.model.*;
 import com.cashier.service.ReturnService;
+import com.cashier.util.CurrencyUtil;
 import com.cashier.util.LoggerFactoryUtil;
 import com.cashier.util.ReceiptPrinter;
 import javafx.collections.FXCollections;
@@ -117,7 +118,7 @@ public class ReturnOrderController {
                 } else {
                     try {
                         double amount = Double.parseDouble(item);
-                        setText(String.format("¥%.2f", amount));
+                        setText(CurrencyUtil.format(amount));
                     } catch (Exception e) {
                         setText(item);
                     }
@@ -175,7 +176,7 @@ public class ReturnOrderController {
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    setText(String.format("¥%.2f", item));
+                    setText(CurrencyUtil.format(item));
                 }
             }
         });
@@ -187,7 +188,7 @@ public class ReturnOrderController {
                 if (empty || item == null) {
                     setText(null);
                 } else {
-                    setText(String.format("¥%.2f", item));
+                    setText(CurrencyUtil.format(item));
                 }
             }
         });
@@ -236,7 +237,7 @@ public class ReturnOrderController {
 
         returnOrderIdLabel.setText(returnOrder.returnOrderId);
         memberNameLabel.setText(returnOrder.memberName != null ? returnOrder.memberName : "无");
-        totalAmountLabel.setText(String.format("¥%.2f", returnOrder.totalAmount));
+        totalAmountLabel.setText(CurrencyUtil.format(returnOrder.totalAmount.doubleValue()));
         statusLabel.setText(returnOrder.getStatusText());
         operatorNameLabel.setText(returnOrder.operatorName);
         returnDateLabel.setText(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(returnOrder.returnDate));
@@ -335,7 +336,7 @@ public class ReturnOrderController {
                 order.returnOrderId,
                 order.memberName != null ? order.memberName : "无",
                 sdf.format(order.returnDate),
-                String.format("¥%.2f", order.totalAmount),
+                CurrencyUtil.format(order.totalAmount.doubleValue()),
                 order.getStatusText(),
                 order.operatorName,
                 order.returnReason != null ? order.returnReason : ""

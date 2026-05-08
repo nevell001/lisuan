@@ -2,6 +2,7 @@ package com.cashier.controller;
 
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Transaction;
+import com.cashier.util.CurrencyUtil;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.fxml.FXML;
@@ -153,7 +154,7 @@ public class StatisticsController {
         categoryCountColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.valueOf(cellData.getValue().count)));
         categoryAmountColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%.2f", cellData.getValue().amount)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().amount)));
     }
 
     /**
@@ -165,7 +166,7 @@ public class StatisticsController {
         hourCountColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.valueOf(cellData.getValue().count)));
         hourAmountColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%.2f", cellData.getValue().amount)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().amount)));
     }
 
     /**
@@ -375,25 +376,25 @@ public class StatisticsController {
         }
 
         // 更新UI
-        totalSalesLabel.setText(String.format("¥%.2f", totalSales));
+        totalSalesLabel.setText(CurrencyUtil.format(totalSales));
         transactionCountLabel.setText(String.valueOf(transactionCount));
-        avgTransactionLabel.setText(transactionCount > 0 ? String.format("¥%.2f", totalSales / transactionCount) : "¥0.00");
-        memberSalesLabel.setText(String.format("¥%.2f", memberSales));
-        cashSalesLabel.setText(String.format("¥%.2f", cashSales));
-        wechatSalesLabel.setText(String.format("¥%.2f", wechatSales));
-        alipaySalesLabel.setText(String.format("¥%.2f", alipaySales));
-        cardSalesLabel.setText(String.format("¥%.2f", cardSales));
+        avgTransactionLabel.setText(transactionCount > 0 ? CurrencyUtil.format(totalSales / transactionCount) : CurrencyUtil.format(0));
+        memberSalesLabel.setText(CurrencyUtil.format(memberSales));
+        cashSalesLabel.setText(CurrencyUtil.format(cashSales));
+        wechatSalesLabel.setText(CurrencyUtil.format(wechatSales));
+        alipaySalesLabel.setText(CurrencyUtil.format(alipaySales));
+        cardSalesLabel.setText(CurrencyUtil.format(cardSales));
 
         // 找出销售最多的商品
         if (!productCountMap.isEmpty()) {
             String topProduct = Collections.max(productCountMap.entrySet(), Map.Entry.comparingByValue()).getKey();
             topProductLabel.setText(topProduct);
             topProductCountLabel.setText(String.valueOf(productCountMap.get(topProduct)));
-            topProductAmountLabel.setText(String.format("¥%.2f", productAmountMap.get(topProduct)));
+            topProductAmountLabel.setText(CurrencyUtil.format(productAmountMap.get(topProduct)));
         } else {
             topProductLabel.setText("无");
             topProductCountLabel.setText("0");
-            topProductAmountLabel.setText("¥0.00");
+            topProductAmountLabel.setText(CurrencyUtil.format(0));
         }
 
         // 更新分类表格
@@ -481,7 +482,7 @@ public class StatisticsController {
             java.util.List<String[]> data = new java.util.ArrayList<>();
 
             // 添加汇总统计数据
-            data.add(new String[]{"总体销售额", String.format("¥%.2f", Double.parseDouble(totalSalesLabel.getText().replace("¥", "").replace(",", "")))});
+            data.add(new String[]{"总体销售额", totalSalesLabel.getText()});
             data.add(new String[]{"交易数量", transactionCountLabel.getText()});
             data.add(new String[]{"平均客单价", avgTransactionLabel.getText()});
             data.add(new String[]{"会员销售额", memberSalesLabel.getText()});

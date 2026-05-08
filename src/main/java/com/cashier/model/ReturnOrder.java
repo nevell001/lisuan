@@ -77,7 +77,7 @@ public class ReturnOrder {
     }
 
     public String getTotalAmountFormatted() {
-        return "¥" + getTotalAmount().setScale(2, RoundingMode.HALF_UP).toPlainString();
+        return com.cashier.util.CurrencyUtil.format(getTotalAmount().doubleValue());
     }
 
     public String getStatus() {

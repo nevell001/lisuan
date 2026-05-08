@@ -18,9 +18,9 @@
 
         <!-- 搜索框放在最前面，方便快速输入 -->
         <HBox spacing="8" alignment="CENTER_LEFT">
-            <Label text="搜索商品 (Ctrl+F):" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2196F3;"/>
+            <Label text="%cart.search_products" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #2196F3;"/>
             <TextField fx:id="searchField"
-                      promptText="扫码或输入商品名称"
+                      promptText="%cart.scan_or_search"
                       prefWidth="280"
                       prefHeight="38"
                       style="-fx-font-size: 15px; -fx-font-weight: bold;"
@@ -30,20 +30,20 @@
         <Region HBox.hgrow="ALWAYS"/>
 
         <!-- 统计信息 -->
-        <Label fx:id="countLabel" text="商品数量: 0" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
+        <Label fx:id="countLabel" text="%cart.product_count" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
 
         <Separator orientation="VERTICAL" prefWidth="20"/>
 
         <!-- 操作按钮 -->
         <Button fx:id="clearButton"
-                text="清空 (Ctrl+L)"
+                text="%cart.clear"
                 onAction="#handleClearCart"
                 prefWidth="120"
                 prefHeight="42"
                 style="-fx-font-size: 15px; -fx-font-weight: bold;"
                 styleClass="warning-button"/>
 
-        <Button text="快捷键帮助 (Ctrl+/)"
+        <Button text="%cart.shortcut_help"
                 onAction="#showShortcutHelp"
                 prefWidth="150"
                 prefHeight="42"
@@ -56,19 +56,19 @@
 <!-- 左侧：购物车商品列表 -->
             <VBox VBox.vgrow="ALWAYS" styleClass="cart-section">
                 <!-- 区域标题 -->
-                <Label text="🛒 购物车" styleClass="section-header"/>
-                
+                <Label text="%cart.title_with_icon" styleClass="section-header"/>
+
                 <TableView fx:id="cartTable"
                           VBox.vgrow="ALWAYS"
                           styleClass="cart-table">
                     <columns>
-                        <TableColumn fx:id="nameColumn" text="商品名称" prefWidth="200"/>
-                        <TableColumn fx:id="priceColumn" text="单价(元)" prefWidth="100"/>
-                        <TableColumn fx:id="quantityColumn" text="数量" prefWidth="100"/>
-                        <TableColumn fx:id="subtotalColumn" text="小计(元)" prefWidth="100"/>
+                        <TableColumn fx:id="nameColumn" text="%cart.product_name" prefWidth="200"/>
+                        <TableColumn fx:id="priceColumn" text="%cart.unit_price" prefWidth="100"/>
+                        <TableColumn fx:id="quantityColumn" text="%cart.quantity" prefWidth="100"/>
+                        <TableColumn fx:id="subtotalColumn" text="%cart.subtotal" prefWidth="100"/>
                     </columns>
                     <placeholder>
-                        <Label text="购物车为空" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
+                        <Label text="%cart.empty" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
                     </placeholder>
                 </TableView>
             </VBox>
@@ -82,19 +82,19 @@
                     <padding>
                         <Insets top="12" right="12" bottom="12" left="12"/>
                     </padding>
-                    <Label text="可用商品" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #FFFFFF;"/>
-                    <Label text="(双击添加)" style="-fx-font-size: 13px; -fx-text-fill: #E0E0E0; -fx-font-style: italic;"/>
+                    <Label text="%cart.available_products" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #FFFFFF;"/>
+                    <Label text="%cart.double_click_add" style="-fx-font-size: 13px; -fx-text-fill: #E0E0E0; -fx-font-style: italic;"/>
                     <Region HBox.hgrow="ALWAYS"/>
-                    <Label text="库存" style="-fx-font-size: 13px; -fx-text-fill: #E0E0E0;"/>
+                    <Label text="%cart.stock" style="-fx-font-size: 13px; -fx-text-fill: #E0E0E0;"/>
                 </HBox>
-                
+
                 <TableView fx:id="productTable"
                           VBox.vgrow="ALWAYS"
                           styleClass="product-table">
                     <columns>
-                        <TableColumn fx:id="productNameColumn" text="商品名称" prefWidth="180"/>
-                        <TableColumn fx:id="productPriceColumn" text="单价" prefWidth="90"/>
-                        <TableColumn fx:id="productStockColumn" text="库存" prefWidth="70"/>
+                        <TableColumn fx:id="productNameColumn" text="%cart.product_name" prefWidth="180"/>
+                        <TableColumn fx:id="productPriceColumn" text="%cart.unit_price" prefWidth="90"/>
+                        <TableColumn fx:id="productStockColumn" text="%cart.stock" prefWidth="70"/>
                     </columns>
                 </TableView>
             </VBox>
@@ -111,9 +111,9 @@
                         <Insets top="8" right="8" bottom="8" left="8"/>
                     </padding>
                     <HBox spacing="10" alignment="CENTER_LEFT">
-                        <Label text="会员手机号 (Ctrl+M):" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2196F3;"/>
-                        <TextField fx:id="memberPhoneField" prefWidth="130" prefHeight="36" promptText="输入手机号" style="-fx-font-size: 14px;"/>
-                        <Button text="查询" onAction="#handleSearchMember" prefWidth="70" prefHeight="36" style="-fx-font-size: 14px; -fx-font-weight: bold;" styleClass="secondary-button"/>
+                        <Label text="%cart.member_phone" style="-fx-font-size: 14px; -fx-font-weight: bold; -fx-text-fill: #2196F3;"/>
+                        <TextField fx:id="memberPhoneField" prefWidth="130" prefHeight="36" promptText="%cart.enter_phone" style="-fx-font-size: 14px;"/>
+                        <Button text="%cart.search_button" onAction="#handleSearchMember" prefWidth="70" prefHeight="36" style="-fx-font-size: 14px; -fx-font-weight: bold;" styleClass="secondary-button"/>
                     </HBox>
                     <Label fx:id="memberInfoLabel" text="" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
                 </VBox>
@@ -123,29 +123,29 @@
                 <!-- 金额信息 -->
                 <VBox spacing="6">
                     <HBox spacing="15" alignment="CENTER_LEFT">
-                        <Label text="商品总数:" style="-fx-font-size: 15px; -fx-text-fill: #616161;"/>
+                        <Label text="%cart.total_quantity" style="-fx-font-size: 15px; -fx-text-fill: #616161;"/>
                         <Label fx:id="totalQuantityLabel" text="0" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #212121;"/>
                     </HBox>
 
                     <HBox spacing="15" alignment="CENTER_LEFT">
-                        <Label text="商品金额:" style="-fx-font-size: 15px; -fx-text-fill: #616161;"/>
+                        <Label text="%cart.total_amount" style="-fx-font-size: 15px; -fx-text-fill: #616161;"/>
                         <Label fx:id="totalAmountLabel" text="¥0.00" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #212121;"/>
                     </HBox>
 
                     <HBox spacing="15" alignment="CENTER_LEFT">
-                        <Label text="会员折扣:" style="-fx-font-size: 15px; -fx-text-fill: #616161;"/>
+                        <Label text="%cart.member_discount" style="-fx-font-size: 15px; -fx-text-fill: #616161;"/>
                         <Label fx:id="memberDiscountLabel" text="0%" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
                     </HBox>
 
                     <HBox spacing="15" alignment="CENTER_LEFT">
-                        <Label text="折扣金额:" style="-fx-font-size: 15px; -fx-text-fill: #616161;"/>
+                        <Label text="%cart.discount_amount" style="-fx-font-size: 15px; -fx-text-fill: #616161;"/>
                         <Label fx:id="discountLabel" text="-¥0.00" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
                     </HBox>
 
                     <Separator/>
 
                     <HBox spacing="15" alignment="CENTER_LEFT">
-                        <Label text="应付金额:" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #212121;"/>
+                        <Label text="%cart.final_amount" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #212121;"/>
                         <Label fx:id="finalAmountLabel" text="¥0.00" style="-fx-font-size: 26px; -fx-font-weight: bold; -fx-text-fill: #F44336;"/>
                     </HBox>
                 </VBox>
@@ -155,10 +155,10 @@
                     <padding>
                         <Insets top="10" right="0" bottom="5" left="0"/>
                     </padding>
-                    <Label text="支付方式:" style="-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #212121;"/>
+                    <Label text="%cart.payment_method" style="-fx-font-size: 15px; -fx-font-weight: bold; -fx-text-fill: #212121;"/>
                     <GridPane hgap="8" vgap="8">
                         <Button fx:id="cashButton"
-                                text="现金支付 (F8)"
+                                text="%cart.cash_payment"
                                 onAction="#handleCashPayment"
                                 prefWidth="170"
                                 prefHeight="55"
@@ -166,7 +166,7 @@
                                 styleClass="payment-button cash-button"
                                 GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                         <Button fx:id="wechatButton"
-                                text="微信支付 (Ctrl+1)"
+                                text="%cart.wechat_payment"
                                 onAction="#handleWechatPayment"
                                 prefWidth="170"
                                 prefHeight="55"
@@ -174,7 +174,7 @@
                                 styleClass="payment-button wechat-button"
                                 GridPane.columnIndex="1" GridPane.rowIndex="0"/>
                         <Button fx:id="alipayButton"
-                                text="支付宝 (Ctrl+2)"
+                                text="%cart.alipay_payment"
                                 onAction="#handleAlipayPayment"
                                 prefWidth="170"
                                 prefHeight="55"
@@ -182,7 +182,7 @@
                                 styleClass="payment-button alipay-button"
                                 GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                         <Button fx:id="cardButton"
-                                text="银行卡 (Ctrl+3)"
+                                text="%cart.card_payment"
                                 onAction="#handleCardPayment"
                                 prefWidth="170"
                                 prefHeight="55"

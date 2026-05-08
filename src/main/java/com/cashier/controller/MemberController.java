@@ -2,6 +2,7 @@ package com.cashier.controller;
 
 import com.cashier.dao.MemberDAO;
 import com.cashier.model.Member;
+import com.cashier.util.FXMLUtils;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
@@ -153,8 +154,7 @@ public class MemberController {
     private void handleAddMember() {
         try {
             // 加载会员编辑对话框
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/MemberEditView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/MemberEditView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
@@ -208,8 +208,7 @@ public class MemberController {
         if (selected != null) {
             try {
                 // 加载会员编辑对话框
-                FXMLLoader loader = new FXMLLoader();
-                loader.setLocation(getClass().getResource("/com/cashier/view/MemberEditView.fxml"));
+                FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/MemberEditView.fxml");
                 VBox root = loader.load();
 
                 // 获取控制器
@@ -289,8 +288,7 @@ public class MemberController {
         if (selected != null) {
             try {
                 // 加载充值对话框
-                FXMLLoader loader = new FXMLLoader();
-                loader.setLocation(getClass().getResource("/com/cashier/view/RechargeView.fxml"));
+                FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/RechargeView.fxml");
                 VBox root = loader.load();
 
                 // 获取控制器

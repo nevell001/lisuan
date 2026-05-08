@@ -26,6 +26,7 @@ config/*.properties
 config/*.config
 docker-compose.yml
 docker/create-cashier-user.sql
+.env
 
 # Windows 批处理文件（跟踪这些文件）
 # *.bat
@@ -66,6 +67,10 @@ pom.xml.versionsBackup
 
 # 字体文件
 fonts/exports/
+
+# Logo 图片（用户上传，不提交）
+logos/*
+!logos/README.md
 
 # Claude/iFlow 配置文件（本地使用，不提交）
 CLAUDE.md

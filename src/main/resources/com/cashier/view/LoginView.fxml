@@ -18,9 +18,9 @@
 
     <!-- 标题区域 -->
     <VBox alignment="CENTER" spacing="10">
-        <Label text="收银系统"
+        <Label text="%app.name"
                styleClass="login-title"/>
-        <Label text="Cashier Management System"
+        <Label text="%app.subtitle"
                styleClass="login-subtitle"/>
     </VBox>
 
@@ -32,18 +32,18 @@
 
         <!-- 用户名 -->
         <VBox spacing="8">
-            <Label text="用户名" styleClass="form-label"/>
+            <Label text="%login.username" styleClass="form-label"/>
             <TextField fx:id="usernameField"
-                       promptText="请输入用户名"
+                       promptText="%login.username"
                        prefWidth="300"
                        styleClass="login-input"/>
         </VBox>
 
         <!-- 密码 -->
         <VBox spacing="8">
-            <Label text="密码" styleClass="form-label"/>
+            <Label text="%login.password" styleClass="form-label"/>
             <PasswordField fx:id="passwordField"
-                          promptText="请输入密码"
+                          promptText="%login.password"
                           prefWidth="300"
                           styleClass="login-input"
                           onAction="#handleLogin"/>
@@ -51,7 +51,7 @@
 
         <!-- 记住密码 -->
         <HBox spacing="20" alignment="CENTER_LEFT" style="-fx-padding-top: 5;">
-            <CheckBox fx:id="rememberMeCheckBox" text="记住密码" styleClass="remember-checkbox"/>
+            <CheckBox fx:id="rememberMeCheckBox" text="%login.remember" styleClass="remember-checkbox"/>
             <HBox HBox.hgrow="ALWAYS"/>
         </HBox>
 
@@ -68,18 +68,18 @@
 
         <!-- 按钮 -->
         <VBox spacing="12" style="-fx-padding-top: 10;">
-            <Button text="登录"
+            <Button text="%login.button"
                     onAction="#handleLogin"
                     prefWidth="300"
                     prefHeight="45"
                     styleClass="login-button"/>
             <HBox spacing="10" alignment="CENTER">
-                <Button text="退出"
+                <Button text="%login.exit"
                         onAction="#handleExit"
                         prefWidth="145"
                         prefHeight="38"
                         styleClass="secondary-button"/>
-                <Button text="关于"
+                <Button text="%menu.help.about"
                         onAction="#handleAbout"
                         prefWidth="145"
                         prefHeight="38"
@@ -90,7 +90,7 @@
 
     <!-- 提示信息 -->
     <VBox spacing="8" alignment="CENTER">
-        <Label text="默认账户: admin / admin123"
+        <Label text="%login.default_account"
                styleClass="hint-label"/>
         <Label fx:id="versionLabel"
                styleClass="version-label"/>

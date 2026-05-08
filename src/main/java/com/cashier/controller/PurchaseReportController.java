@@ -6,6 +6,7 @@ import com.cashier.dao.SupplierDAO;
 import com.cashier.model.PurchaseOrder;
 import com.cashier.model.PurchaseOrderItem;
 import com.cashier.model.Supplier;
+import com.cashier.util.CurrencyUtil;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.collections.FXCollections;
@@ -178,7 +179,7 @@ public class PurchaseReportController {
         dateColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(cellData.getValue().date));
         amountColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().amount)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().amount)));
         quantityColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.valueOf(cellData.getValue().quantity)));
         statusColumn.setCellValueFactory(cellData ->
@@ -196,7 +197,7 @@ public class PurchaseReportController {
         orderCountColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.valueOf(cellData.getValue().orderCount)));
         supplierAmountColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().amount)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().amount)));
     }
 
     /**
@@ -208,7 +209,7 @@ public class PurchaseReportController {
         categoryQuantityColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.valueOf(cellData.getValue().quantity)));
         categoryAmountColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().amount)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().amount)));
     }
 
     /**
@@ -431,9 +432,9 @@ public class PurchaseReportController {
 
         // 更新统计卡片
         totalOrdersLabel.setText(String.valueOf(totalOrders));
-        totalAmountLabel.setText(String.format("¥%,.2f", totalAmount));
+        totalAmountLabel.setText(CurrencyUtil.format(totalAmount));
         totalQuantityLabel.setText(String.valueOf(totalQuantity));
-        avgOrderAmountLabel.setText(totalOrders > 0 ? String.format("¥%,.2f", totalAmount / totalOrders) : "¥0.00");
+        avgOrderAmountLabel.setText(totalOrders > 0 ? CurrencyUtil.format(totalAmount / totalOrders) : CurrencyUtil.format(0));
         pendingOrdersLabel.setText(String.valueOf(pendingOrders));
         approvedOrdersLabel.setText(String.valueOf(approvedOrders));
         completedOrdersLabel.setText(String.valueOf(completedOrders));
@@ -666,7 +667,7 @@ public class PurchaseReportController {
                         record.orderNo,
                         record.supplierName,
                         record.date,
-                        String.format("¥%.2f", record.amount),
+                        CurrencyUtil.format(record.amount),
                         String.valueOf(record.quantity),
                         record.status
                     });
@@ -733,7 +734,7 @@ public class PurchaseReportController {
                         String.valueOf(record.rank),
                         record.supplierName,
                         String.valueOf(record.orderCount),
-                        String.format("¥%.2f", record.amount)
+                        CurrencyUtil.format(record.amount)
                     });
                 }
 
@@ -797,7 +798,7 @@ public class PurchaseReportController {
                     data.add(new String[]{
                         record.category,
                         String.valueOf(record.quantity),
-                        String.format("¥%.2f", record.amount)
+                        CurrencyUtil.format(record.amount)
                     });
                 }
 

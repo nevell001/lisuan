@@ -4,6 +4,8 @@ import com.cashier.controller.CreateReturnOrderDialogController;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Transaction;
 import com.cashier.model.Product;
+import com.cashier.util.CurrencyUtil;
+import com.cashier.util.FXMLUtils;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
@@ -153,7 +155,7 @@ public class TransactionController {
             return new SimpleStringProperty(sb.toString());
         });
         amountColumn.setCellValueFactory(cellData ->
-            new SimpleStringProperty(String.format("¥%.2f", cellData.getValue().finalAmount)));
+            new SimpleStringProperty(CurrencyUtil.format(cellData.getValue().finalAmount.doubleValue())));
         paymentColumn.setCellValueFactory(new PropertyValueFactory<>("paymentMethod"));
         memberColumn.setCellValueFactory(cellData -> {
             String phone = cellData.getValue().memberPhone;
@@ -273,8 +275,7 @@ public class TransactionController {
             }
 
             // 加载FXML
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/CreateReturnOrderDialog.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/CreateReturnOrderDialog.fxml");
             Parent root = loader.load();
 
             // 获取控制器并设置数据
@@ -447,9 +448,9 @@ public class TransactionController {
                     t.transactionId,
                     timestampStr,
                     itemsStr,
-                    String.format("¥%.2f", t.totalAmount),
-                    String.format("¥%.2f", t.tax),
-                    String.format("¥%.2f", t.finalAmount),
+                    CurrencyUtil.format(t.totalAmount.doubleValue()),
+                    CurrencyUtil.format(t.tax.doubleValue()),
+                    CurrencyUtil.format(t.finalAmount.doubleValue()),
                     t.paymentMethod,
                     t.memberPhone == null || t.memberPhone.isEmpty() ? "非会员" : t.memberPhone
                 });

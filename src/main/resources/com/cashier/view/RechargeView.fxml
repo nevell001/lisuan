@@ -17,7 +17,7 @@
     </padding>
 
     <!-- 标题 -->
-    <Label text="会员充值" 
+    <Label text="%recharge.title"
            style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
 
     <!-- 会员信息 -->
@@ -26,19 +26,19 @@
             <Insets top="10" right="10" bottom="10" left="10"/>
         </padding>
         <HBox spacing="10">
-            <Label text="会员姓名:" style="-fx-font-weight: bold;"/>
+            <Label text="%recharge.member_name" style="-fx-font-weight: bold;"/>
             <Label fx:id="memberNameLabel" text=""/>
         </HBox>
         <HBox spacing="10">
-            <Label text="手机号码:" style="-fx-font-weight: bold;"/>
+            <Label text="%recharge.phone" style="-fx-font-weight: bold;"/>
             <Label fx:id="memberPhoneLabel" text=""/>
         </HBox>
         <HBox spacing="10">
-            <Label text="当前余额:" style="-fx-font-weight: bold;"/>
+            <Label text="%recharge.current_balance" style="-fx-font-weight: bold;"/>
             <Label fx:id="currentBalanceLabel" text="" style="-fx-text-fill: #4CAF50; -fx-font-weight: bold;"/>
         </HBox>
         <HBox spacing="10">
-            <Label text="当前积分:" style="-fx-font-weight: bold;"/>
+            <Label text="%recharge.current_points" style="-fx-font-weight: bold;"/>
             <Label fx:id="currentPointsLabel" text="" style="-fx-text-fill: #FF9800; -fx-font-weight: bold;"/>
         </HBox>
     </VBox>
@@ -50,15 +50,15 @@
         </padding>
 
         <!-- 充值金额 -->
-        <Label text="充值金额:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-        <TextField fx:id="amountField" 
-                   GridPane.columnIndex="1" GridPane.rowIndex="0" 
-                   prefWidth="200" promptText="输入充值金额"/>
+        <Label text="%recharge.amount" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <TextField fx:id="amountField"
+                   GridPane.columnIndex="1" GridPane.rowIndex="0"
+                   prefWidth="200" promptText="%recharge.amount_hint"/>
 
         <!-- 支付方式 -->
-        <Label text="支付方式:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-        <ComboBox fx:id="paymentMethodComboBox" 
-                  GridPane.columnIndex="1" GridPane.rowIndex="1" 
+        <Label text="%recharge.payment_method" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <ComboBox fx:id="paymentMethodComboBox"
+                  GridPane.columnIndex="1" GridPane.rowIndex="1"
                   prefWidth="200"/>
     </GridPane>
 
@@ -68,25 +68,25 @@
             <Insets top="10" right="10" bottom="10" left="10"/>
         </padding>
         <HBox spacing="10">
-            <Label text="充值后余额:" style="-fx-font-weight: bold;"/>
+            <Label text="%recharge.new_balance" style="-fx-font-weight: bold;"/>
             <Label fx:id="newBalanceLabel" text="" style="-fx-text-fill: #4CAF50; -fx-font-weight: bold; -fx-font-size: 14px;"/>
         </HBox>
         <HBox spacing="10">
-            <Label text="赠送积分:" style="-fx-font-weight: bold;"/>
+            <Label text="%recharge.bonus_points" style="-fx-font-weight: bold;"/>
             <Label fx:id="bonusPointsLabel" text="" style="-fx-text-fill: #FF9800; -fx-font-weight: bold; -fx-font-size: 14px;"/>
-            <Label text="(1元=10积分)" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
+            <Label text="%recharge.points_hint" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
         </HBox>
     </VBox>
 
     <!-- 充值历史记录 -->
     <VBox spacing="5">
-        <Label text="最近充值记录" style="-fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+        <Label text="%recharge.history" style="-fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
         <TableView fx:id="historyTable" prefHeight="150">
             <columns>
-                <TableColumn fx:id="dateColumn" text="充值时间" prefWidth="140"/>
-                <TableColumn fx:id="amountColumn" text="金额" prefWidth="80"/>
-                <TableColumn fx:id="paymentColumn" text="支付方式" prefWidth="80"/>
-                <TableColumn fx:id="operatorColumn" text="操作员" prefWidth="80"/>
+                <TableColumn fx:id="dateColumn" text="%recharge.date" prefWidth="140"/>
+                <TableColumn fx:id="amountColumn" text="%recharge.amount_column" prefWidth="80"/>
+                <TableColumn fx:id="paymentColumn" text="%recharge.payment_column" prefWidth="80"/>
+                <TableColumn fx:id="operatorColumn" text="%recharge.operator" prefWidth="80"/>
             </columns>
         </TableView>
     </VBox>
@@ -94,12 +94,12 @@
     <!-- 按钮区域 -->
     <HBox spacing="10" alignment="CENTER_RIGHT">
         <Button fx:id="cancelButton"
-                text="取消"
+                text="%recharge.cancel"
                 onAction="#handleCancel"
                 prefWidth="80"
                 styleClass="secondary-button"/>
         <Button fx:id="okButton"
-                text="确认充值"
+                text="%recharge.confirm"
                 onAction="#handleOk"
                 prefWidth="100"
                 styleClass="primary-button"/>

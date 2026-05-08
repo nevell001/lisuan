@@ -4,6 +4,7 @@ import com.cashier.dao.ProductDAO;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Product;
 import com.cashier.model.Transaction;
+import com.cashier.util.CurrencyUtil;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.collections.FXCollections;
@@ -210,7 +211,7 @@ public class InventoryReportController {
         currentStockColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.valueOf(cellData.getValue().currentStock)));
         stockValueColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().stockValue)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().stockValue)));
         salesQuantityColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.valueOf(cellData.getValue().salesQuantity)));
         turnoverRateColumn.setCellValueFactory(cellData ->
@@ -248,7 +249,7 @@ public class InventoryReportController {
         overstockQuantityColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.valueOf(cellData.getValue().currentStock)));
         overstockValueColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().stockValue)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().stockValue)));
         overstockDaysColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.format("%.0f", cellData.getValue().inventoryDays)));
     }
@@ -507,7 +508,7 @@ public class InventoryReportController {
 
         // 更新统计卡片
         totalProductsLabel.setText(String.valueOf(totalProducts));
-        totalStockValueLabel.setText(String.format("¥%,.2f", totalStockValue));
+        totalStockValueLabel.setText(CurrencyUtil.format(totalStockValue));
         avgTurnoverRateLabel.setText(String.format("%.2f", avgTurnoverRate));
         lowStockCountLabel.setText(String.valueOf(lowStockCount));
         slowSalesCountLabel.setText(String.valueOf(slowSalesCount));
@@ -773,7 +774,7 @@ public class InventoryReportController {
                         record.productName,
                         record.category,
                         String.valueOf(record.currentStock),
-                        String.format("¥%.2f", record.stockValue),
+                        CurrencyUtil.format(record.stockValue),
                         String.valueOf(record.salesQuantity),
                         String.format("%.2f", record.turnoverRate),
                         String.format("%.1f", record.inventoryDays),
@@ -842,7 +843,7 @@ public class InventoryReportController {
                         record.productName,
                         record.category,
                         String.valueOf(record.currentStock),
-                        String.format("¥%.2f", record.stockValue),
+                        CurrencyUtil.format(record.stockValue),
                         record.lastSaleDate != null ? record.lastSaleDate : "从未销售",
                         String.format("%.1f", record.inventoryDays)
                     });
@@ -912,9 +913,9 @@ public class InventoryReportController {
                         record.category,
                         String.valueOf(record.currentStock),
                         "10", // 默认最低库存
-                        String.format("¥%.2f", record.stockValue),
+                        CurrencyUtil.format(record.stockValue),
                         String.valueOf(overstockQuantity),
-                        String.format("¥%.2f", overstockAmount)
+                        CurrencyUtil.format(overstockAmount)
                     });
                 }
 

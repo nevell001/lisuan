@@ -2,6 +2,7 @@ package com.cashier.controller;
 
 import com.cashier.dao.*;
 import com.cashier.model.*;
+import com.cashier.util.CurrencyUtil;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
@@ -490,7 +491,7 @@ public class PurchaseInboundController {
             infoPane.add(new Label("采购日期:"), 0, 2);
             infoPane.add(new Label(order.purchaseDate), 1, 2);
             infoPane.add(new Label("总金额:"), 0, 3);
-            infoPane.add(new Label("¥" + String.format("%.2f", order.totalAmount)), 1, 3);
+            infoPane.add(new Label(CurrencyUtil.format(order.totalAmount.doubleValue())), 1, 3);
 
             // 商品明细
             TableView<PurchaseOrderItem> itemTable = new TableView<>();
@@ -645,7 +646,7 @@ public class PurchaseInboundController {
             infoPane.add(new Label("入库数量:"), 0, 3);
             infoPane.add(new Label(String.valueOf(inbound.totalQuantity)), 1, 3);
             infoPane.add(new Label("入库金额:"), 0, 4);
-            infoPane.add(new Label("¥" + String.format("%.2f", inbound.totalAmount)), 1, 4);
+            infoPane.add(new Label(CurrencyUtil.format(inbound.totalAmount.doubleValue())), 1, 4);
             infoPane.add(new Label("操作人:"), 0, 5);
             infoPane.add(new Label(inbound.operator), 1, 5);
             infoPane.add(new Label("备注:"), 0, 6);

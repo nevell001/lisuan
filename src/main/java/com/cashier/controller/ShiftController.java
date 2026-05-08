@@ -5,6 +5,7 @@ import com.cashier.dao.ShiftDAO;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Shift;
 import com.cashier.model.Transaction;
+import com.cashier.util.CurrencyUtil;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
@@ -160,11 +161,14 @@ public class ShiftController {
         transactionColumn.setCellValueFactory(cellData ->
             new SimpleStringProperty(String.valueOf(cellData.getValue().shiftTransactionCount)));
         revenueColumn.setCellValueFactory(cellData ->
-            new SimpleStringProperty(String.format("¥%.2f", cellData.getValue().shiftRevenue)));
+            new SimpleStringProperty(CurrencyUtil.format(cellData.getValue().shiftRevenue.doubleValue())));
         paymentColumn.setCellValueFactory(cellData -> {
             Shift s = cellData.getValue();
-            return new SimpleStringProperty(String.format("现金:¥%.2f 微信:¥%.2f 支付宝:¥%.2f 银行卡:¥%.2f",
-                s.cashRevenue, s.wechatRevenue, s.alipayRevenue, s.cardRevenue));
+            return new SimpleStringProperty(String.format("现金:%s 微信:%s 支付宝:%s 银行卡:%s",
+                CurrencyUtil.format(s.cashRevenue.doubleValue()),
+                CurrencyUtil.format(s.wechatRevenue.doubleValue()),
+                CurrencyUtil.format(s.alipayRevenue.doubleValue()),
+                CurrencyUtil.format(s.cardRevenue.doubleValue())));
         });
     }
 
@@ -467,11 +471,11 @@ public class ShiftController {
                     endTimeStr,
                     durationText,
                     String.valueOf(s.shiftTransactionCount),
-                    String.format("¥%.2f", s.shiftRevenue),
-                    String.format("¥%.2f", s.cashRevenue),
-                    String.format("¥%.2f", s.wechatRevenue),
-                    String.format("¥%.2f", s.alipayRevenue),
-                    String.format("¥%.2f", s.cardRevenue),
+                    CurrencyUtil.format(s.shiftRevenue.doubleValue()),
+                    CurrencyUtil.format(s.cashRevenue.doubleValue()),
+                    CurrencyUtil.format(s.wechatRevenue.doubleValue()),
+                    CurrencyUtil.format(s.alipayRevenue.doubleValue()),
+                    CurrencyUtil.format(s.cardRevenue.doubleValue()),
                     s.notes == null || s.notes.isEmpty() ? "无" : s.notes
                 });
             }

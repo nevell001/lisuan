@@ -6,8 +6,10 @@ import com.cashier.dao.ShiftDAO;
 import com.cashier.model.Shift;
 import com.cashier.model.User;
 import com.cashier.service.DataService;
+import com.cashier.util.FXMLUtils;
 import com.cashier.util.FXUtils;
 import com.cashier.util.StatusBarManager;
+import com.cashier.i18n.I18nManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.animation.Animation;
@@ -221,7 +223,8 @@ private Button shiftBtn;
             } else if (event.getCode() == KeyCode.ESCAPE) {
                 // 清空搜索或关闭当前标签页
                 Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
-                if (selectedTab != null && !selectedTab.getText().equals("欢迎")) {
+                String welcomeTab = I18nManager.getInstance().get("main.welcome");
+                if (selectedTab != null && !selectedTab.getText().equals(welcomeTab)) {
                     tabPane.getTabs().remove(selectedTab);
                     openTabs.remove(selectedTab.getText());
                     event.consume();
@@ -296,17 +299,21 @@ private Button shiftBtn;
          */
         public void setCurrentUser(User user) {
             this.currentUser = user;
-            
+
+            // 加载用户特定的语言偏好
+            String userLanguage = com.cashier.service.DataService.loadLanguagePreference(user.username);
+            com.cashier.i18n.I18nManager.getInstance().setLocale(userLanguage);
+
             // 更新用户信息显示
             currentUserLabel.setText(user.name + " (" + user.getRoleDisplayName() + ")");
             userNameLabel.setText(user.name);
             userRoleLabel.setText(user.getRoleDisplayName());
-            
+
             // 设置头像（显示用户名的首字母）
             if (user.name != null && !user.name.isEmpty()) {
                 avatarLabel.setText(user.name.substring(0, 1).toUpperCase());
             }
-            
+
             // 根据角色设置头像颜色
             String role = user.role;
             if ("admin".equals(role)) {
@@ -479,15 +486,14 @@ private Button shiftBtn;
         
         try {
             // 加载用户管理界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/UserView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/UserView.fxml");
             VBox root = loader.load();
             
             // 获取控制器
             UserController controller = loader.getController();
             
             // 创建内容标签页
-            createContentTab("用户管理", root);
+            createContentTab(I18nManager.getInstance().get("nav.user_management"), root);
             
         } catch (IOException e) {
             showError("加载用户管理界面失败: " + e.getMessage());
@@ -619,15 +625,14 @@ private Button shiftBtn;
         
         try {
             // 加载商品管理界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/InventoryView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/InventoryView.fxml");
             VBox root = loader.load();
             
             // 获取控制器
             InventoryController controller = loader.getController();
             
             // 创建内容标签页
-            createContentTab("商品管理", root);
+            createContentTab(I18nManager.getInstance().get("nav.inventory"), root);
             
         } catch (IOException e) {
             showError("加载商品管理界面失败: " + e.getMessage());
@@ -642,8 +647,7 @@ private Button shiftBtn;
         try {
             logger.debug("MainController: 开始加载购物车界面...");
             // 加载购物车界面（购物车和结账已合并）
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/CartView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/CartView.fxml");
             logger.debug("MainController: FXML文件路径: {}", getClass().getResource("/com/cashier/view/CartView.fxml"));
             VBox root = loader.load();
 
@@ -652,7 +656,7 @@ private Button shiftBtn;
             logger.debug("MainController: 获取控制器成功");
 
             // 创建内容标签页
-            createContentTab("pos/结账", root);
+            createContentTab(I18nManager.getInstance().get("nav.cart"), root);
             logger.debug("MainController: 购物车界面加载成功");
 
         } catch (IOException e) {
@@ -671,15 +675,14 @@ private Button shiftBtn;
         
         try {
             // 加载购物车界面（购物车和结账已合并）
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/CartView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/CartView.fxml");
             VBox root = loader.load();
             
             // 获取控制器
             CartController controller = loader.getController();
             
             // 创建内容标签页
-            createContentTab("pos/结账", root);
+            createContentTab(I18nManager.getInstance().get("nav.cart"), root);
             
         } catch (IOException e) {
             showError("加载POS界面失败: " + e.getMessage());
@@ -693,15 +696,14 @@ private Button shiftBtn;
 
         try {
             // 加载交易记录界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/TransactionView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/TransactionView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
             TransactionController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab("交易记录", root);
+            createContentTab(I18nManager.getInstance().get("nav.transactions"), root);
 
         } catch (IOException e) {
             showError("加载交易记录界面失败: " + e.getMessage());
@@ -715,15 +717,14 @@ private Button shiftBtn;
         
         try {
             // 加载会员管理界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/MemberView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/MemberView.fxml");
             VBox root = loader.load();
             
             // 获取控制器
             MemberController controller = loader.getController();
             
             // 创建内容标签页
-            createContentTab("会员管理", root);
+            createContentTab(I18nManager.getInstance().get("nav.members"), root);
             
         } catch (IOException e) {
             showError("加载会员管理界面失败: " + e.getMessage());
@@ -737,15 +738,14 @@ private Button shiftBtn;
 
         try {
             // 加载供应商管理界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/SupplierView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/SupplierView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
             SupplierController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab("供应商管理", root);
+            createContentTab(I18nManager.getInstance().get("nav.supplier"), root);
 
         } catch (IOException e) {
             showError("加载供应商管理界面失败: " + e.getMessage());
@@ -759,15 +759,14 @@ private Button shiftBtn;
 
         try {
             // 加载采购订单界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/PurchaseOrderView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/PurchaseOrderView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
             PurchaseOrderController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab("采购订单", root);
+            createContentTab(I18nManager.getInstance().get("nav.purchase_order"), root);
 
         } catch (IOException e) {
             showError("加载采购订单界面失败: " + e.getMessage());
@@ -781,15 +780,14 @@ private Button shiftBtn;
 
         try {
             // 加载采购审批界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/PurchaseApprovalView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/PurchaseApprovalView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
             PurchaseApprovalController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab("采购审批", root);
+            createContentTab(I18nManager.getInstance().get("nav.purchase_approval"), root);
 
         } catch (IOException e) {
             showError("加载采购审批界面失败: " + e.getMessage());
@@ -803,15 +801,14 @@ private Button shiftBtn;
 
         try {
             // 加载采购入库界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/PurchaseInboundView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/PurchaseInboundView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
             PurchaseInboundController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab("采购入库", root);
+            createContentTab(I18nManager.getInstance().get("nav.purchase_inbound"), root);
 
         } catch (IOException e) {
             showError("加载采购入库界面失败: " + e.getMessage());
@@ -825,15 +822,14 @@ private Button shiftBtn;
 
         try {
             // 加载库存盘点界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/InventoryCheckView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/InventoryCheckView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
             InventoryCheckController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab("库存盘点", root);
+            createContentTab(I18nManager.getInstance().get("nav.inventory_check"), root);
 
         } catch (IOException e) {
             showError("加载库存盘点界面失败: " + e.getMessage());
@@ -847,15 +843,14 @@ private Button shiftBtn;
 
         try {
             // 加载数据统计界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/StatisticsView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/StatisticsView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
             StatisticsController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab("数据统计", root);
+            createContentTab(I18nManager.getInstance().get("nav.statistics"), root);
 
         } catch (IOException e) {
             showError("加载数据统计界面失败: " + e.getMessage());
@@ -869,8 +864,7 @@ private Button shiftBtn;
 
         try {
             // 加载库存预警界面（在新窗口中打开）
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/InventoryAlertView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/InventoryAlertView.fxml");
             javafx.scene.Parent root = loader.load();
 
             // 获取控制器
@@ -908,15 +902,14 @@ private Button shiftBtn;
 
         try {
             // 加载采购报表界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/PurchaseReportView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/PurchaseReportView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
             PurchaseReportController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab("采购报表", root);
+            createContentTab(I18nManager.getInstance().get("nav.purchase_report"), root);
 
         } catch (IOException e) {
             showError("加载采购报表界面失败: " + e.getMessage());
@@ -930,15 +923,14 @@ private Button shiftBtn;
 
         try {
             // 加载库存报表界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/InventoryReportView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/InventoryReportView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
             InventoryReportController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab("库存报表", root);
+            createContentTab(I18nManager.getInstance().get("nav.inventory_report"), root);
 
         } catch (IOException e) {
             showError("加载库存报表界面失败: " + e.getMessage());
@@ -952,15 +944,14 @@ private Button shiftBtn;
 
         try {
             // 加载利润分析界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/ProfitReportView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/ProfitReportView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
             ProfitReportController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab("利润分析", root);
+            createContentTab(I18nManager.getInstance().get("nav.profit_report"), root);
 
         } catch (IOException e) {
             showError("加载利润分析界面失败: " + e.getMessage());
@@ -974,15 +965,14 @@ private Button shiftBtn;
 
         try {
             // 加载退货报表界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/ReturnReportView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/ReturnReportView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
             ReturnReportController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab("退货报表", root);
+            createContentTab(I18nManager.getInstance().get("nav.return_report"), root);
 
         } catch (IOException e) {
             showError("加载退货报表界面失败: " + e.getMessage());
@@ -996,15 +986,14 @@ private Button shiftBtn;
 
         try {
             // 加载促销管理界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/PromotionView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/PromotionView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
             PromotionController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab("促销管理", root);
+            createContentTab(I18nManager.getInstance().get("nav.promotions"), root);
 
         } catch (IOException e) {
             showError("加载促销管理界面失败: " + e.getMessage());
@@ -1018,8 +1007,7 @@ private Button shiftBtn;
 
         try {
             // 加载交接班界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/ShiftView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/ShiftView.fxml");
             VBox root = loader.load();
 
             // 获取控制器
@@ -1027,7 +1015,7 @@ private Button shiftBtn;
             controller.setCurrentUser(currentUser);
 
             // 创建内容标签页
-            createContentTab("交班管理", root);
+            createContentTab(I18nManager.getInstance().get("nav.shift"), root);
 
         } catch (IOException e) {
             showError("加载交接班界面失败: " + e.getMessage());
@@ -1041,16 +1029,16 @@ private Button shiftBtn;
 
         try {
             // 加载设置界面
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/SettingsView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/SettingsView.fxml");
             VBox root = loader.load();
 
-            // 获取控制器
+            // 获取控制器并设置当前用户
             SettingsController controller = loader.getController();
+            controller.setCurrentUser(currentUser);
 
             // 创建内容标签页
-            createContentTab("系统设置", root);
-            
+            createContentTab(I18nManager.getInstance().get("nav.settings"), root);
+
         } catch (IOException e) {
             showError("加载设置界面失败: " + e.getMessage());
         }
@@ -1062,13 +1050,12 @@ private Button shiftBtn;
         setActiveButton(returnOrderBtn);
 
         try {
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/ReturnOrderView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/ReturnOrderView.fxml");
             VBox root = loader.load();
 
             ReturnOrderController controller = loader.getController();
 
-            createContentTab("退货订单", root);
+            createContentTab(I18nManager.getInstance().get("nav.return_order"), root);
 
         } catch (IOException e) {
             showError("加载退货订单界面失败: " + e.getMessage());
@@ -1081,13 +1068,12 @@ private Button shiftBtn;
         setActiveButton(returnApprovalBtn);
 
         try {
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/ReturnApprovalView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/ReturnApprovalView.fxml");
             VBox root = loader.load();
 
             ReturnApprovalController controller = loader.getController();
 
-            createContentTab("退货审批", root);
+            createContentTab(I18nManager.getInstance().get("nav.return_approval"), root);
 
         } catch (IOException e) {
             showError("加载退货审批界面失败: " + e.getMessage());

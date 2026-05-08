@@ -18,25 +18,25 @@
 
         <!-- 操作按钮 -->
         <Button fx:id="addButton"
-                text="添加用户"
+                text="%user.add"
                 onAction="#handleAddUser"
                 prefWidth="100"
                 styleClass="primary-button"/>
 
         <Button fx:id="editButton"
-                text="编辑"
+                text="%user.edit_button"
                 onAction="#handleEditUser"
                 prefWidth="80"
                 styleClass="secondary-button"/>
 
         <Button fx:id="deleteButton"
-                text="删除"
+                text="%user.delete_button"
                 onAction="#handleDeleteUser"
                 prefWidth="80"
                 styleClass="danger-button"/>
 
         <Button fx:id="resetPasswordButton"
-                text="重置密码"
+                text="%user.reset_password"
                 onAction="#handleResetPassword"
                 prefWidth="100"
                 styleClass="warning-button"/>
@@ -44,13 +44,13 @@
         <Separator orientation="VERTICAL"/>
 
         <Button fx:id="activateButton"
-                text="激活"
+                text="%user.activate"
                 onAction="#handleActivateUser"
                 prefWidth="80"
                 styleClass="success-button"/>
 
         <Button fx:id="deactivateButton"
-                text="禁用"
+                text="%user.deactivate"
                 onAction="#handleDeactivateUser"
                 prefWidth="80"
                 styleClass="warning-button"/>
@@ -58,24 +58,24 @@
         <Separator orientation="VERTICAL"/>
 
         <!-- 筛选条件 -->
-        <Label text="角色:"/>
+        <Label text="%user.role_label"/>
         <ComboBox fx:id="roleFilterComboBox" prefWidth="100"/>
 
-        <Label text="状态:"/>
+        <Label text="%user.status_label"/>
         <ComboBox fx:id="statusFilterComboBox" prefWidth="100"/>
 
-        <Label text="搜索:"/>
+        <Label text="%user.search_label"/>
         <TextField fx:id="searchField"
-                  promptText="用户名或姓名"
+                  promptText="%user.search_hint"
                   prefWidth="150"
                   onAction="#handleSearch"/>
 
-        <Button text="搜索"
+        <Button text="%common.search"
                 onAction="#handleSearch"
                 prefWidth="60"
                 styleClass="secondary-button"/>
 
-        <Button text="清除"
+        <Button text="%common.clear"
                 onAction="#handleClearSearch"
                 prefWidth="60"
                 styleClass="secondary-button"/>
@@ -83,7 +83,7 @@
         <Region HBox.hgrow="ALWAYS"/>
 
         <!-- 统计信息 -->
-        <Label fx:id="countLabel" text="用户数量: 0" style="-fx-text-fill: #757575;"/>
+        <Label fx:id="countLabel" text="%user.count" style="-fx-text-fill: #757575;"/>
     </HBox>
 
     <!-- 用户列表表格 -->
@@ -91,15 +91,15 @@
               VBox.vgrow="ALWAYS"
               styleClass="user-table">
         <columns>
-            <TableColumn fx:id="usernameColumn" text="用户名" prefWidth="120"/>
-            <TableColumn fx:id="nameColumn" text="姓名" prefWidth="120"/>
-            <TableColumn fx:id="roleColumn" text="角色" prefWidth="100"/>
-            <TableColumn fx:id="createTimeColumn" text="创建时间" prefWidth="160"/>
-            <TableColumn fx:id="lastLoginColumn" text="最后登录" prefWidth="160"/>
-            <TableColumn fx:id="statusColumn" text="状态" prefWidth="80"/>
+            <TableColumn fx:id="usernameColumn" text="%user.username" prefWidth="120"/>
+            <TableColumn fx:id="nameColumn" text="%user.real_name" prefWidth="120"/>
+            <TableColumn fx:id="roleColumn" text="%user.role" prefWidth="100"/>
+            <TableColumn fx:id="createTimeColumn" text="%user.create_time" prefWidth="160"/>
+            <TableColumn fx:id="lastLoginColumn" text="%user.last_login" prefWidth="160"/>
+            <TableColumn fx:id="statusColumn" text="%user.status" prefWidth="80"/>
         </columns>
         <placeholder>
-            <Label text="暂无用户数据" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
+            <Label text="%user.no_data" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
         </placeholder>
     </TableView>
 

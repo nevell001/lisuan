@@ -440,6 +440,28 @@ PREPARE stmt FROM @sql;
 EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
+-- 创建语言偏好表（如果不存在）
+SET @table_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'language_preferences'
+);
+
+SET @sql = IF(@table_exists = 0,
+    'CREATE TABLE IF NOT EXISTS language_preferences (
+        username VARCHAR(50) PRIMARY KEY,
+        language_tag VARCHAR(10) DEFAULT ''zh-CN'',
+        updated_at BIGINT,
+        INDEX idx_username (username),
+        FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
+    'SELECT "language_preferences table already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
 -- ============================================
 -- v2.3.0-v2.3.1 新增表：采购管理模块
 -- ============================================

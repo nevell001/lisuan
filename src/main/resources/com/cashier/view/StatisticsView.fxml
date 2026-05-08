@@ -17,49 +17,49 @@
 
     <!-- 顶部工具栏 -->
     <HBox spacing="10" alignment="CENTER_LEFT">
-        <Label text="数据统计" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+        <Label text="%statistics.title" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
         <Region HBox.hgrow="ALWAYS"/>
         <ComboBox fx:id="timeRangeComboBox" prefWidth="120"/>
-        <DatePicker fx:id="startDatePicker" prefWidth="150" promptText="开始日期"/>
-        <DatePicker fx:id="endDatePicker" prefWidth="150" promptText="结束日期"/>
-        <Button text="查询" onAction="#handleQuery" styleClass="primary-button"/>
-        <Button text="刷新" onAction="#handleRefresh"/>
-        <Button text="导出" onAction="#handleExport" styleClass="success-button"/>
+        <DatePicker fx:id="startDatePicker" prefWidth="150" promptText="%statistics.date_from"/>
+        <DatePicker fx:id="endDatePicker" prefWidth="150" promptText="%statistics.date_to"/>
+        <Button text="%statistics.query" onAction="#handleQuery" styleClass="primary-button"/>
+        <Button text="%statistics.refresh" onAction="#handleRefresh"/>
+        <Button text="%statistics.export" onAction="#handleExport" styleClass="success-button"/>
     </HBox>
 
     <!-- 统计摘要 - 紧凑的两行布局 -->
     <HBox spacing="15" style="-fx-background-color: #f5f5f5; -fx-padding: 15;">
         <!-- 第一行：主要指标 -->
         <VBox spacing="5" prefWidth="150">
-            <Label text="总销售额" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
+            <Label text="%statistics.total_sales" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
             <Label fx:id="totalSalesLabel" text="¥0.00" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
         </VBox>
         <VBox spacing="5" prefWidth="120">
-            <Label text="交易笔数" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
+            <Label text="%statistics.transaction_count" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
             <Label fx:id="transactionCountLabel" text="0" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
         </VBox>
         <VBox spacing="5" prefWidth="130">
-            <Label text="平均交易额" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
+            <Label text="%statistics.avg_transaction" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
             <Label fx:id="avgTransactionLabel" text="¥0.00" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #FF9800;"/>
         </VBox>
         <VBox spacing="5" prefWidth="130">
-            <Label text="会员消费" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
+            <Label text="%statistics.member_sales" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
             <Label fx:id="memberSalesLabel" text="¥0.00" style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #9C27B0;"/>
         </VBox>
         <VBox spacing="5" prefWidth="110">
-            <Label text="现金支付" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
+            <Label text="%statistics.cash_payment" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
             <Label fx:id="cashSalesLabel" text="¥0.00" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #607D8B;"/>
         </VBox>
         <VBox spacing="5" prefWidth="110">
-            <Label text="微信支付" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
+            <Label text="%statistics.wechat_payment" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
             <Label fx:id="wechatSalesLabel" text="¥0.00" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #2196F3;"/>
         </VBox>
         <VBox spacing="5" prefWidth="110">
-            <Label text="支付宝支付" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
+            <Label text="%statistics.alipay_payment" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
             <Label fx:id="alipaySalesLabel" text="¥0.00" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #03A9F4;"/>
         </VBox>
         <VBox spacing="5" prefWidth="110">
-            <Label text="银行卡支付" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
+            <Label text="%statistics.card_payment" style="-fx-font-weight: bold; -fx-font-size: 11px;"/>
             <Label fx:id="cardSalesLabel" text="¥0.00" style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #00BCD4;"/>
         </VBox>
     </HBox>
@@ -68,19 +68,19 @@
     <HBox spacing="15" VBox.vgrow="ALWAYS">
         <!-- 支付方式分布饼图 -->
         <VBox spacing="5" prefWidth="400">
-            <Label text="支付方式分布" style="-fx-font-weight: bold;"/>
+            <Label text="%statistics.payment_distribution" style="-fx-font-weight: bold;"/>
             <PieChart fx:id="paymentMethodPieChart" VBox.vgrow="ALWAYS" legendSide="RIGHT"/>
         </VBox>
 
         <!-- 销售趋势图 -->
         <VBox spacing="5" HBox.hgrow="ALWAYS">
-            <Label text="销售趋势" style="-fx-font-weight: bold;"/>
+            <Label text="%statistics.sales_trend" style="-fx-font-weight: bold;"/>
             <LineChart fx:id="salesTrendLineChart" VBox.vgrow="ALWAYS">
                 <xAxis>
-                    <CategoryAxis label="日期"/>
+                    <CategoryAxis label="%statistics.date_axis"/>
                 </xAxis>
                 <yAxis>
-                    <NumberAxis label="销售额（元）"/>
+                    <NumberAxis label="%statistics.sales_amount_axis"/>
                 </yAxis>
             </LineChart>
         </VBox>
@@ -88,50 +88,50 @@
 
     <!-- 分类销售统计 -->
     <VBox spacing="5" VBox.vgrow="ALWAYS" prefHeight="300">
-        <Label text="分类销售统计" style="-fx-font-weight: bold;"/>
+        <Label text="%statistics.category_sales" style="-fx-font-weight: bold;"/>
         <BarChart fx:id="categorySalesBarChart" VBox.vgrow="ALWAYS">
             <xAxis>
-                <CategoryAxis label="分类"/>
+                <CategoryAxis label="%statistics.category_axis"/>
             </xAxis>
             <yAxis>
-                <NumberAxis label="销售额（元）"/>
+                <NumberAxis label="%statistics.sales_amount_axis"/>
             </yAxis>
         </BarChart>
     </VBox>
 
     <!-- 详细统计区域 - 使用 TabPane -->
     <TabPane VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
-        <Tab text="分类统计">
+        <Tab text="%statistics.tab_category">
             <TableView fx:id="categoryTable">
                 <columns>
-                    <TableColumn fx:id="categoryNameColumn" text="分类名称" prefWidth="200"/>
-                    <TableColumn fx:id="categoryCountColumn" text="销售数量" prefWidth="100"/>
-                    <TableColumn fx:id="categoryAmountColumn" text="销售金额" prefWidth="120"/>
+                    <TableColumn fx:id="categoryNameColumn" text="%statistics.category_name" prefWidth="200"/>
+                    <TableColumn fx:id="categoryCountColumn" text="%statistics.category_count" prefWidth="100"/>
+                    <TableColumn fx:id="categoryAmountColumn" text="%statistics.category_amount" prefWidth="120"/>
                 </columns>
             </TableView>
         </Tab>
-        <Tab text="时段统计">
+        <Tab text="%statistics.tab_hourly">
             <TableView fx:id="hourlyTable">
                 <columns>
-                    <TableColumn fx:id="hourColumn" text="时间段" prefWidth="120"/>
-                    <TableColumn fx:id="hourCountColumn" text="交易笔数" prefWidth="100"/>
-                    <TableColumn fx:id="hourAmountColumn" text="交易金额" prefWidth="120"/>
+                    <TableColumn fx:id="hourColumn" text="%statistics.hour_period" prefWidth="120"/>
+                    <TableColumn fx:id="hourCountColumn" text="%statistics.hour_count" prefWidth="100"/>
+                    <TableColumn fx:id="hourAmountColumn" text="%statistics.hour_amount" prefWidth="120"/>
                 </columns>
             </TableView>
         </Tab>
-        <Tab text="热销商品">
+        <Tab text="%statistics.tab_top_products">
             <VBox spacing="10" style="-fx-padding: 20;">
                 <HBox spacing="20" alignment="CENTER_LEFT">
                     <VBox spacing="3">
-                        <Label text="商品名称" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
-                        <Label fx:id="topProductLabel" text="无" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
+                        <Label text="%statistics.top_product_name" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
+                        <Label fx:id="topProductLabel" text="%statistics.no_data" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
                     </VBox>
                     <VBox spacing="3">
-                        <Label text="销售数量" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
+                        <Label text="%statistics.top_product_count" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
                         <Label fx:id="topProductCountLabel" text="0" style="-fx-font-size: 18px; -fx-font-weight: bold;"/>
                     </VBox>
                     <VBox spacing="3">
-                        <Label text="销售金额" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
+                        <Label text="%statistics.top_product_amount" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
                         <Label fx:id="topProductAmountLabel" text="¥0.00" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #4CAF50;"/>
                     </VBox>
                 </HBox>

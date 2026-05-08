@@ -284,6 +284,19 @@
 
 .tab-pane .tab {
     -fx-background-color: #E0E0E0;
+    -fx-min-width: 160px;
+    -fx-pref-width: 200px;
+}
+
+.tab-pane .tab .tab-label {
+    -fx-padding: 5 15 5 15;
+    -fx-text-alignment: CENTER;
+    -fx-wrap-text: true;
+    -fx-font-size: 13px;
+}
+
+.tab-pane .tab .tab-container {
+    -fx-padding: 5 10 5 10;
 }
 
 .tab-pane .tab:selected {

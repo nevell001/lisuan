@@ -3,6 +3,7 @@ package com.cashier.controller;
 import com.cashier.dao.*;
 import com.cashier.model.*;
 import com.cashier.service.ReturnService;
+import com.cashier.util.CurrencyUtil;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -121,7 +122,7 @@ public class ReturnReportController {
                 } else {
                     try {
                         double amount = Double.parseDouble(item);
-                        setText(String.format("¥%.2f", amount));
+                        setText(CurrencyUtil.format(amount));
                     } catch (Exception e) {
                         setText(item);
                     }
@@ -240,7 +241,7 @@ public class ReturnReportController {
                 order.returnOrderId,
                 order.memberName != null ? order.memberName : "无",
                 sdf.format(order.returnDate),
-                String.format("¥%.2f", order.totalAmount),
+                CurrencyUtil.format(order.totalAmount.doubleValue()),
                 order.getStatusText(),
                 order.operatorName,
                 order.returnReason != null ? order.returnReason : ""
@@ -287,12 +288,12 @@ public class ReturnReportController {
 
             // 更新统计标签
             totalReturnOrdersLabel.setText(String.valueOf(stats.totalReturnOrders));
-            totalReturnAmountLabel.setText(String.format("¥%.2f", stats.totalReturnAmount));
+            totalReturnAmountLabel.setText(CurrencyUtil.format(stats.totalReturnAmount));
             approvedOrdersLabel.setText(String.valueOf(stats.approvedOrders));
             rejectedOrdersLabel.setText(String.valueOf(stats.rejectedOrders));
             completedOrdersLabel.setText(String.valueOf(stats.completedOrders));
             pendingOrdersLabel.setText(String.valueOf(stats.totalReturnOrders - stats.approvedOrders - stats.rejectedOrders - stats.completedOrders));
-            avgReturnAmountLabel.setText(String.format("¥%.2f", 
+            avgReturnAmountLabel.setText(CurrencyUtil.format(
                 stats.totalReturnOrders > 0 ? stats.totalReturnAmount / stats.totalReturnOrders : 0));
 
             // 加载退货订单列表

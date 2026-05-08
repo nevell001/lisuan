@@ -19,38 +19,38 @@
             </padding>
 
             <Button fx:id="addButton"
-                    text="添加促销"
+                    text="%promotion.add"
                     onAction="#handleAddPromotion"
                     prefWidth="100"
                     styleClass="primary-button"/>
 
             <Button fx:id="editButton"
-                    text="编辑"
+                    text="%promotion.edit"
                     onAction="#handleEditPromotion"
                     prefWidth="80"
                     styleClass="secondary-button"/>
 
             <Button fx:id="deleteButton"
-                    text="删除"
+                    text="%promotion.delete"
                     onAction="#handleDeletePromotion"
                     prefWidth="80"
                     styleClass="danger-button"/>
 
             <Button fx:id="enableButton"
-                    text="启用"
+                    text="%promotion.enable"
                     onAction="#handleEnablePromotion"
                     prefWidth="80"
                     styleClass="success-button"/>
 
             <Button fx:id="disableButton"
-                    text="禁用"
+                    text="%promotion.disable"
                     onAction="#handleDisablePromotion"
                     prefWidth="80"
                     styleClass="warning-button"/>
 
             <Region HBox.hgrow="ALWAYS"/>
 
-            <Label fx:id="countLabel" text="促销活动: 0 个" style="-fx-text-fill: #757575;"/>
+            <Label fx:id="countLabel" text="%promotion.count" style="-fx-text-fill: #757575;"/>
         </HBox>
 
         <!-- 第二行：筛选和搜索 -->
@@ -59,26 +59,26 @@
                 <Insets top="5" right="10" bottom="10" left="10"/>
             </padding>
 
-            <Label text="类型:"/>
+            <Label text="%promotion.type_label"/>
             <ComboBox fx:id="typeFilterComboBox" prefWidth="100"/>
 
-            <Label text="状态:"/>
+            <Label text="%promotion.status_label"/>
             <ComboBox fx:id="statusFilterComboBox" prefWidth="100"/>
 
             <Separator orientation="VERTICAL"/>
 
-            <Label text="搜索:"/>
+            <Label text="%promotion.search_label"/>
             <TextField fx:id="searchField"
-                      promptText="促销名称或描述"
+                      promptText="%promotion.search_hint"
                       prefWidth="200"
                       onAction="#handleSearch"/>
 
-            <Button text="搜索"
+            <Button text="%common.search"
                     onAction="#handleSearch"
                     prefWidth="60"
                     styleClass="secondary-button"/>
 
-            <Button text="清除"
+            <Button text="%common.clear"
                     onAction="#handleClearSearch"
                     prefWidth="60"
                     styleClass="secondary-button"/>
@@ -90,15 +90,15 @@
               VBox.vgrow="ALWAYS"
               styleClass="promotion-table">
         <columns>
-            <TableColumn fx:id="nameColumn" text="促销名称" prefWidth="150"/>
-            <TableColumn fx:id="typeColumn" text="类型" prefWidth="80"/>
-            <TableColumn fx:id="descriptionColumn" text="描述" prefWidth="250"/>
-            <TableColumn fx:id="periodColumn" text="有效期" prefWidth="180"/>
-            <TableColumn fx:id="usageColumn" text="使用次数" prefWidth="100"/>
-            <TableColumn fx:id="statusColumn" text="状态" prefWidth="120"/>
+            <TableColumn fx:id="nameColumn" text="%promotion.name" prefWidth="150"/>
+            <TableColumn fx:id="typeColumn" text="%promotion.type" prefWidth="80"/>
+            <TableColumn fx:id="descriptionColumn" text="%promotion.description" prefWidth="250"/>
+            <TableColumn fx:id="periodColumn" text="%promotion.period" prefWidth="180"/>
+            <TableColumn fx:id="usageColumn" text="%promotion.usage" prefWidth="100"/>
+            <TableColumn fx:id="statusColumn" text="%promotion.status" prefWidth="120"/>
         </columns>
         <placeholder>
-            <Label text="暂无促销记录" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
+            <Label text="%promotion.no_data" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
         </placeholder>
     </TableView>
 

@@ -19,10 +19,10 @@
     <!-- 标题 -->
     <HBox alignment="CENTER_LEFT" spacing="10">
         <Label fx:id="titleLabel"
-               text="快速入库"
+               text="%restock.title"
                style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Label text="快速入库通道" style="-fx-font-size: 12px; -fx-text-fill: #757575; -fx-font-style: italic;"/>
+        <Label text="%restock.subtitle" style="-fx-font-size: 12px; -fx-text-fill: #757575; -fx-font-style: italic;"/>
     </HBox>
 
     <!-- 商品信息卡片 -->
@@ -48,15 +48,15 @@
         </columnConstraints>
 
         <!-- 补货数量 -->
-        <Label text="入库数量:" GridPane.columnIndex="0" GridPane.rowIndex="0"
+        <Label text="%restock.quantity" GridPane.columnIndex="0" GridPane.rowIndex="0"
                style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <TextField fx:id="quantityField"
                    GridPane.columnIndex="1" GridPane.rowIndex="0"
-                   prefWidth="250" promptText="输入入库数量"
+                   prefWidth="250" promptText="%restock.quantity_hint"
                    style="-fx-font-size: 14px;"/>
 
         <!-- 入库来源 -->
-        <Label text="入库来源:" GridPane.columnIndex="0" GridPane.rowIndex="1"
+        <Label text="%restock.source" GridPane.columnIndex="0" GridPane.rowIndex="1"
                style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <ComboBox fx:id="sourceComboBox"
                   GridPane.columnIndex="1" GridPane.rowIndex="1"
@@ -64,11 +64,11 @@
                   style="-fx-font-size: 14px;"/>
 
         <!-- 备注 -->
-        <Label text="备注:" GridPane.columnIndex="0" GridPane.rowIndex="2"
+        <Label text="%restock.reason" GridPane.columnIndex="0" GridPane.rowIndex="2"
                style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
         <TextField fx:id="reasonField"
                    GridPane.columnIndex="1" GridPane.rowIndex="2"
-                   prefWidth="250" promptText="可选，如供应商名称"
+                   prefWidth="250" promptText="%restock.reason_hint"
                    style="-fx-font-size: 14px;"/>
     </GridPane>
 
@@ -77,14 +77,14 @@
         <padding>
             <Insets top="10" right="15" bottom="10" left="15"/>
         </padding>
-        <Label text="入库预览" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #757575;"/>
+        <Label text="%restock.preview" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #757575;"/>
         <HBox spacing="30" alignment="CENTER_LEFT">
             <VBox spacing="2">
-                <Label text="入库后库存" style="-fx-font-size: 11px; -fx-text-fill: #9E9E9E;"/>
+                <Label text="%restock.after_stock" style="-fx-font-size: 11px; -fx-text-fill: #9E9E9E;"/>
                 <Label fx:id="afterStockLabel" text="-" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
             </VBox>
             <VBox spacing="2">
-                <Label text="入库金额" style="-fx-font-size: 11px; -fx-text-fill: #9E9E9E;"/>
+                <Label text="%restock.total_cost" style="-fx-font-size: 11px; -fx-text-fill: #9E9E9E;"/>
                 <Label fx:id="totalCostLabel" text="-" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #F57C00;"/>
             </VBox>
         </HBox>
@@ -98,13 +98,13 @@
     <!-- 按钮区域 -->
     <HBox spacing="10" alignment="CENTER_RIGHT">
         <Button fx:id="cancelButton"
-                text="取消"
+                text="%restock.cancel"
                 onAction="#handleCancel"
                 prefWidth="90"
                 prefHeight="38"
                 styleClass="secondary-button"/>
         <Button fx:id="confirmButton"
-                text="确认入库"
+                text="%restock.confirm"
                 onAction="#handleConfirm"
                 prefWidth="90"
                 prefHeight="38"

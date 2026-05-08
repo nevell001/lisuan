@@ -19,44 +19,44 @@
             </padding>
 
             <Button fx:id="addButton"
-                    text="添加商品"
+                    text="%product.add"
                     onAction="#handleAddProduct"
                     prefWidth="100"
                     styleClass="primary-button"/>
 
             <Button fx:id="editButton"
-                    text="编辑"
+                    text="%product.edit"
                     onAction="#handleEditProduct"
                     prefWidth="80"
                     styleClass="secondary-button"/>
 
             <Button fx:id="deleteButton"
-                    text="删除"
+                    text="%product.delete"
                     onAction="#handleDeleteProduct"
                     prefWidth="80"
                     styleClass="danger-button"/>
 
             <Button fx:id="restockButton"
-                    text="补货"
+                    text="%inventory.restock"
                     onAction="#handleRestock"
                     prefWidth="80"
                     styleClass="info-button"/>
 
             <Button fx:id="categoryButton"
-                    text="分类管理"
+                    text="%inventory.category_management"
                     onAction="#handleCategoryManagement"
                     prefWidth="100"
                     styleClass="secondary-button"/>
 
             <Button fx:id="unitButton"
-                    text="单位管理"
+                    text="%inventory.unit_management"
                     onAction="#handleUnitManagement"
                     prefWidth="100"
                     styleClass="secondary-button"/>
 
             <Region HBox.hgrow="ALWAYS"/>
 
-            <Label fx:id="countLabel" text="商品数量: 0" style="-fx-text-fill: #757575;"/>
+            <Label fx:id="countLabel" text="%inventory.count" style="-fx-text-fill: #757575;"/>
         </HBox>
 
         <!-- 第二行：搜索和排序 -->
@@ -65,30 +65,30 @@
                 <Insets top="5" right="10" bottom="10" left="10"/>
             </padding>
 
-            <Label text="搜索:"/>
+            <Label text="%inventory.search_label"/>
             <TextField fx:id="searchField"
-                      promptText="输入商品名称或条码搜索"
+                      promptText="%inventory.search_hint"
                       prefWidth="200"
                       onAction="#handleSearch"/>
 
-            <Button text="搜索"
+            <Button text="%inventory.search_button"
                     onAction="#handleSearch"
                     prefWidth="60"
                     styleClass="secondary-button"/>
 
-            <Button text="清除"
+            <Button text="%inventory.clear_button"
                     onAction="#handleClearSearch"
                     prefWidth="60"
                     styleClass="secondary-button"/>
 
-            <Button text="刷新"
+            <Button text="%inventory.refresh_button"
                     onAction="#handleRefresh"
                     prefWidth="60"
                     styleClass="success-button"/>
 
             <Separator orientation="VERTICAL"/>
 
-            <Label text="排序:"/>
+            <Label text="%inventory.sort_label"/>
             <ComboBox fx:id="sortComboBox" prefWidth="150"/>
         </HBox>
     </VBox>
@@ -98,16 +98,16 @@
               VBox.vgrow="ALWAYS"
               styleClass="inventory-table">
         <columns>
-            <TableColumn fx:id="barcodeColumn" text="条码" prefWidth="130"/>
-            <TableColumn fx:id="nameColumn" text="商品名称" prefWidth="220"/>
-            <TableColumn fx:id="priceColumn" text="单价(元)" prefWidth="90"/>
-            <TableColumn fx:id="quantityColumn" text="库存" prefWidth="70"/>
-            <TableColumn fx:id="minStockColumn" text="最低库存" prefWidth="70"/>
-            <TableColumn fx:id="categoryColumn" text="分类" prefWidth="100"/>
-            <TableColumn fx:id="warningColumn" text="预警状态" prefWidth="80"/>
+            <TableColumn fx:id="barcodeColumn" text="%inventory.barcode" prefWidth="130"/>
+            <TableColumn fx:id="nameColumn" text="%product.name" prefWidth="220"/>
+            <TableColumn fx:id="priceColumn" text="%cart.unit_price" prefWidth="90"/>
+            <TableColumn fx:id="quantityColumn" text="%product.stock" prefWidth="70"/>
+            <TableColumn fx:id="minStockColumn" text="%inventory.min_stock" prefWidth="70"/>
+            <TableColumn fx:id="categoryColumn" text="%product.category" prefWidth="100"/>
+            <TableColumn fx:id="warningColumn" text="%inventory.warning_status" prefWidth="80"/>
         </columns>
         <placeholder>
-            <Label text="暂无商品数据" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
+            <Label text="%inventory.no_data" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
         </placeholder>
     </TableView>
 

@@ -2,6 +2,7 @@
 
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
+<?import javafx.scene.image.*?>
 <?import javafx.scene.layout.*?>
 
 <VBox xmlns="http://javafx.com/javafx/17"
@@ -18,7 +19,7 @@
 
         <Region HBox.hgrow="ALWAYS"/>
 
-        <Button text="重置所有设置"
+        <Button text="%settings.reset_all"
                 onAction="#handleResetAll"
                 prefWidth="120"
                 styleClass="warning-button"/>
@@ -28,67 +29,64 @@
     <TabPane fx:id="settingsTabPane" VBox.vgrow="ALWAYS" tabClosingPolicy="UNAVAILABLE">
 
         <!-- 基本设置标签页 -->
-        <Tab text="基本设置">
+        <Tab text="%settings.tab.basic">
             <ScrollPane fitToWidth="true" fitToHeight="true">
                 <VBox spacing="20" styleClass="settings-content">
                     <padding>
                         <Insets top="20" right="20" bottom="20" left="20"/>
                     </padding>
 
-                    <Label text="店铺信息" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-                    
+                    <Label text="%settings.store_info" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
                     <GridPane hgap="10" vgap="10">
                         <padding>
                             <Insets top="10" right="0" bottom="0" left="0"/>
                         </padding>
 
-                        <Label text="店铺名称:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Label text="%settings.store_name_label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                         <TextField fx:id="storeNameField" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="300"/>
 
-                        <Label text="店铺地址:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <Label text="%settings.store_address_label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                         <TextField fx:id="storeAddressField" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="300"/>
 
-                        <Label text="联系电话:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <Label text="%settings.store_phone_label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
                         <TextField fx:id="storePhoneField" GridPane.columnIndex="1" GridPane.rowIndex="2" prefWidth="300"/>
                     </GridPane>
 
                     <Separator/>
 
-                    <Label text="财务设置" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-                    
+                    <Label text="%settings.financial" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
                     <GridPane hgap="10" vgap="10">
                         <padding>
                             <Insets top="10" right="0" bottom="0" left="0"/>
                         </padding>
 
-                        <Label text="税率:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                        <TextField fx:id="taxRateField" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="150" promptText="0.0-1.0"/>
-                        <Label text="(0.0-1.0)" GridPane.columnIndex="2" GridPane.rowIndex="0" style="-fx-text-fill: #757575;"/>
-
-                        <Label text="货币:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                        <ComboBox fx:id="currencyComboBox" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="150"/>
+                        <Label text="%settings.tax_rate_label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <TextField fx:id="taxRateField" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="150" promptText="%settings.tax_rate_hint"/>
+                        <Label text="%settings.tax_rate_hint2" GridPane.columnIndex="2" GridPane.rowIndex="0" style="-fx-text-fill: #757575;"/>
                     </GridPane>
 
                     <Separator/>
 
-                    <Label text="界面设置" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-                    
+                    <Label text="%settings.ui" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
                     <GridPane hgap="10" vgap="10">
                         <padding>
                             <Insets top="10" right="0" bottom="0" left="0"/>
                         </padding>
 
-                        <Label text="语言:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Label text="%settings.language_label_colon" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                         <ComboBox fx:id="languageComboBox" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="150"/>
 
-                        <Label text="主题:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <Label text="%settings.theme_label_colon" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                         <ComboBox fx:id="themeComboBox" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="150"/>
                     </GridPane>
 
                     <Separator/>
 
                     <HBox spacing="10" alignment="CENTER_RIGHT">
-                        <Button text="保存设置"
+                        <Button text="%settings.save"
                                 onAction="#handleSaveBasicSettings"
                                 prefWidth="120"
                                 styleClass="primary-button"/>
@@ -98,48 +96,84 @@
         </Tab>
 
         <!-- 打印设置标签页 -->
-        <Tab text="打印设置">
+        <Tab text="%settings.tab.print">
             <ScrollPane fitToWidth="true" fitToHeight="true">
                 <VBox spacing="20" styleClass="settings-content">
                     <padding>
                         <Insets top="20" right="20" bottom="20" left="20"/>
                     </padding>
 
-                    <CheckBox fx:id="enablePrintCheckBox" text="启用打印功能"/>
+                    <CheckBox fx:id="enablePrintCheckBox" text="%settings.enable_print"/>
 
                     <Separator/>
 
-                    <Label text="打印机设置" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-                    
+                    <Label text="%settings.printer_name" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
                     <GridPane hgap="10" vgap="10">
                         <padding>
                             <Insets top="10" right="0" bottom="0" left="0"/>
                         </padding>
 
-                        <Label text="打印机名称:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Label text="%settings.printer_name_label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                         <TextField fx:id="printerNameField" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="300"/>
 
-                        <Label text="纸张大小:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <Label text="%settings.paper_size_label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                         <ComboBox fx:id="paperSizeComboBox" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="150"/>
                     </GridPane>
 
                     <Separator/>
 
-                    <Label text="打印选项" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-                    
+                    <Label text="%settings.logo_settings" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
+                    <VBox spacing="10" styleClass="logo-section">
+                        <padding>
+                            <Insets top="10" right="0" bottom="0" left="0"/>
+                        </padding>
+
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <CheckBox fx:id="printLogoCheckBox" text="%settings.print_logo"/>
+                            <Label text="%settings.logo_format_hint" style="-fx-text-fill: #666; -fx-font-size: 11px;"/>
+                        </HBox>
+
+                        <HBox spacing="10" alignment="CENTER_LEFT">
+                            <TextField fx:id="logoPathField" promptText="%settings.logo_path_hint" prefWidth="400" editable="false"/>
+                            <Button text="%settings.select_logo" onAction="#handleSelectLogo" styleClass="secondary-button"/>
+                            <Button text="%settings.clear" onAction="#handleClearLogo" styleClass="secondary-button"/>
+                        </HBox>
+
+                        <!-- Logo 预览区域 -->
+                        <HBox spacing="10" alignment="CENTER_LEFT" styleClass="logo-preview-container">
+                            <StackPane prefWidth="120" prefHeight="120" style="-fx-background-color: #f5f5f5; -fx-border-color: #ddd; -fx-border-width: 1;">
+                                <padding>
+                                    <Insets top="5" right="5" bottom="5" left="5"/>
+                                </padding>
+                                <ImageView fx:id="logoPreviewImage" fitWidth="110" fitHeight="110" preserveRatio="true"/>
+                                <Label fx:id="logoPreviewPlaceholder" text="%settings.no_logo" style="-fx-text-fill: #999;" visible="true"/>
+                            </StackPane>
+                            <VBox spacing="5">
+                                <Label text="%settings.logo_preview" style="-fx-font-weight: bold;"/>
+                                <Label fx:id="logoInfoLabel" text="%settings.logo_hint" style="-fx-text-fill: #666; -fx-font-size: 11px;"/>
+                                <Label text="%settings.logo_print_hint" style="-fx-text-fill: #999; -fx-font-size: 10px;"/>
+                            </VBox>
+                        </HBox>
+                    </VBox>
+
+                    <Separator/>
+
+                    <Label text="%settings.other_print_options" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
                     <VBox spacing="10">
                         <padding>
                             <Insets top="10" right="0" bottom="0" left="0"/>
                         </padding>
 
-                        <CheckBox fx:id="printLogoCheckBox" text="打印店铺Logo"/>
-                        <CheckBox fx:id="printBarcodeCheckBox" text="打印商品条形码"/>
+                        <CheckBox fx:id="printBarcodeCheckBox" text="%settings.print_barcode"/>
                     </VBox>
 
                     <Separator/>
 
                     <HBox spacing="10" alignment="CENTER_RIGHT">
-                        <Button text="保存设置"
+                        <Button text="%settings.save"
                                 onAction="#handleSavePrintSettings"
                                 prefWidth="120"
                                 styleClass="primary-button"/>
@@ -149,46 +183,46 @@
         </Tab>
 
         <!-- 备份设置标签页 -->
-        <Tab text="备份设置">
+        <Tab text="%settings.tab.backup">
             <ScrollPane fitToWidth="true" fitToHeight="true">
                 <VBox spacing="20" styleClass="settings-content">
                     <padding>
                         <Insets top="20" right="20" bottom="20" left="20"/>
                     </padding>
 
-                    <CheckBox fx:id="autoBackupCheckBox" text="启用自动备份"/>
+                    <CheckBox fx:id="autoBackupCheckBox" text="%settings.auto_backup"/>
 
                     <Separator/>
 
-                    <Label text="自动备份设置" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-                    
+                    <Label text="%settings.backup_settings" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
                     <GridPane hgap="10" vgap="10">
                         <padding>
                             <Insets top="10" right="0" bottom="0" left="0"/>
                         </padding>
 
-                        <Label text="备份频率:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Label text="%settings.backup_frequency_label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                         <ComboBox fx:id="backupFrequencyComboBox" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="150"/>
 
-                        <Label text="备份路径:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <Label text="%settings.backup_path_label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                         <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="1">
-                            <TextField fx:id="backupPathField" prefWidth="250" promptText="输入备份路径或点击浏览选择"/>
-                            <Button text="浏览" onAction="#handleBrowseBackupPath" prefWidth="80" styleClass="secondary-button"/>
+                            <TextField fx:id="backupPathField" prefWidth="250" promptText="%settings.backup_path_hint"/>
+                            <Button text="%settings.browse" onAction="#handleBrowseBackupPath" prefWidth="80" styleClass="secondary-button"/>
                         </HBox>
                     </GridPane>
 
                     <Separator/>
 
-                    <Label text="手动操作" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-                    
+                    <Label text="%settings.manual_operations" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
                     <HBox spacing="10">
                         <Button fx:id="backupNowButton"
-                                text="立即备份"
+                                text="%settings.backup_now"
                                 onAction="#handleBackupNow"
                                 prefWidth="120"
                                 styleClass="primary-button"/>
                         <Button fx:id="restoreButton"
-                                text="恢复数据"
+                                text="%settings.restore"
                                 onAction="#handleRestore"
                                 prefWidth="120"
                                 styleClass="warning-button"/>
@@ -197,7 +231,7 @@
                     <Separator/>
 
                     <HBox spacing="10" alignment="CENTER_RIGHT">
-                        <Button text="保存设置"
+                        <Button text="%settings.save"
                                 onAction="#handleSaveBackupSettings"
                                 prefWidth="120"
                                 styleClass="primary-button"/>
@@ -207,45 +241,45 @@
         </Tab>
 
         <!-- 安全设置标签页 -->
-        <Tab text="安全设置">
+        <Tab text="%settings.tab.security">
             <ScrollPane fitToWidth="true" fitToHeight="true">
                 <VBox spacing="20" styleClass="settings-content">
                     <padding>
                         <Insets top="20" right="20" bottom="20" left="20"/>
                     </padding>
 
-                    <Label text="会话安全" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-                    
+                    <Label text="%settings.session_security" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
                     <GridPane hgap="10" vgap="10">
                         <padding>
                             <Insets top="10" right="0" bottom="0" left="0"/>
                         </padding>
 
-                        <CheckBox fx:id="autoLogoutCheckBox" text="启用自动登出" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                        <Label text="自动登出时间(分钟):" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <CheckBox fx:id="autoLogoutCheckBox" text="%settings.auto_logout" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Label text="%settings.auto_logout_time_label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                         <Spinner fx:id="autoLogoutMinutesSpinner" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="150"/>
                     </GridPane>
 
                     <Separator/>
 
-                    <Label text="密码策略" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-                    
+                    <Label text="%settings.password_policy" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
                     <GridPane hgap="10" vgap="10">
                         <padding>
                             <Insets top="10" right="0" bottom="0" left="0"/>
                         </padding>
 
-                        <CheckBox fx:id="passwordComplexityCheckBox" text="启用密码复杂度检查" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
-                        <Label text="密码最小长度:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <CheckBox fx:id="passwordComplexityCheckBox" text="%settings.password_complexity" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Label text="%settings.password_min_length_label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                         <Spinner fx:id="passwordMinLengthSpinner" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="150"/>
-                        <Label text="最大尝试次数:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <Label text="%settings.password_max_attempts_label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
                         <Spinner fx:id="passwordMaxAttemptsSpinner" GridPane.columnIndex="1" GridPane.rowIndex="2" prefWidth="150"/>
                     </GridPane>
 
                     <Separator/>
 
                     <HBox spacing="10" alignment="CENTER_RIGHT">
-                        <Button text="保存设置"
+                        <Button text="%settings.save"
                                 onAction="#handleSaveSecuritySettings"
                                 prefWidth="120"
                                 styleClass="primary-button"/>
@@ -254,83 +288,83 @@
             </ScrollPane>
         </Tab>
 
-        
+
 
         <!-- 数据导入标签页 -->
-        <Tab text="数据导入">
+        <Tab text="%settings.tab.import">
             <ScrollPane fitToWidth="true" fitToHeight="true">
                 <VBox spacing="20" styleClass="settings-content">
                     <padding>
                         <Insets top="20" right="20" bottom="20" left="20"/>
                     </padding>
 
-                    <Label text="从本地 CSV 文件导入" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-                    
+                    <Label text="%settings.csv_import" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
                     <GridPane hgap="10" vgap="10">
                         <padding>
                             <Insets top="10" right="0" bottom="0" left="0"/>
                         </padding>
 
-                        <Label text="CSV 文件路径:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                        <Label text="%settings.csv_file_path_label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                         <HBox spacing="5" GridPane.columnIndex="1" GridPane.rowIndex="0">
-                            <TextField fx:id="csvFilePathField" 
-                                       prefWidth="250" 
-                                       promptText="选择 CSV 文件"/>
-                            <Button text="浏览" 
-                                    onAction="#handleBrowseCsvFile" 
-                                    prefWidth="80" 
+                            <TextField fx:id="csvFilePathField"
+                                       prefWidth="250"
+                                       promptText="%settings.csv_file_hint"/>
+                            <Button text="%settings.browse"
+                                    onAction="#handleBrowseCsvFile"
+                                    prefWidth="80"
                                     styleClass="secondary-button"/>
                         </HBox>
                     </GridPane>
 
                     <VBox spacing="10" style="-fx-background-color: #FFF3E0; -fx-padding: 15; -fx-background-radius: 5;">
-                        <Label text="CSV 文件格式（支持两种格式）:" style="-fx-font-weight: bold; -fx-text-fill: #F57C00;"/>
-                        <Label text="格式一：逗号分隔（标准 CSV）" style="-fx-font-weight: 600; -fx-text-fill: #F57C00;"/>
-                        <Label text="• 使用逗号(,)作为字段分隔符" style="-fx-wrap-text: true;"/>
-                        <Label text="• 字段顺序：id,barcode,name,spec,unit,price,brand,supplier,made_in,created_at,updated_at,deleted_at" style="-fx-wrap-text: true;"/>
-                        <Label text="• 示例：1,6901234567890,可口可乐500ml,500ml,瓶,3.5,可口可乐,可口可乐公司,中国,2024-01-01,2024-01-01,NULL" style="-fx-wrap-text: true;"/>
-                        <Label text="• 编码格式：UTF-8" style="-fx-wrap-text: true;"/>
+                        <Label text="%settings.csv_format" style="-fx-font-weight: bold; -fx-text-fill: #F57C00;"/>
+                        <Label text="%settings.csv_format_comma" style="-fx-font-weight: 600; -fx-text-fill: #F57C00;"/>
+                        <Label text="%settings.csv_format_detail_1" style="-fx-wrap-text: true;"/>
+                        <Label text="%settings.csv_format_detail_2" style="-fx-wrap-text: true;"/>
+                        <Label text="%settings.csv_format_detail_3" style="-fx-wrap-text: true;"/>
+                        <Label text="%settings.csv_format_detail_4" style="-fx-wrap-text: true;"/>
                         <Label text=""/>
-                        <Label text="格式二：管道符分隔" style="-fx-font-weight: 600; -fx-text-fill: #F57C00;"/>
-                        <Label text="• 使用管道符(|)作为字段分隔符" style="-fx-wrap-text: true;"/>
-                        <Label text="• 字段顺序：条码|商品名|价格|单位|分类|品牌|规格|厂商" style="-fx-wrap-text: true;"/>
-                        <Label text="• 示例：6901234567890|可口可乐500ml|3.5|瓶|饮料|可口可乐|500ml|可口可乐公司" style="-fx-wrap-text: true;"/>
-                        <Label text="• 编码格式：UTF-8" style="-fx-wrap-text: true;"/>
+                        <Label text="%settings.csv_format_pipe" style="-fx-font-weight: 600; -fx-text-fill: #F57C00;"/>
+                        <Label text="%settings.csv_format_detail_5" style="-fx-wrap-text: true;"/>
+                        <Label text="%settings.csv_format_detail_6" style="-fx-wrap-text: true;"/>
+                        <Label text="%settings.csv_format_detail_7" style="-fx-wrap-text: true;"/>
+                        <Label text="%settings.csv_format_detail_8" style="-fx-wrap-text: true;"/>
                     </VBox>
 
                     <HBox spacing="10" alignment="CENTER_LEFT">
                         <Button fx:id="importFromCsvButton"
-                                text="从 CSV 导入"
+                                text="%settings.import_from_csv"
                                 onAction="#handleImportFromCSV"
                                 prefWidth="150"
                                 styleClass="primary-button"/>
-                        <ProgressBar fx:id="importProgressBar" 
-                                    prefWidth="300" 
-                                    progress="0" 
+                        <ProgressBar fx:id="importProgressBar"
+                                    prefWidth="300"
+                                    progress="0"
                                     visible="false"/>
                         <Label fx:id="importStatusLabel" text=""/>
-                        <CheckBox fx:id="skipDuplicatesCheckBox" text="跳过已存在的商品" selected="true"/>
+                        <CheckBox fx:id="skipDuplicatesCheckBox" text="%settings.skip_duplicates" selected="true"/>
                     </HBox>
 
                     <Separator/>
 
-                    <Label text="导入统计" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
-                    
+                    <Label text="%settings.import_statistics" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+
                     <GridPane hgap="20" vgap="10">
                         <padding>
                             <Insets top="10" right="0" bottom="0" left="0"/>
                         </padding>
 
-                        <Label text="总处理数:" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-weight: 600;"/>
+                        <Label text="%settings.total_processed_label" GridPane.columnIndex="0" GridPane.rowIndex="0" style="-fx-font-weight: 600;"/>
                         <Label fx:id="totalProcessedLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
 
-                        <Label text="成功导入:" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-weight: 600;"/>
+                        <Label text="%settings.import_success_label" GridPane.columnIndex="0" GridPane.rowIndex="1" style="-fx-font-weight: 600;"/>
                         <Label fx:id="successCountLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-text-fill: #4CAF50;"/>
 
-                        <Label text="跳过:" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-font-weight: 600;"/>
+                        <Label text="%settings.import_skipped_label" GridPane.columnIndex="0" GridPane.rowIndex="2" style="-fx-font-weight: 600;"/>
                         <Label fx:id="skippedCountLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-text-fill: #FF9800;"/>
 
-                        <Label text="错误:" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-font-weight: 600;"/>
+                        <Label text="%settings.import_errors_label" GridPane.columnIndex="0" GridPane.rowIndex="3" style="-fx-font-weight: 600;"/>
                         <Label fx:id="errorCountLabel" text="0" GridPane.columnIndex="1" GridPane.rowIndex="3" style="-fx-text-fill: #F44336;"/>
                     </GridPane>
 
@@ -338,7 +372,7 @@
                         <padding>
                             <Insets top="5" right="5" bottom="5" left="5"/>
                         </padding>
-                        <Label text="导入日志:" style="-fx-font-weight: 600;"/>
+                        <Label text="%settings.import_log" style="-fx-font-weight: 600;"/>
                     </VBox>
                 </VBox>
             </ScrollPane>

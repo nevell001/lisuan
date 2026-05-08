@@ -2,7 +2,7 @@
 
 一个功能完整的收银系统，使用 JavaFX 17 开发，提供现代化的图形化界面。
 
-**当前版本**: v2.5.0 | **最新更新**: 2026-05-06
+**当前版本**: v2.5.1 | **最新更新**: 2026-05-08
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.12-blue)
@@ -115,7 +115,7 @@ mvn javafx:run
 **打包后运行**：
 ```bash
 mvn clean package
-java -jar target/cashier-system-fx-2.5.0-jar-with-dependencies.jar
+java -jar target/cashier-system-fx-2.5.1-jar-with-dependencies.jar
 ```
 
 
@@ -157,6 +157,23 @@ java -jar target/cashier-system-fx-2.5.0-jar-with-dependencies.jar
 - 🌍 **多语言** - 6 个端点，国际化支持
 
 项目规模：179 个 Java 文件，2.2MB 源码，126 个测试全部通过
+
+### v2.5.1 (2026-05-08) - 国际化增强 🌍
+- 🌐 **双语界面支持** - 所有界面元素支持中英文双语显示
+  - 菜单栏：系统/System、文件/File、数据/Data、编辑/Edit、视图/View、主题/Theme、设置/Settings、帮助/Help
+  - 导航菜单：结账/Checkout、商品管理/Inventory、会员管理/Members 等 20+ 个导航项
+  - 标签页：基本设置/Basic Settings、打印设置/Print Settings、分类统计/Category Statistics 等
+  - 系统提示：确定/OK、取消/Cancel、保存成功/Saved successfully 等通用提示信息
+- 🎨 **布局优化** - 调整侧边栏和标签页宽度，适配双语文字显示
+  - 侧边栏宽度：220px → 260px
+  - 标签页宽度：自适应（最小 160px，首选 200px）
+  - 添加文字换行支持，字号 13px
+- 💰 **货币国际化** - 货币符号随语言自动切换
+  - 简体中文：¥ (CNY)
+  - 繁体中文：US$ (USD)
+  - English：$ (USD)
+  - 日本語：¥ (JPY)
+  - 한국어：₩ (KRW)
 
 ### v2.4.6 (2026-04-27) - 安全优化
 - 🔒 **优化 SQL 查询并移除安全隐患**

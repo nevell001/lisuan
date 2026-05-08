@@ -18,20 +18,20 @@
 
         <!-- 操作按钮 -->
         <Button fx:id="addButton"
-                text="添加供应商"
+                text="%supplier.add"
                 onAction="#handleAddSupplier"
                 prefWidth="120"
                 styleClass="primary-button"/>
 
         <Button fx:id="editButton"
-                text="编辑"
+                text="%supplier.edit_button"
                 onAction="#handleEditSupplier"
                 prefWidth="80"
                 disable="true"
                 styleClass="secondary-button"/>
 
         <Button fx:id="deleteButton"
-                text="删除"
+                text="%supplier.delete_button"
                 onAction="#handleDeleteSupplier"
                 prefWidth="80"
                 disable="true"
@@ -40,18 +40,18 @@
         <Separator orientation="VERTICAL"/>
 
         <!-- 搜索 -->
-        <Label text="搜索:"/>
+        <Label text="%supplier.search_label"/>
         <TextField fx:id="searchField"
-                  promptText="输入编号、名称或联系人"
+                  promptText="%supplier.search_hint"
                   prefWidth="200"
                   onAction="#handleSearch"/>
 
-        <Button text="搜索"
+        <Button text="%common.search"
                 onAction="#handleSearch"
                 prefWidth="60"
                 styleClass="secondary-button"/>
 
-        <Button text="清除"
+        <Button text="%common.clear"
                 onAction="#handleClearSearch"
                 prefWidth="60"
                 styleClass="secondary-button"/>
@@ -59,7 +59,7 @@
         <Region HBox.hgrow="ALWAYS"/>
 
         <!-- 统计信息 -->
-        <Label fx:id="countLabel" text="供应商数量: 0" style="-fx-text-fill: #757575;"/>
+        <Label fx:id="countLabel" text="%supplier.count" style="-fx-text-fill: #757575;"/>
     </HBox>
 
     <!-- 供应商表格 -->
@@ -67,16 +67,16 @@
               VBox.vgrow="ALWAYS"
               styleClass="supplier-table">
         <columns>
-            <TableColumn fx:id="codeColumn" text="供应商编号" prefWidth="120" minWidth="100"/>
-            <TableColumn fx:id="nameColumn" text="供应商名称" prefWidth="180" minWidth="150"/>
-            <TableColumn fx:id="contactColumn" text="联系人" prefWidth="100" minWidth="80"/>
-            <TableColumn fx:id="phoneColumn" text="联系电话" prefWidth="120" minWidth="100"/>
-            <TableColumn fx:id="rankColumn" text="等级" prefWidth="60" minWidth="50"/>
-            <TableColumn fx:id="statusColumn" text="状态" prefWidth="60" minWidth="50"/>
-            <TableColumn fx:id="addressColumn" text="地址" prefWidth="350" minWidth="250"/>
+            <TableColumn fx:id="codeColumn" text="%supplier.code" prefWidth="120" minWidth="100"/>
+            <TableColumn fx:id="nameColumn" text="%supplier.name" prefWidth="180" minWidth="150"/>
+            <TableColumn fx:id="contactColumn" text="%supplier.contact" prefWidth="100" minWidth="80"/>
+            <TableColumn fx:id="phoneColumn" text="%supplier.phone" prefWidth="120" minWidth="100"/>
+            <TableColumn fx:id="rankColumn" text="%supplier.rank" prefWidth="60" minWidth="50"/>
+            <TableColumn fx:id="statusColumn" text="%supplier.status" prefWidth="60" minWidth="50"/>
+            <TableColumn fx:id="addressColumn" text="%supplier.address" prefWidth="350" minWidth="250"/>
         </columns>
         <placeholder>
-            <Label text="暂无供应商数据" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
+            <Label text="%supplier.no_data" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
         </placeholder>
     </TableView>
 

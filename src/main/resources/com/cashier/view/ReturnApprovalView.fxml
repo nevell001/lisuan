@@ -15,98 +15,98 @@
 
     <!-- 顶部标题 -->
     <HBox spacing="10" alignment="CENTER_LEFT">
-        <Label text="退货审批" styleClass="title-label" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
+        <Label text="%return_approval.title" styleClass="title-label" style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
         <Region HBox.hgrow="ALWAYS"/>
-        <Button text="刷新" onAction="#handleRefresh"/>
+        <Button text="%return_approval.refresh" onAction="#handleRefresh"/>
     </HBox>
 
     <SplitPane dividerPositions="0.5" VBox.vgrow="ALWAYS">
         <!-- 左侧：待审批订单列表 -->
         <VBox spacing="10">
-            <Label text="待审批退货订单" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+            <Label text="%return_approval.pending_orders" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
             <TableView fx:id="pendingOrderTable" VBox.vgrow="ALWAYS">
                 <columns>
-                    <TableColumn fx:id="returnOrderIdColumn" text="退货单号" prefWidth="140"/>
-                    <TableColumn fx:id="memberNameColumn" text="会员名称" prefWidth="100"/>
-                    <TableColumn fx:id="returnDateColumn" text="退货日期" prefWidth="140"/>
-                    <TableColumn fx:id="totalAmountColumn" text="退货金额" prefWidth="100"/>
-                    <TableColumn fx:id="returnReasonColumn" text="退货原因" prefWidth="150"/>
-                    <TableColumn fx:id="operatorNameColumn" text="操作员" prefWidth="80"/>
+                    <TableColumn fx:id="returnOrderIdColumn" text="%return_approval.return_id" prefWidth="140"/>
+                    <TableColumn fx:id="memberNameColumn" text="%return_approval.member_name" prefWidth="100"/>
+                    <TableColumn fx:id="returnDateColumn" text="%return_approval.return_date" prefWidth="140"/>
+                    <TableColumn fx:id="totalAmountColumn" text="%return_approval.total_amount" prefWidth="100"/>
+                    <TableColumn fx:id="returnReasonColumn" text="%return_approval.return_reason" prefWidth="150"/>
+                    <TableColumn fx:id="operatorNameColumn" text="%return_approval.operator" prefWidth="80"/>
                 </columns>
             </TableView>
         </VBox>
 
         <!-- 右侧：订单详情和审批 -->
         <VBox spacing="10">
-            <Label text="订单详情" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
-            
+            <Label text="%return_approval.order_details" style="-fx-font-weight: bold; -fx-font-size: 14px;"/>
+
             <!-- 订单基本信息 -->
             <GridPane hgap="10" vgap="5">
-                <Label text="退货单号:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                <Label text="%return_approval.return_id_label" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                 <Label fx:id="returnOrderIdLabel" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
-                
-                <Label text="会员名称:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+
+                <Label text="%return_approval.member_name_label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
                 <Label fx:id="memberNameLabel" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
-                
-                <Label text="退货金额:" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
-                <Label fx:id="totalAmountLabel" GridPane.columnIndex="3" GridPane.rowIndex="0" 
+
+                <Label text="%return_approval.total_amount_label" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                <Label fx:id="totalAmountLabel" GridPane.columnIndex="3" GridPane.rowIndex="0"
                        style="-fx-text-fill: red; -fx-font-weight: bold; -fx-font-size: 16px;"/>
-                
-                <Label text="退货日期:" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+
+                <Label text="%return_approval.return_date_label" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
                 <Label fx:id="returnDateLabel" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
-                
-                <Label text="操作员:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+
+                <Label text="%return_approval.operator_label" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
                 <Label fx:id="operatorNameLabel" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
-                
-                <Label text="原支付方式:" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+
+                <Label text="%return_approval.payment_method_label" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
                 <Label fx:id="paymentMethodLabel" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
             </GridPane>
 
             <!-- 退货原因 -->
             <VBox spacing="5">
-                <Label text="退货原因:"/>
+                <Label text="%return_approval.return_reason_label"/>
                 <TextArea fx:id="returnReasonTextArea" prefRowCount="2" editable="false" wrapText="true"/>
             </VBox>
 
             <!-- 原交易信息 -->
             <HBox spacing="10" alignment="CENTER_LEFT">
-                <Label text="原交易:"/>
+                <Label text="%return_approval.original_transaction"/>
                 <Label fx:id="originalTransactionLabel" style="-fx-text-fill: blue;"/>
-                <Button text="查看详情" onAction="#handleViewOriginalTransaction" prefWidth="100"/>
+                <Button text="%return_approval.view_original_detail" onAction="#handleViewOriginalTransaction" prefWidth="100"/>
             </HBox>
 
             <!-- 退货明细 -->
             <VBox spacing="5" VBox.vgrow="ALWAYS">
-                <Label text="退货明细" style="-fx-font-weight: bold;"/>
+                <Label text="%return_approval.item_title" style="-fx-font-weight: bold;"/>
                 <TableView fx:id="itemTable" VBox.vgrow="ALWAYS">
                     <columns>
-                        <TableColumn fx:id="productCodeColumn" text="商品编号" prefWidth="100"/>
-                        <TableColumn fx:id="productNameColumn" text="商品名称" prefWidth="150"/>
-                        <TableColumn fx:id="returnQuantityColumn" text="退货数量" prefWidth="80"/>
-                        <TableColumn fx:id="unitPriceColumn" text="单价" prefWidth="80"/>
-                        <TableColumn fx:id="returnAmountColumn" text="退货金额" prefWidth="100"/>
-                        <TableColumn fx:id="conditionColumn" text="商品状态" prefWidth="80"/>
+                        <TableColumn fx:id="productCodeColumn" text="%return_approval.product_code" prefWidth="100"/>
+                        <TableColumn fx:id="productNameColumn" text="%return_approval.product_name" prefWidth="150"/>
+                        <TableColumn fx:id="returnQuantityColumn" text="%return_approval.return_quantity" prefWidth="80"/>
+                        <TableColumn fx:id="unitPriceColumn" text="%return_approval.unit_price" prefWidth="80"/>
+                        <TableColumn fx:id="returnAmountColumn" text="%return_approval.return_amount" prefWidth="100"/>
+                        <TableColumn fx:id="conditionColumn" text="%return_approval.condition" prefWidth="80"/>
                     </columns>
                 </TableView>
             </VBox>
 
             <!-- 审批操作 -->
             <VBox spacing="10" style="-fx-background-color: #f5f5f5; -fx-padding: 10;">
-                <Label text="审批操作" style="-fx-font-weight: bold;"/>
-                
+                <Label text="%return_approval.approval_action" style="-fx-font-weight: bold;"/>
+
                 <GridPane hgap="10" vgap="5">
-                    <Label text="退款方式:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <Label text="%return_approval.refund_method" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                     <ComboBox fx:id="refundMethodComboBox" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="150"/>
                 </GridPane>
-                
+
                 <VBox spacing="5">
-                    <Label text="审批意见:"/>
-                    <TextArea fx:id="approvalCommentTextArea" prefRowCount="3" promptText="请输入审批意见" wrapText="true"/>
+                    <Label text="%return_approval.approval_comment"/>
+                    <TextArea fx:id="approvalCommentTextArea" prefRowCount="3" promptText="%return_approval.approval_comment_hint" wrapText="true"/>
                 </VBox>
-                
+
                 <HBox spacing="10" alignment="CENTER_RIGHT">
-                    <Button text="拒绝" onAction="#handleReject" styleClass="danger-button" prefWidth="120"/>
-                    <Button text="批准" onAction="#handleApprove" styleClass="success-button" prefWidth="120"/>
+                    <Button text="%return_approval.reject" onAction="#handleReject" styleClass="danger-button" prefWidth="120"/>
+                    <Button text="%return_approval.approve" onAction="#handleApprove" styleClass="success-button" prefWidth="120"/>
                 </HBox>
             </VBox>
         </VBox>

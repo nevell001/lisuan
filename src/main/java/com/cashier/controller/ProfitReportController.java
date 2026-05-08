@@ -5,6 +5,7 @@ import com.cashier.dao.PurchaseInboundDAO;
 import com.cashier.dao.PurchaseInboundItemDAO;
 import com.cashier.dao.PurchaseOrderDAO;
 import com.cashier.dao.TransactionDAO;
+import com.cashier.util.CurrencyUtil;
 import com.cashier.model.Product;
 import com.cashier.model.PurchaseInbound;
 import com.cashier.model.PurchaseInboundItem;
@@ -197,11 +198,11 @@ public class ProfitReportController {
         productCategoryColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(cellData.getValue().category));
         salesRevenueColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().revenue)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().revenue)));
         salesCostColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().cost)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().cost)));
         salesProfitColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().profit)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().profit)));
         salesMarginColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.format("%.2f%%", cellData.getValue().margin * 100)));
     }
@@ -213,11 +214,11 @@ public class ProfitReportController {
         categoryNameColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(cellData.getValue().category));
         categoryRevenueColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().revenue)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().revenue)));
         categoryCostColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().cost)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().cost)));
         categoryProfitColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().profit)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().profit)));
         categoryMarginColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.format("%.2f%%", cellData.getValue().margin * 100)));
     }
@@ -229,11 +230,11 @@ public class ProfitReportController {
         dateColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(cellData.getValue().date));
         dailyRevenueColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().revenue)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().revenue)));
         dailyCostColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().cost)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().cost)));
         dailyProfitColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format("¥%,.2f", cellData.getValue().profit)));
+            new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().profit)));
         dailyMarginColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(String.format("%.2f%%", cellData.getValue().margin * 100)));
     }
@@ -552,11 +553,11 @@ public class ProfitReportController {
         }
 
         // 更新统计卡片
-        totalRevenueLabel.setText(String.format("¥%,.2f", totalRevenue));
-        totalCostLabel.setText(String.format("¥%,.2f", totalCost));
-        grossProfitLabel.setText(String.format("¥%,.2f", grossProfit));
+        totalRevenueLabel.setText(CurrencyUtil.format(totalRevenue));
+        totalCostLabel.setText(CurrencyUtil.format(totalCost));
+        grossProfitLabel.setText(CurrencyUtil.format(grossProfit));
         grossMarginLabel.setText(String.format("%.2f%%", grossMargin * 100));
-        netProfitLabel.setText(String.format("¥%,.2f", netProfit));
+        netProfitLabel.setText(CurrencyUtil.format(netProfit));
         avgMarginLabel.setText(String.format("%.2f%%", avgMargin * 100));
         // bestMarginProductLabel.setText(bestMarginProduct);
         // bestMarginValueLabel.setText(String.format("%.2f%%", bestMarginValue * 100));
@@ -789,9 +790,9 @@ public class ProfitReportController {
                     data.add(new String[]{
                         record.productName != null ? record.productName : "",
                         record.category != null ? record.category : "",
-                        String.format("¥%.2f", record.revenue),
-                        String.format("¥%.2f", record.cost),
-                        String.format("¥%.2f", record.profit),
+                        CurrencyUtil.format(record.revenue),
+                        CurrencyUtil.format(record.cost),
+                        CurrencyUtil.format(record.profit),
                         String.format("%.2f", profitMargin)
                     });
                 }
@@ -856,9 +857,9 @@ public class ProfitReportController {
                     double profitMargin = record.revenue > 0 ? (record.profit / record.revenue) * 100 : 0;
                     data.add(new String[]{
                         record.category != null ? record.category : "",
-                        String.format("¥%.2f", record.revenue),
-                        String.format("¥%.2f", record.cost),
-                        String.format("¥%.2f", record.profit),
+                        CurrencyUtil.format(record.revenue),
+                        CurrencyUtil.format(record.cost),
+                        CurrencyUtil.format(record.profit),
                         String.format("%.2f", profitMargin)
                     });
                 }
@@ -923,11 +924,11 @@ public class ProfitReportController {
                     double profitMargin = record.revenue > 0 ? (record.profit / record.revenue) * 100 : 0;
                     data.add(new String[]{
                         record.date != null ? record.date : "",
-                        String.format("¥%.2f", record.revenue),
-                        String.format("¥%.2f", record.cost),
-                        String.format("¥%.2f", record.profit),
+                        CurrencyUtil.format(record.revenue),
+                        CurrencyUtil.format(record.cost),
+                        CurrencyUtil.format(record.profit),
                         String.format("%.2f", profitMargin),
-                        String.format("¥%.2f", record.profit * 0.95) // 假设净利润为毛利润的95%
+                        CurrencyUtil.format(record.profit * 0.95) // 假设净利润为毛利润的95%
                     });
                 }
 

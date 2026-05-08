@@ -18,14 +18,14 @@
         </padding>
 
         <!-- 系统标题 -->
-        <Label text="🛒 收银台" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #FFFFFF;"/>
+        <Label text="%pos.title_with_icon" style="-fx-font-size: 24px; -fx-font-weight: bold; -fx-text-fill: #FFFFFF;"/>
 
         <Region HBox.hgrow="ALWAYS"/>
 
         <!-- 当前用户信息 -->
         <VBox spacing="2" alignment="CENTER_LEFT">
-            <Label fx:id="userNameLabel" text="用户" style="-fx-text-fill: #FFFFFF; -fx-font-size: 16px; -fx-font-weight: bold;"/>
-            <Label fx:id="userRoleLabel" text="收银员" style="-fx-text-fill: #E0E0E0; -fx-font-size: 13px;"/>
+            <Label fx:id="userNameLabel" text="%pos.user" style="-fx-text-fill: #FFFFFF; -fx-font-size: 16px; -fx-font-weight: bold;"/>
+            <Label fx:id="userRoleLabel" text="%pos.cashier_role" style="-fx-text-fill: #E0E0E0; -fx-font-size: 13px;"/>
         </VBox>
 
         <!-- 用户头像（显示首字母） -->
@@ -36,7 +36,7 @@
 
         <!-- 退出按钮 -->
         <Button fx:id="exitButton"
-                text="退出 (ESC)"
+                text="%pos.exit"
                 onAction="#handleExit"
                 prefWidth="90"
                 prefHeight="40"
@@ -63,14 +63,14 @@
 
         <!-- 交接班按钮 -->
         <Button fx:id="shiftButton"
-                text="交接班 (F6)"
+                text="%pos.shift"
                 onAction="#handleShift"
                 prefWidth="140"
                 prefHeight="40"
                 style="-fx-font-size: 15px; -fx-font-weight: bold;"
                 styleClass="primary-button"/>
 
-        <Label fx:id="statusLabel" text="就绪" style="-fx-text-fill: #FFFFFF; -fx-font-size: 14px; -fx-font-weight: bold;"/>
+        <Label fx:id="statusLabel" text="%pos.ready" style="-fx-text-fill: #FFFFFF; -fx-font-size: 14px; -fx-font-weight: bold;"/>
     </HBox>
 
 </VBox>

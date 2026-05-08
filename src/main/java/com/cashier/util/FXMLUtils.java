@@ -1,5 +1,6 @@
 package com.cashier.util;
 
+import com.cashier.i18n.I18nManager;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -14,39 +15,45 @@ import java.util.ResourceBundle;
 /**
  * FXML 工具类
  * 提供加载 FXML 文件的便捷方法
+ * 自动使用 I18nManager 的当前语言资源包
  */
 public class FXMLUtils {
 
     /**
      * 加载 FXML 文件并返回根节点
+     * 自动使用 I18nManager 的当前语言资源包
      * @param fxmlPath FXML 文件路径（相对于 resources 目录）
      * @return 根节点
      * @throws IOException 如果加载失败
      */
     public static Parent loadFXML(String fxmlPath) throws IOException {
-        return loadFXML(fxmlPath, null, null);
+        return loadFXML(fxmlPath, null, I18nManager.getInstance().getResourceBundle());
     }
 
     /**
      * 加载 FXML 文件并返回根节点
+     * 自动使用 I18nManager 的当前语言资源包
      * @param fxmlPath FXML 文件路径（相对于 resources 目录）
      * @param controller 控制器实例
      * @return 根节点
      * @throws IOException 如果加载失败
      */
     public static Parent loadFXML(String fxmlPath, Object controller) throws IOException {
-        return loadFXML(fxmlPath, controller, null);
+        return loadFXML(fxmlPath, controller, I18nManager.getInstance().getResourceBundle());
     }
 
     /**
      * 加载 FXML 文件并返回根节点
      * @param fxmlPath FXML 文件路径（相对于 resources 目录）
      * @param controller 控制器实例
-     * @param resources 资源包
+     * @param resources 资源包（如果为 null，则使用 I18nManager 的当前语言包）
      * @return 根节点
      * @throws IOException 如果加载失败
      */
     public static Parent loadFXML(String fxmlPath, Object controller, ResourceBundle resources) throws IOException {
+        if (resources == null) {
+            resources = I18nManager.getInstance().getResourceBundle();
+        }
         FXMLLoader loader = new FXMLLoader();
         loader.setLocation(FXMLUtils.class.getResource(fxmlPath));
 
@@ -54,43 +61,46 @@ public class FXMLUtils {
             loader.setController(controller);
         }
 
-        if (resources != null) {
-            loader.setResources(resources);
-        }
+        loader.setResources(resources);
 
         return loader.load();
     }
 
     /**
      * 加载 FXML 文件并返回 FXMLLoader 对象
+     * 自动使用 I18nManager 的当前语言资源包
      * @param fxmlPath FXML 文件路径（相对于 resources 目录）
      * @return FXMLLoader 对象
      * @throws IOException 如果加载失败
      */
     public static FXMLLoader loadFXMLLoader(String fxmlPath) throws IOException {
-        return loadFXMLLoader(fxmlPath, null, null);
+        return loadFXMLLoader(fxmlPath, null, I18nManager.getInstance().getResourceBundle());
     }
 
     /**
      * 加载 FXML 文件并返回 FXMLLoader 对象
+     * 自动使用 I18nManager 的当前语言资源包
      * @param fxmlPath FXML 文件路径（相对于 resources 目录）
      * @param controller 控制器实例
      * @return FXMLLoader 对象
      * @throws IOException 如果加载失败
      */
     public static FXMLLoader loadFXMLLoader(String fxmlPath, Object controller) throws IOException {
-        return loadFXMLLoader(fxmlPath, controller, null);
+        return loadFXMLLoader(fxmlPath, controller, I18nManager.getInstance().getResourceBundle());
     }
 
     /**
      * 加载 FXML 文件并返回 FXMLLoader 对象
      * @param fxmlPath FXML 文件路径（相对于 resources 目录）
      * @param controller 控制器实例
-     * @param resources 资源包
+     * @param resources 资源包（如果为 null，则使用 I18nManager 的当前语言包）
      * @return FXMLLoader 对象
      * @throws IOException 如果加载失败
      */
     public static FXMLLoader loadFXMLLoader(String fxmlPath, Object controller, ResourceBundle resources) throws IOException {
+        if (resources == null) {
+            resources = I18nManager.getInstance().getResourceBundle();
+        }
         FXMLLoader loader = new FXMLLoader();
         URL location = FXMLUtils.class.getResource(fxmlPath);
 
@@ -104,15 +114,14 @@ public class FXMLUtils {
             loader.setController(controller);
         }
 
-        if (resources != null) {
-            loader.setResources(resources);
-        }
+        loader.setResources(resources);
 
         return loader;
     }
 
     /**
      * 创建模态对话框
+     * 自动使用 I18nManager 的当前语言资源包
      * @param fxmlPath FXML 文件路径
      * @param title 对话框标题
      * @param owner 所有者窗口
@@ -134,6 +143,7 @@ public class FXMLUtils {
 
     /**
      * 创建模态对话框（带控制器）
+     * 自动使用 I18nManager 的当前语言资源包
      * @param fxmlPath FXML 文件路径
      * @param title 对话框标题
      * @param owner 所有者窗口
@@ -156,6 +166,7 @@ public class FXMLUtils {
 
     /**
      * 创建非模态对话框
+     * 自动使用 I18nManager 的当前语言资源包
      * @param fxmlPath FXML 文件路径
      * @param title 对话框标题
      * @param owner 所有者窗口
@@ -177,6 +188,7 @@ public class FXMLUtils {
 
     /**
      * 创建无边框对话框
+     * 自动使用 I18nManager 的当前语言资源包
      * @param fxmlPath FXML 文件路径
      * @param owner 所有者窗口
      * @return 对话框 Stage

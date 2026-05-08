@@ -438,10 +438,12 @@ public class ExportUtil {
                 minWidths[i] = 115;  // 增加时间列最小宽度，确保日期和时间都能显示
                 isDateTimeColumn[i] = true;  // 标记为时间列
             } 
-            // 金额相关列需要适中宽度（确保能显示 ¥XXX.XX）
-            else if (header.contains("金额") || header.contains("收入") || 
+            // 金额相关列需要适中宽度（确保能显示货币符号+金额）
+            // 检查常见货币符号以支持多语言
+            else if (header.contains("金额") || header.contains("收入") ||
                      header.contains("revenue") || header.contains("amount") ||
-                     header.contains("¥") || header.contains("元")) {
+                     header.contains("元") || header.contains("¥") ||
+                     header.contains("$") || header.contains("₩")) {
                 minWidths[i] = 65;  // 进一步减小金额列最小宽度
             }
             // 备注列需要更宽，但可以适当压缩

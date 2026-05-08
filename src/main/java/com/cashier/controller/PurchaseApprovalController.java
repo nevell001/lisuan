@@ -2,6 +2,7 @@ package com.cashier.controller;
 
 import com.cashier.dao.*;
 import com.cashier.model.*;
+import com.cashier.util.CurrencyUtil;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
@@ -220,7 +221,7 @@ public class PurchaseApprovalController {
             infoPane.add(new Label("采购人:"), 0, 3);
             infoPane.add(new Label(order.purchaser), 1, 3);
             infoPane.add(new Label("总金额:"), 0, 4);
-            infoPane.add(new Label("¥" + String.format("%.2f", order.totalAmount)), 1, 4);
+            infoPane.add(new Label(CurrencyUtil.format(order.totalAmount.doubleValue())), 1, 4);
 
             // 审批意见
             TextArea remarkArea = new TextArea();
@@ -329,7 +330,7 @@ public class PurchaseApprovalController {
             infoPane.add(new Label("状态:"), 0, 5);
             infoPane.add(new Label(order.getStatusDisplayName()), 1, 5);
             infoPane.add(new Label("总金额:"), 0, 6);
-            infoPane.add(new Label("¥" + String.format("%.2f", order.totalAmount)), 1, 6);
+            infoPane.add(new Label(CurrencyUtil.format(order.totalAmount.doubleValue())), 1, 6);
 
             // 审批历史
             Label approvalHistoryLabel = new Label("审批历史:");

@@ -18,34 +18,34 @@
 
         <!-- 操作按钮 -->
         <Button fx:id="addButton"
-                text="新建盘点"
+                text="%inventory_check.add"
                 onAction="#handleAddCheck"
                 prefWidth="100"
                 styleClass="primary-button"/>
 
         <Button fx:id="editButton"
-                text="编辑"
+                text="%inventory_check.edit"
                 onAction="#handleEditCheck"
                 prefWidth="80"
                 disable="true"
                 styleClass="secondary-button"/>
 
         <Button fx:id="deleteButton"
-                text="删除"
+                text="%inventory_check.delete"
                 onAction="#handleDeleteCheck"
                 prefWidth="80"
                 disable="true"
                 styleClass="danger-button"/>
 
         <Button fx:id="viewDetailButton"
-                text="查看详情"
+                text="%inventory_check.view_detail"
                 onAction="#handleViewDetail"
                 prefWidth="100"
                 disable="true"
                 styleClass="info-button"/>
 
         <Button fx:id="completeButton"
-                text="完成盘点"
+                text="%inventory_check.complete"
                 onAction="#handleComplete"
                 prefWidth="100"
                 disable="true"
@@ -54,7 +54,7 @@
         <Separator orientation="VERTICAL"/>
 
         <!-- 筛选 -->
-        <Label text="状态:"/>
+        <Label text="%inventory_check.status_label"/>
         <ComboBox fx:id="statusFilterCombo"
                   prefWidth="100"
                   onAction="#handleStatusFilter"/>
@@ -62,13 +62,13 @@
         <Separator orientation="VERTICAL"/>
 
         <!-- 搜索 -->
-        <Label text="搜索:"/>
+        <Label text="%inventory_check.search_label"/>
         <TextField fx:id="searchField"
-                  promptText="输入盘点单号或盘点人"
+                  promptText="%inventory_check.search_hint"
                   prefWidth="200"
                   onAction="#handleSearch"/>
 
-        <Button text="搜索"
+        <Button text="%common.search"
                 onAction="#handleSearch"
                 prefWidth="60"
                 styleClass="secondary-button"/>
@@ -76,7 +76,7 @@
         <Region HBox.hgrow="ALWAYS"/>
 
         <!-- 统计信息 -->
-        <Label fx:id="countLabel" text="盘点记录: 0 条" style="-fx-text-fill: #757575;"/>
+        <Label fx:id="countLabel" text="%inventory_check.count" style="-fx-text-fill: #757575;"/>
     </HBox>
 
     <!-- 库存盘点表格 -->
@@ -84,16 +84,16 @@
               VBox.vgrow="ALWAYS"
               styleClass="inventory-check-table">
         <columns>
-            <TableColumn fx:id="checkNoColumn" text="盘点单号" prefWidth="150"/>
-            <TableColumn fx:id="checkDateColumn" text="盘点日期" prefWidth="100"/>
-            <TableColumn fx:id="checkTypeColumn" text="盘点类型" prefWidth="100"/>
-            <TableColumn fx:id="totalItemsColumn" text="商品总数" prefWidth="80"/>
-            <TableColumn fx:id="diffItemsColumn" text="差异数" prefWidth="80"/>
-            <TableColumn fx:id="statusColumn" text="状态" prefWidth="80"/>
-            <TableColumn fx:id="operatorColumn" text="盘点人" prefWidth="100"/>
+            <TableColumn fx:id="checkNoColumn" text="%inventory_check.check_no" prefWidth="150"/>
+            <TableColumn fx:id="checkDateColumn" text="%inventory_check.check_date" prefWidth="100"/>
+            <TableColumn fx:id="checkTypeColumn" text="%inventory_check.check_type" prefWidth="100"/>
+            <TableColumn fx:id="totalItemsColumn" text="%inventory_check.total_items" prefWidth="80"/>
+            <TableColumn fx:id="diffItemsColumn" text="%inventory_check.diff_items" prefWidth="80"/>
+            <TableColumn fx:id="statusColumn" text="%inventory_check.status" prefWidth="80"/>
+            <TableColumn fx:id="operatorColumn" text="%inventory_check.operator" prefWidth="100"/>
         </columns>
         <placeholder>
-            <Label text="暂无盘点记录" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
+            <Label text="%inventory_check.no_data" style="-fx-text-fill: #9E9E9E; -fx-font-size: 14px;"/>
         </placeholder>
     </TableView>
 

@@ -2,6 +2,7 @@ package com.cashier.controller;
 
 import com.cashier.CashierSystemFXApplication;
 import com.cashier.model.User;
+import com.cashier.util.FXMLUtils;
 import com.cashier.util.StatusBarManager;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -81,6 +82,10 @@ public class PosModeController {
      */
     public void setCurrentUser(User user) {
         this.currentUser = user;
+
+        // 加载用户特定的语言偏好
+        String userLanguage = com.cashier.service.DataService.loadLanguagePreference(user.username);
+        com.cashier.i18n.I18nManager.getInstance().setLocale(userLanguage);
 
         // 更新用户信息显示
         userNameLabel.setText(user.name);
@@ -273,8 +278,7 @@ public class PosModeController {
      */
     private void loadCartView() {
         try {
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/CartView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/CartView.fxml");
             VBox cartView = loader.load();
 
             // 获取CartController并设置当前用户
@@ -379,8 +383,7 @@ public class PosModeController {
     @FXML
     private void handleShift() {
         try {
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/ShiftView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/ShiftView.fxml");
             VBox root = loader.load();
 
             ShiftController controller = loader.getController();

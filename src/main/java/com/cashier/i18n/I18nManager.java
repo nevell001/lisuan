@@ -20,35 +20,56 @@ public class I18nManager {
     private final ConcurrentHashMap<String, ResourceBundle> bundles = new ConcurrentHashMap<>();
     
     // 支持的语言列表
-    public static final Locale CHINESE = Locale.SIMPLIFIED_CHINESE;
+    public static final Locale CHINESE_SIMPLIFIED = Locale.SIMPLIFIED_CHINESE;
+    public static final Locale CHINESE_TRADITIONAL = Locale.TRADITIONAL_CHINESE;
     public static final Locale ENGLISH = Locale.ENGLISH;
     public static final Locale JAPANESE = Locale.JAPANESE;
     public static final Locale KOREAN = Locale.KOREAN;
-    
+
     // 可用的语言列表
     public static final List<Locale> AVAILABLE_LOCALES = Arrays.asList(
-        CHINESE, ENGLISH, JAPANESE, KOREAN
+        CHINESE_SIMPLIFIED, CHINESE_TRADITIONAL, ENGLISH, JAPANESE, KOREAN
     );
-    
+
     private I18nManager() {
-        // 默认使用中文
-        setLocale(CHINESE);
+        // 默认使用简体中文
+        setLocaleInternal(CHINESE_SIMPLIFIED);
     }
-    
+
     /**
      * 获取单例实例
      */
     public static I18nManager getInstance() {
         if (instance == null) {
             instance = new I18nManager();
+            // 在实例完全构造后刷新货币格式
+            try {
+                com.cashier.util.CurrencyUtil.refresh();
+            } catch (Exception e) {
+                LoggerFactory.getLogger(I18nManager.class).warn("刷新货币格式失败", e);
+            }
         }
         return instance;
     }
-    
+
     /**
      * 设置当前语言
      */
     public void setLocale(Locale locale) {
+        setLocaleInternal(locale);
+
+        // 刷新货币格式
+        try {
+            com.cashier.util.CurrencyUtil.refresh();
+        } catch (Exception e) {
+            logger.warn("刷新货币格式失败", e);
+        }
+    }
+
+    /**
+     * 内部设置语言方法（不触发货币刷新）
+     */
+    private void setLocaleInternal(Locale locale) {
         this.currentLocale = locale;
         this.bundle = getBundle(locale);
         logger.info("语言已切换到: {} ({})", locale.getDisplayLanguage(), locale);
@@ -60,7 +81,7 @@ public class I18nManager {
     public void setLocale(String languageTag) {
         Locale locale = Locale.forLanguageTag(languageTag);
         if (!AVAILABLE_LOCALES.contains(locale)) {
-            locale = CHINESE; // 默认中文
+            locale = CHINESE_SIMPLIFIED; // 默认简体中文
         }
         setLocale(locale);
     }
@@ -88,9 +109,16 @@ public class I18nManager {
                 return ResourceBundle.getBundle("com.cashier.i18n.messages", locale);
             } catch (MissingResourceException e) {
                 logger.warn("找不到语言包: {}, 使用默认", locale);
-                return ResourceBundle.getBundle("com.cashier.i18n.messages", CHINESE);
+                return ResourceBundle.getBundle("com.cashier.i18n.messages", CHINESE_SIMPLIFIED);
             }
         });
+    }
+
+    /**
+     * 获取当前 ResourceBundle（用于 FXML 加载）
+     */
+    public ResourceBundle getResourceBundle() {
+        return bundle;
     }
     
     /**

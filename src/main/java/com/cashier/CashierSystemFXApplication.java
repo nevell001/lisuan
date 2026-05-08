@@ -54,6 +54,11 @@ public class CashierSystemFXApplication extends Application {
         // 预热缓存
         com.cashier.util.CacheManager.warmupCache();
 
+        // 加载语言偏好
+        String savedLanguage = DataService.loadLanguagePreference();
+        com.cashier.i18n.I18nManager.getInstance().setLocale(savedLanguage);
+        logger.info("应用启动 - 已加载语言偏好: {}, I18nManager 当前语言: {}", savedLanguage, com.cashier.i18n.I18nManager.getInstance().getCurrentLanguageTag());
+
         // 设置应用图标
         setupApplicationIcon();
 
@@ -94,8 +99,7 @@ public class CashierSystemFXApplication extends Application {
      */
     private void loadLoginScene() {
         try {
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/LoginView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/LoginView.fxml");
             Parent root = loader.load();
 
             // 获取控制器并设置应用程序引用
@@ -122,8 +126,7 @@ public class CashierSystemFXApplication extends Application {
      */
     private void loadMainScene() {
         try {
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/MainView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/MainView.fxml");
             Parent root = loader.load();
 
             // 获取控制器并设置应用程序引用
@@ -292,8 +295,7 @@ public class CashierSystemFXApplication extends Application {
      */
     private void switchToPosModeView(User user) {
         try {
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/PosModeView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/PosModeView.fxml");
             Parent root = loader.load();
 
             // 获取控制器并设置应用程序引用
@@ -343,28 +345,27 @@ public class CashierSystemFXApplication extends Application {
      */
     private void loadFullMainView(User user) {
         try {
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/MainView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/MainView.fxml");
             Parent root = loader.load();
-    
+
             // 获取控制器并设置应用程序引用
             MainController controller = loader.getController();
             controller.setApplication(this);
             controller.setCurrentUser(user);
-    
+
             // 创建场景
             Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
-    
+
             // 应用主题
             String currentTheme = DataService.loadThemePreference();
             applyTheme(scene, currentTheme);
-    
+
             // 设置场景
             primaryStage.setScene(scene);
-    
+
             // 更新窗口标题
             primaryStage.setTitle(APP_TITLE + " - " + user.name + " (" + user.getRoleDisplayName() + ")");
-    
+
             logger.info("用户 {} ({}) 进入完整主界面", user.name, user.getRoleDisplayName());
 
             // 启动库存预警服务
@@ -429,8 +430,7 @@ public class CashierSystemFXApplication extends Application {
         this.currentUser = null;
 
         try {
-            FXMLLoader loader = new FXMLLoader();
-            loader.setLocation(getClass().getResource("/com/cashier/view/LoginView.fxml"));
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/LoginView.fxml");
             Parent root = loader.load();
 
             // 获取控制器并设置应用程序引用

@@ -4,6 +4,7 @@ import com.cashier.dao.PromotionDAO;
 import com.cashier.model.CartItem;
 import com.cashier.model.Promotion;
 import com.cashier.service.DataService;
+import com.cashier.util.CurrencyUtil;
 import com.cashier.model.Member;
 import com.cashier.model.Product;
 import com.cashier.model.Transaction;
@@ -349,21 +350,26 @@ public class CheckoutController {
         BigDecimal totalDiscountAmount = totalAmount.subtract(finalAmount);  // 优惠金额 = 原价 - 应付金额
 
         totalQuantityLabel.setText(String.valueOf(totalQuantity));
-        totalAmountLabel.setText(String.format("¥%.2f", totalAmount));
+        totalAmountLabel.setText(CurrencyUtil.format(totalAmount.doubleValue()));
         memberDiscountLabel.setText(String.format("%.1f折", currentMember != null ? currentMember.getDiscountRate() : BigDecimal.TEN));
 
         // 显示优惠明细
         if (promotionDiscount.compareTo(BigDecimal.ZERO) > 0 && appliedPromotion != null) {
             String promotionType = "优惠券".equals(appliedPromotion.type) ? "优惠券" : "促销";
-            discountLabel.setText(String.format("-¥%.2f (%s: %s - ¥%.2f)",
-                totalDiscountAmount, promotionType, appliedPromotion.name, promotionDiscount));
+            discountLabel.setText(String.format("-%s (%s: %s - %s)",
+                CurrencyUtil.format(totalDiscountAmount.doubleValue()),
+                promotionType, appliedPromotion.name,
+                CurrencyUtil.format(promotionDiscount.doubleValue())));
         } else if (promotionDiscount.compareTo(BigDecimal.ZERO) > 0) {
-            discountLabel.setText(String.format("-¥%.2f (促销: ¥%.2f)", totalDiscountAmount, promotionDiscount));
+            discountLabel.setText(String.format("-%s (促销: %s)",
+                CurrencyUtil.format(totalDiscountAmount.doubleValue()),
+                CurrencyUtil.format(promotionDiscount.doubleValue())));
         } else {
-            discountLabel.setText(String.format("-¥%.2f", totalDiscountAmount));
+            discountLabel.setText(CurrencyUtil.format(totalDiscountAmount.doubleValue()));
+            discountLabel.setText("-" + discountLabel.getText());
         }
 
-        finalAmountLabel.setText(String.format("¥%.2f", finalAmount));
+        finalAmountLabel.setText(CurrencyUtil.format(finalAmount.doubleValue()));
     }
 
     /**
