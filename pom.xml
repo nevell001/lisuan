@@ -265,7 +265,7 @@
                 </configuration>
             </plugin>
 
-            <!-- Maven JavaFX 插件 - 打包 JavaFX 应用（使用最新版本支持模块化） -->
+            <!-- Maven JavaFX 插件 - 开发运行使用 -->
             <plugin>
                 <groupId>org.openjfx</groupId>
                 <artifactId>javafx-maven-plugin</artifactId>
@@ -281,27 +281,6 @@
                         <jvmArg>-Dfile.encoding=UTF-8</jvmArg>
                         <jvmArg>-Dsun.jnu.encoding=UTF-8</jvmArg>
                     </jvmArgs>
-                    <!-- 添加 JavaFX 模块参数，支持 Windows -->
-                    <release>
-                        <imageZipName>cashier-system</imageZipName>
-                        <imageName>cashier-system</imageName>
-                        <target>
-                            <name>cashier-system</name>
-                            <modules>
-                                <module>javafx.controls</module>
-                                <module>javafx.fxml</module>
-                                <module>javafx.graphics</module>
-                                <module>javafx.base</module>
-                                <module>javafx.media</module>
-                            </modules>
-                            <jmods>
-                                <jmod>
-                                    <name>javafx.controls</name>
-                                    <path>${javafx.sdk.path}</path>
-                                </jmod>
-                            </jmods>
-                        </target>
-                    </release>
                 </configuration>
             </plugin>
 
@@ -329,6 +308,38 @@
                         </goals>
                     </execution>
                 </executions>
+            </plugin>
+
+            <!-- jpackage - 原生安装包打包工具 -->
+            <plugin>
+                <groupId>org.panteleyev</groupId>
+                <artifactId>jpackage-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <configuration>
+                    <name>CashierSystem</name>
+                    <appVersion>${project.version}</appVersion>
+                    <vendor>Cashier System</vendor>
+                    <destination>target/dist</destination>
+                    <input>target</input>
+                    <mainClass>com.cashier.CashierSystemFXApplication</mainClass>
+                    <mainJar>cashier-system-fx-${project.version}-jar-with-dependencies.jar</mainJar>
+                    <!-- Windows 特定配置 -->
+                    <winMenu>true</winMenu>
+                    <winDirChooser>true</winDirChooser>
+                    <winShortcut>true</winShortcut>
+                    <winMenuGroup>CashierSystem</winMenuGroup>
+                    <!-- Linux 特定配置 -->
+                    <linuxShortcut>true</linuxShortcut>
+                    <linuxMenuGroup>Office</linuxMenuGroup>
+                    <!-- 应用图标 -->
+                    <icon>src/main/resources/images/logos/app-icon.png</icon>
+                    <!-- JVM 参数 -->
+                    <javaOptions>
+                        <option>-Dfile.encoding=UTF-8</option>
+                        <option>-Xms512m</option>
+                        <option>-Xmx1024m</option>
+                    </javaOptions>
+                </configuration>
             </plugin>
 
             <!-- Maven Surefire 插件 - 运行测试 -->

@@ -322,8 +322,16 @@ echo.
 echo Starting, please wait...
 echo.
 
-REM Start application using Maven JavaFX plugin with forced dependency update
-call mvn javafx:run -U
+REM Start application - prioritize JAR for production, Maven for development
+if exist "%JAR_FILE%" (
+    echo [INFO] Using packaged JAR: %JAR_FILE%
+    echo.
+    java %JVM_OPTS% -jar "%JAR_FILE%"
+) else (
+    echo [INFO] JAR not found, using Maven JavaFX plugin...
+    echo.
+    call mvn javafx:run -U
+)
 
 REM Check exit code
 if errorlevel 1 (
