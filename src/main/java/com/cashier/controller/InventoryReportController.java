@@ -1,5 +1,6 @@
 package com.cashier.controller;
 
+import com.cashier.i18n.I18nManager;
 import com.cashier.dao.ProductDAO;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Product;
@@ -950,7 +951,7 @@ public class InventoryReportController {
      */
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("错误");
+        alert.setTitle(I18nManager.getInstance().get("label.error"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();

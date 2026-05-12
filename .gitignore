@@ -75,3 +75,7 @@ logos/*
 # Claude/iFlow 配置文件（本地使用，不提交）
 CLAUDE.md
 IFLOW.md
+.deepseek/
+fonts/*.ttc
+src/main/resources/fonts/*.otf
+src/main/resources/fonts/*.ttf

@@ -1,6 +1,7 @@
 package com.cashier.controller;
 
 import com.cashier.dao.CategoryDAO;
+import com.cashier.i18n.I18nManager;
 import com.cashier.dao.ProductDAO;
 import com.cashier.dao.SupplierDAO;
 import com.cashier.dao.UnitDAO;
@@ -392,7 +393,7 @@ public class ProductEditController {
 
                             // 显示成功提示
                             javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-                            alert.setTitle("成功");
+                            alert.setTitle(I18nManager.getInstance().get("label.success"));
                             alert.setHeaderText(null);
                             alert.setContentText("商品添加成功！");
                             alert.showAndWait();
@@ -453,7 +454,7 @@ public class ProductEditController {
 
                             // 显示成功提示
                             javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-                            alert.setTitle("成功");
+                            alert.setTitle(I18nManager.getInstance().get("label.success"));
                             alert.setHeaderText(null);
                             alert.setContentText("商品更新成功！");
                             alert.showAndWait();

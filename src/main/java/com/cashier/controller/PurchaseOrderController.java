@@ -1,5 +1,6 @@
 package com.cashier.controller;
 
+import com.cashier.i18n.I18nManager;
 import com.cashier.dao.*;
 import com.cashier.model.*;
 import com.cashier.util.CurrencyUtil;
@@ -855,7 +856,7 @@ public class PurchaseOrderController {
         PurchaseOrder selected = orderTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("确认删除");
+            alert.setTitle(I18nManager.getInstance().get("common.confirm"));
             alert.setHeaderText(null);
             alert.setContentText("确定要删除采购订单 \"" + selected.orderNo + "\" 吗？");
 
@@ -964,7 +965,7 @@ public class PurchaseOrderController {
         PurchaseOrder selected = orderTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("确认提交");
+            alert.setTitle(I18nManager.getInstance().get("common.confirm"));
             alert.setHeaderText(null);
             alert.setContentText("确定要提交订单 \"" + selected.orderNo + "\" 进行审批吗？");
 
@@ -1040,7 +1041,7 @@ public class PurchaseOrderController {
      */
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("错误");
+        alert.setTitle(I18nManager.getInstance().get("label.error"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();

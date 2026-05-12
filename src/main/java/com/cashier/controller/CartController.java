@@ -1,5 +1,6 @@
 package com.cashier.controller;
 
+import com.cashier.i18n.I18nManager;
 import com.cashier.dao.MemberDAO;
 import com.cashier.dao.ProductDAO;
 import com.cashier.dao.PromotionDAO;
@@ -547,7 +548,7 @@ public class CartController {
     @FXML
     private void handleClearCart() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("确认清空");
+        alert.setTitle(I18nManager.getInstance().get("common.confirm"));
         alert.setHeaderText(null);
         alert.setContentText("确定要清空购物车吗？");
 
@@ -905,7 +906,7 @@ public class CartController {
 
         // 确认支付
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("确认支付");
+        alert.setTitle(I18nManager.getInstance().get("common.confirm"));
         alert.setHeaderText(null);
         alert.setContentText(String.format("确定要使用%s支付 %s 吗？",
             paymentMethod, CurrencyUtil.format(getFinalAmount().doubleValue())));
@@ -1132,7 +1133,7 @@ public class CartController {
      */
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("错误");
+        alert.setTitle(I18nManager.getInstance().get("label.error"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
@@ -1144,7 +1145,7 @@ public class CartController {
      */
     private void showInfo(String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("提示");
+        alert.setTitle(I18nManager.getInstance().get("common.tip"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
@@ -1217,9 +1218,9 @@ public class CartController {
                 CurrencyUtil.format(changeAmount)
             );
         }
-        
+
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("支付成功");
+        alert.setTitle(I18nManager.getInstance().get("label.success"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
@@ -1384,7 +1385,7 @@ public class CartController {
     private void checkShiftStatus() {
         if (!com.cashier.service.DataService.hasActiveShift()) {
             Alert alert = new Alert(Alert.AlertType.WARNING);
-            alert.setTitle("提示");
+            alert.setTitle(I18nManager.getInstance().get("common.tip"));
             alert.setHeaderText(null);
             alert.setContentText("当前没有开班，请先切换到交班页面进行开班操作！");
             alert.showAndWait();

@@ -2,6 +2,7 @@ package com.cashier.controller;
 
 import com.cashier.controller.CreateReturnOrderDialogController;
 import com.cashier.dao.TransactionDAO;
+import com.cashier.i18n.I18nManager;
 import com.cashier.model.Transaction;
 import com.cashier.model.Product;
 import com.cashier.util.CurrencyUtil;
@@ -248,7 +249,7 @@ public class TransactionController {
         detail.append("实付金额: ¥").append(String.format("%.2f", transaction.finalAmount)).append("\n");
 
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("交易详情");
+        alert.setTitle(I18nManager.getInstance().get("label.transaction_detail"));
         alert.setHeaderText(null);
         alert.setContentText(detail.toString());
         alert.getDialogPane().setPrefWidth(500);
@@ -294,13 +295,13 @@ public class TransactionController {
 
             // 如果提交成功，刷新交易列表
             if (controller.isSubmitted()) {
-                showAlert(Alert.AlertType.INFORMATION, "成功", "退货订单创建成功！");
+                showAlert(Alert.AlertType.INFORMATION, I18nManager.getInstance().get("label.success"), I18nManager.getInstance().get("success.create_return"));
                 loadTransactions();
             }
 
         } catch (Exception e) {
             logger.error("打开退货订单对话框失败", e);
-            showAlert(Alert.AlertType.ERROR, "错误", "打开退货订单对话框失败: " + e.getMessage());
+            showAlert(Alert.AlertType.ERROR, I18nManager.getInstance().get("label.error"), "打开退货订单对话框失败: " + e.getMessage());
         }
     }
 
@@ -387,8 +388,8 @@ public class TransactionController {
             "Excel", "Excel", "PDF"
         );
         formatDialog.setTitle("选择导出格式");
-        formatDialog.setHeaderText("请选择导出格式");
-        formatDialog.setContentText("格式:");
+        formatDialog.setHeaderText(I18nManager.getInstance().get("label.please_select_format"));
+        formatDialog.setContentText(I18nManager.getInstance().get("label.format") + ":");
 
         formatDialog.showAndWait().ifPresent(format -> {
             com.cashier.util.ExportUtil.ExportFormat exportFormat =
@@ -467,13 +468,13 @@ public class TransactionController {
 
             if (filePath != null) {
                 Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
-                successAlert.setTitle("导出成功");
+                successAlert.setTitle(I18nManager.getInstance().get("success.export"));
                 successAlert.setHeaderText(null);
-                successAlert.setContentText("文件已成功导出到:\n" + filePath);
+                successAlert.setContentText(I18nManager.getInstance().get("success.export_file") + ":\n" + filePath);
                 successAlert.showAndWait();
-                updateStatus("导出成功");
+                updateStatus(I18nManager.getInstance().get("success.export"));
             } else {
-                showError("导出失败，请查看日志获取详细信息");
+                showError(I18nManager.getInstance().get("error.export_failed"));
             }
         } catch (Exception e) {
             logger.error("导出交易记录失败", e);
@@ -518,7 +519,7 @@ public class TransactionController {
      */
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("错误");
+        alert.setTitle(I18nManager.getInstance().get("label.error"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();

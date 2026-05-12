@@ -1,5 +1,6 @@
 package com.cashier.controller;
 
+import com.cashier.i18n.I18nManager;
 import com.cashier.dao.CategoryDAO;
 import com.cashier.dao.ProductDAO;
 import com.cashier.dao.UnitDAO;
@@ -479,7 +480,7 @@ public class InventoryController {
      */
     private void showInfo(String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("提示");
+        alert.setTitle(I18nManager.getInstance().get("common.tip"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
@@ -695,7 +696,7 @@ public class InventoryController {
      */
     private void showDeleteCategoryDialog(Category category, ObservableList<Category> categoryList) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("删除分类");
+        alert.setTitle(I18nManager.getInstance().get("common.delete"));
         alert.setHeaderText("确认删除");
         alert.setContentText("确定要删除分类 \"" + category.name + "\" 吗？");
 
@@ -916,7 +917,7 @@ public class InventoryController {
      */
     private void showDeleteUnitDialog(Unit unit, ObservableList<Unit> unitList) {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("删除单位");
+        alert.setTitle(I18nManager.getInstance().get("common.delete"));
         alert.setHeaderText("确认删除");
         alert.setContentText("确定要删除单位 \"" + unit.name + "\" 吗？");
 
@@ -943,7 +944,7 @@ public class InventoryController {
      */
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("错误");
+        alert.setTitle(I18nManager.getInstance().get("label.error"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();

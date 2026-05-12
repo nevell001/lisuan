@@ -1,6 +1,7 @@
 package com.cashier.controller;
 
 import com.cashier.service.DataService;
+import com.cashier.i18n.I18nManager;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -322,12 +323,13 @@ public class SettingsController {
      */
     private void showLanguageRestartDialog() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("语言已更改");
+        I18nManager i18n = I18nManager.getInstance();
+        alert.setTitle(i18n.get("settings.language") + " " + i18n.get("message.save.success").split(" / ")[0]);
         alert.setHeaderText(null);
-        alert.setContentText("语言设置已保存，需要重启应用才能生效。\n\n是否立即重启？");
+        alert.setContentText(i18n.get("message.restart.required"));
 
-        ButtonType restartButton = new ButtonType("立即重启", ButtonBar.ButtonData.OK_DONE);
-        ButtonType laterButton = new ButtonType("稍后重启", ButtonBar.ButtonData.CANCEL_CLOSE);
+        ButtonType restartButton = new ButtonType(i18n.get("message.restart.now"), ButtonBar.ButtonData.OK_DONE);
+        ButtonType laterButton = new ButtonType(i18n.get("message.restart.later"), ButtonBar.ButtonData.CANCEL_CLOSE);
         alert.getButtonTypes().setAll(restartButton, laterButton);
 
         logger.info("显示语言重启对话框，等待用户选择...");
@@ -760,7 +762,7 @@ public class SettingsController {
     @FXML
     private void handleResetAll() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("确认重置");
+        alert.setTitle(I18nManager.getInstance().get("common.confirm"));
         alert.setHeaderText(null);
         alert.setContentText("确定要重置所有设置为默认值吗？");
 
@@ -867,7 +869,7 @@ public class SettingsController {
      */
     private void showSuccess(String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("成功");
+        alert.setTitle(I18nManager.getInstance().get("label.success"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
@@ -879,7 +881,7 @@ public class SettingsController {
      */
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("错误");
+        alert.setTitle(I18nManager.getInstance().get("label.error"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();

@@ -1,5 +1,6 @@
 package com.cashier.controller;
 
+import com.cashier.i18n.I18nManager;
 import com.cashier.CashierSystemFXApplication;
 import com.cashier.model.User;
 import com.cashier.util.FXMLUtils;
@@ -414,7 +415,7 @@ public class PosModeController {
             if (!cartEmpty) {
                 // 购物车不为空，提示确认
                 Alert alert = new Alert(Alert.AlertType.WARNING);
-                alert.setTitle("确认退出");
+                alert.setTitle(I18nManager.getInstance().get("common.confirm"));
                 alert.setHeaderText("购物车不为空");
                 alert.setContentText("当前购物车还有商品，确定要退出吗？未结账的商品将会丢失。");
                 alert.showAndWait();
@@ -438,7 +439,7 @@ public class PosModeController {
      */
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("错误");
+        alert.setTitle(I18nManager.getInstance().get("label.error"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();

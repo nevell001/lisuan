@@ -2,6 +2,7 @@ package com.cashier.controller;
 
 import com.cashier.controller.MainController;
 import com.cashier.dao.ShiftDAO;
+import com.cashier.i18n.I18nManager;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Shift;
 import com.cashier.model.Transaction;
@@ -350,7 +351,7 @@ public class ShiftController {
         }
 
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("交接班详情");
+        alert.setTitle(I18nManager.getInstance().get("label.transaction_detail"));
         alert.setHeaderText(null);
         alert.setContentText(detail.toString());
         alert.getDialogPane().setPrefWidth(500);
@@ -563,7 +564,7 @@ public class ShiftController {
 
         // 确认开班
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("确认开班");
+        alert.setTitle(I18nManager.getInstance().get("common.confirm"));
         alert.setHeaderText(null);
         alert.setContentText("确定要开始新的班次吗？");
 
@@ -654,7 +655,7 @@ try {
 
         // 确认交班
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("确认交班");
+        alert.setTitle(I18nManager.getInstance().get("common.confirm"));
         alert.setHeaderText(null);
         alert.setContentText("确定要结束当前班次吗？");
 
@@ -725,18 +726,20 @@ try {
             updateShiftButtonStates();
 
             // 显示交班详情
+            I18nManager i18n = I18nManager.getInstance();
+            String sym = CurrencyUtil.getSymbol();
             String detail = String.format(
-                "交班成功！\n\n" +
-                "班次ID: %s\n" +
-                "操作员: %s\n" +
-                "班次时长: %s\n" +
-                "本班次交易数: %d\n" +
-                "本班次营业额: ¥%.2f\n\n" +
-                "支付方式明细:\n" +
-                "现金: ¥%.2f\n" +
-                "微信: ¥%.2f\n" +
-                "支付宝: ¥%.2f\n" +
-                "银行卡: ¥%.2f",
+                i18n.get("success.shift_end") + "\n\n" +
+                i18n.get("label.shift_id") + ": %s\n" +
+                i18n.get("label.operator") + ": %s\n" +
+                i18n.get("label.shift_duration") + ": %s\n" +
+                i18n.get("label.transaction_count") + ": %d\n" +
+                i18n.get("label.revenue") + ": " + sym + "%.2f\n\n" +
+                i18n.get("label.payment_detail") + ":\n" +
+                i18n.get("label.cash") + ": " + sym + "%.2f\n" +
+                i18n.get("label.wechat") + ": " + sym + "%.2f\n" +
+                i18n.get("label.alipay") + ": " + sym + "%.2f\n" +
+                i18n.get("label.card") + ": " + sym + "%.2f",
                 activeShift.shiftId,
                 activeShift.operatorName,
                 activeShift.getDurationText(),
@@ -749,7 +752,7 @@ try {
             );
 
             Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
-            successAlert.setTitle("交班成功");
+            successAlert.setTitle(i18n.get("success.shift_end"));
             successAlert.setHeaderText(null);
             successAlert.setContentText(detail);
             successAlert.getDialogPane().setPrefWidth(500);
@@ -798,7 +801,7 @@ try {
      */
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("错误");
+        alert.setTitle(I18nManager.getInstance().get("label.error"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();
@@ -810,7 +813,7 @@ try {
      */
     private void showSuccess(String message) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("成功");
+        alert.setTitle(I18nManager.getInstance().get("label.success"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();

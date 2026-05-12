@@ -107,6 +107,7 @@ public class I18n {
     public static final String REPORT_PRODUCTS = "report.products";
     public static final String REPORT_MEMBERS = "report.members";
     public static final String REPORT_TOP_PRODUCTS = "report.top_products";
+    public static final String COMMON_TIP = "common.tip";
     
     // ========== 发票 ==========
     public static final String INVOICE_TITLE = "invoice.title";
@@ -133,6 +134,39 @@ public class I18n {
     public static final String STATUS_COMPLETED = "status.completed";
     public static final String STATUS_CANCELLED = "status.cancelled";
     
+    // ========== 错误消息 ==========
+    public static final String ERROR_LOAD_DATA = "error.load_data";
+    public static final String ERROR_SAVE_DATA = "error.save_data";
+    public static final String ERROR_DELETE_DATA = "error.delete_data";
+    public static final String ERROR_EXPORT_DATA = "error.export_data";
+    public static final String ERROR_IMPORT_DATA = "error.import_data";
+    public static final String ERROR_EXPORT_FAILED = "error.export_failed";
+
+    // ========== 成功消息 ==========
+    public static final String SUCCESS_EXPORT = "success.export";
+    public static final String SUCCESS_EXPORT_FILE = "success.export_file";
+    public static final String SUCCESS_CREATE_RETURN = "success.create_return";
+    public static final String SUCCESS_SHIFT_END = "success.shift_end";
+
+    // ========== 通用标签 ==========
+    public static final String LABEL_SHIFT_ID = "label.shift_id";
+    public static final String LABEL_OPERATOR = "label.operator";
+    public static final String LABEL_SHIFT_DURATION = "label.shift_duration";
+    public static final String LABEL_TRANSACTION_COUNT = "label.transaction_count";
+    public static final String LABEL_REVENUE = "label.revenue";
+    public static final String LABEL_PAYMENT_DETAIL = "label.payment_detail";
+    public static final String LABEL_CASH = "label.cash";
+    public static final String LABEL_WECHAT = "label.wechat";
+    public static final String LABEL_ALIPAY = "label.alipay";
+    public static final String LABEL_CARD = "label.card";
+    public static final String LABEL_TRANSACTION_DETAIL = "label.transaction_detail";
+    public static final String LABEL_EXPORT_FORMAT = "label.export_format";
+    public static final String LABEL_PLEASE_SELECT_FORMAT = "label.please_select_format";
+    public static final String LABEL_FORMAT = "label.format";
+    public static final String LABEL_ERROR = "label.error";
+    public static final String LABEL_SUCCESS = "label.success";
+    public static final String LABEL_FAILED = "label.failed";
+
     /**
      * 获取翻译文本
      */

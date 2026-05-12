@@ -1,6 +1,7 @@
 package com.cashier.util;
 
 import javafx.animation.FadeTransition;
+import com.cashier.i18n.I18nManager;
 import javafx.animation.ScaleTransition;
 import javafx.animation.TranslateTransition;
 import javafx.scene.Node;
@@ -84,7 +85,7 @@ public class FXUtils {
      * @param message 消息
      */
     public static void showError(String message) {
-        showErrorAlert("错误", message);
+        showErrorAlert(I18nManager.getInstance().get("label.error"), message);
     }
 
     /**
@@ -92,7 +93,7 @@ public class FXUtils {
      * @param message 消息
      */
     public static void showInfo(String message) {
-        showInfoAlert("信息", message);
+        showInfoAlert(I18nManager.getInstance().get("common.info"), message);
     }
 
     /**

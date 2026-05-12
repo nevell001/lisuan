@@ -250,7 +250,7 @@ public class ExportUtil {
             File fontFile = new File(fontPath);
             if (fontFile.exists()) {
                 try {
-                    PDFont font = PDType0Font.load(document, fontFile);
+                    PDFont font = PDType0Font.load(document, new java.io.FileInputStream(fontFile), true);
                     logger.info("成功加载系统字体: {}", fontPath);
                     return font;
                 } catch (IOException e) {
@@ -297,7 +297,7 @@ public class ExportUtil {
             // 当前 Y 位置
             float yPosition = pageHeight - margin;
 
-            PDPageContentStream contentStream = new PDPageContentStream(document, page);
+            PDPageContentStream contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true);
 
             // 写入标题
             contentStream.setFont(font, titleFontSize);
@@ -353,7 +353,7 @@ public class ExportUtil {
                     yPosition = pageHeight - margin;
                     tableTop = yPosition;
                     dataStartY = yPosition;
-                    contentStream = new PDPageContentStream(document, page);
+                    contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true);
                     contentStream.setFont(font, dataFontSize);
                     // 绘制表头
                     drawTableHeader(contentStream, font, headerFontSize, margin, yPosition, rowHeight, tableWidth, headers, columnWidths);

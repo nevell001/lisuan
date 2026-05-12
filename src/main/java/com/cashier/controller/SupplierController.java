@@ -1,6 +1,7 @@
 package com.cashier.controller;
 
 import com.cashier.dao.SupplierDAO;
+import com.cashier.i18n.I18nManager;
 import com.cashier.model.Supplier;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
@@ -363,7 +364,7 @@ public class SupplierController {
         Supplier selected = supplierTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("确认删除");
+            alert.setTitle(I18nManager.getInstance().get("common.confirm"));
             alert.setHeaderText(null);
             alert.setContentText("确定要删除供应商 \"" + selected.name + "\" 吗？");
 
@@ -432,7 +433,7 @@ public class SupplierController {
      */
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("错误");
+        alert.setTitle(I18nManager.getInstance().get("label.error"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();

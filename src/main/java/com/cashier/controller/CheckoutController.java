@@ -1,5 +1,6 @@
 package com.cashier.controller;
 
+import com.cashier.i18n.I18nManager;
 import com.cashier.dao.PromotionDAO;
 import com.cashier.model.CartItem;
 import com.cashier.model.Promotion;
@@ -551,7 +552,7 @@ public class CheckoutController {
     @FXML
     private void handleCancel() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-        alert.setTitle("确认取消");
+        alert.setTitle(I18nManager.getInstance().get("common.confirm"));
         alert.setHeaderText(null);
         alert.setContentText("确定要取消结账吗？购物车将被清空。");
 
@@ -670,7 +671,7 @@ public class CheckoutController {
      */
     private void showSuccess(String paymentMethod, Transaction transaction) {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle("支付成功");
+        alert.setTitle(I18nManager.getInstance().get("label.success"));
         alert.setHeaderText(null);
         alert.setContentText(String.format(
             "支付成功！\n\n" +
@@ -710,7 +711,7 @@ public class CheckoutController {
      */
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("错误");
+        alert.setTitle(I18nManager.getInstance().get("label.error"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();

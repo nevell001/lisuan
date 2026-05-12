@@ -124,7 +124,7 @@
         <dependency>
             <groupId>org.apache.pdfbox</groupId>
             <artifactId>pdfbox</artifactId>
-            <version>2.0.32</version>
+            <version>3.0.4</version>
         </dependency>
 
         <!-- ControlsFX - 增强的 UI 控件库 -->
@@ -364,8 +364,10 @@
                     <include>**/*.css</include>
                     <include>**/*.fxml</include>
                     <include>**/*.properties</include>
-                    <include>**/*.ttf</include>
-                    <include>**/*.otf</include>
+                    
+                    
+                    
+                    
                     <include>**/*.png</include>
                     <include>**/*.jpg</include>
                     <include>**/*.xml</include>
@@ -377,6 +379,8 @@
                 <includes>
                     <include>**/*.wav</include>
                     <include>**/*.svg</include>
+                    <include>**/*.otf</include>
+                    <include>**/*.ttf</include>
                 </includes>
             </resource>
         </resources>

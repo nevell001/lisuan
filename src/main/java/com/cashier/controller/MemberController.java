@@ -1,6 +1,7 @@
 package com.cashier.controller;
 
 import com.cashier.dao.MemberDAO;
+import com.cashier.i18n.I18nManager;
 import com.cashier.model.Member;
 import com.cashier.util.FXMLUtils;
 import com.cashier.util.StatusBarManager;
@@ -262,7 +263,7 @@ public class MemberController {
         Member selected = memberTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle("确认删除");
+            alert.setTitle(I18nManager.getInstance().get("common.confirm"));
             alert.setHeaderText(null);
             alert.setContentText("确定要删除会员 \"" + selected.name + "\" 吗？");
 
@@ -374,7 +375,7 @@ public class MemberController {
      */
     private void showError(String message) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("错误");
+        alert.setTitle(I18nManager.getInstance().get("label.error"));
         alert.setHeaderText(null);
         alert.setContentText(message);
         alert.showAndWait();

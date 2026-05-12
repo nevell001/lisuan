@@ -485,6 +485,7 @@ public class ReceiptPrinter {
             }
 
             content.append("\n商品列表:\n");
+            String sym = CurrencyUtil.getSymbol();
             content.append("----------------------------------------\n");
 
             // 商品列表
@@ -493,17 +494,17 @@ public class ReceiptPrinter {
                 if (name.length() > 16) {
                     name = name.substring(0, 15) + "~";
                 }
-                content.append(String.format("%-16s x%d  ¥%.2f\n", name, item.quantity, item.product.price));
-                content.append(String.format("                  小计: ¥%.2f\n", item.subtotal));
+                content.append(String.format("%-16s x%d  " + sym + "%.2f\n", name, item.quantity, item.product.price));
+                content.append(String.format("                  小计: " + sym + "%.2f\n", item.subtotal));
             }
 
             content.append("----------------------------------------\n");
-            content.append(String.format("商品总额: ¥%.2f\n", transaction.totalAmount));
+            content.append(String.format("商品总额: " + sym + "%.2f\n", transaction.totalAmount));
             if (transaction.tax.compareTo(BigDecimal.ZERO) > 0) {
-                content.append(String.format("税费: ¥%.2f\n", transaction.tax));
+                content.append(String.format("税费: " + sym + "%.2f\n", transaction.tax));
             }
             content.append("----------------------------------------\n");
-            content.append(String.format("实付金额: ¥%.2f\n", transaction.finalAmount));
+            content.append(String.format("实付金额: " + sym + "%.2f\n", transaction.finalAmount));
             content.append("========================================\n");
 
             // 支付方式
