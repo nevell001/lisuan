@@ -207,7 +207,7 @@ public class TransactionController {
      * 处理查看详情
      */
     @FXML
-    private void handleViewDetail() {
+    public void handleViewDetail() {
         Transaction selected = transactionTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showTransactionDetail(selected);
@@ -260,7 +260,7 @@ public class TransactionController {
      * 处理创建退货
      */
     @FXML
-    private void handleCreateReturn() {
+    public void handleCreateReturn() {
         Transaction selected = transactionTable.getSelectionModel().getSelectedItem();
         if (selected == null) {
             showAlert(Alert.AlertType.WARNING, "提示", "请先选择要退货的交易记录");
@@ -309,7 +309,7 @@ public class TransactionController {
      * 处理搜索
      */
     @FXML
-    private void handleSearch() {
+    public void handleSearch() {
         applyFilters();
     }
 
@@ -317,7 +317,7 @@ public class TransactionController {
      * 处理清除搜索
      */
     @FXML
-    private void handleClearSearch() {
+    public void handleClearSearch() {
         startDatePicker.setValue(null);
         endDatePicker.setValue(null);
         searchField.clear();
@@ -377,7 +377,7 @@ public class TransactionController {
      * 处理导出
      */
     @FXML
-    private void handleExport() {
+    public void handleExport() {
         if (transactionList.isEmpty()) {
             showError("没有可导出的交易记录");
             return;
@@ -486,7 +486,7 @@ public class TransactionController {
      * 处理刷新
      */
     @FXML
-    private void handleRefresh() {
+    public void handleRefresh() {
         loadTransactions();
         updateStatus("已刷新");
     }

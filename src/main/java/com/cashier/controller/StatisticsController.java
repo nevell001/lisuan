@@ -188,7 +188,7 @@ public class StatisticsController {
     /**
      * 处理时间范围变化
      */
-    private void handleTimeRangeChange() {
+    public void handleTimeRangeChange() {
         String selected = timeRangeComboBox.getSelectionModel().getSelectedItem();
         LocalDate today = LocalDate.now();
 
@@ -234,7 +234,7 @@ public class StatisticsController {
      * 处理查询
      */
     @FXML
-    private void handleQuery() {
+    public void handleQuery() {
         LocalDate startDate = startDatePicker.getValue();
         LocalDate endDate = endDatePicker.getValue();
 
@@ -259,7 +259,7 @@ public class StatisticsController {
      * 处理刷新
      */
     @FXML
-    private void handleRefresh() {
+    public void handleRefresh() {
         // 重新加载数据
         loadTransactions();
         
@@ -446,7 +446,7 @@ public class StatisticsController {
      * 处理导出
      */
     @FXML
-    private void handleExport() {
+    public void handleExport() {
         if (allTransactions == null || allTransactions.isEmpty()) {
             showError("没有可导出的统计数据");
             return;

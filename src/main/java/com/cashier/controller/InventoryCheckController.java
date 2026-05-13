@@ -204,7 +204,7 @@ public class InventoryCheckController {
      * 处理添加盘点单
      */
     @FXML
-    private void handleAddCheck() {
+    public void handleAddCheck() {
         showCheckDialog(null);
     }
 
@@ -212,7 +212,7 @@ public class InventoryCheckController {
      * 处理编辑盘点单
      */
     @FXML
-    private void handleEditCheck() {
+    public void handleEditCheck() {
         InventoryCheck selected = checkTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showCheckDialog(selected);
@@ -733,7 +733,7 @@ public class InventoryCheckController {
      * 处理删除盘点单
      */
     @FXML
-    private void handleDeleteCheck() {
+    public void handleDeleteCheck() {
         InventoryCheck selected = checkTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -760,7 +760,7 @@ public class InventoryCheckController {
      * 处理查看详情
      */
     @FXML
-    private void handleViewDetail() {
+    public void handleViewDetail() {
         InventoryCheck selected = checkTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showCheckDetailDialog(selected);
@@ -851,7 +851,7 @@ public class InventoryCheckController {
      * 处理完成盘点
      */
     @FXML
-    private void handleComplete() {
+    public void handleComplete() {
         InventoryCheck selected = checkTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -887,7 +887,7 @@ public class InventoryCheckController {
      * 处理搜索
      */
     @FXML
-    private void handleSearch() {
+    public void handleSearch() {
         String searchText = searchField.getText().trim().toLowerCase();
         if (searchText.isEmpty()) {
             filterChecks();
@@ -917,7 +917,7 @@ public class InventoryCheckController {
      * 处理状态筛选
      */
     @FXML
-    private void handleStatusFilter() {
+    public void handleStatusFilter() {
         filterChecks();
     }
 

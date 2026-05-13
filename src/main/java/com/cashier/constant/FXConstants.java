@@ -105,17 +105,50 @@ public class FXConstants {
     /** 主字体名称 */
     public static final String PRIMARY_FONT_FAMILY = "Microsoft YaHei";
 
+    // ========== 设计规范 - 间距系统 ==========
+
+    /** 极小间距 (4px) - 用于紧凑元素间的分隔 */
+    public static final int SPACING_XS = 4;
+
+    /** 小间距 (8px) - 用于相关元素间的分隔 */
+    public static final int SPACING_SM = 8;
+
+    /** 中间距 (12px) - 用于分组内元素的分隔 */
+    public static final int SPACING_MD = 12;
+
+    /** 大间距 (16px) - 用于不同分组间的分隔 */
+    public static final int SPACING_LG = 16;
+
+    /** 超大间距 (24px) - 用于主要区域间的分隔 */
+    public static final int SPACING_XL = 24;
+
+    // ========== 设计规范 - 字体系统 ==========
+
+    /** 小字 (12px) - 辅助信息、注释 */
+    public static final double FONT_SIZE_SM = 12;
+
+    /** 标准字 (14px) - 正文、默认字体 */
+    public static final double FONT_SIZE_MD = 14;
+
+    /** 大字 (16px) - 重要信息、强调文本 */
+    public static final double FONT_SIZE_LG = 16;
+
+    /** 标题字 (20px) - 页面标题、对话框标题 */
+    public static final double FONT_SIZE_XL = 20;
+
+    // ========== 兼容性常量（向后兼容） ==========
+
     /** 默认字体大小 */
-    public static final double FONT_SIZE_NORMAL = 14;
+    public static final double FONT_SIZE_NORMAL = FONT_SIZE_MD;
 
     /** 大字体大小 */
-    public static final double FONT_SIZE_LARGE = 16;
+    public static final double FONT_SIZE_LARGE = FONT_SIZE_LG;
 
     /** 小字体大小 */
-    public static final double FONT_SIZE_SMALL = 12;
+    public static final double FONT_SIZE_SMALL = FONT_SIZE_SM;
 
     /** 标题字体大小 */
-    public static final double FONT_SIZE_TITLE = 20;
+    public static final double FONT_SIZE_TITLE = FONT_SIZE_XL;
 
     /** 头部字体大小 */
     public static final double FONT_SIZE_HEADING = 18;

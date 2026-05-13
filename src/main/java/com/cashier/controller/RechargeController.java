@@ -199,7 +199,7 @@ public class RechargeController {
      * 处理确定按钮
      */
     @FXML
-    private void handleOk() {
+    public void handleOk() {
         if (isInputValid()) {
             rechargeAmount = Double.parseDouble(amountField.getText().trim());
             String paymentMethod = paymentMethodComboBox.getSelectionModel().getSelectedItem();
@@ -219,7 +219,7 @@ public class RechargeController {
      * 处理取消按钮
      */
     @FXML
-    private void handleCancel() {
+    public void handleCancel() {
         dialogStage.close();
     }
 

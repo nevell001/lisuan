@@ -8,9 +8,7 @@
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cashier.controller.MemberEditController"
       spacing="15"
-      styleClass="member-edit-view"
-      prefWidth="550"
-      prefHeight="500">
+      styleClass="member-edit-view, edit-view-container">
 
     <padding>
         <Insets top="20" right="20" bottom="20" left="20"/>
@@ -19,76 +17,91 @@
     <!-- 标题 -->
     <Label fx:id="titleLabel"
            text="%member.edit.title"
-           style="-fx-font-size: 20px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+           styleClass="view-title"/>
 
     <!-- 表单 -->
-    <GridPane hgap="15" vgap="15" VBox.vgrow="ALWAYS">
+    <GridPane hgap="15" vgap="15" VBox.vgrow="ALWAYS" styleClass="form-grid">
         <padding>
             <Insets top="15" right="10" bottom="30" left="10"/>
         </padding>
-        <!-- 列宽设置：标签列固定宽度，输入框列固定宽度 -->
         <columnConstraints>
-            <ColumnConstraints prefWidth="90" minWidth="90" maxWidth="90"/>
-            <ColumnConstraints prefWidth="150" hgrow="NEVER"/>
-            <ColumnConstraints prefWidth="90" minWidth="90" maxWidth="90"/>
-            <ColumnConstraints prefWidth="150" hgrow="NEVER"/>
+            <ColumnConstraints hgrow="NEVER" minWidth="90" prefWidth="90"/>
+            <ColumnConstraints hgrow="SOMETIMES" percentWidth="30"/>
+            <ColumnConstraints hgrow="NEVER" minWidth="90" prefWidth="90"/>
+            <ColumnConstraints hgrow="SOMETIMES" percentWidth="30"/>
         </columnConstraints>
 
         <!-- 会员编号和自动生成复选框 -->
-        <Label text="%member.edit.code" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+        <Label text="%member.edit.code" GridPane.columnIndex="0" GridPane.rowIndex="0"
+               styleClass="form-label"/>
         <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="0" GridPane.columnSpan="3">
             <TextField fx:id="memberCodeField"
-                       prefWidth="150" promptText="%member.edit.code_hint"/>
+                       promptText="%member.edit.code_hint"
+                       styleClass="form-input, input-code"/>
             <CheckBox fx:id="autoCodeCheckBox"
-                      text="%member.edit.auto_generate"/>
+                      text="%member.edit.auto_generate"
+                      styleClass="form-checkbox"/>
         </HBox>
 
         <!-- 手机号 -->
-        <Label text="%member.edit.phone" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+        <Label text="%member.edit.phone" GridPane.columnIndex="0" GridPane.rowIndex="1"
+               styleClass="form-label"/>
         <TextField fx:id="phoneField"
                    GridPane.columnIndex="1" GridPane.rowIndex="1"
-                   prefWidth="150" promptText="%member.edit.phone_hint"/>
+                   promptText="%member.edit.phone_hint"
+                   styleClass="form-input, input-phone"/>
 
         <!-- 姓名 -->
-        <Label text="%member.edit.name" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+        <Label text="%member.edit.name" GridPane.columnIndex="2" GridPane.rowIndex="1"
+               styleClass="form-label"/>
         <TextField fx:id="nameField"
                    GridPane.columnIndex="3" GridPane.rowIndex="1"
-                   prefWidth="150" promptText="%member.edit.name_hint"/>
+                   promptText="%member.edit.name_hint"
+                   styleClass="form-input"/>
 
         <!-- 积分 -->
-        <Label text="%member.edit.points" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+        <Label text="%member.edit.points" GridPane.columnIndex="0" GridPane.rowIndex="2"
+               styleClass="form-label"/>
         <TextField fx:id="pointsField"
                    GridPane.columnIndex="1" GridPane.rowIndex="2"
-                   prefWidth="150" promptText="%member.edit.points_hint"/>
+                   promptText="%member.edit.points_hint"
+                   styleClass="form-input, input-number"/>
 
         <!-- 等级 -->
-        <Label text="%member.edit.level" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+        <Label text="%member.edit.level" GridPane.columnIndex="2" GridPane.rowIndex="2"
+               styleClass="form-label"/>
         <ComboBox fx:id="levelComboBox"
                   GridPane.columnIndex="3" GridPane.rowIndex="2"
-                  prefWidth="150"/>
+                  styleClass="form-combo"/>
 
         <!-- 折扣 -->
-        <Label text="%member.edit.discount" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+        <Label text="%member.edit.discount" GridPane.columnIndex="0" GridPane.rowIndex="3"
+               styleClass="form-label"/>
         <TextField fx:id="discountField"
                    GridPane.columnIndex="1" GridPane.rowIndex="3"
-                   prefWidth="150" promptText="%member.edit.discount_hint"/>
+                   promptText="%member.edit.discount_hint"
+                   styleClass="form-input, input-number"/>
+
+        <!-- 余额 -->
+        <Label text="%member.edit.balance" GridPane.columnIndex="2" GridPane.rowIndex="3"
+               styleClass="form-label"/>
+        <TextField fx:id="balanceField"
+                   GridPane.columnIndex="3" GridPane.rowIndex="3"
+                   promptText="%member.edit.balance_hint"
+                   styleClass="form-input, input-amount"/>
 
         <!-- 折扣说明 -->
         <Label text="%member.edit.discount_hint2"
                GridPane.columnIndex="0" GridPane.rowIndex="4"
-               style="-fx-text-fill: #757575; -fx-font-size: 10px;"/>
-
-        <!-- 余额 -->
-        <Label text="%member.edit.balance" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
-        <TextField fx:id="balanceField"
-                   GridPane.columnIndex="3" GridPane.rowIndex="3"
-                   prefWidth="150" promptText="%member.edit.balance_hint"/>
+               styleClass="form-hint"/>
 
         <!-- 生日 -->
-        <Label text="%member.edit.birthday" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+        <Label text="%member.edit.birthday" GridPane.columnIndex="0" GridPane.rowIndex="5"
+               styleClass="form-label"/>
         <TextField fx:id="birthdayField"
                    GridPane.columnIndex="1" GridPane.rowIndex="5"
-                   prefWidth="150" promptText="%member.edit.birthday_hint"/>
+                   promptText="%member.edit.birthday_hint"
+                   styleClass="form-input, input-date"/>
     </GridPane>
 
     <!-- 分隔线 -->
@@ -97,25 +110,21 @@
     <!-- 错误提示 -->
     <Label fx:id="errorLabel"
            text=""
-           style="-fx-text-fill: #F44336; -fx-font-size: 12px;"/>
+           styleClass="error-label"/>
 
     <!-- 按钮区域 -->
-    <HBox spacing="15" alignment="CENTER_RIGHT">
+    <HBox spacing="15" alignment="CENTER_RIGHT" styleClass="button-bar">
         <padding>
             <Insets top="10"/>
         </padding>
         <Button fx:id="cancelButton"
                 text="%member.edit.cancel"
                 onAction="#handleCancel"
-                prefWidth="100"
-                prefHeight="35"
-                styleClass="secondary-button"/>
+                styleClass="secondary-button, button-normal"/>
         <Button fx:id="saveButton"
                 text="%member.edit.save"
                 onAction="#handleSave"
-                prefWidth="100"
-                prefHeight="35"
-                styleClass="primary-button"/>
+                styleClass="primary-button, button-normal"/>
     </HBox>
 
 </VBox>

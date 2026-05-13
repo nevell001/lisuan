@@ -230,7 +230,7 @@ public class InventoryController {
      * 处理添加商品
      */
     @FXML
-    private void handleAddProduct() {
+    public void handleAddProduct() {
         try {
             // 加载商品编辑对话框
             FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/ProductEditView.fxml");
@@ -276,7 +276,7 @@ public class InventoryController {
      * 处理编辑商品
      */
     @FXML
-    private void handleEditProduct() {
+    public void handleEditProduct() {
         Product selected = inventoryTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             try {
@@ -325,7 +325,7 @@ public class InventoryController {
      * 处理删除商品
      */
     @FXML
-    private void handleDeleteProduct() {
+    public void handleDeleteProduct() {
         Product selected = inventoryTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -350,7 +350,7 @@ public class InventoryController {
      * 处理快速入库
      */
     @FXML
-    private void handleRestock() {
+    public void handleRestock() {
         Product selected = inventoryTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             try {
@@ -398,7 +398,7 @@ public class InventoryController {
      * 处理搜索
      */
     @FXML
-    private void handleSearch() {
+    public void handleSearch() {
         String searchText = searchField.getText().trim().toLowerCase();
         if (searchText.isEmpty()) {
             inventoryList.setAll(inventory.values());
@@ -415,7 +415,7 @@ public class InventoryController {
      * 处理清除搜索
      */
     @FXML
-    private void handleClearSearch() {
+    public void handleClearSearch() {
         searchField.clear();
         inventoryList.setAll(inventory.values());
         updateCountLabel();
@@ -425,7 +425,7 @@ public class InventoryController {
      * 处理刷新
      */
     @FXML
-    private void handleRefresh() {
+    public void handleRefresh() {
         refreshInventory();
         updateStatus("商品列表已刷新");
         showInfo("商品列表已刷新");
@@ -490,7 +490,7 @@ public class InventoryController {
      * 处理分类管理
      */
     @FXML
-    private void handleCategoryManagement() {
+    public void handleCategoryManagement() {
         showCategoryManagementDialog();
     }
 
@@ -721,7 +721,7 @@ public class InventoryController {
      * 处理单位管理
      */
     @FXML
-    private void handleUnitManagement() {
+    public void handleUnitManagement() {
         showUnitManagementDialog();
     }
 

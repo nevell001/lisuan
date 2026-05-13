@@ -4,6 +4,7 @@
 
 | 版本 | 脚本文件 | 说明 | 发布日期 | 状态 |
 |------|----------|------|----------|------|
+| v2.5.2 | 11-v2.5.2-currency-preference.sql | 货币独立配置支持（语言与货币解耦） | 2026-05-12 | ✅ 已发布 |
 | v2.4.3 | 00-init-complete.sql | 商品名称唯一性约束 + MySQL 8.4 LTS 兼容性 | 2026-03-07 | ✅ 已发布 |
 | v2.4.3 | 08-v2.4.3-product-name-unique.sql | 商品名称唯一性约束升级脚本 | 2026-03-07 | ✅ 已发布 |
 | v2.4.3 | 09-v2.4.3-fix-promotions.sql | 促销表修复（添加 promotion_code 字段） | 2026-03-08 | ✅ 已发布 |
@@ -102,6 +103,26 @@ docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < doc
 docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-init/05-v2.4.0-updates.sql
 docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-init/06-v2.4.1-updates.sql
 ```
+
+**从 v2.5.1 升级到 v2.5.2**
+
+> **新功能**：v2.5.2 版本添加了货币独立配置功能，语言和货币可以分别设置。
+
+```bash
+docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD --default-character-set=utf8mb4 cashier_system < docker/mysql-init/11-v2.5.2-currency-preference.sql
+```
+
+**升级内容**：
+- 在 `language_preferences` 表添加 `currency_code` 字段
+- 支持的货币：CNY（人民币）、USD（美元）、JPY（日元）、KRW（韩元）、EUR（欧元）
+- 货币偏好独立于语言设置存储
+
+**验证升级结果**：
+```sql
+DESC language_preferences;
+```
+
+应该能看到 `currency_code` 字段。
 
 **特点**：
 - ✅ 保留现有数据
@@ -278,6 +299,7 @@ docker/mysql-init/
 ├── 07-fix-transaction-items.sql           # 诊断修复脚本
 ├── 08-v2.4.3-product-name-unique.sql      # 商品名称唯一性约束升级脚本
 ├── 09-v2.4.3-fix-promotions.sql           # 促销表修复脚本（v2.4.3 重要）
+├── 11-v2.5.2-currency-preference.sql      # v2.5.2 货币独立配置支持
 └── DATABASE_VERSIONS.md                    # 本文档
 ```
 

@@ -236,7 +236,7 @@ public class ReturnApprovalController {
     }
 
     @FXML
-    private void handleApprove() {
+    public void handleApprove() {
         if (selectedOrder == null) {
             showAlert(Alert.AlertType.WARNING, "提示", "请先选择要审批的退货订单");
             return;
@@ -279,7 +279,7 @@ public class ReturnApprovalController {
     }
 
     @FXML
-    private void handleReject() {
+    public void handleReject() {
         if (selectedOrder == null) {
             showAlert(Alert.AlertType.WARNING, "提示", "请先选择要审批的退货订单");
             return;
@@ -322,7 +322,7 @@ public class ReturnApprovalController {
     }
 
     @FXML
-    private void handleRefresh() {
+    public void handleRefresh() {
         loadPendingOrders();
         clearDetail();
         approvalCommentTextArea.clear();
@@ -330,7 +330,7 @@ public class ReturnApprovalController {
     }
 
     @FXML
-    private void handleViewOriginalTransaction() {
+    public void handleViewOriginalTransaction() {
         if (selectedOrder == null || selectedOrder.originalTransactionId == null) {
             showAlert(Alert.AlertType.WARNING, "提示", "请先选择退货订单");
             return;

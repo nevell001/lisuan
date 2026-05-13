@@ -373,7 +373,7 @@ public class CreateReturnOrderDialogController {
      * 处理全选
      */
     @FXML
-    private void handleSelectAll() {
+    public void handleSelectAll() {
         // 逻辑已在 initialize() 中实现
     }
 
@@ -381,7 +381,7 @@ public class CreateReturnOrderDialogController {
      * 处理取消
      */
     @FXML
-    private void handleCancel() {
+    public void handleCancel() {
         submitted = false;
         if (dialogStage != null) {
             dialogStage.close();
@@ -438,7 +438,7 @@ public class CreateReturnOrderDialogController {
      * 处理提交
      */
     @FXML
-    private void handleSubmit() {
+    public void handleSubmit() {
         // 验证输入
         String returnReason = returnReasonField.getText().trim();
         if (returnReason.isEmpty()) {

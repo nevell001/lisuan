@@ -162,7 +162,7 @@ public class MemberEditController {
      * 处理保存
      */
     @FXML
-    private void handleSave() {
+    public void handleSave() {
         if (isInputValid()) {
             if (member == null) {
                 // 添加新会员
@@ -203,7 +203,7 @@ public class MemberEditController {
      * 处理取消
      */
     @FXML
-    private void handleCancel() {
+    public void handleCancel() {
         dialogStage.close();
     }
 

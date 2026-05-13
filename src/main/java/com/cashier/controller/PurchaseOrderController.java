@@ -213,7 +213,7 @@ public class PurchaseOrderController {
      * 处理添加订单
      */
     @FXML
-    private void handleAddOrder() {
+    public void handleAddOrder() {
         showOrderDialog(null);
     }
 
@@ -221,7 +221,7 @@ public class PurchaseOrderController {
      * 处理编辑订单
      */
     @FXML
-    private void handleEditOrder() {
+    public void handleEditOrder() {
         PurchaseOrder selected = orderTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showOrderDialog(selected);
@@ -852,7 +852,7 @@ public class PurchaseOrderController {
      * 处理删除订单
      */
     @FXML
-    private void handleDeleteOrder() {
+    public void handleDeleteOrder() {
         PurchaseOrder selected = orderTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -879,7 +879,7 @@ public class PurchaseOrderController {
      * 处理查看详情
      */
     @FXML
-    private void handleViewDetail() {
+    public void handleViewDetail() {
         PurchaseOrder selected = orderTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showOrderDetailDialog(selected);
@@ -961,7 +961,7 @@ public class PurchaseOrderController {
      * 处理提交审批
      */
     @FXML
-    private void handleSubmitApproval() {
+    public void handleSubmitApproval() {
         PurchaseOrder selected = orderTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -985,7 +985,7 @@ public class PurchaseOrderController {
      * 处理搜索
      */
     @FXML
-    private void handleSearch() {
+    public void handleSearch() {
         String searchText = searchField.getText().trim().toLowerCase();
         if (searchText.isEmpty()) {
             filterOrders();
@@ -1016,7 +1016,7 @@ public class PurchaseOrderController {
      * 处理状态筛选
      */
     @FXML
-    private void handleStatusFilter() {
+    public void handleStatusFilter() {
         filterOrders();
     }
 

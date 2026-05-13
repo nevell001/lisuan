@@ -81,6 +81,33 @@
     -fx-border-color: #667eea;
 }
 
+/* 登录视图特定样式 */
+.login-scene .checkbox-row {
+    -fx-padding-top: 5px;
+}
+
+.login-scene .button-group {
+    -fx-padding-top: 10px;
+}
+
+.login-scene .hint-section {
+    -fx-spacing: 8px;
+}
+
+.login-scene .hint-label {
+    -fx-text-fill: #757575;
+    -fx-font-size: 12px;
+}
+
+.login-scene .version-label {
+    -fx-text-fill: #9E9E9E;
+    -fx-font-size: 11px;
+}
+
+.login-scene .loading-indicator {
+    -fx-pref-height: 30px;
+}
+
 .forgot-password-link {
     -fx-text-fill: #667eea;
     -fx-font-size: 13px;
@@ -1107,6 +1134,60 @@
     -fx-alignment: CENTER;
 }
 
+/* ========== 表单验证样式 ========== */
+/* 验证错误状态 */
+.validation-error {
+    -fx-background-color: #FFEBEE;
+    -fx-border-color: #F44336;
+    -fx-border-width: 2px;
+    -fx-effect: dropshadow(three-pass-box, rgba(244, 67, 54, 0.2), 3, 0, 0, 1);
+}
+
+.text-field.validation-error:focused,
+.password-field.validation-error:focused,
+.text-area.validation-error:focused,
+.combo-box.validation-error:focused {
+    -fx-border-color: #F44336;
+    -fx-border-width: 2px;
+}
+
+/* 必填字段标记 */
+.required-field {
+    -fx-text-fill: #F44336;
+}
+
+/* 验证成功状态 */
+.validation-success {
+    -fx-background-color: #E8F5E9;
+    -fx-border-color: #4CAF50;
+    -fx-border-width: 1px;
+}
+
+/* 验证警告状态 */
+.validation-warning {
+    -fx-background-color: #FFF3E0;
+    -fx-border-color: #FF9800;
+    -fx-border-width: 1px;
+}
+
+/* 焦点环样式（无障碍支持） */
+.text-field:focused,
+.password-field:focused,
+.text-area:focused,
+.combo-box:focused {
+    -fx-effect: dropshadow(gaussian, rgba(63, 81, 181, 0.3), 4, 0, 0, 0);
+}
+
+/* 高对比度焦点环 */
+.text-field:focused:high-contrast,
+.password-field:focused:high-contrast,
+.text-area:focused:high-contrast,
+.combo-box:focused:high-contrast {
+    -fx-border-color: #FFD700;
+    -fx-border-width: 3px;
+    -fx-effect: dropshadow(gaussian, rgba(255, 215, 0, 0.5), 6, 0, 0, 0);
+}
+
 /* ========== 简洁组合框样式（去除多余边框） ========== */
 .clean-combo-box {
     -fx-background-color: white;
@@ -1266,4 +1347,908 @@
     -fx-border-width: 1px;
     -fx-border-radius: 6px;
 }
+
+/* ========== 快捷键帮助界面样式 ========== */
+.shortcut-help-view {
+    -fx-background-color: #FFFFFF;
+}
+
+/* 标题栏 */
+.shortcut-help-view .header-bar {
+    -fx-background-color: linear-gradient(to right, #667eea, #764ba2);
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 3, 0, 0, 2);
+}
+
+.shortcut-help-view .title-label {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #FFFFFF;
+}
+
+/* 搜索栏 */
+.shortcut-help-view .search-bar {
+    -fx-background-color: #F5F5F5;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 0 0 1px 0;
+}
+
+.shortcut-help-view .search-field {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 20px;
+    -fx-border-color: #E0E0E0;
+    -fx-border-radius: 20px;
+    -fx-border-width: 1px;
+    -fx-padding: 8px 16px;
+    -fx-font-size: 14px;
+}
+
+.shortcut-help-view .search-field:focused {
+    -fx-border-color: #667eea;
+    -fx-border-width: 2px;
+}
+
+/* 内容区域 */
+.shortcut-help-view .content-area {
+    -fx-background-color: #FAFAFA;
+}
+
+/* 快捷键分组 */
+.shortcut-help-view .shortcut-group {
+    -fx-background-color: #FFFFFF;
+    -fx-background-radius: 8px;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1px;
+    -fx-border-radius: 8px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 2, 0, 0, 1);
+}
+
+.shortcut-help-view .group-title {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3F51B5;
+    -fx-border-color: transparent;
+    -fx-border-width: 0 0 0 4px;
+    -fx-border-insets: 0 0 0 0;
+}
+
+/* 快捷键网格 */
+.shortcut-help-view .shortcut-grid {
+    -fx-hgap: 15px;
+    -fx-vgap: 8px;
+}
+
+/* 快捷键按键样式 */
+.shortcut-help-view .shortcut-key {
+    -fx-background-color: linear-gradient(to bottom, #F5F5F5, #E0E0E0);
+    -fx-background-radius: 4px;
+    -fx-border-color: #BDBDBD;
+    -fx-border-width: 1px;
+    -fx-border-radius: 4px;
+    -fx-padding: 6px 12px;
+    -fx-font-family: "Consolas", "Monaco", "Courier New", monospace;
+    -fx-font-size: 12px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #424242;
+    -fx-background-insets: 0;
+    -fx-border-insets: 0;
+    -fx-effect: innershadow(gaussian, rgba(0,0,0,0.1), 2, 0, 0, 0);
+}
+
+/* 快捷键描述样式 */
+.shortcut-help-view .shortcut-desc {
+    -fx-font-size: 14px;
+    -fx-text-fill: #424242;
+}
+
+/* 图标按钮 */
+.shortcut-help-view .icon-button {
+    -fx-background-color: rgba(255, 255, 255, 0.2);
+    -fx-background-radius: 4px;
+    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-radius: 4px;
+    -fx-border-width: 1px;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 13px;
+    -fx-padding: 6px 16px;
+    -fx-cursor: hand;
+}
+
+.shortcut-help-view .icon-button:hover {
+    -fx-background-color: rgba(255, 255, 255, 0.3);
+}
+
+/* ========== 导航分组样式 ========== */
+/* 导航分组容器 */
+.nav-group {
+    -fx-background-color: transparent;
+}
+
+/* 分组标题 */
+.nav-group-header {
+    -fx-background-color: #F5F5F5;
+    -fx-border-color: transparent transparent #E0E0E0 transparent;
+    -fx-border-width: 0 0 1px 0;
+    -fx-cursor: hand;
+    -fx-font-size: 11px;
+}
+
+.nav-group-header:hover {
+    -fx-background-color: #EEEEEE;
+}
+
+/* 分组内容 */
+.nav-group-content {
+    -fx-background-color: #FFFFFF;
+    -fx-padding: 2px 0;
+}
+
+/* 导航按钮优化 */
+.nav-button {
+    -fx-background-color: transparent;
+    -fx-text-fill: #424242;
+    -fx-font-size: 12px;
+    -fx-padding: 8px 8px;
+    -fx-alignment: CENTER_LEFT;
+    -fx-background-insets: 0;
+    -fx-border-color: transparent;
+    -fx-border-width: 0;
+    -fx-graphic-text-gap: 6px;
+    -fx-cursor: hand;
+    -fx-wrap-text: false;
+}
+
+.nav-button:hover {
+    -fx-background-color: #F5F5F5;
+}
+
+.nav-button:active,
+.nav-button.active {
+    -fx-background-color: #E3F2FD;
+    -fx-text-fill: #3F51B5;
+    -fx-font-weight: bold;
+}
+
+.nav-button-active {
+    -fx-background-color: #E3F2FD;
+    -fx-text-fill: #3F51B5;
+    -fx-font-weight: bold;
+}
+
+/* ========== 全局搜索界面样式 ========== */
+.search-view {
+    -fx-background-color: #FFFFFF;
+}
+
+/* 搜索头部 */
+.search-view .search-header {
+    -fx-background-color: linear-gradient(to right, #667eea, #764ba2);
+    -fx-border-color: transparent;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.1), 3, 0, 0, 2);
+}
+
+.search-view .search-input {
+    -fx-background-color: rgba(255, 255, 255, 0.9);
+    -fx-background-radius: 20px;
+    -fx-border-color: transparent;
+    -fx-border-radius: 20px;
+    -fx-padding: 10px 16px;
+    -fx-font-size: 14px;
+    -fx-prompt-text-fill: #9E9E9E;
+}
+
+.search-view .search-input:focused {
+    -fx-background-color: #FFFFFF;
+}
+
+/* 搜索结果列表 */
+.search-view .search-results {
+    -fx-background-color: #FAFAFA;
+    -fx-border-color: transparent;
+}
+
+.search-view .search-result-item {
+    -fx-background-color: #FFFFFF;
+    -fx-padding: 12px 16px;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 0 0 1px 0;
+    -fx-cursor: hand;
+}
+
+.search-view .search-result-item:hover {
+    -fx-background-color: #F5F5F5;
+}
+
+.search-view .search-result-item .result-type {
+    -fx-background-color: #E3F2FD;
+    -fx-text-fill: #3F51B5;
+    -fx-font-size: 10px;
+    -fx-padding: 2px 6px;
+    -fx-background-radius: 3px;
+}
+
+.search-view .search-result-item .result-title {
+    -fx-font-size: 14px;
+    -fx-text-fill: #212121;
+}
+
+.search-view .search-result-item .result-shortcut {
+    -fx-font-family: "Consolas", "Monaco", monospace;
+    -fx-font-size: 11px;
+    -fx-text-fill: #757575;
+    -fx-background-color: #F5F5F5;
+    -fx-padding: 2px 6px;
+    -fx-background-radius: 3px;
+}
+
+/* 搜索结果单元格 */
+.search-view .search-result-cell {
+    -fx-background-color: transparent;
+    -fx-padding: 0;
+}
+
+.search-view .search-result-cell:filled:selected {
+    -fx-background-color: #E3F2FD;
+}
+
+/* 搜索底部 */
+.search-view .search-footer {
+    -fx-background-color: #F5F5F5;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1px 0 0 0;
+}
+
+/* ========== 通用数据表格组件样式 ========== */
+.data-table {
+    -fx-spacing: 10;
+}
+
+.data-table-view {
+    -fx-background-color: white;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1px;
+    -fx-border-radius: 4px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.05), 2, 0, 0, 1);
+}
+
+.data-table-view .column-header {
+    -fx-background-color: #3F51B5;
+    -fx-text-fill: #FFFFFF;
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-padding: 12px 8px;
+}
+
+.data-table-view .column-header-background {
+    -fx-background-color: #3F51B5;
+}
+
+.data-table-view .table-cell {
+    -fx-padding: 10px 8px;
+    -fx-font-size: 13px;
+}
+
+.data-table-view .table-row-cell:odd {
+    -fx-background-color: #F8FAFC;
+}
+
+.data-table-view .table-row-cell:selected {
+    -fx-background-color: linear-gradient(to right, rgba(63, 81, 181, 0.25), rgba(63, 81, 181, 0.35));
+    -fx-text-fill: #3F51B5;
+}
+
+.data-table-view .table-row-cell:hover {
+    -fx-background-color: rgba(63, 81, 181, 0.08);
+}
+
+/* 表格工具栏 */
+.data-table-toolbar {
+    -fx-background-color: #FFFFFF;
+    -fx-padding: 10px;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 0 0 1px 0;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.data-table .search-input {
+    -fx-background-color: #F5F5F5;
+    -fx-background-radius: 4px;
+    -fx-border-color: #E0E0E0;
+    -fx-border-radius: 4px;
+    -fx-padding: 6px 12px;
+}
+
+/* 表格状态栏 */
+.data-table-status-bar {
+    -fx-background-color: #FAFAFA;
+    -fx-padding: 8px 12px;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1px 0 0 0;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.data-table .count-label {
+    -fx-font-size: 13px;
+    -fx-text-fill: #424242;
+}
+
+.data-table .hint-label {
+    -fx-font-size: 12px;
+    -fx-text-fill: #9E9E9E;
+}
+
+/* ========== 响应式表单样式 ========== */
+
+/* 编辑视图容器 */
+.edit-view-container {
+    -fx-background-color: white;
+    -fx-background-radius: 8px;
+    -fx-effect: dropshadow(three-pass-box, rgba(0,0,0,0.08), 10, 0, 0, 2);
+}
+
+/* 视图标题 */
+.view-title {
+    -fx-font-size: 20px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3F51B5;
+}
+
+/* 表单网格 */
+.form-grid {
+    -fx-background-color: transparent;
+}
+
+/* 表单标签 */
+.form-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: 600;
+    -fx-text-fill: #424242;
+}
+
+/* 表单输入框 */
+.form-input {
+    -fx-min-height: 32px;
+    -fx-pref-height: 32px;
+    -fx-font-size: 14px;
+    -fx-background-color: white;
+    -fx-background-radius: 4px;
+    -fx-border-color: #E0E0E0;
+    -fx-border-radius: 4px;
+    -fx-padding: 6px 10px;
+}
+
+.form-input:focused {
+    -fx-border-color: #3F51B5;
+    -fx-border-width: 1.5px;
+}
+
+/* 特殊输入框样式 */
+.input-code {
+    -fx-pref-width: 180px;
+    -fx-font-family: "Monospaced";
+}
+
+.input-amount {
+    -fx-pref-width: 150px;
+    -fx-text-alignment: RIGHT;
+}
+
+.input-number {
+    -fx-pref-width: 120px;
+    -fx-text-alignment: RIGHT;
+}
+
+.input-phone {
+    -fx-pref-width: 150px;
+}
+
+.input-date {
+    -fx-pref-width: 150px;
+}
+
+/* 表单下拉框 */
+.form-combo {
+    -fx-min-height: 32px;
+    -fx-pref-height: 32px;
+    -fx-font-size: 14px;
+    -fx-background-color: white;
+    -fx-background-radius: 4px;
+    -fx-border-color: #E0E0E0;
+    -fx-border-radius: 4px;
+}
+
+.form-combo:focused {
+    -fx-border-color: #3F51B5;
+    -fx-border-width: 1.5px;
+}
+
+.form-combo .list-cell {
+    -fx-padding: 6px 10px;
+}
+
+/* 表单复选框 */
+.form-checkbox {
+    -fx-font-size: 14px;
+    -fx-text-fill: #424242;
+}
+
+/* 表单文本域 */
+.form-textarea {
+    -fx-min-height: 80px;
+    -fx-pref-height: 80px;
+    -fx-font-size: 14px;
+    -fx-background-color: white;
+    -fx-background-radius: 4px;
+    -fx-border-color: #E0E0E0;
+    -fx-border-radius: 4px;
+    -fx-padding: 8px 10px;
+    -fx-wrap-text: true;
+}
+
+.form-textarea:focused {
+    -fx-border-color: #3F51B5;
+    -fx-border-width: 1.5px;
+}
+
+/* 表单提示 */
+.form-hint {
+    -fx-font-size: 11px;
+    -fx-text-fill: #9E9E9E;
+    -fx-font-style: italic;
+}
+
+/* 按钮栏 */
+.button-bar {
+    -fx-padding: 10px 0;
+    -fx-alignment: CENTER_RIGHT;
+}
+
+/* 按钮尺寸 */
+.button-small {
+    -fx-min-width: 70px;
+    -fx-min-height: 28px;
+    -fx-font-size: 12px;
+}
+
+.button-normal {
+    -fx-min-width: 100px;
+    -fx-min-height: 36px;
+    -fx-font-size: 13px;
+}
+
+.button-large {
+    -fx-min-width: 120px;
+    -fx-min-height: 40px;
+    -fx-font-size: 14px;
+}
+
+/* 错误标签 */
+.error-label {
+    -fx-text-fill: #F44336;
+    -fx-font-size: 12px;
+    -fx-min-height: 18px;
+    -fx-padding: 4px 0;
+}
+
+/* ========== 对话框内容区域样式 ========== */
+.dialog-content {
+    -fx-padding: 16px;
+    -fx-spacing: 12px;
+}
+
+.dialog-form-grid {
+    -fx-hgap: 15px;
+    -fx-vgap: 15px;
+}
+
+.dialog-button-bar {
+    -fx-spacing: 10px;
+    -fx-alignment: CENTER_RIGHT;
+    -fx-padding: 10px 0 0 0;
+}
+
+/* ========== 购物车视图样式 ========== */
+
+/* 搜索区域 */
+.cart-view .search-section {
+    -fx-spacing: 8px;
+    -fx-alignment: CENTER_LEFT;
+}
+
+.cart-view .search-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2196F3;
+}
+
+.cart-view .search-field-input {
+    -fx-pref-width: 280px;
+    -fx-min-height: 38px;
+    -fx-pref-height: 38px;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+/* 统计标签 */
+.cart-view .count-label {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4CAF50;
+}
+
+/* 工具栏分隔符 */
+.cart-view .toolbar-separator {
+    -fx-pref-width: 2px;
+}
+
+/* 操作按钮 */
+.cart-view .button-action {
+    -fx-min-width: 120px;
+    -fx-min-height: 42px;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+}
+
+/* 区域标题 */
+.cart-view .section-header {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #3F51B5;
+    -fx-padding: 12px;
+    -fx-background-color: #F5F5F5;
+}
+
+/* 空标签 */
+.cart-view .empty-label {
+    -fx-text-fill: #9E9E9E;
+    -fx-font-size: 14px;
+}
+
+/* 商品列表标题 */
+.cart-view .product-list-title {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #FFFFFF;
+}
+
+.cart-view .double-click-hint {
+    -fx-font-size: 13px;
+    -fx-text-fill: #E0E0E0;
+    -fx-font-style: italic;
+}
+
+.cart-view .stock-hint {
+    -fx-font-size: 13px;
+    -fx-text-fill: #E0E0E0;
+}
+
+/* 会员信息框 */
+.cart-view .member-info-box {
+    -fx-background-color: #E3F2FD;
+    -fx-background-radius: 6px;
+    -fx-border-color: #2196F3;
+    -fx-border-radius: 6px;
+    -fx-border-width: 1px;
+}
+
+.cart-view .member-label {
+    -fx-font-size: 14px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #2196F3;
+}
+
+.cart-view .member-phone-input {
+    -fx-pref-width: 130px;
+    -fx-min-height: 36px;
+    -fx-font-size: 14px;
+}
+
+.cart-view .member-info-display {
+    -fx-font-size: 13px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4CAF50;
+}
+
+/* 金额信息 */
+.cart-view .amount-info {
+    -fx-padding: 4px 0;
+}
+
+.cart-view .amount-label {
+    -fx-font-size: 15px;
+    -fx-text-fill: #616161;
+}
+
+.cart-view .amount-value {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #212121;
+}
+
+.cart-view .discount-value {
+    -fx-font-size: 16px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #4CAF50;
+}
+
+.cart-view .final-label {
+    -fx-font-size: 18px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #212121;
+}
+
+.cart-view .final-value {
+    -fx-font-size: 26px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #F44336;
+}
+
+/* 支付方式 */
+.cart-view .payment-method-label {
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-text-fill: #212121;
+}
+
+.cart-view .payment-grid {
+    -fx-hgap: 8px;
+    -fx-vgap: 8px;
+}
+
+.cart-view .payment-button {
+    -fx-min-width: 170px;
+    -fx-min-height: 55px;
+    -fx-font-size: 15px;
+    -fx-font-weight: bold;
+    -fx-background-radius: 8px;
+}
+
+/* 支付按钮颜色 */
+.cart-view .cash-button {
+    -fx-background-color: #4CAF50;
+    -fx-text-fill: white;
+}
+
+.cart-view .cash-button:hover {
+    -fx-background-color: #45A049;
+}
+
+.cart-view .wechat-button {
+    -fx-background-color: #09BB07;
+    -fx-text-fill: white;
+}
+
+.cart-view .wechat-button:hover {
+    -fx-background-color: #08A806;
+}
+
+.cart-view .alipay-button {
+    -fx-background-color: #1677FF;
+    -fx-text-fill: white;
+}
+
+.cart-view .alipay-button:hover {
+    -fx-background-color: #146DE8;
+}
+
+.cart-view .card-button {
+    -fx-background-color: #FF9800;
+    -fx-text-fill: white;
+}
+
+.cart-view .card-button:hover {
+    -fx-background-color: #F57C00;
+}
+
+/* 结算信息区域 */
+.cart-view .checkout-info {
+    -fx-background-color: #FAFAFA;
+    -fx-border-color: #E0E0E0;
+    -fx-border-width: 1px 0 0 0;
+}
+
+/* 购物车区域 */
+.cart-view .cart-section {
+    -fx-background-color: white;
+}
+
+/* 购物车表格 */
+.cart-view .cart-table {
+    -fx-background-color: white;
+}
+
+.cart-view .cart-table .table-row-cell:selected {
+    -fx-background-color: rgba(76, 175, 80, 0.2);
+    -fx-text-fill: #2E7D32;
+}
+
+/* 商品表格 */
+.cart-view .product-table .table-row-cell:hover {
+    -fx-background-color: rgba(33, 150, 243, 0.1);
+    -fx-cursor: hand;
+}
+
+/* 分割面板 */
+.cart-view .cart-split-pane {
+    -fx-background-color: #E0E0E0;
+    -fx-padding: 2px;
+}
+
+.cart-view .cart-split-pane .split-pane-divider {
+    -fx-padding: 0 2px;
+    -fx-background-color: #BDBDBD;
+}
+/* ========== 无障碍支持 (Accessibility) ========== */
+
+/* 焦点可见性增强 */
+*:focused {
+    -fx-focus-color: #3F51B5;
+    -fx-faint-focus-color: transparent;
+    -fx-background-insets: 0;
+}
+
+/* 强焦点环 - 用于键盘导航 */
+.a11y-strong-focus *:focused {
+    -fx-focus-color: #FF9800;
+    -fx-border-color: #FF9800;
+    -fx-border-width: 2px;
+}
+
+/* 高对比度模式 */
+.high-contrast {
+    -fx-background-color: #000000;
+    -fx-text-fill: #FFFFFF;
+}
+
+.high-contrast .button {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #000000;
+    -fx-border-color: #FFFFFF;
+    -fx-border-width: 2px;
+}
+
+.high-contrast .button:focused {
+    -fx-border-color: #FFFF00;
+    -fx-border-width: 3px;
+}
+
+.high-contrast .text-field,
+.high-contrast .text-area,
+.high-contrast .combo-box {
+    -fx-background-color: #000000;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #FFFFFF;
+    -fx-border-width: 2px;
+}
+
+.high-contrast .table-row-cell {
+    -fx-background-color: #000000;
+    -fx-text-fill: #FFFFFF;
+    -fx-border-color: #333333;
+}
+
+.high-contrast .table-row-cell:selected {
+    -fx-background-color: #FFFFFF;
+    -fx-text-fill: #000000;
+}
+
+.high-contrast .table-row-cell:focused {
+    -fx-border-color: #FFFF00;
+    -fx-border-width: 2px;
+}
+
+/* 屏幕阅读器支持 */
+.a11y-label {
+    -fx-accessible-text: accessible-text;
+}
+
+/* 隐藏但保留给屏幕阅读器的内容 */
+.a11y-screen-reader-only {
+    -fx-opacity: 0;
+    -fx-pref-width: 1px;
+    -fx-pref-height: 1px;
+}
+
+/* 键盘导航提示 */
+.a11y-keyboard-hint {
+    -fx-font-size: 11px;
+    -fx-text-fill: #757575;
+    -fx-font-style: italic;
+}
+
+/* 可跳转到主内容的链接 */
+.a11y-skip-link {
+    -fx-background-color: #3F51B5;
+    -fx-text-fill: #FFFFFF;
+    -fx-padding: 8px 16px;
+}
+
+.a11y-skip-link:focus {
+    -fx-background-color: #FF9800;
+    -fx-text-fill: #000000;
+}
+
+/* 表格行焦点增强 */
+.table-view .table-row-cell:focused {
+    -fx-background-color: rgba(63, 81, 181, 0.15);
+    -fx-border-color: #3F51B5;
+    -fx-border-width: 1px;
+}
+
+/* 树视图和列表视图焦点增强 */
+.tree-view .tree-cell:focused,
+.list-view .list-cell:focused {
+    -fx-background-color: rgba(63, 81, 181, 0.15);
+    -fx-border-color: #3F51B5;
+    -fx-border-width: 1px;
+}
+
+/* 进度条和滑块的无障碍增强 */
+.progress-bar,
+.slider {
+    -fx-accessible-text: accessible-value;
+}
+
+/* 选项卡焦点增强 */
+.tab-pane .tab:focused {
+    -fx-border-color: #3F51B5;
+    -fx-border-width: 2px;
+    -fx-border-radius: 4px 4px 0 0;
+}
+
+/* 菜单项焦点增强 */
+.menu-item:focused,
+.context-menu .menu-item:focused {
+    -fx-background-color: #3F51B5;
+    -fx-text-fill: #FFFFFF;
+}
+
+/* 减少动画（适用于运动敏感用户） */
+.reduced-motion * {
+    -fx-transition-duration: 0ms !important;
+    -fx-animation-duration: 0ms !important;
+}
+
+/* 大文本模式支持 */
+.large-text {
+    -fx-font-size: 18px;
+}
+
+.large-text .text-field,
+.large-text .text-area,
+.large-text .button {
+    -fx-font-size: 18px;
+    -fx-min-height: 44px; /* WCAG 2.1 推荐的最小触摸目标尺寸 */
+}
+
+.large-text .table-row-cell {
+    -fx-cell-size: 44px;
+}
+
+/* 颜色盲友好的配色方案 */
+.colorblind-friendly .chart-series-line {
+    -fx-stroke-width: 3px;
+}
+
+.colorblind-friendly .success-indicator {
+    -fx-background-color: #009E73; /* 使用形状+颜色区分 */
+}
+
+.colorblind-friendly .error-indicator {
+    -fx-background-color: #D55E00;
+}
+
+.colorblind-friendly .warning-indicator {
+    -fx-background-color: #0072B2;
+}
+
+/* 工具提示无障碍增强 */
+.tooltip {
+    -fx-background-color: #212121;
+    -fx-text-fill: #FFFFFF;
+    -fx-background-radius: 4px;
+    -fx-font-size: 13px;
+    -fx-padding: 8px 12px;
+    -fx-accessible-text: accessible-help;
 }

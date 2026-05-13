@@ -10,6 +10,7 @@ import com.cashier.model.Member;
 import com.cashier.model.Product;
 import com.cashier.model.Transaction;
 import com.cashier.model.User;
+import com.cashier.util.DialogBuilder;
 import com.cashier.util.FXUtils;
 import com.cashier.util.ReceiptPrinter;
 import org.slf4j.Logger;
@@ -255,7 +256,7 @@ public class CheckoutController {
      * 搜索会员
      */
     @FXML
-    private void handleSearchMember() {
+    public void handleSearchMember() {
         String phone = memberPhoneField.getText().trim();
         if (phone.isEmpty()) {
             currentMember = null;
@@ -377,7 +378,7 @@ public class CheckoutController {
      * 现金支付
      */
     @FXML
-    private void handleCashPayment() {
+    public void handleCashPayment() {
         handlePayment("现金");
     }
 
@@ -385,7 +386,7 @@ public class CheckoutController {
      * 微信支付
      */
     @FXML
-    private void handleWechatPayment() {
+    public void handleWechatPayment() {
         handlePayment("微信");
     }
 
@@ -393,7 +394,7 @@ public class CheckoutController {
      * 支付宝支付
      */
     @FXML
-    private void handleAlipayPayment() {
+    public void handleAlipayPayment() {
         handlePayment("支付宝");
     }
 
@@ -401,7 +402,7 @@ public class CheckoutController {
      * 银行卡支付
      */
     @FXML
-    private void handleCardPayment() {
+    public void handleCardPayment() {
         handlePayment("银行卡");
     }
 
@@ -409,7 +410,7 @@ public class CheckoutController {
      * 处理支付
      * @param paymentMethod 支付方式
      */
-    private void handlePayment(String paymentMethod) {
+    public void handlePayment(String paymentMethod) {
         if (cartList.isEmpty()) {
             showError("购物车为空，无法支付！");
             return;
@@ -550,7 +551,7 @@ public class CheckoutController {
      * 取消
      */
     @FXML
-    private void handleCancel() {
+    public void handleCancel() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(I18nManager.getInstance().get("common.confirm"));
         alert.setHeaderText(null);
@@ -568,7 +569,7 @@ public class CheckoutController {
      * 打印小票
      */
     @FXML
-    private void handlePrint() {
+    public void handlePrint() {
         if (lastTransaction == null) {
             FXUtils.showError("没有可打印的交易记录");
             return;
@@ -670,21 +671,25 @@ public class CheckoutController {
      * @param transaction 交易记录
      */
     private void showSuccess(String paymentMethod, Transaction transaction) {
-        Alert alert = new Alert(Alert.AlertType.INFORMATION);
-        alert.setTitle(I18nManager.getInstance().get("label.success"));
-        alert.setHeaderText(null);
-        alert.setContentText(String.format(
-            "支付成功！\n\n" +
-            "订单号: %s\n" +
-            "支付方式: %s\n" +
-            "支付金额: ¥%.2f\n" +
-            "商品数量: %d",
+        I18nManager i18n = I18nManager.getInstance();
+        String content = String.format(
+            i18n.get("payment.success") + "\n\n" +
+            i18n.get("label.order_id") + ": %s\n" +
+            i18n.get("transaction.payment_method") + ": %s\n" +
+            i18n.get("transaction.amount") + ": ¥%.2f\n" +
+            i18n.get("cart.product_count") + ": %d",
             transaction.transactionId,
             paymentMethod,
             getFinalAmount(),
             cartList.size()
-        ));
-        alert.showAndWait();
+        );
+
+        DialogBuilder.information()
+                .title(i18n.get("label.success"))
+                .header(i18n.get("payment.success.header"))
+                .content(content)
+                .width(400)
+                .show();
     }
 
     /**
@@ -748,7 +753,7 @@ public class CheckoutController {
      * 验证优惠券
      */
     @FXML
-    private void handleVerifyCoupon() {
+    public void handleVerifyCoupon() {
         String couponCode = couponCodeField.getText().trim();
         if (couponCode.isEmpty()) {
             showError("请输入优惠券代码！");
@@ -818,7 +823,7 @@ public class CheckoutController {
      * 清除优惠券
      */
     @FXML
-    private void handleClearCoupon() {
+    public void handleClearCoupon() {
         clearCoupon();
     }
 

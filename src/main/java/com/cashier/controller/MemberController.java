@@ -1,8 +1,10 @@
 package com.cashier.controller;
 
+import com.cashier.controller.base.BaseController;
 import com.cashier.dao.MemberDAO;
 import com.cashier.i18n.I18nManager;
 import com.cashier.model.Member;
+import com.cashier.util.DialogBuilder;
 import com.cashier.util.FXMLUtils;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
@@ -28,7 +30,7 @@ import java.util.Map;
  * 会员管理控制器
  * 处理会员的增删改查和充值
  */
-public class MemberController {
+public class MemberController extends BaseController<Member> {
     private static final Logger logger = LoggerFactoryUtil.getLogger(MemberController.class);
 
     @FXML
@@ -85,15 +87,16 @@ public class MemberController {
         setupTableColumns();
 
         // 加载会员数据
-        loadMembers();
+        loadTableData();
 
         // 设置表格选择模式
         memberTable.getSelectionModel().setSelectionMode(SelectionMode.MULTIPLE);
 
-        // 添加表格选择监听
-        memberTable.getSelectionModel().selectedItemProperty().addListener(
-            (obs, oldVal, newVal) -> updateButtonStates()
-        );
+        // 添加表格选择监听（使用BaseController方法）
+        setupTableSelectionListener(memberTable, member -> updateButtonState(memberTable, editButton, deleteButton, rechargeButton));
+
+        // 设置表格双击编辑监听（使用BaseController方法）
+        setupTableDoubleClickListener(memberTable);
     }
 
     /**
@@ -103,18 +106,20 @@ public class MemberController {
         phoneColumn.setCellValueFactory(new PropertyValueFactory<>("phone"));
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         levelColumn.setCellValueFactory(new PropertyValueFactory<>("level"));
-        pointsColumn.setCellValueFactory(cellData -> 
+        pointsColumn.setCellValueFactory(cellData ->
             new SimpleStringProperty(String.valueOf(cellData.getValue().getPoints().intValue())));
-        balanceColumn.setCellValueFactory(cellData -> 
+        balanceColumn.setCellValueFactory(cellData ->
             new SimpleStringProperty(String.format("%.2f", cellData.getValue().balance)));
         discountColumn.setCellValueFactory(cellData ->
-                    new SimpleStringProperty(String.format("%.1f折", cellData.getValue().discount)));        birthdayColumn.setCellValueFactory(new PropertyValueFactory<>("birthday"));
+                    new SimpleStringProperty(String.format("%.1f折", cellData.getValue().discount)));
+        birthdayColumn.setCellValueFactory(new PropertyValueFactory<>("birthday"));
     }
 
     /**
-     * 加载会员数据
+     * 加载表格数据（实现BaseController抽象方法）
      */
-    private void loadMembers() {
+    @Override
+    protected void loadTableData() {
         try {
             var memberData = MemberDAO.findAll();
             members = new java.util.HashMap<>();
@@ -132,207 +137,34 @@ public class MemberController {
     }
 
     /**
-     * 更新会员数量标签
+     * 处理添加会员（实现BaseController抽象方法）
      */
-    private void updateCountLabel() {
-        countLabel.setText("会员数量: " + memberList.size());
+    @Override
+    protected void handleAdd() {
+        handleAddMember();
     }
 
     /**
-     * 更新按钮状态
+     * 处理编辑会员（实现BaseController抽象方法）
      */
-    private void updateButtonStates() {
-        boolean hasSelection = !memberTable.getSelectionModel().getSelectedItems().isEmpty();
-        editButton.setDisable(!hasSelection);
-        deleteButton.setDisable(!hasSelection);
-        rechargeButton.setDisable(!hasSelection);
+    @Override
+    protected void handleEdit() {
+        handleEditMember();
     }
 
     /**
-     * 处理添加会员
+     * 处理删除会员（实现BaseController抽象方法）
      */
-    @FXML
-    private void handleAddMember() {
-        try {
-            // 加载会员编辑对话框
-            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/MemberEditView.fxml");
-            VBox root = loader.load();
-
-            // 获取控制器
-            MemberEditController controller = loader.getController();
-
-            // 创建对话框
-            Stage dialogStage = new Stage();
-            dialogStage.setTitle("添加会员");
-            dialogStage.initModality(Modality.WINDOW_MODAL);
-            dialogStage.initOwner(memberTable.getScene().getWindow());
-            dialogStage.setResizable(false);
-
-            // 设置场景
-            Scene scene = new Scene(root);
-            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
-            scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
-
-            dialogStage.setScene(scene);
-
-            // 设置控制器引用
-            controller.setDialogStage(dialogStage);
-            controller.setMember(null);
-
-            // 显示对话框并等待响应
-            dialogStage.showAndWait();
-
-            // 如果用户点击了保存
-            if (controller.isOkClicked()) {
-                Member newMember = controller.getMember();
-                try {
-                    MemberDAO.insert(newMember);
-                    loadMembers();
-                    updateStatus("会员添加成功: " + newMember.name);
-                } catch (SQLException e) {
-                    logger.error("添加会员失败", e);
-                    showError("添加会员失败: " + e.getMessage());
-                }
-            }
-
-        } catch (IOException e) {
-            showError("加载添加会员对话框失败: " + e.getMessage());
-        }
+    @Override
+    protected void handleDelete() {
+        handleDeleteMember();
     }
 
     /**
-     * 处理编辑会员
+     * 处理搜索（实现BaseController抽象方法）
      */
-    @FXML
-    private void handleEditMember() {
-        Member selected = memberTable.getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            try {
-                // 加载会员编辑对话框
-                FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/MemberEditView.fxml");
-                VBox root = loader.load();
-
-                // 获取控制器
-                MemberEditController controller = loader.getController();
-
-                // 创建对话框
-                Stage dialogStage = new Stage();
-                dialogStage.setTitle("编辑会员");
-                dialogStage.initModality(Modality.WINDOW_MODAL);
-                dialogStage.initOwner(memberTable.getScene().getWindow());
-                dialogStage.setResizable(false);
-
-                // 设置场景
-                Scene scene = new Scene(root);
-                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
-                scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
-
-                dialogStage.setScene(scene);
-
-                // 设置控制器引用
-                controller.setDialogStage(dialogStage);
-                controller.setMember(selected);
-
-                // 显示对话框并等待响应
-                dialogStage.showAndWait();
-
-                // 如果用户点击了保存
-                if (controller.isOkClicked()) {
-                    Member updatedMember = controller.getMember();
-                    try {
-                        MemberDAO.update(updatedMember);
-                        loadMembers();
-                        updateStatus("会员更新成功: " + updatedMember.name);
-                    } catch (SQLException e) {
-                    logger.error("更新会员失败", e);
-                    showError("更新会员失败: " + e.getMessage());
-                }
-                }
-
-            } catch (IOException e) {
-                showError("加载编辑会员对话框失败: " + e.getMessage());
-            }
-        }
-    }
-
-    /**
-     * 处理删除会员
-     */
-    @FXML
-    private void handleDeleteMember() {
-        Member selected = memberTable.getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
-            alert.setTitle(I18nManager.getInstance().get("common.confirm"));
-            alert.setHeaderText(null);
-            alert.setContentText("确定要删除会员 \"" + selected.name + "\" 吗？");
-
-            if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-                try {
-                    MemberDAO.delete(selected.id);
-                    loadMembers();
-                    updateStatus("会员删除成功: " + selected.name);
-                } catch (SQLException e) {
-                    logger.error("删除会员失败", e);
-                    showError("删除会员失败: " + e.getMessage());
-                }
-            }
-        }
-    }
-
-    /**
-     * 处理充值
-     */
-    @FXML
-    private void handleRecharge() {
-        Member selected = memberTable.getSelectionModel().getSelectedItem();
-        if (selected != null) {
-            try {
-                // 加载充值对话框
-                FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/RechargeView.fxml");
-                VBox root = loader.load();
-
-                // 获取控制器
-                RechargeController controller = loader.getController();
-
-                // 创建对话框
-                Stage dialogStage = new Stage();
-                dialogStage.setTitle("会员充值");
-                dialogStage.initModality(Modality.WINDOW_MODAL);
-                dialogStage.initOwner(memberTable.getScene().getWindow());
-                dialogStage.setResizable(false);
-
-                // 设置场景
-                Scene scene = new Scene(root);
-                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
-                scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
-
-                dialogStage.setScene(scene);
-
-                // 设置控制器引用
-                controller.setDialogStage(dialogStage);
-                controller.setMember(selected);
-
-                // 显示对话框并等待响应
-                dialogStage.showAndWait();
-
-                // 如果用户点击了确认
-                if (controller.isOkClicked()) {
-                    loadMembers();
-                    updateStatus("充值成功: " + selected.name + " (+" + controller.getRechargeAmount() + "元)");
-                }
-
-            } catch (IOException e) {
-                showError("加载充值对话框失败: " + e.getMessage());
-            }
-        }
-    }
-
-    /**
-     * 处理搜索
-     */
-    @FXML
-    private void handleSearch() {
+    @Override
+    public void handleSearch() {
         String searchText = searchField.getText().trim().toLowerCase();
         if (searchText.isEmpty()) {
             memberList.setAll(members.values());
@@ -345,10 +177,161 @@ public class MemberController {
     }
 
     /**
+     * 显示编辑对话框（实现BaseController抽象方法）
+     */
+    @Override
+    protected boolean showEditDialog(Member item) {
+        try {
+            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/MemberEditView.fxml");
+            VBox root = loader.load();
+
+            MemberEditController controller = loader.getController();
+
+            Stage dialogStage = new Stage();
+            dialogStage.setTitle(item == null ? i18n.get("member.add.title") : i18n.get("member.edit.title"));
+            dialogStage.initModality(Modality.WINDOW_MODAL);
+            dialogStage.initOwner(memberTable.getScene().getWindow());
+            dialogStage.setResizable(false);
+
+            Scene scene = new Scene(root);
+            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+            scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
+
+            dialogStage.setScene(scene);
+            controller.setDialogStage(dialogStage);
+            controller.setMember(item);
+
+            dialogStage.showAndWait();
+
+            if (controller.isOkClicked()) {
+                Member updatedMember = controller.getMember();
+                try {
+                    if (item == null) {
+                        MemberDAO.insert(updatedMember);
+                    } else {
+                        MemberDAO.update(updatedMember);
+                    }
+                    loadTableData();
+                    updateStatus(item == null ? "会员添加成功: " + updatedMember.name : "会员更新成功: " + updatedMember.name);
+                    return true;
+                } catch (SQLException e) {
+                    logger.error(item == null ? "添加会员失败" : "更新会员失败", e);
+                    showError(item == null ? "添加会员失败: " + e.getMessage() : "更新会员失败: " + e.getMessage());
+                }
+            }
+        } catch (IOException e) {
+            showError("加载对话框失败: " + e.getMessage());
+        }
+        return false;
+    }
+
+    /**
+     * 处理添加会员
+     */
+    @FXML
+    public void handleAddMember() {
+        showEditDialog(null);
+    }
+
+    /**
+     * 处理编辑会员
+     */
+    @FXML
+    public void handleEditMember() {
+        Member selected = getSelectedItem(memberTable);
+        if (selected != null) {
+            showEditDialog(selected);
+        }
+    }
+
+    /**
+     * 处理删除会员 - 支持批量删除
+     */
+    @FXML
+    public void handleDeleteMember() {
+        ObservableList<Member> selected = getSelectedItems(memberTable);
+        if (selected.isEmpty()) {
+            return;
+        }
+
+        if (selected.size() == 1) {
+            // 单个删除
+            Member member = selected.get(0);
+            if (confirmDeleteWithName(member.name)) {
+                try {
+                    MemberDAO.delete(member.id);
+                    loadTableData();
+                    showSuccess(i18n.get("member.delete.success", member.name));
+                } catch (SQLException e) {
+                    logger.error("删除会员失败", e);
+                    showError(i18n.get("member.delete.error") + ": " + e.getMessage());
+                }
+            }
+        } else {
+            // 批量删除
+            if (confirm(i18n.get("member.delete.batch_confirm", String.valueOf(selected.size())),
+                      i18n.get("member.delete.batch_detail", String.valueOf(selected.size())))) {
+                try {
+                    int successCount = 0;
+                    for (Member member : selected) {
+                        MemberDAO.delete(member.id);
+                        successCount++;
+                    }
+                    loadTableData();
+                    showSuccess(i18n.get("member.delete.batch_success", String.valueOf(successCount)));
+                } catch (SQLException e) {
+                    logger.error("批量删除会员失败", e);
+                    showError(i18n.get("member.delete.batch_error") + ": " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * 处理充值
+     */
+    @FXML
+    public void handleRecharge() {
+        Member selected = getSelectedItem(memberTable);
+        if (selected != null) {
+            try {
+                FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/RechargeView.fxml");
+                VBox root = loader.load();
+
+                RechargeController controller = loader.getController();
+
+                Stage dialogStage = new Stage();
+                dialogStage.setTitle(i18n.get("member.recharge.title"));
+                dialogStage.initModality(Modality.WINDOW_MODAL);
+                dialogStage.initOwner(memberTable.getScene().getWindow());
+                dialogStage.setResizable(false);
+
+                Scene scene = new Scene(root);
+                scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+                scene.getStylesheets().add(getClass().getResource("/css/light-theme.css").toExternalForm());
+
+                dialogStage.setScene(scene);
+                controller.setDialogStage(dialogStage);
+                controller.setMember(selected);
+
+                dialogStage.showAndWait();
+
+                if (controller.isOkClicked()) {
+                    loadTableData();
+                    updateStatus(i18n.get("member.recharge.success", selected.name, String.valueOf(controller.getRechargeAmount())));
+                }
+
+            } catch (IOException e) {
+                showError(i18n.get("member.recharge.load_error") + ": " + e.getMessage());
+            }
+        }
+    }
+
+    /**
      * 处理清除搜索
      */
     @FXML
-    private void handleClearSearch() {
+    public void handleClearSearch() {
         searchField.clear();
         memberList.setAll(members.values());
         updateCountLabel();
@@ -358,26 +341,30 @@ public class MemberController {
      * 刷新会员列表
      */
     public void refreshMembers() {
-        loadMembers();
+        loadTableData();
+    }
+
+    /**
+     * 更新会员数量标签
+     */
+    private void updateCountLabel() {
+        countLabel.setText(i18n.get("member.count", String.valueOf(memberList.size())));
+    }
+
+    /**
+     * 更新按钮状态（扩展BaseController方法以支持充值按钮）
+     */
+    private void updateButtonState(TableView<Member> table, Button editButton, Button deleteButton, Button rechargeButton) {
+        boolean hasSelection = getSelectedItem(table) != null;
+        setButtonEnabled(editButton, hasSelection);
+        setButtonEnabled(deleteButton, hasSelection);
+        setButtonEnabled(rechargeButton, hasSelection);
     }
 
     /**
      * 更新状态
-     * @param status 状态文本
      */
     private void updateStatus(String status) {
         StatusBarManager.updateStatus(status);
-    }
-
-    /**
-     * 显示错误信息
-     * @param message 错误消息
-     */
-    private void showError(String message) {
-        Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle(I18nManager.getInstance().get("label.error"));
-        alert.setHeaderText(null);
-        alert.setContentText(message);
-        alert.showAndWait();
     }
 }

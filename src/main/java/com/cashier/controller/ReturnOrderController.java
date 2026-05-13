@@ -267,7 +267,7 @@ public class ReturnOrderController {
     }
 
     @FXML
-    private void handleSearch() {
+    public void handleSearch() {
         String keyword = searchField.getText().trim();
         String status = statusFilter.getValue();
 
@@ -298,7 +298,7 @@ public class ReturnOrderController {
     }
 
     @FXML
-    private void handleRefresh() {
+    public void handleRefresh() {
         loadReturnOrders();
         clearDetail();
         searchField.clear();
@@ -309,7 +309,7 @@ public class ReturnOrderController {
     }
 
     @FXML
-    private void handleCreateReturn() {
+    public void handleCreateReturn() {
         // 显示一个简单的对话框提示用户使用交易记录创建退货
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("创建退货订单");
@@ -320,7 +320,7 @@ public class ReturnOrderController {
     }
 
     @FXML
-    private void handleExport() {
+    public void handleExport() {
         if (returnOrderList.isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "提示", "没有可导出的数据");
             return;
@@ -361,7 +361,7 @@ public class ReturnOrderController {
     }
 
     @FXML
-    private void handleViewOriginalTransaction() {
+    public void handleViewOriginalTransaction() {
         if (selectedReturnOrder == null || selectedReturnOrder.originalTransactionId == null) {
             showAlert(Alert.AlertType.WARNING, "提示", "请先选择退货订单");
             return;
@@ -391,7 +391,7 @@ public class ReturnOrderController {
     }
 
     @FXML
-    private void handlePrintReturnReceipt() {
+    public void handlePrintReturnReceipt() {
         if (selectedReturnOrder == null) {
             showAlert(Alert.AlertType.WARNING, "提示", "请先选择退货订单");
             return;
@@ -426,7 +426,7 @@ public class ReturnOrderController {
     }
 
     @FXML
-    private void handleCompleteReturn() {
+    public void handleCompleteReturn() {
         if (selectedReturnOrder == null) {
             showAlert(Alert.AlertType.WARNING, "提示", "请先选择退货订单");
             return;

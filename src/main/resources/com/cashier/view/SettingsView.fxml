@@ -79,8 +79,11 @@
                         <Label text="%settings.language_label_colon" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
                         <ComboBox fx:id="languageComboBox" GridPane.columnIndex="1" GridPane.rowIndex="0" prefWidth="150"/>
 
-                        <Label text="%settings.theme_label_colon" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
-                        <ComboBox fx:id="themeComboBox" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="150"/>
+                        <Label text="%settings.currency_label" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                        <ComboBox fx:id="currencyComboBox" GridPane.columnIndex="1" GridPane.rowIndex="1" prefWidth="200"/>
+
+                        <Label text="%settings.theme_label_colon" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                        <ComboBox fx:id="themeComboBox" GridPane.columnIndex="1" GridPane.rowIndex="2" prefWidth="150"/>
                     </GridPane>
 
                     <Separator/>

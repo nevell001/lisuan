@@ -351,7 +351,7 @@ public class ProfitReportController {
     /**
      * 处理时间范围变化
      */
-    private void handleTimeRangeChange() {
+    public void handleTimeRangeChange() {
         String selected = timeRangeComboBox.getSelectionModel().getSelectedItem();
         LocalDate today = LocalDate.now();
 
@@ -397,7 +397,7 @@ public class ProfitReportController {
      * 处理查询
      */
     @FXML
-    private void handleQuery() {
+    public void handleQuery() {
         LocalDate startDate = startDatePicker.getValue();
         LocalDate endDate = endDatePicker.getValue();
 
@@ -736,7 +736,7 @@ public class ProfitReportController {
      * 处理导出
      */
     @FXML
-    private void handleExport() {
+    public void handleExport() {
         // 显示导出选项对话框
         ChoiceDialog<String> exportDialog = new ChoiceDialog<>(
             "商品利润", "商品利润", "分类利润", "每日利润"

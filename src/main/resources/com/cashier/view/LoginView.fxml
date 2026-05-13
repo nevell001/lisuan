@@ -3,7 +3,6 @@
 <?import javafx.geometry.Insets?>
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
-<?import javafx.scene.shape.Rectangle?>
 
 <VBox xmlns="http://javafx.com/javafx/17"
       xmlns:fx="http://javafx.com/fxml/1"
@@ -35,7 +34,6 @@
             <Label text="%login.username" styleClass="form-label"/>
             <TextField fx:id="usernameField"
                        promptText="%login.username"
-                       prefWidth="300"
                        styleClass="login-input"/>
         </VBox>
 
@@ -44,13 +42,12 @@
             <Label text="%login.password" styleClass="form-label"/>
             <PasswordField fx:id="passwordField"
                           promptText="%login.password"
-                          prefWidth="300"
                           styleClass="login-input"
                           onAction="#handleLogin"/>
         </VBox>
 
         <!-- 记住密码 -->
-        <HBox spacing="20" alignment="CENTER_LEFT" style="-fx-padding-top: 5;">
+        <HBox spacing="20" alignment="CENTER_LEFT" styleClass="checkbox-row">
             <CheckBox fx:id="rememberMeCheckBox" text="%login.remember" styleClass="remember-checkbox"/>
             <HBox HBox.hgrow="ALWAYS"/>
         </HBox>
@@ -67,29 +64,23 @@
                           managed="false"/>
 
         <!-- 按钮 -->
-        <VBox spacing="12" style="-fx-padding-top: 10;">
+        <VBox spacing="12" styleClass="button-group">
             <Button text="%login.button"
                     onAction="#handleLogin"
-                    prefWidth="300"
-                    prefHeight="45"
                     styleClass="login-button"/>
             <HBox spacing="10" alignment="CENTER">
                 <Button text="%login.exit"
                         onAction="#handleExit"
-                        prefWidth="145"
-                        prefHeight="38"
-                        styleClass="secondary-button"/>
+                        styleClass="secondary-button, button-small"/>
                 <Button text="%menu.help.about"
                         onAction="#handleAbout"
-                        prefWidth="145"
-                        prefHeight="38"
-                        styleClass="secondary-button"/>
+                        styleClass="secondary-button, button-small"/>
             </HBox>
         </VBox>
     </VBox>
 
     <!-- 提示信息 -->
-    <VBox spacing="8" alignment="CENTER">
+    <VBox spacing="8" alignment="CENTER" styleClass="hint-section">
         <Label text="%login.default_account"
                styleClass="hint-label"/>
         <Label fx:id="versionLabel"

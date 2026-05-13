@@ -51,6 +51,9 @@ public class SettingsController {
     private ComboBox<String> languageComboBox;
 
     @FXML
+    private ComboBox<String> currencyComboBox;
+
+    @FXML
     private ComboBox<String> themeComboBox;
 
     // 打印设置标签页
@@ -162,6 +165,16 @@ public class SettingsController {
             "한국어"
         ));
         languageComboBox.getSelectionModel().select(0);
+
+        // 初始化货币下拉框
+        currencyComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
+            "¥ 人民币 (CNY)",
+            "$ 美元 (USD)",
+            "¥ 日元 (JPY)",
+            "₩ 韩元 (KRW)",
+            "€ 欧元 (EUR)"
+        ));
+        currencyComboBox.getSelectionModel().select(0);
 
         // 初始化主题下拉框
         themeComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
@@ -275,25 +288,46 @@ public class SettingsController {
         // 记录初始加载时的语言，用于检测变化
         initialLanguage = savedLanguage;
 
+        // 加载货币偏好 - 从数据库加载当前用户的货币偏好
+        try {
+            String savedCurrency = com.cashier.dao.LanguagePreferenceDAO.getCurrencyPreference(username);
+            String savedCurrencyName = convertCurrencyCodeToName(savedCurrency);
+            currencyComboBox.getSelectionModel().select(savedCurrencyName);
+            initialCurrency = savedCurrency;
+        } catch (Exception e) {
+            logger.warn("加载货币偏好失败: {}", e.getMessage());
+            currencyComboBox.getSelectionModel().select(0); // 默认人民币
+            initialCurrency = "CNY";
+        }
+
         // 初始化 I18nManager 的语言
         applyLanguageSetting(savedLanguage);
 
-        logger.info("SettingsController: 设置加载完成，当前主题: {}, 当前语言: {}, 用户: {}", savedThemeCode, savedLanguage, username);
+        logger.info("SettingsController: 设置加载完成，当前主题: {}, 当前语言: {}, 当前货币: {}, 用户: {}",
+                savedThemeCode, savedLanguage, initialCurrency, username);
     }
 
     /** 初始加载时的语言（用于检测变化） */
     private String initialLanguage = null;
 
+    /** 初始加载时的货币（用于检测变化） */
+    private String initialCurrency = null;
+
     /**
      * 处理保存基本设置
      */
     @FXML
-    private void handleSaveBasicSettings() {
+    public void handleSaveBasicSettings() {
         if (validateBasicSettings()) {
             // 检查语言是否变化（与初始加载时的语言对比）
             String selectedLanguage = languageComboBox.getSelectionModel().getSelectedItem();
             String newLanguageTag = selectedLanguage != null ? convertLanguageNameToTag(selectedLanguage) : "zh-CN";
             boolean languageChanged = !newLanguageTag.equals(initialLanguage);
+
+            // 检查货币是否变化
+            String selectedCurrency = currencyComboBox.getSelectionModel().getSelectedItem();
+            String newCurrencyCode = selectedCurrency != null ? convertCurrencyNameToCode(selectedCurrency) : "CNY";
+            boolean currencyChanged = !newCurrencyCode.equals(initialCurrency);
 
             saveSettings();
 
@@ -307,6 +341,18 @@ public class SettingsController {
             // 应用语言设置
             if (selectedLanguage != null) {
                 applyLanguageSetting(newLanguageTag);
+            }
+
+            // 应用货币设置
+            if (selectedCurrency != null && currencyChanged) {
+                try {
+                    String username = (currentUser != null) ? currentUser.username : "default";
+                    com.cashier.dao.LanguagePreferenceDAO.setCurrencyPreference(username, newCurrencyCode);
+                    com.cashier.util.CurrencyUtil.setCurrency(newCurrencyCode);
+                    logger.info("货币已更新为: {}", newCurrencyCode);
+                } catch (Exception e) {
+                    logger.error("保存货币偏好失败: {}", e.getMessage(), e);
+                }
             }
 
             if (languageChanged) {
@@ -462,6 +508,50 @@ public class SettingsController {
     }
 
     /**
+     * 货币代码转显示名称
+     */
+    private String convertCurrencyCodeToName(String currencyCode) {
+        if (currencyCode == null) {
+            return "¥ 人民币 (CNY)";
+        }
+        switch (currencyCode) {
+            case "CNY":
+                return "¥ 人民币 (CNY)";
+            case "USD":
+                return "$ 美元 (USD)";
+            case "JPY":
+                return "¥ 日元 (JPY)";
+            case "KRW":
+                return "₩ 韩元 (KRW)";
+            case "EUR":
+                return "€ 欧元 (EUR)";
+            default:
+                return "¥ 人民币 (CNY)";
+        }
+    }
+
+    /**
+     * 货币显示名称转代码
+     */
+    private String convertCurrencyNameToCode(String currencyName) {
+        if (currencyName == null) {
+            return "CNY";
+        }
+        if (currencyName.contains("CNY") || currencyName.contains("人民币")) {
+            return "CNY";
+        } else if (currencyName.contains("USD") || currencyName.contains("美元")) {
+            return "USD";
+        } else if (currencyName.contains("JPY") || currencyName.contains("日元")) {
+            return "JPY";
+        } else if (currencyName.contains("KRW") || currencyName.contains("韩元")) {
+            return "KRW";
+        } else if (currencyName.contains("EUR") || currencyName.contains("欧元")) {
+            return "EUR";
+        }
+        return "CNY";
+    }
+
+    /**
      * 应用语言设置
      * @param languageTag 语言标签
      */
@@ -493,7 +583,7 @@ public class SettingsController {
      * 处理保存打印设置
      */
     @FXML
-    private void handleSavePrintSettings() {
+    public void handleSavePrintSettings() {
         saveSettings();
         showSuccess("打印设置保存成功！");
     }
@@ -502,7 +592,7 @@ public class SettingsController {
      * 处理保存备份设置
      */
     @FXML
-    private void handleSaveBackupSettings() {
+    public void handleSaveBackupSettings() {
         saveSettings();
         showSuccess("备份设置保存成功！");
     }
@@ -511,7 +601,7 @@ public class SettingsController {
      * 处理保存安全设置
      */
     @FXML
-    private void handleSaveSecuritySettings() {
+    public void handleSaveSecuritySettings() {
         saveSettings();
         showSuccess("安全设置保存成功！");
     }
@@ -520,7 +610,7 @@ public class SettingsController {
      * 处理浏览备份路径
      */
     @FXML
-    private void handleBrowseBackupPath() {
+    public void handleBrowseBackupPath() {
         DirectoryChooser directoryChooser = new DirectoryChooser();
         directoryChooser.setTitle("选择备份目录");
 
@@ -543,7 +633,7 @@ public class SettingsController {
      * 处理选择 Logo 图片
      */
     @FXML
-    private void handleSelectLogo() {
+    public void handleSelectLogo() {
         FileChooser fileChooser = new FileChooser();
         fileChooser.setTitle("选择 Logo 图片");
 
@@ -574,7 +664,7 @@ public class SettingsController {
      * 处理清除 Logo
      */
     @FXML
-    private void handleClearLogo() {
+    public void handleClearLogo() {
         logoPathField.clear();
         logoPreviewImage.setImage(null);
         logoPreviewPlaceholder.setVisible(true);
@@ -655,7 +745,7 @@ public class SettingsController {
      * 处理立即备份
      */
     @FXML
-    private void handleBackupNow() {
+    public void handleBackupNow() {
         try {
             // 获取用户选择的备份路径，如果为空则使用项目根目录
             String backupBasePath = backupPathField.getText().trim();
@@ -689,7 +779,7 @@ public class SettingsController {
      * 处理恢复数据
      */
     @FXML
-    private void handleRestore() {
+    public void handleRestore() {
         // 获取用户选择的备份路径，如果为空则使用项目根目录
         final String backupBasePath;
         String path = backupPathField.getText().trim();
@@ -760,7 +850,7 @@ public class SettingsController {
      * 处理重置所有设置
      */
     @FXML
-    private void handleResetAll() {
+    public void handleResetAll() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(I18nManager.getInstance().get("common.confirm"));
         alert.setHeaderText(null);
@@ -891,7 +981,7 @@ public class SettingsController {
      * 打开探数API网站
      */
     @FXML
-    private void handleOpenTanshuApi() {
+    public void handleOpenTanshuApi() {
         try {
             java.awt.Desktop.getDesktop().browse(new java.net.URI("https://www.tanshuapi.com/market/detail-77"));
         } catch (Exception e) {
@@ -904,7 +994,7 @@ public class SettingsController {
      * 打开聚合数据网站
      */
     @FXML
-    private void handleOpenJuheApi() {
+    public void handleOpenJuheApi() {
         try {
             java.awt.Desktop.getDesktop().browse(new java.net.URI("https://www.juhe.cn/docs/api/id/489"));
         } catch (Exception e) {
@@ -917,7 +1007,7 @@ public class SettingsController {
      * 打开天聚数据网站
      */
     @FXML
-    private void handleOpenTianapiApi() {
+    public void handleOpenTianapiApi() {
         try {
             java.awt.Desktop.getDesktop().browse(new java.net.URI("https://www.tianapi.com/apiview/138"));
         } catch (Exception e) {
@@ -930,7 +1020,7 @@ public class SettingsController {
      * 浏览 CSV 文件
      */
     @FXML
-    private void handleBrowseCsvFile() {
+    public void handleBrowseCsvFile() {
         javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
         fileChooser.setTitle("选择 CSV 文件");
         fileChooser.getExtensionFilters().add(
@@ -950,7 +1040,7 @@ public class SettingsController {
      * 从 CSV 文件导入数据
      */
     @FXML
-    private void handleImportFromCSV() {
+    public void handleImportFromCSV() {
         String filePath = csvFilePathField.getText().trim();
         
         if (filePath.isEmpty()) {

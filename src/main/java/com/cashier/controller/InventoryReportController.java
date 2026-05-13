@@ -312,7 +312,7 @@ public class InventoryReportController {
     /**
      * 处理时间范围变化
      */
-    private void handleTimeRangeChange() {
+    public void handleTimeRangeChange() {
         String selected = timeRangeComboBox.getSelectionModel().getSelectedItem();
         LocalDate today = LocalDate.now();
 
@@ -358,7 +358,7 @@ public class InventoryReportController {
      * 处理查询
      */
     @FXML
-    private void handleQuery() {
+    public void handleQuery() {
         LocalDate startDate = startDatePicker.getValue();
         LocalDate endDate = endDatePicker.getValue();
 
@@ -720,7 +720,7 @@ public class InventoryReportController {
      * 处理导出
      */
     @FXML
-    private void handleExport() {
+    public void handleExport() {
         // 显示导出选项对话框
         ChoiceDialog<String> exportDialog = new ChoiceDialog<>(
             "商品统计", "商品统计", "滞销商品", "库存积压"

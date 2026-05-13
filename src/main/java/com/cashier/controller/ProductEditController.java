@@ -332,7 +332,7 @@ public class ProductEditController {
      * 处理保存
      */
     @FXML
-    private void handleSave() {
+    public void handleSave() {
         logger.info("开始处理保存操作，product是否为null: {}", (product == null));
         
         if (isInputValid()) {
@@ -475,7 +475,7 @@ public class ProductEditController {
      * 处理取消
      */
     @FXML
-    private void handleCancel() {
+    public void handleCancel() {
         dialogStage.close();
     }
 

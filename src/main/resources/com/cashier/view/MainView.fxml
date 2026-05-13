@@ -34,26 +34,26 @@
             </MenuBar>
 
             <!-- 工具栏 -->
-            <HBox spacing="10" styleClass="toolbar" alignment="CENTER_LEFT">
+            <HBox spacing="8" styleClass="toolbar" alignment="CENTER_LEFT">
                 <padding>
-                    <Insets top="8" right="10" bottom="8" left="10"/>
+                    <Insets top="6" right="8" bottom="6" left="8"/>
                 </padding>
 
-                <Label text="%app.name" style="-fx-font-size: 18px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+                <Label text="%app.name" style="-fx-font-size: 16px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
                 <Region HBox.hgrow="ALWAYS"/>
-                <Label fx:id="currentUserLabel" style="-fx-font-size: 14px; -fx-text-fill: #616161;"/>
-                <Label fx:id="currentTimeLabel" style="-fx-font-size: 14px; -fx-text-fill: #616161;"/>
+                <Label fx:id="currentUserLabel" style="-fx-font-size: 13px; -fx-text-fill: #616161;"/>
+                <Label fx:id="currentTimeLabel" style="-fx-font-size: 13px; -fx-text-fill: #616161;"/>
             </HBox>
         </VBox>
     </top>
 
     <!-- 左侧导航栏 -->
     <left>
-        <VBox spacing="0" styleClass="sidebar" prefWidth="260">
+        <VBox spacing="0" styleClass="sidebar" prefWidth="210">
             <!-- 用户信息卡片 -->
-            <VBox spacing="8" styleClass="user-card">
+            <VBox spacing="6" styleClass="user-card">
                 <padding>
-                    <Insets top="20" right="15" bottom="20" left="15"/>
+                    <Insets top="15" right="12" bottom="15" left="12"/>
                 </padding>
 
                 <!-- 头像 -->
@@ -73,200 +73,175 @@
                        style="-fx-font-size: 13px; -fx-text-fill: #616161;"/>
             </VBox>
 
-            <!-- 导航按钮 -->
+            <!-- 导航按钮 - 分组优化版本 -->
             <ScrollPane fitToWidth="true" fitToHeight="true" hbarPolicy="NEVER">
-                <VBox spacing="2" styleClass="nav-buttons">
+                <VBox spacing="0" styleClass="nav-buttons">
                     <padding>
-                        <Insets top="10" right="10" bottom="10" left="10"/>
+                        <Insets top="3" right="3" bottom="3" left="3"/>
                     </padding>
 
-                    <Button fx:id="cartBtn"
-                            text="%nav.cart"
-                            onAction="#handleCart"
-                            styleClass="nav-button, nav-button-active">
-                        <graphic>
-                            <Label text="🛒" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
+                    <!-- 收银管理分组 -->
+                    <VBox spacing="0" styleClass="nav-group">
+                        <HBox spacing="6" alignment="CENTER_LEFT" styleClass="nav-group-header">
+                            <padding>
+                                <Insets top="6" right="8" bottom="6" left="8"/>
+                            </padding>
+                            <Label text="🛒" style="-fx-font-size: 14px;"/>
+                            <Label text="%nav.group.pos" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
+                        </HBox>
+                        <VBox spacing="1" styleClass="nav-group-content">
+                            <Button fx:id="cartBtn" text="%nav.cart" onAction="#handleCart" styleClass="nav-button, nav-button-active">
+                                <graphic><Label text="🛒" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                            <Button fx:id="shiftBtn" text="%nav.shift" onAction="#handleShift" styleClass="nav-button">
+                                <graphic><Label text="🔄" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                        </VBox>
+                    </VBox>
 
-                    <Button fx:id="inventoryBtn"
-                            text="%nav.inventory"
-                            onAction="#handleInventory"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="📦" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
+                    <Separator style="-fx-padding: 5px 0;"/>
 
-                    <Button fx:id="membersBtn"
-                            text="%nav.members"
-                            onAction="#handleMembers"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="👥" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
+                    <!-- 商品管理分组 -->
+                    <VBox spacing="0" styleClass="nav-group">
+                        <HBox spacing="6" alignment="CENTER_LEFT" styleClass="nav-group-header">
+                            <padding>
+                                <Insets top="6" right="8" bottom="6" left="8"/>
+                            </padding>
+                            <Label text="📦" style="-fx-font-size: 14px;"/>
+                            <Label text="%nav.group.product" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
+                        </HBox>
+                        <VBox spacing="1" styleClass="nav-group-content">
+                            <Button fx:id="inventoryBtn" text="%nav.inventory" onAction="#handleInventory" styleClass="nav-button">
+                                <graphic><Label text="📦" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                            <Button fx:id="inventoryCheckBtn" text="%nav.inventory_check" onAction="#handleInventoryCheck" styleClass="nav-button">
+                                <graphic><Label text="🔍" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                        </VBox>
+                    </VBox>
 
-                    <Separator/>
+                    <Separator style="-fx-padding: 5px 0;"/>
 
-                    <Button fx:id="supplierBtn"
-                            text="%nav.supplier"
-                            onAction="#handleSupplier"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="🏭" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
+                    <!-- 客户管理分组 -->
+                    <VBox spacing="0" styleClass="nav-group">
+                        <HBox spacing="6" alignment="CENTER_LEFT" styleClass="nav-group-header">
+                            <padding>
+                                <Insets top="6" right="8" bottom="6" left="8"/>
+                            </padding>
+                            <Label text="👥" style="-fx-font-size: 14px;"/>
+                            <Label text="%nav.group.customer" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
+                        </HBox>
+                        <VBox spacing="1" styleClass="nav-group-content">
+                            <Button fx:id="membersBtn" text="%nav.members" onAction="#handleMembers" styleClass="nav-button">
+                                <graphic><Label text="👥" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                            <Button fx:id="returnOrderBtn" text="%nav.return_order" onAction="#handleReturnOrder" styleClass="nav-button">
+                                <graphic><Label text="↩" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                        </VBox>
+                    </VBox>
 
-                    <Button fx:id="purchaseOrderBtn"
-                            text="%nav.purchase_order"
-                            onAction="#handlePurchaseOrder"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="📝" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
+                    <Separator style="-fx-padding: 5px 0;"/>
 
-                    <Button fx:id="purchaseApprovalBtn"
-                            text="%nav.purchase_approval"
-                            onAction="#handlePurchaseApproval"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="✅" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
+                    <!-- 采购管理分组 -->
+                    <VBox spacing="0" styleClass="nav-group">
+                        <HBox spacing="6" alignment="CENTER_LEFT" styleClass="nav-group-header">
+                            <padding>
+                                <Insets top="6" right="8" bottom="6" left="8"/>
+                            </padding>
+                            <Label text="🏭" style="-fx-font-size: 14px;"/>
+                            <Label text="%nav.group.purchase" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
+                        </HBox>
+                        <VBox spacing="1" styleClass="nav-group-content">
+                            <Button fx:id="supplierBtn" text="%nav.supplier" onAction="#handleSupplier" styleClass="nav-button">
+                                <graphic><Label text="🏭" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                            <Button fx:id="purchaseOrderBtn" text="%nav.purchase_order" onAction="#handlePurchaseOrder" styleClass="nav-button">
+                                <graphic><Label text="📝" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                            <Button fx:id="purchaseApprovalBtn" text="%nav.purchase_approval" onAction="#handlePurchaseApproval" styleClass="nav-button">
+                                <graphic><Label text="✅" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                            <Button fx:id="purchaseInboundBtn" text="%nav.purchase_inbound" onAction="#handlePurchaseInbound" styleClass="nav-button">
+                                <graphic><Label text="📥" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                        </VBox>
+                    </VBox>
 
-                    <Button fx:id="purchaseInboundBtn"
-                            text="%nav.purchase_inbound"
-                            onAction="#handlePurchaseInbound"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="📥" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
+                    <Separator style="-fx-padding: 5px 0;"/>
 
-                    <Button fx:id="inventoryCheckBtn"
-                            text="%nav.inventory_check"
-                            onAction="#handleInventoryCheck"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="🔍" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
+                    <!-- 数据统计分组 -->
+                    <VBox spacing="0" styleClass="nav-group">
+                        <HBox spacing="6" alignment="CENTER_LEFT" styleClass="nav-group-header">
+                            <padding>
+                                <Insets top="6" right="8" bottom="6" left="8"/>
+                            </padding>
+                            <Label text="📊" style="-fx-font-size: 14px;"/>
+                            <Label text="%nav.group.statistics" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
+                        </HBox>
+                        <VBox spacing="1" styleClass="nav-group-content">
+                            <Button fx:id="transactionsBtn" text="%nav.transactions" onAction="#handleTransactions" styleClass="nav-button">
+                                <graphic><Label text="📊" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                            <Button fx:id="statisticsBtn" text="%nav.statistics" onAction="#handleStatistics" styleClass="nav-button">
+                                <graphic><Label text="📈" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                            <Button fx:id="promotionsBtn" text="%nav.promotions" onAction="#handlePromotions" styleClass="nav-button">
+                                <graphic><Label text="🎉" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                        </VBox>
+                    </VBox>
 
-                    <Separator/>
+                    <Separator style="-fx-padding: 5px 0;"/>
 
-                    <Button fx:id="promotionsBtn"
-                            text="%nav.promotions"
-                            onAction="#handlePromotions"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="🎉" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
+                    <!-- 报表中心分组 -->
+                    <VBox spacing="0" styleClass="nav-group">
+                        <HBox spacing="6" alignment="CENTER_LEFT" styleClass="nav-group-header">
+                            <padding>
+                                <Insets top="6" right="8" bottom="6" left="8"/>
+                            </padding>
+                            <Label text="📑" style="-fx-font-size: 14px;"/>
+                            <Label text="%nav.group.reports" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
+                        </HBox>
+                        <VBox spacing="1" styleClass="nav-group-content">
+                            <Button fx:id="purchaseReportBtn" text="%nav.purchase_report" onAction="#handlePurchaseReport" styleClass="nav-button">
+                                <graphic><Label text="📊" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                            <Button fx:id="inventoryReportBtn" text="%nav.inventory_report" onAction="#handleInventoryReport" styleClass="nav-button">
+                                <graphic><Label text="📉" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                            <Button fx:id="profitReportBtn" text="%nav.profit_report" onAction="#handleProfitReport" styleClass="nav-button">
+                                <graphic><Label text="💰" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                            <Button fx:id="returnReportBtn" text="%nav.return_report" onAction="#handleReturnReport" styleClass="nav-button">
+                                <graphic><Label text="📈" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                        </VBox>
+                    </VBox>
 
-                    <Button fx:id="transactionsBtn"
-                            text="%nav.transactions"
-                            onAction="#handleTransactions"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="📊" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
+                    <Separator style="-fx-padding: 5px 0;"/>
 
-                    <Button fx:id="statisticsBtn"
-                            text="%nav.statistics"
-                            onAction="#handleStatistics"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="📈" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
-
-                    <Separator/>
-
-                    <Button fx:id="purchaseReportBtn"
-                            text="%nav.purchase_report"
-                            onAction="#handlePurchaseReport"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="📊" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
-
-                    <Button fx:id="inventoryReportBtn"
-                            text="%nav.inventory_report"
-                            onAction="#handleInventoryReport"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="📉" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
-
-                    <Button fx:id="profitReportBtn"
-                            text="%nav.profit_report"
-                            onAction="#handleProfitReport"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="💰" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
-
-                    <Button fx:id="returnReportBtn"
-                            text="%nav.return_report"
-                            onAction="#handleReturnReport"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="📈" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
-
-                    <Separator/>
-
-                    <Button fx:id="shiftBtn"
-                            text="%nav.shift"
-                            onAction="#handleShift"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="🔄" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
-
-                    <Button fx:id="userManagementBtn"
-                            text="%nav.user_management"
-                            onAction="#handleUserManagement"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="👤" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
-
-                    <Button fx:id="returnOrderBtn"
-                            text="%nav.return_order"
-                            onAction="#handleReturnOrder"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="↩" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
-
-                    <Button fx:id="returnApprovalBtn"
-                            text="%nav.return_approval"
-                            onAction="#handleReturnApproval"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="✓" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
-
-                    <Button fx:id="settingsBtn"
-                            text="%nav.settings"
-                            onAction="#handleSettings"
-                            styleClass="nav-button">
-                        <graphic>
-                            <Label text="⚙" style="-fx-font-size: 16px; -fx-font-family: 'Segoe UI Symbol', 'Microsoft YaHei', sans-serif;"/>
-                        </graphic>
-                    </Button>
+                    <!-- 系统设置分组 -->
+                    <VBox spacing="0" styleClass="nav-group">
+                        <HBox spacing="6" alignment="CENTER_LEFT" styleClass="nav-group-header">
+                            <padding>
+                                <Insets top="6" right="8" bottom="6" left="8"/>
+                            </padding>
+                            <Label text="⚙" style="-fx-font-size: 14px;"/>
+                            <Label text="%nav.group.system" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
+                        </HBox>
+                        <VBox spacing="1" styleClass="nav-group-content">
+                            <Button fx:id="userManagementBtn" text="%nav.user_management" onAction="#handleUserManagement" styleClass="nav-button">
+                                <graphic><Label text="👤" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                            <Button fx:id="returnApprovalBtn" text="%nav.return_approval" onAction="#handleReturnApproval" styleClass="nav-button">
+                                <graphic><Label text="✓" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                            <Button fx:id="settingsBtn" text="%nav.settings" onAction="#handleSettings" styleClass="nav-button">
+                                <graphic><Label text="⚙" style="-fx-font-size: 14px;"/></graphic>
+                            </Button>
+                        </VBox>
+                    </VBox>
                 </VBox>
             </ScrollPane>
         </VBox>
@@ -306,9 +281,9 @@
 
     <!-- 底部状态栏 -->
     <bottom>
-        <HBox spacing="10" styleClass="status-bar" alignment="CENTER_LEFT">
+        <HBox spacing="8" styleClass="status-bar" alignment="CENTER_LEFT">
             <padding>
-                <Insets top="5" right="10" bottom="5" left="10"/>
+                <Insets top="4" right="8" bottom="4" left="8"/>
             </padding>
 
             <Label fx:id="statusLabel" text="%status.ready" style="-fx-text-fill: #616161;"/>

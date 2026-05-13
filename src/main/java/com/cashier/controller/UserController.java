@@ -184,7 +184,7 @@ public class UserController {
      * 处理添加用户
      */
     @FXML
-    private void handleAddUser() {
+    public void handleAddUser() {
         showUserDialog(null);
     }
 
@@ -192,7 +192,7 @@ public class UserController {
      * 处理编辑用户
      */
     @FXML
-    private void handleEditUser() {
+    public void handleEditUser() {
         User selected = userTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showUserDialog(selected);
@@ -349,7 +349,7 @@ public class UserController {
      * 处理删除用户
      */
     @FXML
-    private void handleDeleteUser() {
+    public void handleDeleteUser() {
         User selected = userTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             // 不允许删除admin用户
@@ -384,7 +384,7 @@ public class UserController {
      * 处理重置密码
      */
     @FXML
-    private void handleResetPassword() {
+    public void handleResetPassword() {
         User selected = userTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             TextInputDialog dialog = new TextInputDialog();
@@ -418,7 +418,7 @@ public class UserController {
      * 处理激活用户
      */
     @FXML
-    private void handleActivateUser() {
+    public void handleActivateUser() {
         User selected = userTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             selected.active = true;
@@ -440,7 +440,7 @@ public class UserController {
      * 处理禁用用户
      */
     @FXML
-    private void handleDeactivateUser() {
+    public void handleDeactivateUser() {
         User selected = userTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             // 不允许禁用admin用户
@@ -475,7 +475,7 @@ public class UserController {
      * 处理搜索
      */
     @FXML
-    private void handleSearch() {
+    public void handleSearch() {
         applyFilters();
     }
 
@@ -483,7 +483,7 @@ public class UserController {
      * 处理清除搜索
      */
     @FXML
-    private void handleClearSearch() {
+    public void handleClearSearch() {
         searchField.clear();
         roleFilterComboBox.getSelectionModel().select(0);
         statusFilterComboBox.getSelectionModel().select(0);

@@ -25,7 +25,10 @@ import javafx.scene.input.KeyCodeCombination;
 import javafx.scene.input.KeyCombination;
 import javafx.scene.input.KeyEvent;
 import javafx.scene.layout.StackPane;
+import javafx.scene.Scene;
 import javafx.scene.layout.VBox;
+import javafx.stage.Modality;
+import javafx.stage.Stage;
 import javafx.util.Duration;
 import java.io.File;
 import java.io.IOException;
@@ -280,6 +283,13 @@ private Button shiftBtn;
                 } else if (event.getCode() == KeyCode.DIGIT4) {
                     handleSettings();
                     event.consume();
+                } else if (event.getCode() == KeyCode.SLASH) {
+                    handleShortcutHelp();
+                    event.consume();
+                } else if (event.getCode() == KeyCode.F && event.isShiftDown()) {
+                    // Ctrl+Shift+F - 全局搜索
+                    handleGlobalSearch();
+                    event.consume();
                 }
             }
         });
@@ -410,7 +420,7 @@ private Button shiftBtn;
     // ========== 菜单处理方法 ==========
 
     @FXML
-    private void handleLogout() {
+    public void handleLogout() {
         // 检查是否有活跃班次
         if (com.cashier.service.DataService.hasActiveShift()) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -447,7 +457,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleExit() {
+    public void handleExit() {
         // 检查是否有活跃班次
         if (com.cashier.service.DataService.hasActiveShift()) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -480,7 +490,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleUserManagement() {
+    public void handleUserManagement() {
         updateStatus("用户管理");
         setActiveButton(userManagementBtn);
         
@@ -501,7 +511,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleDataBackup() {
+    public void handleDataBackup() {
         updateStatus("数据备份");
         
         try {
@@ -519,7 +529,7 @@ private Button shiftBtn;
     }
     
     @FXML
-    private void handleDataRestore() {
+    public void handleDataRestore() {
         updateStatus("数据恢复");
         
         // 列出可用的备份目录
@@ -571,13 +581,79 @@ private Button shiftBtn;
             }
         });
     }    @FXML
-    private void handleExportData() {
+    public void handleExportData() {
         updateStatus("导出数据");
         FXUtils.showInfoAlert("开发中", "导出数据功能正在开发中...");
     }
 
+    /**
+     * 显示快捷键帮助对话框
+     */
     @FXML
-    private void handleLightTheme() {
+    public void handleShortcutHelp() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/cashier/view/ShortcutHelpView.fxml"));
+            I18nManager i18n = I18nManager.getInstance();
+            loader.setResources(i18n.getResourceBundle());
+
+            VBox root = loader.load();
+            ShortcutHelpController controller = loader.getController();
+
+            // 创建对话框
+            Stage dialogStage = new Stage();
+            dialogStage.initModality(Modality.NONE);
+            dialogStage.initOwner(tabPane.getScene().getWindow());
+            dialogStage.setTitle(i18n.get("快捷键.title"));
+            dialogStage.setResizable(false);
+
+            Scene scene = new Scene(root, 700, 600);
+            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+
+            dialogStage.setScene(scene);
+            controller.setStage(dialogStage);
+
+            dialogStage.show();
+        } catch (IOException e) {
+            logger.error("加载快捷键帮助界面失败", e);
+            FXUtils.showErrorAlert("错误", "无法打开快捷键帮助");
+        }
+    }
+
+    /**
+     * 显示全局搜索对话框
+     */
+    @FXML
+    public void handleGlobalSearch() {
+        try {
+            FXMLLoader loader = new FXMLLoader(getClass().getResource("/com/cashier/view/SearchView.fxml"));
+            I18nManager i18n = I18nManager.getInstance();
+            loader.setResources(i18n.getResourceBundle());
+
+            VBox root = loader.load();
+            SearchController controller = loader.getController();
+
+            // 创建对话框
+            Stage dialogStage = new Stage();
+            dialogStage.initModality(Modality.NONE);
+            dialogStage.initOwner(tabPane.getScene().getWindow());
+            dialogStage.setTitle(i18n.get("search.title"));
+            dialogStage.setResizable(false);
+
+            Scene scene = new Scene(root, 600, 500);
+            scene.getStylesheets().add(getClass().getResource("/css/styles.css").toExternalForm());
+
+            dialogStage.setScene(scene);
+            controller.setStage(dialogStage);
+
+            dialogStage.showAndWait();
+        } catch (IOException e) {
+            logger.error("加载全局搜索界面失败", e);
+            FXUtils.showErrorAlert("错误", "无法打开全局搜索");
+        }
+    }
+
+    @FXML
+    public void handleLightTheme() {
         if (application != null) {
             application.applyTheme(application.getPrimaryStage().getScene(), "light");
             updateStatus("已切换到浅色主题");
@@ -585,7 +661,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleDarkTheme() {
+    public void handleDarkTheme() {
         if (application != null) {
             application.applyTheme(application.getPrimaryStage().getScene(), "dark");
             updateStatus("已切换到深色主题");
@@ -593,7 +669,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleIntelliJTheme() {
+    public void handleIntelliJTheme() {
         if (application != null) {
             application.applyTheme(application.getPrimaryStage().getScene(), "intellij");
             updateStatus("已切换到 IntelliJ 主题");
@@ -601,7 +677,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleAbout() {
+    public void handleAbout() {
         updateStatus("关于");
         String about =
             AppConstants.APP_NAME + "\n\n" +
@@ -619,7 +695,7 @@ private Button shiftBtn;
     // ========== 导航处理方法 ==========
 
     @FXML
-    private void handleInventory() {
+    public void handleInventory() {
         updateStatus("商品管理");
         setActiveButton(inventoryBtn);
         
@@ -640,7 +716,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleCart() {
+    public void handleCart() {
         updateStatus("POS");
         setActiveButton(cartBtn);
 
@@ -669,7 +745,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleCheckout() {
+    public void handleCheckout() {
         updateStatus("POS");
         setActiveButton(checkoutBtn);
         
@@ -690,7 +766,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleTransactions() {
+    public void handleTransactions() {
         updateStatus("交易记录");
         setActiveButton(transactionsBtn);
 
@@ -711,7 +787,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleMembers() {
+    public void handleMembers() {
         updateStatus("会员管理");
         setActiveButton(membersBtn);
         
@@ -732,7 +808,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleSupplier() {
+    public void handleSupplier() {
         updateStatus("供应商管理");
         setActiveButton(supplierBtn);
 
@@ -753,7 +829,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handlePurchaseOrder() {
+    public void handlePurchaseOrder() {
         updateStatus("采购订单");
         setActiveButton(purchaseOrderBtn);
 
@@ -774,7 +850,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handlePurchaseApproval() {
+    public void handlePurchaseApproval() {
         updateStatus("采购审批");
         setActiveButton(purchaseApprovalBtn);
 
@@ -795,7 +871,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handlePurchaseInbound() {
+    public void handlePurchaseInbound() {
         updateStatus("采购入库");
         setActiveButton(purchaseInboundBtn);
 
@@ -816,7 +892,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleInventoryCheck() {
+    public void handleInventoryCheck() {
         updateStatus("库存盘点");
         setActiveButton(inventoryCheckBtn);
 
@@ -837,7 +913,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleStatistics() {
+    public void handleStatistics() {
         updateStatus("数据统计");
         setActiveButton(statisticsBtn);
 
@@ -858,7 +934,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleInventoryAlert() {
+    public void handleInventoryAlert() {
         updateStatus("库存预警");
         setActiveButton(inventoryReportBtn);
 
@@ -896,7 +972,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handlePurchaseReport() {
+    public void handlePurchaseReport() {
         updateStatus("采购报表");
         setActiveButton(purchaseReportBtn);
 
@@ -917,7 +993,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleInventoryReport() {
+    public void handleInventoryReport() {
         updateStatus("库存报表");
         setActiveButton(inventoryReportBtn);
 
@@ -938,7 +1014,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleProfitReport() {
+    public void handleProfitReport() {
         updateStatus("利润分析");
         setActiveButton(profitReportBtn);
 
@@ -959,7 +1035,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleReturnReport() {
+    public void handleReturnReport() {
         updateStatus("退货报表");
         setActiveButton(returnReportBtn);
 
@@ -980,7 +1056,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handlePromotions() {
+    public void handlePromotions() {
         updateStatus("促销管理");
         setActiveButton(promotionsBtn);
 
@@ -1001,7 +1077,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleShift() {
+    public void handleShift() {
         updateStatus("交接班");
         setActiveButton(shiftBtn);
 
@@ -1023,7 +1099,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleSettings() {
+    public void handleSettings() {
         updateStatus("系统设置");
         setActiveButton(settingsBtn);
 
@@ -1045,7 +1121,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleReturnOrder() {
+    public void handleReturnOrder() {
         updateStatus("退货订单");
         setActiveButton(returnOrderBtn);
 
@@ -1063,7 +1139,7 @@ private Button shiftBtn;
     }
 
     @FXML
-    private void handleReturnApproval() {
+    public void handleReturnApproval() {
         updateStatus("退货审批");
         setActiveButton(returnApprovalBtn);
 

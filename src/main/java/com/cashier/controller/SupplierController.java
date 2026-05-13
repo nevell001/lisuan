@@ -152,7 +152,7 @@ public class SupplierController {
      * 处理添加供应商
      */
     @FXML
-    private void handleAddSupplier() {
+    public void handleAddSupplier() {
         showSupplierDialog(null);
     }
 
@@ -160,7 +160,7 @@ public class SupplierController {
      * 处理编辑供应商
      */
     @FXML
-    private void handleEditSupplier() {
+    public void handleEditSupplier() {
         Supplier selected = supplierTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showSupplierDialog(selected);
@@ -360,7 +360,7 @@ public class SupplierController {
      * 处理删除供应商
      */
     @FXML
-    private void handleDeleteSupplier() {
+    public void handleDeleteSupplier() {
         Supplier selected = supplierTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
@@ -387,7 +387,7 @@ public class SupplierController {
      * 处理搜索
      */
     @FXML
-    private void handleSearch() {
+    public void handleSearch() {
         String searchText = searchField.getText().trim().toLowerCase();
         if (searchText.isEmpty()) {
             supplierList.setAll(suppliers.values());
@@ -406,7 +406,7 @@ public class SupplierController {
      * 处理清除搜索
      */
     @FXML
-    private void handleClearSearch() {
+    public void handleClearSearch() {
         searchField.clear();
         supplierList.setAll(suppliers.values());
         updateCountLabel();

@@ -379,7 +379,7 @@ public class InventoryAlertController {
      * 处理立即检查
      */
     @FXML
-    private void handleRefresh() {
+    public void handleRefresh() {
         logger.info("手动触发库存预警检查");
         alertService.triggerCheck();
         updateServiceStatus();
@@ -391,7 +391,7 @@ public class InventoryAlertController {
      * 处理清除所有冷却
      */
     @FXML
-    private void handleClearCooldown() {
+    public void handleClearCooldown() {
         Alert confirmAlert = new Alert(Alert.AlertType.CONFIRMATION);
         confirmAlert.setTitle("确认清除");
         confirmAlert.setHeaderText(null);
@@ -408,7 +408,7 @@ public class InventoryAlertController {
      * 处理导出预警
      */
     @FXML
-    private void handleExport() {
+    public void handleExport() {
         if (alertList.isEmpty()) {
             FXUtils.showErrorAlert("导出失败", "当前没有预警商品可导出！");
             return;
@@ -445,7 +445,7 @@ public class InventoryAlertController {
      * 处理关闭
      */
     @FXML
-    private void handleClose() {
+    public void handleClose() {
         if (updateTimer != null) {
             updateTimer.cancel();
             updateTimer = null;

@@ -181,7 +181,7 @@ public class PromotionController {
      * 处理添加促销
      */
     @FXML
-    private void handleAddPromotion() {
+    public void handleAddPromotion() {
         showPromotionDialog(null);
     }
 
@@ -189,7 +189,7 @@ public class PromotionController {
      * 处理编辑促销
      */
     @FXML
-    private void handleEditPromotion() {
+    public void handleEditPromotion() {
         Promotion selected = promotionTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showPromotionDialog(selected);
@@ -381,7 +381,7 @@ public class PromotionController {
      * 处理删除促销
      */
     @FXML
-    private void handleDeletePromotion() {
+    public void handleDeletePromotion() {
         List<Promotion> selected = promotionTable.getSelectionModel().getSelectedItems();
         if (selected.isEmpty()) {
             return;
@@ -404,7 +404,7 @@ public class PromotionController {
      * 处理启用促销
      */
     @FXML
-    private void handleEnablePromotion() {
+    public void handleEnablePromotion() {
         List<Promotion> selected = promotionTable.getSelectionModel().getSelectedItems();
         for (Promotion p : selected) {
             p.enabled = true;
@@ -418,7 +418,7 @@ public class PromotionController {
      * 处理禁用促销
      */
     @FXML
-    private void handleDisablePromotion() {
+    public void handleDisablePromotion() {
         List<Promotion> selected = promotionTable.getSelectionModel().getSelectedItems();
         for (Promotion p : selected) {
             p.enabled = false;
@@ -432,7 +432,7 @@ public class PromotionController {
      * 处理搜索
      */
     @FXML
-    private void handleSearch() {
+    public void handleSearch() {
         applyFilters();
     }
 
@@ -440,7 +440,7 @@ public class PromotionController {
      * 处理清除搜索
      */
     @FXML
-    private void handleClearSearch() {
+    public void handleClearSearch() {
         searchField.clear();
         typeFilterComboBox.getSelectionModel().select(0);
         statusFilterComboBox.getSelectionModel().select(0);

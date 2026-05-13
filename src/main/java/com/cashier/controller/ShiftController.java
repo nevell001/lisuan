@@ -308,7 +308,7 @@ public class ShiftController {
      * 处理查看详情
      */
     @FXML
-    private void handleViewDetail() {
+    public void handleViewDetail() {
         Shift selected = shiftTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showShiftDetail(selected);
@@ -362,7 +362,7 @@ public class ShiftController {
      * 处理搜索
      */
     @FXML
-    private void handleSearch() {
+    public void handleSearch() {
         applyFilters();
     }
 
@@ -370,7 +370,7 @@ public class ShiftController {
      * 处理清除搜索
      */
     @FXML
-    private void handleClearSearch() {
+    public void handleClearSearch() {
         startDatePicker.setValue(java.time.LocalDate.now());
         endDatePicker.setValue(java.time.LocalDate.now());
         searchField.clear();
@@ -416,7 +416,7 @@ public class ShiftController {
      * 处理导出
      */
     @FXML
-    private void handleExport() {
+    public void handleExport() {
         if (shiftList.isEmpty()) {
             showError("没有可导出的交接班记录");
             return;
@@ -510,7 +510,7 @@ public class ShiftController {
      * 处理刷新
      */
     @FXML
-    private void handleRefresh() {
+    public void handleRefresh() {
         loadShifts();
         updateStatus("已刷新");
     }
@@ -549,7 +549,7 @@ public class ShiftController {
      * 处理开班
      */
     @FXML
-    private void handleStartShift() {
+    public void handleStartShift() {
         // 检查是否已有活跃班次
         try {
             if (ShiftDAO.hasActiveShift()) {
@@ -637,7 +637,7 @@ public class ShiftController {
      * 处理交班
      */
     @FXML
-    private void handleEndShift() {
+    public void handleEndShift() {
         // 检查是否有活跃班次
         Shift activeShift = null;
 try {
@@ -781,7 +781,7 @@ try {
     /**
      * 处理退出登录
      */
-    private void handleLogout() {
+    public void handleLogout() {
         try {
             // 返回登录界面
             javafx.application.Platform.runLater(() -> {

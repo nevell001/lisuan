@@ -1,0 +1,45 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cashier.controller.SearchController"
+      spacing="0"
+      styleClass="search-view">
+
+    <!-- 顶部搜索栏 -->
+    <HBox styleClass="search-header" spacing="10" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="15" right="15" bottom="15" left="15"/>
+        </padding>
+        <Label text="🔍" style="-fx-font-size: 20px;"/>
+        <TextField fx:id="searchField"
+                   promptText="%search.placeholder"
+                   HBox.hgrow="ALWAYS"
+                   styleClass="search-input"/>
+        <Button fx:id="closeButton" text="✕" styleClass="icon-button" onAction="#handleClose"/>
+    </HBox>
+
+    <!-- 搜索结果列表 -->
+    <ListView fx:id="resultsList"
+              VBox.vgrow="ALWAYS"
+              styleClass="search-results"
+              focusTraversable="false"/>
+
+    <!-- 底部提示 -->
+    <HBox styleClass="search-footer" spacing="10">
+        <padding>
+            <Insets top="8" right="15" bottom="8" left="15"/>
+        </padding>
+        <Label text="%search.results" style="-fx-text-fill: #757575; -fx-font-size: 12px;"/>
+        <Label fx:id="resultCountLabel" text="0" style="-fx-text-fill: #3F51B5; -fx-font-weight: bold; -fx-font-size: 12px;"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label text="↑↓ 选择" style="-fx-text-fill: #9E9E9E; -fx-font-size: 11px;"/>
+        <Label text="Enter 打开" style="-fx-text-fill: #9E9E9E; -fx-font-size: 11px;"/>
+        <Label text="Esc 关闭" style="-fx-text-fill: #9E9E9E; -fx-font-size: 11px;"/>
+    </HBox>
+
+</VBox>

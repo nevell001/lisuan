@@ -93,7 +93,7 @@ public class LoginController {
      * 处理登录
      */
     @FXML
-    private void handleLogin() {
+    public void handleLogin() {
         String username = usernameField.getText().trim();
         String password = passwordField.getText();
 
@@ -189,7 +189,7 @@ public class LoginController {
      * 处理退出
      */
     @FXML
-    private void handleExit() {
+    public void handleExit() {
         System.exit(0);
     }
 
@@ -292,7 +292,7 @@ public class LoginController {
      * 处理关于
      */
     @FXML
-    private void handleAbout() {
+    public void handleAbout() {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("关于");
         alert.setHeaderText(AppConstants.APP_NAME + " v" + AppConstants.APP_VERSION);

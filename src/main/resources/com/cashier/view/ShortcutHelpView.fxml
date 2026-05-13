@@ -1,0 +1,177 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.*?>
+
+<VBox xmlns="http://javafx.com/javafx/17"
+      xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cashier.controller.ShortcutHelpController"
+      spacing="0"
+      styleClass="shortcut-help-view">
+
+    <!-- 顶部标题栏 -->
+    <HBox styleClass="header-bar" spacing="10">
+        <padding>
+            <Insets top="15" right="15" bottom="15" left="15"/>
+        </padding>
+        <Label text="⌨️" style="-fx-font-size: 24px;"/>
+        <Label text="%快捷键.title" styleClass="title-label"/>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button text="%快捷键.close" onAction="#handleClose" styleClass="icon-button"/>
+    </HBox>
+
+    <!-- 搜索框 -->
+    <HBox styleClass="search-bar" spacing="10" alignment="CENTER_LEFT">
+        <padding>
+            <Insets top="10" right="15" bottom="10" left="15"/>
+        </padding>
+        <Label text="🔍" style="-fx-font-size: 14px;"/>
+        <TextField fx:id="searchField" promptText="搜索快捷键..." HBox.hgrow="ALWAYS"
+                   styleClass="search-field" onKeyReleased="#handleSearch"/>
+    </HBox>
+
+    <!-- 快捷键内容区域 -->
+    <ScrollPane fx:id="scrollPane" fitToWidth="true" VBox.vgrow="ALWAYS">
+        <VBox fx:id="contentArea" spacing="15" styleClass="content-area">
+            <padding>
+                <Insets top="15" right="15" bottom="15" left="15"/>
+            </padding>
+
+            <!-- 功能键分组 -->
+            <VBox styleClass="shortcut-group" spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="%快捷键.category.function" styleClass="group-title"/>
+                <GridPane hgap="15" vgap="8" styleClass="shortcut-grid">
+                    <Label text="F1" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <Label text="%shortcut.inventory" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                    <Label text="F5" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <Label text="%shortcut.refresh" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                    <Label text="F7" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                    <Label text="%shortcut.members" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+                    <Label text="F8" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                    <Label text="%shortcut.checkout" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+
+                    <Label text="F9" styleClass="shortcut-key" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                    <Label text="%shortcut.promotions" styleClass="shortcut-desc" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+
+                    <Label text="F10" styleClass="shortcut-key" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                    <Label text="%shortcut.inventory_alert" styleClass="shortcut-desc" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+
+                    <Label text="F11" styleClass="shortcut-key" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                    <Label text="%shortcut.backup" styleClass="shortcut-desc" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+
+                    <Label text="F12" styleClass="shortcut-key" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                    <Label text="%shortcut.restore" styleClass="shortcut-desc" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+                </GridPane>
+            </VBox>
+
+            <!-- 导航分组 -->
+            <VBox styleClass="shortcut-group" spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="%快捷键.category.navigation" styleClass="group-title"/>
+                <GridPane hgap="15" vgap="8" styleClass="shortcut-grid">
+                    <Label text="Ctrl+N" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <Label text="%shortcut.new_inventory" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                    <Label text="Ctrl+M" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <Label text="%shortcut.members_nav" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                    <Label text="Ctrl+T" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                    <Label text="%shortcut.statistics" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+                    <Label text="Ctrl+Shift+F" styleClass="shortcut-key" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                    <Label text="%shortcut.search" styleClass="shortcut-desc" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+
+                    <Label text="ESC" styleClass="shortcut-key" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                    <Label text="%shortcut.close_tab" styleClass="shortcut-desc" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+                </GridPane>
+            </VBox>
+
+            <!-- 编辑分组 -->
+            <VBox styleClass="shortcut-group" spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="%快捷键.category.editing" styleClass="group-title"/>
+                <GridPane hgap="15" vgap="8" styleClass="shortcut-grid">
+                    <Label text="Ctrl+S" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <Label text="%shortcut.save" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                    <Label text="Ctrl+E" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <Label text="%shortcut.edit" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                    <Label text="Ctrl+A" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                    <Label text="%shortcut.select_all" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+                    <Label text="Ctrl+B" styleClass="shortcut-key" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                    <Label text="%shortcut.batch" styleClass="shortcut-desc" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+
+                    <Label text="Ctrl+D" styleClass="shortcut-key" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                    <Label text="%shortcut.export" styleClass="shortcut-desc" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+
+                    <Label text="Ctrl+R" styleClass="shortcut-key" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                    <Label text="%shortcut.refresh_edit" styleClass="shortcut-desc" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+                </GridPane>
+            </VBox>
+
+            <!-- 系统分组 -->
+            <VBox styleClass="shortcut-group" spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="%快捷键.category.system" styleClass="group-title"/>
+                <GridPane hgap="15" vgap="8" styleClass="shortcut-grid">
+                    <Label text="Ctrl+Q" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <Label text="%shortcut.exit" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                    <Label text="Ctrl+/" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <Label text="%shortcut.help" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+                </GridPane>
+            </VBox>
+
+            <!-- 收银分组 -->
+            <VBox styleClass="shortcut-group" spacing="10">
+                <padding>
+                    <Insets top="10" right="10" bottom="10" left="10"/>
+                </padding>
+                <Label text="%快捷键.category.pos" styleClass="group-title"/>
+                <GridPane hgap="15" vgap="8" styleClass="shortcut-grid">
+                    <Label text="F2" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                    <Label text="%shortcut.hold_order" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                    <Label text="F3" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                    <Label text="%shortcut.resume_order" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                    <Label text="F4" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                    <Label text="%shortcut.clear_cart" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+                    <Label text="F6" styleClass="shortcut-key" GridPane.columnIndex="2" GridPane.rowIndex="0"/>
+                    <Label text="%shortcut.quick_cash" styleClass="shortcut-desc" GridPane.columnIndex="3" GridPane.rowIndex="0"/>
+
+                    <Label text="Ctrl+1" styleClass="shortcut-key" GridPane.columnIndex="2" GridPane.rowIndex="1"/>
+                    <Label text="%shortcut.payment_wechat" styleClass="shortcut-desc" GridPane.columnIndex="3" GridPane.rowIndex="1"/>
+
+                    <Label text="Ctrl+2" styleClass="shortcut-key" GridPane.columnIndex="2" GridPane.rowIndex="2"/>
+                    <Label text="%shortcut.payment_alipay" styleClass="shortcut-desc" GridPane.columnIndex="3" GridPane.rowIndex="2"/>
+
+                    <Label text="Ctrl+3" styleClass="shortcut-key" GridPane.columnIndex="2" GridPane.rowIndex="3"/>
+                    <Label text="%shortcut.payment_card" styleClass="shortcut-desc" GridPane.columnIndex="3" GridPane.rowIndex="3"/>
+
+                    <Label text="Enter" styleClass="shortcut-key" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                    <Label text="%shortcut.confirm_payment" styleClass="shortcut-desc" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+                </GridPane>
+            </VBox>
+
+        </VBox>
+    </ScrollPane>
+
+</VBox>

@@ -239,6 +239,21 @@ public class CartController {
                 handleAddProduct();
                 event.consume();
             }
+            // F2 - 挂单
+            else if (event.getCode() == javafx.scene.input.KeyCode.F2) {
+                handleHoldOrder();
+                event.consume();
+            }
+            // F3 - 恢复挂单
+            else if (event.getCode() == javafx.scene.input.KeyCode.F3) {
+                handleResumeOrder();
+                event.consume();
+            }
+            // F4 - 清空购物车
+            else if (event.getCode() == javafx.scene.input.KeyCode.F4) {
+                handleClearCart();
+                event.consume();
+            }
             // Delete - 移除商品
             else if (event.getCode() == javafx.scene.input.KeyCode.DELETE) {
                 handleRemoveProduct();
@@ -463,7 +478,7 @@ public class CartController {
      * 添加商品到购物车
      */
     @FXML
-    private void handleAddProduct() {
+    public void handleAddProduct() {
         Product selected = productTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             addToCart(selected, 1);
@@ -532,7 +547,7 @@ public class CartController {
      * 从购物车移除商品
      */
     @FXML
-    private void handleRemoveProduct() {
+    public void handleRemoveProduct() {
         CartItem selected = cartTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             cartMap.remove(selected.product.name);
@@ -546,7 +561,7 @@ public class CartController {
      * 清空购物车
      */
     @FXML
-    private void handleClearCart() {
+    public void handleClearCart() {
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(I18nManager.getInstance().get("common.confirm"));
         alert.setHeaderText(null);
@@ -566,7 +581,7 @@ public class CartController {
      * 搜索商品
      */
     @FXML
-    private void handleSearch() {
+    public void handleSearch() {
         String searchText = searchField.getText().trim();
 
         // 在搜索前刷新库存数据，确保使用最新数据
@@ -623,7 +638,7 @@ public class CartController {
      * 去结账
      */
     @FXML
-    private void handleCheckout() {
+    public void handleCheckout() {
         showError("请选择支付方式完成结账！");
     }
 
@@ -631,7 +646,7 @@ public class CartController {
      * 搜索会员
      */
     @FXML
-    private void handleSearchMember() {
+    public void handleSearchMember() {
         String phone = memberPhoneField.getText().trim();
         if (phone.isEmpty()) {
             currentMember = null;
@@ -665,7 +680,7 @@ public class CartController {
      * 现金支付
      */
     @FXML
-    private void handleCashPayment() {
+    public void handleCashPayment() {
         if (cartList.isEmpty()) {
             showError("购物车为空，无法支付！");
             return;
@@ -837,7 +852,7 @@ public class CartController {
      * 微信支付
      */
     @FXML
-    private void handleWechatPayment() {
+    public void handleWechatPayment() {
         handlePayment("微信");
     }
 
@@ -845,7 +860,7 @@ public class CartController {
      * 支付宝支付
      */
     @FXML
-    private void handleAlipayPayment() {
+    public void handleAlipayPayment() {
         handlePayment("支付宝");
     }
 
@@ -853,7 +868,7 @@ public class CartController {
      * 银行卡支付
      */
     @FXML
-    private void handleCardPayment() {
+    public void handleCardPayment() {
         handlePayment("银行卡");
     }
 
@@ -892,7 +907,7 @@ public class CartController {
      * 处理支付
      * @param paymentMethod 支付方式
      */
-    private void handlePayment(String paymentMethod) {
+    public void handlePayment(String paymentMethod) {
         if (cartList.isEmpty()) {
             showError("购物车为空，无法支付！");
             return;
@@ -1398,6 +1413,288 @@ public class CartController {
      */
     public boolean isCartEmpty() {
         return cartList == null || cartList.isEmpty();
+    }
+
+    // ========== 挂单功能 ==========
+
+    /**
+     * 处理挂单 (F2)
+     */
+    public void handleHoldOrder() {
+        if (isCartEmpty()) {
+            showInfo(I18nManager.getInstance().get("cart.hold.empty_cart"));
+            return;
+        }
+
+        try {
+            // 创建挂单对象
+            com.cashier.model.HoldOrder holdOrder = new com.cashier.model.HoldOrder();
+            holdOrder.orderNumber = com.cashier.model.HoldOrder.generateOrderNumber();
+            holdOrder.userId = currentUser != null ? currentUser.id : 0;
+
+            // 会员信息
+            if (currentMember != null) {
+                holdOrder.memberId = currentMember.id;
+                holdOrder.memberName = currentMember.name;
+                holdOrder.memberPhone = currentMember.phone;
+            }
+
+            // 金额信息
+            holdOrder.totalAmount = calculateHoldOrderTotal();
+            holdOrder.discountAmount = calculateHoldOrderDiscount();
+            holdOrder.finalAmount = calculateHoldOrderFinal();
+            holdOrder.itemCount = cartList.size();
+
+            // 序列化购物车项目
+            holdOrder.itemsJson = serializeCartItems();
+
+            // 保存到数据库
+            com.cashier.dao.HoldOrderDAO.insert(holdOrder);
+
+            // 清空购物车
+            handleClearCart();
+
+            showInfo(I18nManager.getInstance().get("cart.hold.success", holdOrder.orderNumber));
+
+            logger.info("挂单成功: {}", holdOrder.orderNumber);
+
+        } catch (SQLException e) {
+            logger.error("挂单失败", e);
+            showError(I18nManager.getInstance().get("cart.hold.error") + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * 处理恢复挂单 (F3)
+     */
+    public void handleResumeOrder() {
+        try {
+            // 获取当前用户的活跃挂单列表
+            int userId = currentUser != null ? currentUser.id : 0;
+            List<com.cashier.model.HoldOrder> holdOrders =
+                userId > 0 ? com.cashier.dao.HoldOrderDAO.findActiveByUserId(userId)
+                           : com.cashier.dao.HoldOrderDAO.findAllActive();
+
+            if (holdOrders.isEmpty()) {
+                showInfo(I18nManager.getInstance().get("cart.hold.no_orders"));
+                return;
+            }
+
+            // 显示挂单选择对话框
+            showHoldOrderSelectionDialog(holdOrders);
+
+        } catch (SQLException e) {
+            logger.error("获取挂单列表失败", e);
+            showError(I18nManager.getInstance().get("cart.hold.load_error") + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * 显示挂单选择对话框
+     */
+    private void showHoldOrderSelectionDialog(List<com.cashier.model.HoldOrder> holdOrders) {
+        // 使用ListView选择对话框
+        showHoldOrderListViewDialog(holdOrders);
+    }
+
+    /**
+     * 显示挂单列表视图对话框
+     */
+    private void showHoldOrderListViewDialog(List<com.cashier.model.HoldOrder> holdOrders) {
+        javafx.scene.control.Dialog<com.cashier.model.HoldOrder> dialog = new javafx.scene.control.Dialog<>();
+        dialog.setTitle(I18nManager.getInstance().get("cart.hold.resume_title"));
+        dialog.setHeaderText(I18nManager.getInstance().get("cart.hold.resume_header"));
+
+        // 设置按钮
+        dialog.getDialogPane().getButtonTypes().addAll(
+            javafx.scene.control.ButtonType.CANCEL,
+            new javafx.scene.control.ButtonType("确定", javafx.scene.control.ButtonBar.ButtonData.OK_DONE)
+        );
+
+        // 创建ListView
+        javafx.scene.control.ListView<com.cashier.model.HoldOrder> listView = new javafx.scene.control.ListView<>();
+        listView.getItems().addAll(holdOrders);
+
+        // 设置单元格工厂
+        listView.setCellFactory(param -> new javafx.scene.control.ListCell<com.cashier.model.HoldOrder>() {
+            @Override
+            protected void updateItem(com.cashier.model.HoldOrder order, boolean empty) {
+                super.updateItem(order, empty);
+                if (empty || order == null) {
+                    setText(null);
+                } else {
+                    setText(String.format("[%s] %s - %s - ¥%.2f (%d项)",
+                        order.orderNumber,
+                        order.holdDate,
+                        order.memberName != null ? order.memberName : "非会员",
+                        order.finalAmount,
+                        order.itemCount));
+                }
+            }
+        });
+
+        listView.getSelectionModel().selectFirst();
+
+        // 设置对话框内容
+        dialog.getDialogPane().setContent(listView);
+
+        // 转换结果
+        dialog.setResultConverter(dialogButton -> {
+            if (dialogButton == javafx.scene.control.ButtonType.OK) {
+                return listView.getSelectionModel().getSelectedItem();
+            }
+            return null;
+        });
+
+        dialog.showAndWait().ifPresent(order -> {
+            if (order != null) {
+                resumeOrder(order);
+            }
+        });
+    }
+
+    /**
+     * 恢复挂单到购物车
+     */
+    private void resumeOrder(com.cashier.model.HoldOrder order) {
+        try {
+            // 清空当前购物车
+            cartList.clear();
+            cartMap.clear();
+
+            // 反序列化购物车项目
+            deserializeCartItems(order.itemsJson);
+
+            // 恢复会员信息
+            if (order.memberId != null) {
+                try {
+                    currentMember = MemberDAO.findById(order.memberId);
+                    if (currentMember != null) {
+                        memberPhoneField.setText(currentMember.phone);
+                        // 更新会员信息显示
+                        memberInfoLabel.setText(currentMember.name + " - " +
+                            String.format("%.1f折", currentMember.discount));
+                    }
+                } catch (SQLException e) {
+                    logger.warn("恢复会员信息失败: {}", e.getMessage());
+                }
+            }
+
+            // 更新挂单状态
+            com.cashier.dao.HoldOrderDAO.updateStatus(order.id, 1);
+
+            // 更新显示
+            updateStatistics();
+            cartTable.setItems(cartList);
+
+            showInfo(I18nManager.getInstance().get("cart.hold.resume_success", order.orderNumber));
+
+            logger.info("恢复挂单成功: {}", order.orderNumber);
+
+        } catch (Exception e) {
+            logger.error("恢复挂单失败", e);
+            showError(I18nManager.getInstance().get("cart.hold.resume_error") + ": " + e.getMessage());
+        }
+    }
+
+    /**
+     * 序列化购物车项目为JSON字符串
+     */
+    private String serializeCartItems() {
+        StringBuilder json = new StringBuilder("[");
+        for (int i = 0; i < cartList.size(); i++) {
+            CartItem item = cartList.get(i);
+            if (i > 0) json.append(",");
+            json.append("{");
+            json.append("\"productId\":").append(item.product.id).append(",");
+            json.append("\"quantity\":").append(item.quantity);
+            json.append("}");
+        }
+        json.append("]");
+        return json.toString();
+    }
+
+    /**
+     * 从JSON字符串反序列化购物车项目
+     */
+    private void deserializeCartItems(String json) {
+        if (json == null || json.isEmpty()) return;
+
+        // 简单的JSON解析（生产环境建议使用Jackson或Gson）
+        json = json.trim();
+        if (!json.startsWith("[") || !json.endsWith("]")) return;
+
+        String itemsJson = json.substring(1, json.length() - 1);
+        if (itemsJson.isEmpty()) return;
+
+        String[] items = itemsJson.split("\\},\\{");
+        for (String item : items) {
+            item = item.replace("{", "").replace("}", "");
+            String[] fields = item.split(",");
+
+            int productId = 0;
+            int quantity = 1;
+
+            for (String field : fields) {
+                String[] kv = field.split(":");
+                if (kv.length == 2) {
+                    String key = kv[0].replace("\"", "").trim();
+                    String value = kv[1].trim();
+
+                    if ("productId".equals(key)) {
+                        productId = Integer.parseInt(value);
+                    } else if ("quantity".equals(key)) {
+                        quantity = Integer.parseInt(value);
+                    }
+                }
+            }
+
+            // 查找商品并添加到购物车
+            try {
+                Product product = ProductDAO.findById(productId);
+                if (product != null) {
+                    CartItem cartItem = new CartItem(product, quantity);
+                    cartList.add(cartItem);
+                    cartMap.put(product.name, cartItem);
+                }
+            } catch (SQLException e) {
+                logger.warn("恢复商品失败 (ID: {}): {}", productId, e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * 获取总金额
+     */
+    private java.math.BigDecimal calculateHoldOrderTotal() {
+        java.math.BigDecimal total = java.math.BigDecimal.ZERO;
+        for (CartItem item : cartList) {
+            total = total.add(item.subtotal);
+        }
+        return total;
+    }
+
+    /**
+     * 获取折扣金额
+     */
+    private java.math.BigDecimal calculateHoldOrderDiscount() {
+        java.math.BigDecimal total = calculateHoldOrderTotal();
+        java.math.BigDecimal discount = java.math.BigDecimal.ZERO;
+
+        if (currentMember != null) {
+            // discount是折扣（如9.5表示95折），计算折扣金额
+            double discountRate = currentMember.discount.doubleValue() / 10.0;
+            discount = total.multiply(java.math.BigDecimal.valueOf(1 - discountRate));
+        }
+
+        return discount;
+    }
+
+    /**
+     * 获取最终金额
+     */
+    private java.math.BigDecimal calculateHoldOrderFinal() {
+        return calculateHoldOrderTotal().subtract(calculateHoldOrderDiscount());
     }
 
     /**

@@ -382,7 +382,7 @@ public class PosModeController {
      * 处理交接班
      */
     @FXML
-    private void handleShift() {
+    public void handleShift() {
         try {
             FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/ShiftView.fxml");
             VBox root = loader.load();
@@ -408,7 +408,7 @@ public class PosModeController {
      * 处理退出登录
      */
     @FXML
-    private void handleExit() {
+    public void handleExit() {
         if (cartController != null) {
             // 检查购物车是否为空
             boolean cartEmpty = cartController.isCartEmpty();

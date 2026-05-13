@@ -63,7 +63,7 @@ public class PasswordResetController {
      * 处理提交
      */
     @FXML
-    private void handleSubmit() {
+    public void handleSubmit() {
         String username = usernameField.getText().trim();
         String email = emailField.getText().trim();
 
@@ -138,7 +138,7 @@ public class PasswordResetController {
      * 处理取消
      */
     @FXML
-    private void handleCancel() {
+    public void handleCancel() {
         dialogStage.close();
     }
 

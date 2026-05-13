@@ -178,7 +178,7 @@ public class PurchaseApprovalController {
      * 处理审批通过
      */
     @FXML
-    private void handleApprove() {
+    public void handleApprove() {
         PurchaseOrder selected = orderTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showApprovalDialog(selected, "approve");
@@ -189,7 +189,7 @@ public class PurchaseApprovalController {
      * 处理审批拒绝
      */
     @FXML
-    private void handleReject() {
+    public void handleReject() {
         PurchaseOrder selected = orderTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showApprovalDialog(selected, "reject");
@@ -299,7 +299,7 @@ public class PurchaseApprovalController {
      * 处理查看详情
      */
     @FXML
-    private void handleViewDetail() {
+    public void handleViewDetail() {
         PurchaseOrder selected = orderTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showOrderDetailDialog(selected);
@@ -413,7 +413,7 @@ public class PurchaseApprovalController {
      * 处理搜索
      */
     @FXML
-    private void handleSearch() {
+    public void handleSearch() {
         String searchText = searchField.getText().trim().toLowerCase();
         if (searchText.isEmpty()) {
             orderList.setAll(orders.values());
@@ -430,7 +430,7 @@ public class PurchaseApprovalController {
      * 处理刷新
      */
     @FXML
-    private void handleRefresh() {
+    public void handleRefresh() {
         loadPendingOrders();
         updateStatus("已刷新待审批订单");
     }

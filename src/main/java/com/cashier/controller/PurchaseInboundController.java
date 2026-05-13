@@ -164,7 +164,7 @@ public class PurchaseInboundController {
      * 处理入库
      */
     @FXML
-    private void handleInbound() {
+    public void handleInbound() {
         PurchaseOrder selected = orderTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showInboundDialog(selected);
@@ -466,7 +466,7 @@ public class PurchaseInboundController {
      * 处理查看详情
      */
     @FXML
-    private void handleViewDetail() {
+    public void handleViewDetail() {
         PurchaseOrder selected = orderTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
             showOrderDetailDialog(selected);
@@ -552,7 +552,7 @@ public class PurchaseInboundController {
      * 处理查看入库历史
      */
     @FXML
-    private void handleViewHistory() {
+    public void handleViewHistory() {
         showInboundHistoryDialog();
     }
 
@@ -709,7 +709,7 @@ public class PurchaseInboundController {
      * 处理搜索
      */
     @FXML
-    private void handleSearch() {
+    public void handleSearch() {
         String searchText = searchField.getText().trim().toLowerCase();
         if (searchText.isEmpty()) {
             orderList.setAll(orders.values());
@@ -726,7 +726,7 @@ public class PurchaseInboundController {
      * 处理刷新
      */
     @FXML
-    private void handleRefresh() {
+    public void handleRefresh() {
         loadApprovedOrders();
         updateStatus("已刷新可入库订单");
     }

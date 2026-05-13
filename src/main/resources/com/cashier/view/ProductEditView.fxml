@@ -8,9 +8,7 @@
       xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cashier.controller.ProductEditController"
       spacing="15"
-      styleClass="product-edit-view"
-      prefWidth="800"
-      prefHeight="650">
+      styleClass="product-edit-view, edit-view-container">
 
     <padding>
         <Insets top="20" right="25" bottom="20" left="25"/>
@@ -19,140 +17,135 @@
     <!-- 标题 -->
     <Label fx:id="titleLabel"
            text="%product.edit.title"
-           style="-fx-font-size: 22px; -fx-font-weight: bold; -fx-text-fill: #3F51B5;"/>
+           styleClass="view-title"/>
 
     <!-- 表单 - 双列布局 -->
-    <GridPane hgap="20" vgap="15" VBox.vgrow="ALWAYS">
+    <GridPane hgap="20" vgap="15" VBox.vgrow="ALWAYS" styleClass="form-grid">
         <padding>
             <Insets top="10" right="0" bottom="10" left="0"/>
         </padding>
         <columnConstraints>
-            <ColumnConstraints hgrow="NEVER" minWidth="90"/>
-            <ColumnConstraints hgrow="SOMETIMES" prefWidth="240"/>
-            <ColumnConstraints hgrow="NEVER" minWidth="90"/>
-            <ColumnConstraints hgrow="SOMETIMES" prefWidth="240"/>
+            <ColumnConstraints hgrow="NEVER" minWidth="90" prefWidth="90"/>
+            <ColumnConstraints hgrow="SOMETIMES" percentWidth="35"/>
+            <ColumnConstraints hgrow="NEVER" minWidth="90" prefWidth="90"/>
+            <ColumnConstraints hgrow="SOMETIMES" percentWidth="35"/>
         </columnConstraints>
 
         <!-- 第一列：商品编号 -->
         <Label text="%product.edit.code" GridPane.columnIndex="0" GridPane.rowIndex="0"
-               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+               styleClass="form-label"/>
         <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="0" alignment="CENTER_LEFT">
             <TextField fx:id="productCodeField"
-                       prefWidth="180" promptText="%product.edit.code_hint"
-                       style="-fx-font-size: 14px;"/>
-            <CheckBox fx:id="autoCodeCheckBox" text="%product.edit.auto_generate" style="-fx-font-size: 14px;"/>
+                       promptText="%product.edit.code_hint"
+                       styleClass="form-input, input-code"/>
+            <CheckBox fx:id="autoCodeCheckBox" text="%product.edit.auto_generate" styleClass="form-checkbox"/>
         </HBox>
 
         <!-- 第二列：单价 -->
         <Label text="%product.edit.price" GridPane.columnIndex="2" GridPane.rowIndex="0"
-               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+               styleClass="form-label"/>
         <TextField fx:id="priceField"
                    GridPane.columnIndex="3" GridPane.rowIndex="0"
-                   prefWidth="240" promptText="%product.edit.price_hint"
-                   style="-fx-font-size: 14px;"/>
+                   promptText="%product.edit.price_hint"
+                   styleClass="form-input, input-amount"/>
 
         <!-- 第一列：商品名称 -->
         <Label text="%product.edit.name" GridPane.columnIndex="0" GridPane.rowIndex="1"
-               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+               styleClass="form-label"/>
         <TextField fx:id="nameField"
                    GridPane.columnIndex="1" GridPane.rowIndex="1"
-                   prefWidth="240" promptText="%product.edit.name_hint"
-                   style="-fx-font-size: 14px;"/>
+                   promptText="%product.edit.name_hint"
+                   styleClass="form-input"/>
 
         <!-- 第二列：成本价 -->
         <Label text="%product.edit.cost" GridPane.columnIndex="2" GridPane.rowIndex="1"
-               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+               styleClass="form-label"/>
         <TextField fx:id="costField"
                    GridPane.columnIndex="3" GridPane.rowIndex="1"
-                   prefWidth="240" promptText="%product.edit.cost_hint"
-                   style="-fx-font-size: 14px;"/>
+                   promptText="%product.edit.cost_hint"
+                   styleClass="form-input, input-amount"/>
 
         <!-- 第一列：最低库存 -->
         <Label text="%product.edit.min_stock" GridPane.columnIndex="0" GridPane.rowIndex="2"
-               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+               styleClass="form-label"/>
         <TextField fx:id="minStockField"
                    GridPane.columnIndex="1" GridPane.rowIndex="2"
-                   prefWidth="240" promptText="%product.edit.min_stock_hint"
-                   style="-fx-font-size: 14px;"/>
+                   promptText="%product.edit.min_stock_hint"
+                   styleClass="form-input, input-number"/>
 
         <!-- 第二列：分类 -->
         <Label text="%product.edit.category" GridPane.columnIndex="2" GridPane.rowIndex="2"
-               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+               styleClass="form-label"/>
         <ComboBox fx:id="categoryComboBox"
                   GridPane.columnIndex="3" GridPane.rowIndex="2"
-                  prefWidth="240" promptText="%product.edit.category_hint" editable="true"
-                  style="-fx-font-size: 14px;"/>
+                  promptText="%product.edit.category_hint" editable="true"
+                  styleClass="form-combo"/>
 
         <!-- 第一列：单位 -->
         <Label text="%product.edit.unit" GridPane.columnIndex="0" GridPane.rowIndex="3"
-               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+               styleClass="form-label"/>
         <ComboBox fx:id="unitComboBox"
                   GridPane.columnIndex="1" GridPane.rowIndex="3"
-                  prefWidth="240" promptText="%product.edit.unit_hint" editable="true"
-                  style="-fx-font-size: 14px;"/>
+                  promptText="%product.edit.unit_hint" editable="true"
+                  styleClass="form-combo"/>
 
         <!-- 第一列：品牌 -->
         <Label text="%product.edit.brand" GridPane.columnIndex="0" GridPane.rowIndex="4"
-               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+               styleClass="form-label"/>
         <TextField fx:id="brandField"
                    GridPane.columnIndex="1" GridPane.rowIndex="4"
-                   prefWidth="240" promptText="%product.edit.brand_hint"
-                   style="-fx-font-size: 14px;"/>
+                   promptText="%product.edit.brand_hint"
+                   styleClass="form-input"/>
 
         <!-- 第二列：规格 -->
         <Label text="%product.edit.spec" GridPane.columnIndex="2" GridPane.rowIndex="4"
-               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+               styleClass="form-label"/>
         <TextField fx:id="specField"
                    GridPane.columnIndex="3" GridPane.rowIndex="4"
-                   prefWidth="240" promptText="%product.edit.spec_hint"
-                   style="-fx-font-size: 14px;"/>
+                   promptText="%product.edit.spec_hint"
+                   styleClass="form-input"/>
 
         <!-- 第一列：条形码 -->
         <Label text="%product.edit.barcode" GridPane.columnIndex="0" GridPane.rowIndex="5"
-               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+               styleClass="form-label"/>
         <TextField fx:id="barcodeField"
                    GridPane.columnIndex="1" GridPane.rowIndex="5"
-                   prefWidth="240" promptText="%product.edit.barcode_hint"
-                   style="-fx-font-size: 14px;"/>
+                   promptText="%product.edit.barcode_hint"
+                   styleClass="form-input, input-code"/>
 
         <!-- 第二列：供应商 -->
         <Label text="%product.edit.supplier" GridPane.columnIndex="2" GridPane.rowIndex="5"
-               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+               styleClass="form-label"/>
         <ComboBox fx:id="supplierComboBox"
                   GridPane.columnIndex="3" GridPane.rowIndex="5"
-                  prefWidth="240" promptText="%product.edit.supplier_hint" editable="true"
-                  style="-fx-font-size: 14px;"/>
+                  promptText="%product.edit.supplier_hint" editable="true"
+                  styleClass="form-combo"/>
 
         <!-- 商品描述 - 跨两列 -->
         <Label text="%product.edit.description" GridPane.columnIndex="0" GridPane.rowIndex="6"
-               style="-fx-font-size: 14px; -fx-font-weight: 600; -fx-text-fill: #424242;"/>
+               styleClass="form-label"/>
         <TextArea fx:id="descriptionField"
                   GridPane.columnIndex="1" GridPane.rowIndex="6"
                   GridPane.columnSpan="3"
-                  prefWidth="780" prefHeight="80"
                   promptText="%product.edit.description_hint"
-                  style="-fx-font-size: 14px;"/>
+                  styleClass="form-textarea"/>
     </GridPane>
 
     <!-- 错误提示 -->
     <Label fx:id="errorLabel"
            text=""
-           style="-fx-text-fill: #F44336; -fx-font-size: 12px;"/>
+           styleClass="error-label"/>
 
     <!-- 按钮区域 -->
-    <HBox spacing="15" alignment="CENTER_RIGHT">
+    <HBox spacing="15" alignment="CENTER_RIGHT" styleClass="button-bar">
         <Button fx:id="cancelButton"
                 text="%product.edit.cancel"
                 onAction="#handleCancel"
-                prefWidth="100"
-                prefHeight="38"
-                styleClass="secondary-button"/>
+                styleClass="secondary-button, button-normal"/>
         <Button fx:id="saveButton"
                 text="%product.edit.save"
                 onAction="#handleSave"
-                prefWidth="100"
-                prefHeight="38"
-                styleClass="primary-button"/>
+                styleClass="primary-button, button-normal"/>
     </HBox>
 
 </VBox>

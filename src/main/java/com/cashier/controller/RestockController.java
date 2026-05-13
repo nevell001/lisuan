@@ -172,7 +172,7 @@ public class RestockController {
      * 处理确认
      */
     @FXML
-    private void handleConfirm() {
+    public void handleConfirm() {
         if (isInputValid()) {
             int quantity = Integer.parseInt(quantityField.getText().trim());
 
@@ -198,7 +198,7 @@ public class RestockController {
      * 处理取消
      */
     @FXML
-    private void handleCancel() {
+    public void handleCancel() {
         dialogStage.close();
     }
 

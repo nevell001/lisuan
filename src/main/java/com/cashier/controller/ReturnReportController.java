@@ -183,7 +183,7 @@ public class ReturnReportController {
     }
 
     @FXML
-    private void handleReportTypeChange() {
+    public void handleReportTypeChange() {
         String reportType = reportTypeComboBox.getValue();
         LocalDate now = LocalDate.now();
 
@@ -215,17 +215,17 @@ public class ReturnReportController {
     }
 
     @FXML
-    private void handleGenerate() {
+    public void handleGenerate() {
         generateReport();
     }
 
     @FXML
-    private void handleRefresh() {
+    public void handleRefresh() {
         generateReport();
     }
 
     @FXML
-    private void handleExport() {
+    public void handleExport() {
         if (returnOrderList.isEmpty()) {
             showAlert(Alert.AlertType.WARNING, "提示", "没有可导出的数据");
             return;
