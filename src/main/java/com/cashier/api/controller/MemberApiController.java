@@ -118,6 +118,17 @@ public class MemberApiController {
             MemberDAO.insert(member);
             
             logger.info("创建会员: {} - {}", member.phone, member.name);
+            
+            // 广播会员创建事件
+            com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
+                com.cashier.api.sync.SyncEventType.MEMBER_CREATED,
+                Map.of(
+                    "id", member.id,
+                    "phone", member.phone,
+                    "name", member.name
+                )
+            );
+            
             ctx.status(HttpStatus.CREATED)
                .json(Map.of("success", true, "data", member, "message", "会员创建成功"));
         } catch (Exception e) {
@@ -151,6 +162,18 @@ public class MemberApiController {
             MemberDAO.update(member);
             
             logger.info("更新会员: {}", member.phone);
+            
+            // 广播会员更新事件
+            com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
+                com.cashier.api.sync.SyncEventType.MEMBER_UPDATED,
+                Map.of(
+                    "id", member.id,
+                    "phone", member.phone,
+                    "name", member.name,
+                    "level", member.level
+                )
+            );
+            
             ctx.json(Map.of("success", true, "data", member, "message", "会员更新成功"));
         } catch (Exception e) {
             logger.error("更新会员失败", e);
@@ -181,11 +204,20 @@ public class MemberApiController {
                 return;
             }
             
-            member.balance = member.balance.add(request.amount);
-            MemberDAO.update(member);
+            boolean success = com.cashier.service.MemberService.recharge(
+                member, 
+                request.amount.doubleValue(), 
+                "API", 
+                "system"
+            );
             
-            logger.info("会员充值: {} + {}", member.phone, request.amount);
-            ctx.json(Map.of("success", true, "data", member, "message", "充值成功"));
+            if (success) {
+                logger.info("会员充值: {} + {}", member.phone, request.amount);
+                ctx.json(Map.of("success", true, "data", member, "message", "充值成功"));
+            } else {
+                ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                   .json(Map.of("success", false, "message", "充值失败"));
+            }
         } catch (Exception e) {
             logger.error("会员充值失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)

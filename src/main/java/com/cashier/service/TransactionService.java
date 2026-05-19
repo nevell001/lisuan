@@ -18,6 +18,7 @@ import java.util.*;
  */
 public class TransactionService {
     private static final Logger logger = LoggerFactoryUtil.getLogger(TransactionService.class);
+    private static final com.cashier.dao.ProductDAORefactored productDAO = com.cashier.dao.DAOFactory.getInstance().getProductDAO();
 
     /**
      * 交易结果
@@ -104,7 +105,7 @@ public class TransactionService {
                         throw new SQLException("商品不存在: " + item.product.name);
                     }
 
-                    Product latestProduct = ProductDAO.findByIdWithConnection(conn, item.product.id);
+                    Product latestProduct = productDAO.findByIdWithConnection(conn, item.product.id);
                     if (latestProduct == null) {
                         throw new SQLException("商品不存在: " + item.product.name);
                     }
@@ -116,7 +117,7 @@ public class TransactionService {
                     product.quantity = latestProduct.quantity - item.quantity;
                     product.version = latestProduct.version;
 
-                    if (!ProductDAO.updateWithVersionWithConnection(conn, product)) {
+                    if (!productDAO.updateWithVersionWithConnection(conn, product)) {
                         throw new SQLException("商品 " + item.product.name + " 库存更新失败，可能已被其他操作修改");
                     }
 
@@ -178,6 +179,19 @@ public class TransactionService {
             }
 
             logger.info("交易成功完成，交易ID: {}", transactionId);
+            
+            // 广播交易成功事件
+            com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
+                com.cashier.api.sync.SyncEventType.TRANSACTION_CREATED,
+                Map.of(
+                    "transactionId", transactionId,
+                    "finalAmount", transaction.finalAmount.toString(),
+                    "paymentMethod", transaction.paymentMethod,
+                    "timestamp", transaction.timestamp,
+                    "itemCount", cartItems.size()
+                )
+            );
+            
             return new TransactionResult(true, transactionId, "交易成功", transaction);
         } catch (SQLException | RuntimeException e) {
             logger.error("交易失败: {}", e.getMessage(), e);

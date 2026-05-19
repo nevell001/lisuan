@@ -636,6 +636,165 @@ public class DatabaseManager {
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='库存盘点明细表'
                 """);
 
+            // ========== v2.4.5 新增表：退货管理相关表 ==========
+
+            // 创建退货订单表
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS return_orders (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    return_order_id VARCHAR(50) UNIQUE NOT NULL COMMENT '退货单号',
+                    original_transaction_id VARCHAR(50) NOT NULL COMMENT '原交易ID',
+                    member_id INT COMMENT '会员ID',
+                    member_name VARCHAR(100) COMMENT '会员姓名',
+                    return_date TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '退货日期',
+                    return_reason TEXT COMMENT '退货原因',
+                    total_amount DECIMAL(10,2) DEFAULT 0.00 COMMENT '退货总金额',
+                    status VARCHAR(20) DEFAULT 'PENDING' COMMENT '状态',
+                    payment_method VARCHAR(20) COMMENT '退款方式',
+                    operator_name VARCHAR(50) COMMENT '操作员',
+                    approver_name VARCHAR(50) COMMENT '审批人',
+                    approval_date TIMESTAMP NULL COMMENT '审批日期',
+                    approval_comment TEXT COMMENT '审批意见',
+                    completed_date TIMESTAMP NULL COMMENT '完成日期',
+                    notes TEXT COMMENT '备注',
+                    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    INDEX idx_return_order_id (return_order_id),
+                    INDEX idx_original_transaction (original_transaction_id),
+                    INDEX idx_status (status)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='退货订单表'
+                """);
+
+            // 创建退货订单明细表
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS return_order_items (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    return_order_id VARCHAR(50) NOT NULL COMMENT '退货单号',
+                    product_id INT NOT NULL COMMENT '商品ID',
+                    product_code VARCHAR(50) COMMENT '商品编号',
+                    product_name VARCHAR(100) NOT NULL COMMENT '商品名称',
+                    barcode VARCHAR(100) COMMENT '条形码',
+                    category VARCHAR(50) COMMENT '分类',
+                    return_quantity INT NOT NULL COMMENT '退货数量',
+                    unit_price DECIMAL(10,2) NOT NULL COMMENT '单价',
+                    return_amount DECIMAL(10,2) NOT NULL COMMENT '退货金额',
+                    reason TEXT COMMENT '退货原因',
+                    `condition` VARCHAR(20) DEFAULT 'GOOD' COMMENT '商品状态',
+                    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    FOREIGN KEY (return_order_id) REFERENCES return_orders(return_order_id) ON DELETE CASCADE,
+                    INDEX idx_return_order (return_order_id),
+                    INDEX idx_product (product_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='退货订单明细表'
+                """);
+
+            // ========== v2.5.0 新增表：发票和备份相关表 ==========
+
+            // 创建发票表
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS invoices (
+                    invoice_id VARCHAR(50) PRIMARY KEY,
+                    invoice_code VARCHAR(20),
+                    invoice_number VARCHAR(20),
+                    transaction_id VARCHAR(50),
+                    buyer_name VARCHAR(100),
+                    buyer_tax_id VARCHAR(30),
+                    buyer_address VARCHAR(200),
+                    buyer_phone VARCHAR(50),
+                    buyer_bank VARCHAR(100),
+                    seller_name VARCHAR(100),
+                    seller_tax_id VARCHAR(30),
+                    seller_address VARCHAR(200),
+                    seller_phone VARCHAR(50),
+                    seller_bank VARCHAR(100),
+                    total_amount DECIMAL(10,2),
+                    tax_amount DECIMAL(10,2),
+                    final_amount DECIMAL(10,2),
+                    tax_rate DECIMAL(5,4),
+                    create_time DATETIME,
+                    print_time DATETIME,
+                    create_by VARCHAR(50),
+                    status VARCHAR(20),
+                    void_reason VARCHAR(200),
+                    void_time DATETIME,
+                    remark VARCHAR(500),
+                    payee VARCHAR(50),
+                    checker VARCHAR(50),
+                    print_count INT DEFAULT 0,
+                    pdf_path VARCHAR(200),
+                    image_path VARCHAR(200),
+                    INDEX idx_transaction (transaction_id),
+                    INDEX idx_status (status)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='发票表'
+                """);
+
+            // 创建发票商品明细表
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS invoice_items (
+                    id INT AUTO_INCREMENT PRIMARY KEY,
+                    invoice_id VARCHAR(50),
+                    product_name VARCHAR(100),
+                    specification VARCHAR(100),
+                    unit VARCHAR(20),
+                    quantity INT,
+                    unit_price DECIMAL(10,2),
+                    amount DECIMAL(10,2),
+                    tax_rate DECIMAL(5,4),
+                    tax_amount DECIMAL(10,2),
+                    total_amount DECIMAL(10,2),
+                    FOREIGN KEY (invoice_id) REFERENCES invoices(invoice_id) ON DELETE CASCADE,
+                    INDEX idx_invoice (invoice_id)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='发票商品明细表'
+                """);
+
+            // 创建备份记录表
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS backup_records (
+                    backup_id VARCHAR(50) PRIMARY KEY,
+                    backup_type VARCHAR(20),
+                    target VARCHAR(20),
+                    file_name VARCHAR(100),
+                    local_path VARCHAR(200),
+                    remote_path VARCHAR(200),
+                    file_size BIGINT,
+                    status VARCHAR(20),
+                    create_time DATETIME,
+                    start_time DATETIME,
+                    finish_time DATETIME,
+                    duration_seconds INT,
+                    content_type VARCHAR(20),
+                    scope VARCHAR(20),
+                    operator VARCHAR(50),
+                    remark VARCHAR(200),
+                    error_message VARCHAR(500),
+                    checksum VARCHAR(50),
+                    auto_backup BOOLEAN,
+                    INDEX idx_status (status),
+                    INDEX idx_create_time (create_time)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='备份记录表'
+                """);
+
+            // 创建备份配置表
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS backup_config (
+                    id INT PRIMARY KEY,
+                    auto_backup_enabled BOOLEAN,
+                    target VARCHAR(20),
+                    content_type VARCHAR(20),
+                    backup_interval_hours INT,
+                    retention_days INT,
+                    max_backup_count INT,
+                    last_backup_time DATETIME,
+                    next_backup_time DATETIME,
+                    aliyun_endpoint VARCHAR(100),
+                    aliyun_bucket VARCHAR(50),
+                    aliyun_access_key VARCHAR(100),
+                    aliyun_secret_key VARCHAR(100),
+                    local_backup_path VARCHAR(100),
+                    create_time DATETIME,
+                    update_time DATETIME
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='备份配置表'
+                """);
+
             // ========== v2.3.0-v2.3.1 新增表结束 ==========
 
             // 升级表结构（添加 id 字段）

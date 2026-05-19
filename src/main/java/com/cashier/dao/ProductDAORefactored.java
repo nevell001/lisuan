@@ -5,7 +5,11 @@ import com.cashier.model.Product;
 
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 商品数据访问对象（重构版）
@@ -93,6 +97,253 @@ public class ProductDAORefactored extends BaseDAO {
     }
 
     /**
+     * 根据名称查找商品
+     * @param name 商品名称
+     * @return 商品对象，未找到返回null
+     * @throws SQLException 数据库操作异常
+     */
+    public Product findByName(String name) throws SQLException {
+        String sql = "SELECT " + SELECT_COLUMNS + " FROM products WHERE name = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRowToProduct(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 根据商品编号查找商品
+     * @param productCode 商品编号
+     * @return 商品对象，未找到返回null
+     * @throws SQLException 数据库操作异常
+     */
+    public Product findByProductCode(String productCode) throws SQLException {
+        String sql = "SELECT " + SELECT_COLUMNS + " FROM products WHERE product_code = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, productCode);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRowToProduct(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 根据条形码查找商品
+     * @param barcode 条形码
+     * @return 商品对象，未找到返回null
+     * @throws SQLException 数据库操作异常
+     */
+    public Product findByBarcode(String barcode) throws SQLException {
+        String sql = "SELECT " + SELECT_COLUMNS + " FROM products WHERE barcode = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, barcode);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRowToProduct(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 根据分类查询商品
+     * @param category 分类名称
+     * @return 商品列表
+     * @throws SQLException 数据库操作异常
+     */
+    public List<Product> findByCategory(String category) throws SQLException {
+        List<Product> products = new ArrayList<>();
+        String sql = "SELECT " + SELECT_COLUMNS + " FROM products WHERE category = ? ORDER BY name";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, category);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    products.add(mapRowToProduct(rs));
+                }
+            }
+        }
+        return products;
+    }
+
+    /**
+     * 使用指定连接根据ID查找商品
+     * @param conn 数据库连接
+     * @param id 商品ID
+     * @return 商品对象
+     * @throws SQLException 数据库操作异常
+     */
+    public Product findByIdWithConnection(Connection conn, int id) throws SQLException {
+        String sql = "SELECT " + SELECT_COLUMNS + " FROM products WHERE id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, id);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return mapRowToProduct(rs);
+                }
+            }
+        }
+        return null;
+    }
+
+    /**
+     * 使用指定连接批量查询商品
+     * @param conn 数据库连接
+     * @param ids 商品ID集合
+     * @return 商品映射（商品ID -> 商品对象）
+     * @throws SQLException 数据库操作异常
+     */
+    public Map<Integer, Product> findByIdsWithConnection(Connection conn, Collection<Integer> ids) throws SQLException {
+        Map<Integer, Product> products = new HashMap<>();
+        if (ids == null || ids.isEmpty()) {
+            return products;
+        }
+
+        String placeholders = String.join(", ", Collections.nCopies(ids.size(), "?"));
+        String sql = "SELECT " + SELECT_COLUMNS + " FROM products WHERE id IN (" + placeholders + ")";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            int index = 1;
+            for (Integer id : ids) {
+                pstmt.setInt(index++, id);
+            }
+
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Product product = mapRowToProduct(rs);
+                    products.put(product.id, product);
+                }
+            }
+        }
+        return products;
+    }
+
+    /**
+     * 更新商品库存（用于交易）
+     * @param id 商品ID
+     * @param delta 变化量
+     * @return 是否成功
+     * @throws SQLException 数据库操作异常
+     */
+    public boolean updateQuantity(int id, int delta) throws SQLException {
+        String sql = "UPDATE products SET quantity = quantity + ? WHERE id = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, delta);
+            pstmt.setInt(2, id);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * 更新商品库存（带 Connection，用于事务）
+     * @param conn 数据库连接
+     * @param id 商品ID
+     * @param delta 变化量
+     * @return 是否成功
+     * @throws SQLException 数据库操作异常
+     */
+    public boolean updateQuantityWithConnection(Connection conn, int id, int delta) throws SQLException {
+        String sql = "UPDATE products SET quantity = quantity + ? WHERE id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, delta);
+            pstmt.setInt(2, id);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * 查询低库存商品
+     * @return 低库存商品列表
+     * @throws SQLException 数据库操作异常
+     */
+    public List<Product> findLowStock() throws SQLException {
+        List<Product> products = new ArrayList<>();
+        String sql = "SELECT " + SELECT_COLUMNS + " FROM products WHERE quantity <= min_stock ORDER BY quantity";
+        try (Connection conn = getConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            while (rs.next()) {
+                products.add(mapRowToProduct(rs));
+            }
+        }
+        return products;
+    }
+
+    /**
+     * 搜索商品（支持分页）
+     * @param keyword 关键词
+     * @param pageNum 页码
+     * @param pageSize 每页大小
+     * @return 分页结果
+     * @throws SQLException 数据库操作异常
+     */
+    public PageResult<Product> search(String keyword, int pageNum, int pageSize) throws SQLException {
+        if (pageNum < 1) pageNum = 1;
+        if (pageSize < 1) pageSize = 20;
+
+        String searchPattern = "%" + keyword + "%";
+        String countSql = "SELECT COUNT(*) FROM products WHERE name LIKE ? OR product_code LIKE ? OR barcode LIKE ? OR description LIKE ?";
+        
+        long total = 0;
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(countSql)) {
+            pstmt.setString(1, searchPattern);
+            pstmt.setString(2, searchPattern);
+            pstmt.setString(3, searchPattern);
+            pstmt.setString(4, searchPattern);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    total = rs.getLong(1);
+                }
+            }
+        }
+
+        int offset = (pageNum - 1) * pageSize;
+        List<Product> products = new ArrayList<>();
+        String sql = "SELECT " + SELECT_COLUMNS + " FROM products " +
+                     "WHERE name LIKE ? OR product_code LIKE ? OR barcode LIKE ? OR description LIKE ? " +
+                     "ORDER BY name LIMIT ? OFFSET ?";
+
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, searchPattern);
+            pstmt.setString(2, searchPattern);
+            pstmt.setString(3, searchPattern);
+            pstmt.setString(4, searchPattern);
+            pstmt.setInt(5, pageSize);
+            pstmt.setInt(6, offset);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    products.add(mapRowToProduct(rs));
+                }
+            }
+        }
+        return new PageResult<>(products, pageNum, pageSize, total);
+    }
+
+    /**
+     * 搜索商品（不分页）
+     * @param keyword 关键词
+     * @return 商品列表
+     * @throws SQLException 数据库操作异常
+     */
+    public List<Product> search(String keyword) throws SQLException {
+        return search(keyword, 1, Integer.MAX_VALUE).getData();
+    }
+
+    /**
      * 插入新商品（带事务）
      * @param product 商品对象
      * @return 是否成功
@@ -169,6 +420,27 @@ public class ProductDAORefactored extends BaseDAO {
             }
             return false;
         }
+    }
+
+    /**
+     * 使用指定连接和乐观锁更新商品（别名，兼容旧代码）
+     * @param conn 数据库连接
+     * @param product 商品对象
+     * @return 是否成功
+     * @throws SQLException 数据库操作异常
+     */
+    public boolean updateWithVersionWithConnection(Connection conn, Product product) throws SQLException {
+        return updateWithConnection(conn, product);
+    }
+
+    /**
+     * 使用乐观锁更新商品
+     * @param product 商品对象
+     * @return 是否成功
+     * @throws SQLException 数据库操作异常
+     */
+    public boolean updateWithVersion(Product product) throws SQLException {
+        return update(product);
     }
 
     /**

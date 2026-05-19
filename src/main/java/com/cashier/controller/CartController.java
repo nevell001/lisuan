@@ -2,7 +2,8 @@ package com.cashier.controller;
 
 import com.cashier.i18n.I18nManager;
 import com.cashier.dao.MemberDAO;
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
+import com.cashier.dao.ProductDAORefactored;
 import com.cashier.dao.PromotionDAO;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.CartItem;
@@ -46,6 +47,7 @@ import java.util.*;
 /**
  * 购物车控制器
  * 处理购物车的增删改查和结算
+ * 已重构为使用重构版 DAO
  */
 public class CartController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(CartController.class);
@@ -132,13 +134,15 @@ public class CartController {
 
     private ObservableList<CartItem> cartList;
     private ObservableList<Product> productList;
-    private Map<String, Product> inventory;
+    private Map<String, Product> inventoryMap;
     private Map<String, CartItem> cartMap = new HashMap<>();
     private Member currentMember;
     private User currentUser;
     private String orderNumber;
     private BigDecimal alreadyPaidAmount = BigDecimal.ZERO; // 已支付金额
     private Promotion appliedPromotion; // 当前应用的促销
+    private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
+    private final I18nManager i18n = I18nManager.getInstance();
 
     /**
      * 初始化方法
@@ -428,18 +432,19 @@ public class CartController {
      */
     private void loadInventory() {
         logger.info("CartController: 开始加载库存数据...");
-        inventory = new HashMap<>();
+        inventoryMap = new HashMap<>();
         try {
-            List<Product> products = ProductDAO.findAll();
+            List<Product> products = productDAO.findAll();
             for (Product product : products) {
-                inventory.put(product.name, product);
+                inventoryMap.put(product.name, product);
             }
         } catch (Exception e) {
             logger.error("从数据库加载商品失败", e);
-            inventory = DataService.loadInventory();
+            // 降级处理：尝试从 DataService 加载（如果数据库失败）
+            inventoryMap = DataService.loadInventory();
         }
-        logger.info("CartController: 加载了 {} 个商品", inventory.size());
-        productList.setAll(inventory.values());
+        logger.info("CartController: 加载了 {} 个商品", inventoryMap.size());
+        productList.setAll(inventoryMap.values());
         updateCountLabel();
         logger.info("CartController: 库存数据加载完成");
     }
@@ -448,7 +453,7 @@ public class CartController {
      * 更新商品数量标签
      */
     private void updateCountLabel() {
-        countLabel.setText("商品数量: " + productList.size());
+        countLabel.setText(i18n.get("cart.product_count") + ": " + productList.size());
     }
 
     /**
@@ -505,10 +510,10 @@ public class CartController {
         // 从数据库获取最新库存数据，确保使用最新库存
         Product latestProduct = null;
         try {
-            latestProduct = ProductDAO.findById(product.id);
+            latestProduct = productDAO.findById(product.id);
             if (latestProduct != null) {
                 // 更新内存中的库存数据
-                inventory.put(product.name, latestProduct);
+                inventoryMap.put(product.name, latestProduct);
                 product = latestProduct;
             }
         } catch (SQLException e) {
@@ -588,15 +593,15 @@ public class CartController {
         refreshLatestInventory();
 
         if (searchText.isEmpty()) {
-            productList.setAll(inventory.values());
+            productList.setAll(inventoryMap.values());
             updateCountLabel();
             return;
         }
 
         // 搜索匹配的商品（支持名称和条形码）
-        List<Product> matchedProducts = inventory.values().stream()
+        List<Product> matchedProducts = inventoryMap.values().stream()
             .filter(p -> p.name.toLowerCase().contains(searchText.toLowerCase()) ||
-                      p.barcode.toLowerCase().contains(searchText.toLowerCase()) ||
+                      (p.barcode != null && p.barcode.toLowerCase().contains(searchText.toLowerCase())) ||
                       (p.productCode != null && p.productCode.toLowerCase().contains(searchText.toLowerCase())))
             .toList();
 
@@ -885,7 +890,7 @@ public class CartController {
                 cartList,
                 currentMember,
                 transaction,
-                inventory,
+                inventoryMap,
                 appliedPromotion
             );
 
@@ -1381,14 +1386,14 @@ public class CartController {
     private void refreshLatestInventory() {
         logger.info("CartController: 刷新库存数据...");
         try {
-            List<Product> products = ProductDAO.findAll();
+            List<Product> products = productDAO.findAll();
             // 更新内存中的库存数据
             for (Product product : products) {
-                inventory.put(product.name, product);
+                inventoryMap.put(product.name, product);
             }
             // 更新商品列表显示
-            productList.setAll(inventory.values());
-            logger.info("CartController: 库存数据刷新完成，共 {} 个商品", inventory.size());
+            productList.setAll(inventoryMap.values());
+            logger.info("CartController: 库存数据刷新完成，共 {} 个商品", inventoryMap.size());
         } catch (SQLException e) {
             logger.error("刷新库存数据失败", e);
         }
@@ -1651,7 +1656,7 @@ public class CartController {
 
             // 查找商品并添加到购物车
             try {
-                Product product = ProductDAO.findById(productId);
+                Product product = productDAO.findById(productId);
                 if (product != null) {
                     CartItem cartItem = new CartItem(product, quantity);
                     cartList.add(cartItem);
@@ -1698,41 +1703,21 @@ public class CartController {
     }
 
     /**
-
-         * 设置当前用户
-
-         * @param user 当前登录用户
-
-         */
-
-        public void setCurrentUser(User user) {
-
-            this.currentUser = user;
-
-            logger.debug("已设置当前用户: {} ({})", user.name, user.getRoleDisplayName());
-
-        }
-
-    
-
-        /**
-
-         * 聚焦到搜索框
-
-         */
-
-        public void focusSearchField() {
-
-            if (searchField != null) {
-
-                searchField.requestFocus();
-
-                logger.debug("已聚焦到搜索框");
-
-            }
-
-        }
-
-    
-
+     * 设置当前用户
+     * @param user 当前登录用户
+     */
+    public void setCurrentUser(User user) {
+        this.currentUser = user;
+        logger.debug("已设置当前用户: {} ({})", user.name, user.getRoleDisplayName());
     }
+
+    /**
+     * 聚焦到搜索框
+     */
+    public void focusSearchField() {
+        if (searchField != null) {
+            searchField.requestFocus();
+            logger.debug("已聚焦到搜索框");
+        }
+    }
+}

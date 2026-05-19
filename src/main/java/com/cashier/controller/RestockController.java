@@ -1,6 +1,7 @@
 package com.cashier.controller;
 
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
+import com.cashier.dao.ProductDAORefactored;
 import com.cashier.model.Product;
 import com.cashier.util.CurrencyUtil;
 import com.cashier.util.StatusBarManager;
@@ -13,10 +14,13 @@ import java.sql.SQLException;
 import javafx.scene.control.*;
 
 import java.util.Map;
+import java.util.HashMap;
+import java.util.List;
 
 /**
  * 快速入库控制器
  * 处理商品快速入库对话框的逻辑
+ * 已重构为使用重构版 DAO
  */
 public class RestockController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(RestockController.class);
@@ -60,7 +64,8 @@ public class RestockController {
     private javafx.stage.Stage dialogStage;
     private Product product;
     private boolean okClicked = false;
-    private Map<String, Product> inventory;
+    private Map<String, Product> inventoryMap;
+    private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
 
     /**
      * 初始化方法
@@ -69,14 +74,14 @@ public class RestockController {
     private void initialize() {
         // 加载库存数据
         try {
-            var products = ProductDAO.findAll();
-            inventory = new java.util.HashMap<>();
+            List<Product> products = productDAO.findAll();
+            inventoryMap = new HashMap<>();
             for (Product p : products) {
-                inventory.put(p.name, p);
+                inventoryMap.put(p.name, p);
             }
         } catch (SQLException e) {
             logger.error("加载商品数据失败", e);
-            inventory = new java.util.HashMap<>();
+            inventoryMap = new HashMap<>();
         }
 
         // 初始化入库来源下拉框
@@ -106,15 +111,21 @@ public class RestockController {
         }
 
         try {
-            int quantity = Integer.parseInt(quantityField.getText().trim());
-            if (quantity > 0) {
-                // 入库后库存
-                int afterStock = product.quantity + quantity;
-                afterStockLabel.setText(String.format("%d %s", afterStock, product.unit));
+            String text = quantityField.getText().trim();
+            if (!text.isEmpty()) {
+                int quantity = Integer.parseInt(text);
+                if (quantity > 0) {
+                    // 入库后库存
+                    int afterStock = product.quantity + quantity;
+                    afterStockLabel.setText(String.format("%d %s", afterStock, product.unit));
 
-                // 入库金额
-                double totalCost = product.getCost().multiply(BigDecimal.valueOf(quantity)).doubleValue();
-                totalCostLabel.setText(CurrencyUtil.format(totalCost));
+                    // 入库金额
+                    double totalCost = product.getCost().multiply(BigDecimal.valueOf(quantity)).doubleValue();
+                    totalCostLabel.setText(CurrencyUtil.format(totalCost));
+                } else {
+                    afterStockLabel.setText(String.format("%d %s", product.quantity, product.unit));
+                    totalCostLabel.setText(CurrencyUtil.format(0));
+                }
             } else {
                 afterStockLabel.setText(String.format("%d %s", product.quantity, product.unit));
                 totalCostLabel.setText(CurrencyUtil.format(0));
@@ -181,7 +192,7 @@ public class RestockController {
 
             // 保存到数据库
             try {
-                if (ProductDAO.update(product)) {
+                if (productDAO.update(product)) {
                     okClicked = true;
                     dialogStage.close();
                 } else {

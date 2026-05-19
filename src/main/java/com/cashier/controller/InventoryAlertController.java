@@ -1,6 +1,7 @@
 package com.cashier.controller;
 
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
+import com.cashier.dao.ProductDAORefactored;
 import com.cashier.model.Product;
 import com.cashier.service.InventoryAlertService;
 import com.cashier.util.ExportUtil;
@@ -16,6 +17,7 @@ import javafx.scene.shape.Circle;
 import javafx.stage.Stage;
 import org.slf4j.Logger;
 
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.*;
 
@@ -25,6 +27,7 @@ import java.util.*;
  */
 public class InventoryAlertController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(InventoryAlertController.class);
+    private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
 
     @FXML
     private TableView<AlertItem> alertTable;
@@ -307,7 +310,7 @@ public class InventoryAlertController {
      */
     private void loadAlertItems() {
         try {
-            List<Product> allProducts = ProductDAO.findAll();
+            List<Product> allProducts = productDAO.findAll();
             if (allProducts == null) {
                 allProducts = new ArrayList<>();
             }
@@ -353,6 +356,8 @@ public class InventoryAlertController {
             warningCountLabel.setText(String.valueOf(warningCount));
             infoCountLabel.setText(String.valueOf(infoCount));
 
+        } catch (SQLException e) {
+            logger.error("从数据库加载商品失败", e);
         } catch (Exception e) {
             logger.error("加载预警商品失败", e);
         }

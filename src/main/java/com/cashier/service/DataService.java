@@ -17,13 +17,14 @@ import java.util.*;
  */
 public class DataService {
     private static final Logger logger = LoggerFactoryUtil.getLogger(DataService.class);
+    private static final com.cashier.dao.ProductDAORefactored productDAO = com.cashier.dao.DAOFactory.getInstance().getProductDAO();
 
     /**
      * 加载库存数据
      */
     public static Map<String, Product> loadInventory() {
         try {
-            List<Product> products = ProductDAO.findAll();
+            List<Product> products = productDAO.findAll();
             Map<String, Product> inventory = new HashMap<>();
             for (Product product : products) {
                 inventory.put(product.name, product);
@@ -41,14 +42,14 @@ public class DataService {
     public static void saveInventory(Map<String, Product> inventory) {
         try {
             // 批量删除所有商品
-            List<Product> existing = ProductDAO.findAll();
+            List<Product> existing = productDAO.findAll();
             for (Product p : existing) {
-                ProductDAO.delete(p.id);
+                productDAO.delete(p.id);
             }
 
             // 批量插入新商品
             List<Product> products = new ArrayList<>(inventory.values());
-            ProductDAO.batchInsert(products);
+            productDAO.batchInsert(products);
         } catch (SQLException e) {
             logger.error("保存商品数据失败", e);
         }

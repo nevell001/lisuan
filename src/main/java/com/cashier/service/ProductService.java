@@ -93,6 +93,17 @@ public class ProductService {
                 throw DatabaseException.insertFailed("products", null);
             }
             logger.info("创建商品成功: {}", product.getName());
+            
+            // 广播商品创建事件
+            com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
+                com.cashier.api.sync.SyncEventType.PRODUCT_CREATED,
+                java.util.Map.of(
+                    "id", product.id,
+                    "name", product.name,
+                    "productCode", product.productCode != null ? product.productCode : ""
+                )
+            );
+            
             return product;
         } catch (SQLException e) {
             logger.error("创建商品失败", e);
@@ -112,6 +123,17 @@ public class ProductService {
                 throw BusinessException.validationFailed("version", "商品已被其他用户修改，请刷新后重试");
             }
             logger.info("更新商品成功: {}", product.getName());
+            
+            // 广播商品更新事件
+            com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
+                com.cashier.api.sync.SyncEventType.PRODUCT_UPDATED,
+                java.util.Map.of(
+                    "id", product.id,
+                    "name", product.name,
+                    "quantity", product.quantity
+                )
+            );
+            
             return product;
         } catch (SQLException e) {
             logger.error("更新商品失败", e);
@@ -130,6 +152,12 @@ public class ProductService {
                 throw BusinessException.productNotFound(String.valueOf(id));
             }
             logger.info("删除商品成功: id={}", id);
+            
+            // 广播商品删除事件
+            com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
+                com.cashier.api.sync.SyncEventType.PRODUCT_DELETED,
+                java.util.Map.of("id", id)
+            );
         } catch (SQLException e) {
             logger.error("删除商品失败, id={}", id, e);
             throw new DatabaseException("删除商品失败", DatabaseException.DbErrorType.DELETE_FAILED, e);

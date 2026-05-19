@@ -110,6 +110,17 @@ public class MemberService {
 
             if (success) {
                 logger.info("会员充值成功: phone={}, amount={}", member.phone, amount);
+                
+                // 广播会员充值事件
+                com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
+                    com.cashier.api.sync.SyncEventType.MEMBER_RECHARGED,
+                    java.util.Map.of(
+                        "id", member.id,
+                        "phone", member.phone,
+                        "amount", rechargeAmount.toString(),
+                        "newBalance", member.balance.toString()
+                    )
+                );
             }
             return success;
         } catch (SQLException e) {
@@ -221,8 +232,12 @@ public class MemberService {
             List<Member> members = MemberDAO.findAll();
 
             int totalCount = members.size();
-            double totalBalance = members.stream().map(Member::getBalance).mapToDouble(BigDecimal::doubleValue).sum();
-            double totalPoints = members.stream().map(Member::getPoints).mapToDouble(BigDecimal::doubleValue).sum();
+            BigDecimal totalBalance = members.stream()
+                .map(Member::getBalance)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+            BigDecimal totalPoints = members.stream()
+                .map(Member::getPoints)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
 
             // 按等级统计
             Map<String, Integer> levelStats = new HashMap<>();
@@ -231,8 +246,8 @@ public class MemberService {
             }
 
             stats.put("totalCount", totalCount);
-            stats.put("totalBalance", totalBalance);
-            stats.put("totalPoints", totalPoints);
+            stats.put("totalBalance", totalBalance.doubleValue());
+            stats.put("totalPoints", totalPoints.doubleValue());
             stats.put("levelStats", levelStats);
 
         } catch (SQLException e) {

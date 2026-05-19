@@ -5,7 +5,7 @@ import java.math.BigDecimal;
 public class Member {
     private static final BigDecimal DIAMOND_POINTS = new BigDecimal("10000");
     private static final BigDecimal GOLD_POINTS = new BigDecimal("5000");
-    private static final BigDecimal SILVER_POINTS = new BigDecimal("2000");
+    private static final BigDecimal SILVER_POINTS = new BigDecimal("1000");
     private static final BigDecimal DIAMOND_DISCOUNT = new BigDecimal("8.5");
     private static final BigDecimal GOLD_DISCOUNT = new BigDecimal("9.0");
     private static final BigDecimal SILVER_DISCOUNT = new BigDecimal("9.5");

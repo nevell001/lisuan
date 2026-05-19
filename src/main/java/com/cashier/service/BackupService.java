@@ -165,12 +165,23 @@ public class BackupService {
      * 添加数据库备份
      */
     private static void addDatabaseBackup(ZipOutputStream zos) throws IOException {
-        // SQLite数据库文件路径（默认路径）
-        String dbPath = "data/cashier.db";
+        // 创建临时文件用于 SQL 备份
+        File tempSqlFile = File.createTempFile("cashier_backup_", ".sql");
         
-        if (Files.exists(Paths.get(dbPath))) {
-            File dbFile = new File(dbPath);
-            addToZip(zos, "database/cashier.db", dbFile);
+        try {
+            // 使用 DatabaseManager 进行 MySQL 备份
+            boolean success = com.cashier.util.DatabaseManager.backup(tempSqlFile);
+            
+            if (success) {
+                addToZip(zos, "database/backup.sql", tempSqlFile);
+            } else {
+                logger.error("数据库 SQL 导出失败");
+            }
+        } finally {
+            // 删除临时文件
+            if (tempSqlFile.exists()) {
+                tempSqlFile.delete();
+            }
         }
     }
     

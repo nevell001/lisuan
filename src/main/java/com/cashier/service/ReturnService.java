@@ -16,6 +16,7 @@ import java.util.List;
  */
 public class ReturnService {
     private static final Logger logger = LoggerFactoryUtil.getLogger(ReturnService.class);
+    private static final com.cashier.dao.ProductDAORefactored productDAO = com.cashier.dao.DAOFactory.getInstance().getProductDAO();
 
     /**
      * 创建退货订单（事务）
@@ -41,6 +42,15 @@ public class ReturnService {
 
             if (success) {
                 logger.info("退货订单创建成功: {}", returnOrder.returnOrderId);
+                
+                // 广播退货单创建事件（复用发票创建事件或使用通用设置变更）
+                com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
+                    com.cashier.api.sync.SyncEventType.fromName("RETURN_ORDER_CREATED"), 
+                    java.util.Map.of(
+                        "returnOrderId", returnOrder.returnOrderId,
+                        "totalAmount", returnOrder.totalAmount.toString()
+                    )
+                );
             }
             return success;
         } catch (SQLException e) {
@@ -76,13 +86,13 @@ public class ReturnService {
 
                 List<ReturnOrderItem> items = ReturnOrderItemDAO.findByReturnOrderIdWithConnection(conn, returnOrderId);
                 for (ReturnOrderItem item : items) {
-                    Product product = ProductDAO.findByIdWithConnection(conn, item.productId);
+                    Product product = productDAO.findByIdWithConnection(conn, item.productId);
                     if (product == null) {
                         throw new SQLException("退货商品不存在: productId=" + item.productId);
                     }
 
                     product.quantity += item.returnQuantity;
-                    if (!ProductDAO.updateWithVersionWithConnection(conn, product)) {
+                    if (!productDAO.updateWithVersionWithConnection(conn, product)) {
                         throw new SQLException("恢复退货库存失败: productId=" + item.productId);
                     }
                 }
@@ -151,7 +161,21 @@ public class ReturnService {
                 record.operator = returnOrder.operatorName;
                 record.timestamp = new Date();
                 record.recordId = returnOrderId;
-                return RechargeRecordDAO.insertWithConnection(conn, record);
+                if (!RechargeRecordDAO.insertWithConnection(conn, record)) {
+                    throw new SQLException("插入退款记录失败");
+                }
+                
+                // 广播退货完成（退款）事件
+                com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
+                    com.cashier.api.sync.SyncEventType.TRANSACTION_REFUNDED,
+                    java.util.Map.of(
+                        "returnOrderId", returnOrderId,
+                        "transactionId", returnOrder.originalTransactionId != null ? returnOrder.originalTransactionId : "",
+                        "refundAmount", returnOrder.getTotalAmount().toString()
+                    )
+                );
+                
+                return true;
             });
 
             if (success) {

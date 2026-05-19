@@ -1,6 +1,7 @@
 package com.cashier.service;
 
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
+import com.cashier.dao.ProductDAORefactored;
 import com.cashier.model.InventoryStatistics;
 import com.cashier.model.Product;
 import com.cashier.util.DatabaseManager;
@@ -19,6 +20,7 @@ import java.util.Locale;
  */
 public class InventoryService {
     private static final Logger logger = LoggerFactoryUtil.getLogger(InventoryService.class);
+    private static final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
 
     /**
      * 从数据库加载所有库存数据
@@ -38,7 +40,7 @@ public class InventoryService {
         Map<String, Product> inventory = new HashMap<>();
         try {
             logger.info("缓存未命中，从数据库加载库存...");
-            List<Product> products = ProductDAO.findAll();
+            List<Product> products = productDAO.findAll();
             for (Product product : products) {
                 inventory.put(product.name, product);
             }
@@ -105,7 +107,7 @@ public class InventoryService {
 
         try {
             boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
-                Map<Integer, Product> productsMap = ProductDAO.findByIdsWithConnection(conn, productUpdates.keySet());
+                Map<Integer, Product> productsMap = productDAO.findByIdsWithConnection(conn, productUpdates.keySet());
 
                 for (Map.Entry<Integer, Integer> entry : productUpdates.entrySet()) {
                     int productId = entry.getKey();
@@ -121,7 +123,7 @@ public class InventoryService {
                     }
 
                     product.quantity += quantityChange;
-                    if (!ProductDAO.updateWithVersionWithConnection(conn, product)) {
+                    if (!productDAO.updateWithVersionWithConnection(conn, product)) {
                         throw new SQLException("商品 " + product.name + " 库存更新失败，可能已被其他操作修改");
                     }
                 }
@@ -131,6 +133,16 @@ public class InventoryService {
             if (success) {
                 com.cashier.util.CacheManager.clearCache();
                 logger.info("批量更新库存成功，共更新 {} 个商品", productUpdates.size());
+                
+                // 广播库存变化事件
+                com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
+                    com.cashier.api.sync.SyncEventType.INVENTORY_CHANGED,
+                    Map.of(
+                        "count", productUpdates.size(),
+                        "timestamp", System.currentTimeMillis()
+                    )
+                );
+                
                 return productUpdates.size();
             }
             return 0;
@@ -164,7 +176,7 @@ public class InventoryService {
      */
     public static boolean checkStockAvailable(int productId, int requiredQuantity) {
         try {
-            Product product = ProductDAO.findById(productId);
+            Product product = productDAO.findById(productId);
             if (product == null) {
                 return false;
             }
@@ -182,11 +194,10 @@ public class InventoryService {
      */
     public static Product getLatestProduct(int productId) {
         try {
-            return ProductDAO.findById(productId);
+            return productDAO.findById(productId);
         } catch (SQLException e) {
             logger.error("获取商品信息失败", e);
             return null;
         }
     }
-
 }

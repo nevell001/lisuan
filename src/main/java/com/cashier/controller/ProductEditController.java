@@ -2,7 +2,8 @@ package com.cashier.controller;
 
 import com.cashier.dao.CategoryDAO;
 import com.cashier.i18n.I18nManager;
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
+import com.cashier.dao.ProductDAORefactored;
 import com.cashier.dao.SupplierDAO;
 import com.cashier.dao.UnitDAO;
 import com.cashier.model.Category;
@@ -22,10 +23,12 @@ import javafx.stage.Stage;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.HashMap;
 
 /**
  * 商品编辑控制器
  * 处理商品添加和编辑对话框的逻辑
+ * 已重构为使用重构版 DAO
  */
 public class ProductEditController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(ProductEditController.class);
@@ -87,7 +90,8 @@ public class ProductEditController {
     private Stage dialogStage;
     private Product product;
     private boolean okClicked = false;
-    private Map<String, Product> inventory;
+    private Map<String, Product> inventoryMap;
+    private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
 
     /**
      * 初始化方法
@@ -96,14 +100,14 @@ public class ProductEditController {
     private void initialize() {
         // 加载库存数据
         try {
-            var products = ProductDAO.findAll();
-            inventory = new java.util.HashMap<>();
+            List<Product> products = productDAO.findAll();
+            inventoryMap = new HashMap<>();
             for (Product p : products) {
-                inventory.put(p.name, p);
+                inventoryMap.put(p.name, p);
             }
         } catch (SQLException e) {
             logger.error("加载商品数据失败", e);
-            inventory = new java.util.HashMap<>();
+            inventoryMap = new HashMap<>();
         }
 
         // 加载分类数据
@@ -313,7 +317,7 @@ public class ProductEditController {
         String prefix = "P" + dateStr;
         int count = 0;
         try {
-            List<Product> allProducts = ProductDAO.findAll();
+            List<Product> allProducts = productDAO.findAll();
             for (Product p : allProducts) {
                 if (p.productCode != null && p.productCode.startsWith(prefix)) {
                     count++;
@@ -373,7 +377,7 @@ public class ProductEditController {
                                 : product.getPrice().multiply(new BigDecimal("0.7"));
             
                             // 检查商品名称是否已存在
-                            Product existingProduct = ProductDAO.findByName(product.name);
+                            Product existingProduct = productDAO.findByName(product.name);
                             if (existingProduct != null) {
                                 errorLabel.setText("商品名称已存在，请使用其他名称");
                                 logger.warn("商品名称已存在: {}", product.name);
@@ -381,7 +385,7 @@ public class ProductEditController {
                             }
                             
                             // 插入数据库
-                            boolean success = ProductDAO.insert(product);
+                            boolean success = productDAO.insert(product);
                             if (!success) {
                                 errorLabel.setText("添加商品失败，请重试");
                                 return;
@@ -411,7 +415,7 @@ public class ProductEditController {
                             }
                             
                             // 检查商品名称是否已存在（排除当前商品）
-                            Product existingProduct = ProductDAO.findByName(product.name);
+                            Product existingProduct = productDAO.findByName(product.name);
                             if (existingProduct != null && existingProduct.id != product.id) {
                                 errorLabel.setText("商品名称已存在，请使用其他名称");
                                 logger.warn("商品名称已存在: {}", product.name);
@@ -439,7 +443,7 @@ public class ProductEditController {
                             logger.info("准备更新商品到数据库: id={}, name={}, price={}", product.id, product.name, product.price);
                             
                             // 更新数据库
-                            boolean success = ProductDAO.update(product);
+                            boolean success = productDAO.update(product);
                             logger.info("数据库更新结果: {}", success);
                             
                             if (!success) {
@@ -495,7 +499,7 @@ public class ProductEditController {
             } else {
                 // 验证商品编号是否已存在
                 try {
-                    Product existingProduct = ProductDAO.findByProductCode(productCodeField.getText().trim());
+                    Product existingProduct = productDAO.findByProductCode(productCodeField.getText().trim());
                     if (existingProduct != null && (product == null || existingProduct.id != product.id)) {
                         errorMessage += "商品编号已存在，请使用其他编号！\n";
                     }
@@ -509,7 +513,7 @@ public class ProductEditController {
         // 验证商品名称
         if (nameField.getText().trim().isEmpty()) {
             errorMessage += "商品名称不能为空！\n";
-        } else if (product == null && inventory.containsKey(nameField.getText().trim())) {
+        } else if (product == null && inventoryMap.containsKey(nameField.getText().trim())) {
             errorMessage += "商品名称已存在！\n";
         }
 

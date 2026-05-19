@@ -1,12 +1,14 @@
 package com.cashier.service;
 
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
+import com.cashier.dao.ProductDAORefactored;
 import com.cashier.model.Product;
 import com.cashier.notification.NotificationManager;
 import com.cashier.notification.NotificationType;
 import com.cashier.util.LoggerFactoryUtil;
 import org.slf4j.Logger;
 
+import java.sql.SQLException;
 import java.util.List;
 import java.util.concurrent.*;
 
@@ -16,6 +18,7 @@ import java.util.concurrent.*;
  */
 public class InventoryAlertService {
     private static final Logger logger = LoggerFactoryUtil.getLogger(InventoryAlertService.class);
+    private static final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
     private static InventoryAlertService instance;
     
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
@@ -101,7 +104,7 @@ public class InventoryAlertService {
             logger.debug("开始检查库存预警...");
             
             // 获取所有商品
-            List<Product> products = ProductDAO.findAll();
+            List<Product> products = productDAO.findAll();
             
             if (products == null || products.isEmpty()) {
                 logger.debug("没有商品需要检查");
@@ -136,6 +139,8 @@ public class InventoryAlertService {
             
             logger.debug("库存预警检查完成，共发送 {} 条预警通知", alertCount);
             
+        } catch (SQLException e) {
+            logger.error("从数据库加载商品失败", e);
         } catch (Exception e) {
             logger.error("检查库存预警时发生错误", e);
         }

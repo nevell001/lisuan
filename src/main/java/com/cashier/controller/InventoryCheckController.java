@@ -1,7 +1,10 @@
 package com.cashier.controller;
 
 import com.cashier.i18n.I18nManager;
-import com.cashier.dao.*;
+import com.cashier.dao.DAOFactory;
+import com.cashier.dao.InventoryCheckDAO;
+import com.cashier.dao.InventoryCheckItemDAO;
+import com.cashier.dao.ProductDAORefactored;
 import com.cashier.model.*;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
@@ -39,6 +42,7 @@ import javafx.application.Platform;
 @SuppressWarnings("unchecked")
 public class InventoryCheckController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(InventoryCheckController.class);
+    private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
 
     @FXML
     private TableView<InventoryCheck> checkTable;
@@ -552,7 +556,7 @@ public class InventoryCheckController {
             });
 
             // 加载商品数据
-            List<Product> products = ProductDAO.findAll();
+            List<Product> products = productDAO.findAll();
             ObservableList<Product> productList = FXCollections.observableArrayList(products);
             productTable.setItems(productList);
 
@@ -868,7 +872,7 @@ public class InventoryCheckController {
                     List<InventoryCheckItem> items = InventoryCheckItemDAO.findByCheckId(selected.id);
                     for (InventoryCheckItem item : items) {
                         if (item.diffQuantity != 0) {
-                            ProductDAO.updateQuantity(item.productId, item.diffQuantity);
+                            productDAO.updateQuantity(item.productId, item.diffQuantity);
                         }
                     }
 

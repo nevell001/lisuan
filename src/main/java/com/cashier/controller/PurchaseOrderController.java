@@ -42,6 +42,7 @@ import javafx.util.converter.IntegerStringConverter;
 @SuppressWarnings("unchecked")
 public class PurchaseOrderController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(PurchaseOrderController.class);
+    private final com.cashier.dao.ProductDAORefactored productDAO = com.cashier.dao.DAOFactory.getInstance().getProductDAO();
 
     @FXML
     private TableView<PurchaseOrder> orderTable;
@@ -668,7 +669,7 @@ public class PurchaseOrderController {
             productTable.getColumns().addAll(nameCol, barcodeCol, costCol, stockCol);
             
             // 加载商品数据
-            List<Product> allProducts = ProductDAO.findAll();
+            List<Product> allProducts = productDAO.findAll();
             ObservableList<Product> productList = FXCollections.observableArrayList(allProducts);
             productTable.setItems(productList);
 

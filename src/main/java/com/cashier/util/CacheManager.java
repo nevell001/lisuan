@@ -212,7 +212,7 @@ public class CacheManager {
      */
     public static void warmupCache() {
         try {
-            java.util.List<Product> products = com.cashier.dao.ProductDAO.findAll();
+            java.util.List<Product> products = com.cashier.dao.DAOFactory.getInstance().getProductDAO().findAll();
             batchAddToCache(products);
             logger.info("缓存预热完成，共加载 {} 个商品", products.size());
         } catch (Exception e) {

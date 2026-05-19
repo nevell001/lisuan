@@ -6,6 +6,7 @@ import io.javalin.websocket.WsContext;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
@@ -227,12 +228,41 @@ public class SyncManager {
      * 处理同步请求
      */
     private void handleSyncRequest(WsContext ctx, SyncMessage msg) {
-        // TODO: 根据请求类型返回同步数据
+        String entity = (String) msg.data.get("entity");
         SyncMessage response = new SyncMessage();
         response.type = "SYNC_RESPONSE";
         response.timestamp = System.currentTimeMillis();
-        response.data = Map.of("status", "success", "message", "数据同步完成");
         
+        Map<String, Object> responseData = new java.util.HashMap<>();
+        responseData.put("entity", entity);
+        
+        try {
+            if ("PRODUCTS".equals(entity)) {
+                responseData.put("items", com.cashier.dao.DAOFactory.getInstance().getProductDAO().findAll());
+            } else if ("MEMBERS".equals(entity)) {
+                responseData.put("items", com.cashier.dao.MemberDAO.findAll());
+            } else if ("TRANSACTIONS".equals(entity)) {
+                // 返回最近的100条交易
+                List<com.cashier.model.Transaction> transactions = com.cashier.dao.TransactionDAO.findAll();
+                transactions.sort((a, b) -> b.timestamp.compareTo(a.timestamp));
+                responseData.put("items", transactions.subList(0, Math.min(transactions.size(), 100)));
+            } else {
+                responseData.put("status", "error");
+                responseData.put("message", "不支持的同步实体: " + entity);
+                response.data = responseData;
+                ctx.send(toJson(response));
+                return;
+            }
+            
+            responseData.put("status", "success");
+            responseData.put("count", ((java.util.List<?>) responseData.get("items")).size());
+        } catch (Exception e) {
+            logger.error("同步数据失败: {}", entity, e);
+            responseData.put("status", "error");
+            responseData.put("message", "同步失败: " + e.getMessage());
+        }
+        
+        response.data = responseData;
         ctx.send(toJson(response));
     }
     

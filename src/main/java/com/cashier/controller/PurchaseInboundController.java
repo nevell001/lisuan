@@ -39,6 +39,7 @@ import javafx.util.converter.IntegerStringConverter;
 @SuppressWarnings("unchecked")
 public class PurchaseInboundController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(PurchaseInboundController.class);
+    private final com.cashier.dao.ProductDAORefactored productDAO = com.cashier.dao.DAOFactory.getInstance().getProductDAO();
 
     @FXML
     private TableView<PurchaseOrder> orderTable;
@@ -375,7 +376,7 @@ public class PurchaseInboundController {
                             PurchaseOrderItemDAO.increaseInboundQuantity(wrapper.orderItem.id, qty);
 
                             // 更新商品库存
-                            ProductDAO.updateQuantity(wrapper.orderItem.productId, qty);
+                            productDAO.updateQuantity(wrapper.orderItem.productId, qty);
                         }
                     }
 

@@ -1,7 +1,12 @@
 package com.cashier.api.controller;
 
 import com.cashier.api.ApiServer;
-import com.cashier.dao.*;
+import com.cashier.dao.DAOFactory;
+import com.cashier.dao.MemberDAO;
+import com.cashier.dao.ProductDAORefactored;
+import com.cashier.dao.ReturnOrderDAO;
+import com.cashier.dao.ReturnOrderItemDAO;
+import com.cashier.dao.TransactionDAO;
 import com.cashier.model.*;
 import com.cashier.service.ReturnService;
 import com.cashier.util.DatabaseManager;
@@ -24,6 +29,7 @@ import java.util.*;
 public class TransactionApiController {
     private static final Logger logger = LoggerFactory.getLogger(TransactionApiController.class);
     private static final DateTimeFormatter ID_FORMATTER = DateTimeFormatter.ofPattern("yyyyMMddHHmmssSSS");
+    private static final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
     
     /**
      * 获取交易列表
@@ -113,6 +119,18 @@ public class TransactionApiController {
             logger.info("创建交易: {} - 金额: {} - 支付方式: {}", 
                 transactionId, transaction.finalAmount, transaction.paymentMethod);
             
+            // 广播交易成功事件
+            com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
+                com.cashier.api.sync.SyncEventType.TRANSACTION_CREATED,
+                Map.of(
+                    "transactionId", transactionId,
+                    "finalAmount", transaction.finalAmount.toString(),
+                    "paymentMethod", transaction.paymentMethod,
+                    "timestamp", transaction.timestamp,
+                    "itemCount", transaction.items != null ? transaction.items.size() : 0
+                )
+            );
+            
             ctx.status(HttpStatus.CREATED)
                .json(Map.of("success", true, "data", transaction, "transactionId", transactionId));
         } catch (Exception e) {
@@ -182,7 +200,7 @@ public class TransactionApiController {
                             returnItems.add(item);
                             
                             // 恢复库存
-                            ProductDAO.updateQuantityWithConnection(conn, product.id, product.quantity);
+                            productDAO.updateQuantityWithConnection(conn, product.id, product.quantity);
                         }
                         
                         if (!ReturnOrderItemDAO.batchInsertWithConnection(conn, returnItems)) {
@@ -217,6 +235,17 @@ public class TransactionApiController {
             
             if (success) {
                 logger.info("交易退款成功: {} - 金额: {}", transactionId, transaction.finalAmount);
+                
+                // 广播交易退款事件
+                com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
+                    com.cashier.api.sync.SyncEventType.TRANSACTION_REFUNDED,
+                    Map.of(
+                        "transactionId", transactionId,
+                        "refundAmount", transaction.finalAmount.toString(),
+                        "timestamp", LocalDateTime.now().format(DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"))
+                    )
+                );
+                
                 ctx.json(Map.of("success", true, "message", "退款成功", 
                     "transactionId", transactionId,
                     "refundAmount", transaction.finalAmount));

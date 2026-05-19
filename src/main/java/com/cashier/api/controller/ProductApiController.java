@@ -1,7 +1,8 @@
 package com.cashier.api.controller;
 
 import com.cashier.api.ApiServer;
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
+import com.cashier.dao.ProductDAORefactored;
 import com.cashier.model.Product;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
@@ -15,9 +16,11 @@ import java.util.Map;
 
 /**
  * 商品管理 REST API
+ * 已重构为使用重构版 DAO
  */
 public class ProductApiController {
     private static final Logger logger = LoggerFactory.getLogger(ProductApiController.class);
+    private static final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
     
     /**
      * 获取商品列表
@@ -30,11 +33,11 @@ public class ProductApiController {
             
             List<Product> products;
             if (keyword != null && !keyword.isEmpty()) {
-                products = ProductDAO.search(keyword);
+                products = productDAO.search(keyword);
             } else if (category != null && !category.isEmpty()) {
-                products = ProductDAO.findByCategory(category);
+                products = productDAO.findByCategory(category);
             } else {
-                products = ProductDAO.findAll();
+                products = productDAO.findAll();
             }
             
             Map<String, Object> result = new HashMap<>();
@@ -56,7 +59,7 @@ public class ProductApiController {
     public static void get(Context ctx) {
         try {
             int id = ctx.pathParamAsClass("id", Integer.class).get();
-            Product product = ProductDAO.findById(id);
+            Product product = productDAO.findById(id);
             
             if (product == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
@@ -95,7 +98,7 @@ public class ProductApiController {
             product.minStock = request.minStock != null ? request.minStock : 10;
             product.cost = request.cost != null ? request.cost : BigDecimal.ZERO;
             
-            ProductDAO.insert(product);
+            productDAO.insert(product);
             
             logger.info("创建商品: {} ({})", product.name, product.productCode);
             ctx.status(HttpStatus.CREATED)
@@ -116,7 +119,7 @@ public class ProductApiController {
             int id = ctx.pathParamAsClass("id", Integer.class).get();
             ProductRequest request = ctx.bodyAsClass(ProductRequest.class);
             
-            Product product = ProductDAO.findById(id);
+            Product product = productDAO.findById(id);
             if (product == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
                    .json(Map.of("success", false, "message", "商品不存在"));
@@ -137,7 +140,7 @@ public class ProductApiController {
             if (request.cost != null) product.cost = request.cost;
             if (request.productCode != null) product.productCode = request.productCode;
             
-            ProductDAO.update(product);
+            productDAO.update(product);
             
             logger.info("更新商品: {} ({})", product.name, product.id);
             ctx.json(Map.of("success", true, "data", product, "message", "商品更新成功"));
@@ -156,14 +159,14 @@ public class ProductApiController {
         try {
             int id = ctx.pathParamAsClass("id", Integer.class).get();
             
-            Product product = ProductDAO.findById(id);
+            Product product = productDAO.findById(id);
             if (product == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
                    .json(Map.of("success", false, "message", "商品不存在"));
                 return;
             }
             
-            ProductDAO.delete(id);
+            productDAO.delete(id);
             
             logger.info("删除商品: {} ({})", product.name, product.id);
             ctx.json(Map.of("success", true, "message", "商品删除成功"));
@@ -180,7 +183,7 @@ public class ProductApiController {
      */
     public static void lowStock(Context ctx) {
         try {
-            List<Product> products = ProductDAO.findLowStock();
+            List<Product> products = productDAO.findLowStock();
             ctx.json(Map.of("success", true, "data", products, "total", products.size()));
         } catch (Exception e) {
             logger.error("获取低库存商品失败", e);

@@ -1,7 +1,8 @@
 package com.cashier.controller;
 
 import com.cashier.i18n.I18nManager;
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
+import com.cashier.dao.ProductDAORefactored;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.model.Product;
 import com.cashier.model.Transaction;
@@ -149,6 +150,7 @@ public class InventoryReportController {
     private List<Product> allProducts;
     private List<Transaction> allTransactions;
     private Set<String> allCategories;
+    private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
 
     // 默认阈值
     private static final double DEFAULT_TURNOVER_THRESHOLD = 1.0;  // 周转率阈值
@@ -281,7 +283,7 @@ public class InventoryReportController {
      */
     private void loadData() {
         try {
-            allProducts = ProductDAO.findAll();
+            allProducts = productDAO.findAll();
             allTransactions = TransactionDAO.findAll();
             allCategories = new TreeSet<>();
 

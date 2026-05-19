@@ -1,7 +1,8 @@
 package com.cashier.util;
 
 import com.cashier.dao.CategoryDAO;
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
+import com.cashier.dao.ProductDAORefactored;
 import com.cashier.dao.UnitDAO;
 import com.cashier.model.Category;
 import com.cashier.model.Product;
@@ -29,6 +30,7 @@ import java.util.Map;
  */
 public class ProductDataImporter {
     private static final Logger logger = LoggerFactoryUtil.getLogger(ProductDataImporter.class);
+    private static final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
     
     // GitHub 商品条码库 URL
     private static final String GITHUB_BARCODE_URL = "https://raw.githubusercontent.com/EricLiuCN/barcode/master/";
@@ -728,7 +730,7 @@ public class ProductDataImporter {
             
             try {
                 // 检查条码是否已存在
-                Product existing = ProductDAO.findByBarcode(product.barcode);
+                Product existing = productDAO.findByBarcode(product.barcode);
                 
                 if (existing != null) {
                     // 已存在，跳过
@@ -736,7 +738,7 @@ public class ProductDataImporter {
                     logger.debug("跳过已存在的商品: {} (条码: {})", product.name, product.barcode);
                 } else {
                     // 不存在，插入
-                    boolean success = ProductDAO.insert(product);
+                    boolean success = productDAO.insert(product);
                     if (success) {
                         successCount++;
                         inserted++;

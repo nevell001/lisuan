@@ -43,8 +43,39 @@ public class PaymentService {
      * 加载支付配置
      */
     private static void loadConfig() {
-        // TODO: 从数据库或配置文件加载
-        // 默认配置
+        java.io.File configFile = new java.io.File("config/payment.properties");
+        if (configFile.exists()) {
+            try (java.io.FileInputStream fis = new java.io.FileInputStream(configFile)) {
+                java.util.Properties props = new java.util.Properties();
+                props.load(fis);
+                
+                config.wechatEnabled = Boolean.parseBoolean(props.getProperty("wechat.enabled", "true"));
+                config.wechatAppId = props.getProperty("wechat.app.id");
+                config.wechatMchId = props.getProperty("wechat.mch.id");
+                config.wechatApiKey = props.getProperty("wechat.api.key");
+                
+                config.alipayEnabled = Boolean.parseBoolean(props.getProperty("alipay.enabled", "true"));
+                config.alipayAppId = props.getProperty("alipay.app.id");
+                config.alipayPrivateKey = props.getProperty("alipay.private.key");
+                
+                config.orderExpireMinutes = Integer.parseInt(props.getProperty("order.expire.minutes", "15"));
+                config.notifyUrl = props.getProperty("notify.url", "http://localhost:8080/api/payment/notify");
+                
+                logger.info("支付配置加载成功");
+            } catch (Exception e) {
+                logger.warn("加载支付配置失败，使用默认值: {}", e.getMessage());
+                setDefaultConfig();
+            }
+        } else {
+            logger.info("支付配置文件不存在，使用默认值");
+            setDefaultConfig();
+        }
+    }
+    
+    /**
+     * 设置默认配置
+     */
+    private static void setDefaultConfig() {
         config.wechatEnabled = true;
         config.alipayEnabled = true;
         config.orderExpireMinutes = 15;

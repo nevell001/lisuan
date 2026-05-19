@@ -1,0 +1,13 @@
+# 支付配置
+wechat.enabled=true
+wechat.app.id=wxmock123456
+wechat.mch.id=1234567890
+wechat.api.key=YOUR_API_KEY_HERE
+
+alipay.enabled=true
+alipay.app.id=2021000123456789
+alipay.private.key=YOUR_PRIVATE_KEY_HERE
+
+# 通用配置
+order.expire.minutes=15
+notify.url=http://localhost:8080/api/payment/notify

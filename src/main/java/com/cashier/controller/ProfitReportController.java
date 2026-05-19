@@ -1,7 +1,8 @@
 package com.cashier.controller;
 
 import com.cashier.i18n.I18nManager;
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
+import com.cashier.dao.ProductDAORefactored;
 import com.cashier.dao.PurchaseInboundDAO;
 import com.cashier.dao.PurchaseInboundItemDAO;
 import com.cashier.dao.PurchaseOrderDAO;
@@ -148,6 +149,7 @@ public class ProfitReportController {
     private Map<String, Double> productActualCostMap; // 商品实际成本（加权平均）
     private Map<String, Product> productNameMap; // 商品名称到商品的映射
     private Set<String> allCategories;
+    private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
 
     /**
      * 初始化方法
@@ -267,7 +269,7 @@ public class ProfitReportController {
      */
     private void loadData() {
         try {
-            allProducts = ProductDAO.findAll();
+            allProducts = productDAO.findAll();
             allTransactions = TransactionDAO.findAll();
             allInboundRecords = PurchaseInboundDAO.findAll();
             allInboundItems = new ArrayList<>();
@@ -522,9 +524,17 @@ public class ProfitReportController {
 
         // 净利润计算（毛利润 - 运营成本）
         // 运营成本包括：人工、水电、租金等
-        // 注：如需自定义运营成本比例，可修改 DEFAULT_OPERATING_COST_RATIO 常量值
-        // 未来改进：可添加系统设置让用户配置此比例
-        double operatingCost = totalRevenue * DEFAULT_OPERATING_COST_RATIO;
+        double costRatio = DEFAULT_OPERATING_COST_RATIO;
+        try {
+            String ratioStr = com.cashier.dao.SystemSettingsDAO.getSetting("operatingCostRatio");
+            if (ratioStr != null) {
+                costRatio = Double.parseDouble(ratioStr);
+            }
+        } catch (Exception e) {
+            logger.warn("加载运营成本比例设置失败，使用默认值: {}", e.getMessage());
+        }
+        
+        double operatingCost = totalRevenue * costRatio;
         double netProfit = grossProfit - operatingCost;
 
         // 平均毛利率
