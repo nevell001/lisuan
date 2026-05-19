@@ -32,10 +32,42 @@ echo =========================================
 echo.
 
 REM ============================================
+REM   0. Check for Running Instance
+REM ============================================
+
+echo [0/9] Checking for running instances...
+echo ----------------------------------------
+
+REM Check for Java processes containing CashierSystem or cashier-system
+tasklist /FI "IMAGENAME eq java.exe" /V 2>NUL | findstr /I "CashierSystem\|cashier-system" >NUL 2>&1
+if not errorlevel 1 (
+    echo [WARNING] 收银系统已在运行中！
+    echo.
+    echo 检测到系统中已有收银系统进程正在运行。
+    echo.
+    echo 请检查以下位置：
+    echo   - 任务栏中的应用图标
+    echo   - 系统托盘中的收银系统图标
+    echo   - 任务管理器中的 java.exe 进程
+    echo.
+    echo 如果确定没有实例运行，请按 Y 继续；否则按 N 退出。
+    echo.
+    set /p "FORCE_START=强制启动? (Y/N): "
+    if /i not "!FORCE_START!"=="y" (
+        echo [INFO] 启动已取消
+        pause
+        exit /b 0
+    )
+    echo.
+)
+echo [OK] No conflicting instances found
+echo.
+
+REM ============================================
 REM   1. Check Java Installation
 REM ============================================
 
-echo [1/8] Checking Java installation...
+echo [1/9] Checking Java installation...
 echo ----------------------------------------
 
 where java >nul 2>&1
@@ -64,7 +96,7 @@ REM ============================================
 REM   2. Check Maven Installation
 REM ============================================
 
-echo [2/8] Checking Maven installation...
+echo [2/9] Checking Maven installation...
 echo ----------------------------------------
 
 where mvn >nul 2>&1
@@ -99,7 +131,7 @@ REM ============================================
 REM   3. Check Docker Installation
 REM ============================================
 
-echo [3/8] Checking Docker installation...
+echo [3/9] Checking Docker installation...
 echo ----------------------------------------
 
 where docker >nul 2>&1
@@ -165,7 +197,7 @@ REM ============================================
 REM   4. Check MySQL Container
 REM ============================================
 
-echo [4/8] Checking MySQL container...
+echo [4/9] Checking MySQL container...
 echo ----------------------------------------
 
 if %DOCKER_AVAILABLE%==1 (
@@ -198,7 +230,7 @@ REM ============================================
 REM   5. Check Application Files
 REM ============================================
 
-echo [5/8] Checking application files...
+echo [5/9] Checking application files...
 echo ----------------------------------------
 
 cd /d "%APP_DIR%"
@@ -232,7 +264,7 @@ REM ============================================
 REM   6. Start Docker MySQL Container (if needed)
 REM ============================================
 
-echo [6/8] Checking MySQL container...
+echo [6/9] Checking MySQL container...
 echo ----------------------------------------
 
 if %DOCKER_AVAILABLE%==1 (
@@ -275,7 +307,7 @@ REM ============================================
 REM   7. Build JVM Parameters
 REM ============================================
 
-echo [7/8] Building JVM parameters...
+echo [7/9] Building JVM parameters...
 echo ----------------------------------------
 
 set "JVM_OPTS=-Xms512m -Xmx1024m -Dfile.encoding=UTF-8"
@@ -311,7 +343,7 @@ REM ============================================
 REM   8. Start Application
 REM ============================================
 
-echo [8/8] Starting application...
+echo [9/9] Starting application...
 echo ----------------------------------------
 
 echo.
@@ -326,7 +358,17 @@ REM Start application - prioritize JAR for production, Maven for development
 if exist "%JAR_FILE%" (
     echo [INFO] Using packaged JAR: %JAR_FILE%
     echo.
-    java %JVM_OPTS% -jar "%JAR_FILE%"
+
+    REM Use javaw for console-free startup (Windows only)
+    REM Check if javaw is available
+    where javaw >nul 2>&1
+    if not errorlevel 1 (
+        echo [INFO] Using javaw for console-free startup...
+        javaw %JVM_OPTS% -jar "%JAR_FILE%"
+    ) else (
+        echo [INFO] javaw not found, using java...
+        start /B java %JVM_OPTS% -jar "%JAR_FILE%"
+    )
 ) else (
     echo [INFO] JAR not found, using Maven JavaFX plugin...
     echo.

@@ -97,6 +97,10 @@ public class MemberController extends BaseController<Member> {
 
         // 设置表格双击编辑监听（使用BaseController方法）
         setupTableDoubleClickListener(memberTable);
+
+        // 启用 UI 性能优化（固定行高启用更好的虚拟流）
+        memberTable.setFixedCellSize(40.0);
+        memberTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     }
 
     /**

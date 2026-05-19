@@ -261,6 +261,9 @@
                             <addClasspath>true</addClasspath>
                             <mainClass>com.cashier.CashierSystemFXApplication</mainClass>
                         </manifest>
+                        <manifestEntries>
+                            <JavaFX-Preloader-Class>com.cashier.SplashScreen</JavaFX-Preloader-Class>
+                        </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>
@@ -352,6 +355,34 @@
                     <systemPropertyVariables>
                         <TEST_MODE>true</TEST_MODE>
                     </systemPropertyVariables>
+                </configuration>
+            </plugin>
+
+            <!-- jpackage 插件 - 创建原生安装包 -->
+            <plugin>
+                <groupId>org.panteleyev</groupId>
+                <artifactId>jpackage-maven-plugin</artifactId>
+                <version>1.6.0</version>
+                <configuration>
+                    <name>收银系统</name>
+                    <appVersion>${project.version}</appVersion>
+                    <vendor>CashierSystem</vendor>
+                    <destination>target/dist</destination>
+                    <input>target</input>
+                    <mainJar>cashier-system-fx-${project.version}-jar-with-dependencies.jar</mainJar>
+                    <mainClass>com.cashier.CashierSystemFXApplication</mainClass>
+                    <javaOptions>
+                        <option>-Dfile.encoding=UTF-8</option>
+                        <option>-Xms512m</option>
+                        <option>-Xmx1024m</option>
+                    </javaOptions>
+                    <winMenu>true</winMenu>
+                    <winMenuGroup>收银系统</winMenuGroup>
+                    <winShortcut>true</winShortcut>
+                    <winDirChooser>true</winDirChooser>
+                    <winPerUserInstall>false</winPerUserInstall>
+                    <type>EXE</type>
+                    <icon>src/main/resources/images/logos/app-icon.png</icon>
                 </configuration>
             </plugin>
         </plugins>

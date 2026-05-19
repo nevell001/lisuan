@@ -43,9 +43,9 @@ public class ReturnService {
             if (success) {
                 logger.info("退货订单创建成功: {}", returnOrder.returnOrderId);
                 
-                // 广播退货单创建事件（复用发票创建事件或使用通用设置变更）
+                // 广播退货单创建事件
                 com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
-                    com.cashier.api.sync.SyncEventType.fromName("RETURN_ORDER_CREATED"), 
+                    com.cashier.api.sync.SyncEventType.RETURN_ORDER_CREATED,
                     java.util.Map.of(
                         "returnOrderId", returnOrder.returnOrderId,
                         "totalAmount", returnOrder.totalAmount.toString()

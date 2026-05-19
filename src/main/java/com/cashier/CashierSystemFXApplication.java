@@ -11,6 +11,7 @@ import com.cashier.util.FXMLUtils;
 import com.cashier.util.FXUtils;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.application.Application;
+import javafx.application.Platform;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -22,6 +23,7 @@ import javafx.stage.Stage;
 
 import java.io.IOException;
 import java.net.URL;
+import java.util.concurrent.CompletableFuture;
 import org.slf4j.Logger;
 
 /**
@@ -40,36 +42,127 @@ public class CashierSystemFXApplication extends Application {
     private Stage primaryStage;
     private User currentUser;
 
+    // 单实例控制
+    private static final String APP_LOCK_FILE = System.getProperty("java.io.tmpdir") + java.io.File.separator + "cashier-system.lock";
+    private static java.nio.channels.FileLock fileLock;
+    private static java.nio.channels.FileChannel channel;
+
+    @Override
+    public void init() throws Exception {
+        notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.1));
+
+        // 单实例检查 - 防止应用多次启动导致数据冲突
+        java.io.File lockFile = new java.io.File(APP_LOCK_FILE);
+        try {
+            channel = new java.io.RandomAccessFile(lockFile, "rw").getChannel();
+            fileLock = channel.tryLock();
+        } catch (java.io.IOException e) {
+            logger.error("无法获取文件锁", e);
+            throw e;
+        }
+
+        if (fileLock == null) {
+            // 已有实例运行
+            Platform.runLater(() -> {
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setTitle(com.cashier.i18n.I18nManager.getInstance().get("app.single_instance.title"));
+                alert.setHeaderText(null);
+                alert.setContentText(com.cashier.i18n.I18nManager.getInstance().get("app.single_instance.message"));
+                alert.showAndWait();
+                Platform.exit();
+                System.exit(0);
+            });
+            throw new Exception("Application already running");
+        }
+
+        notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.2));
+        logger.info("应用初始化完成，已获取单实例锁");
+    }
+
     @Override
     public void start(Stage primaryStage) throws Exception {
         this.primaryStage = primaryStage;
         instance = this;
 
-        // 初始化数据管理器
-        DataService.initialize();
+        notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.3));
 
-        // 初始化缓存管理器
-        com.cashier.util.CacheManager.initialize();
+        // 立即设置应用图标（同步）
+        setupApplicationIcon();
 
-        // 预热缓存
-        com.cashier.util.CacheManager.warmupCache();
-
-        // 加载语言偏好
+        // 加载语言偏好（同步，轻量级）
         String savedLanguage = DataService.loadLanguagePreference();
         com.cashier.i18n.I18nManager.getInstance().setLocale(savedLanguage);
         logger.info("应用启动 - 已加载语言偏好: {}, I18nManager 当前语言: {}", savedLanguage, com.cashier.i18n.I18nManager.getInstance().getCurrentLanguageTag());
 
-        // 设置应用图标
-        setupApplicationIcon();
+        notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.5));
 
-        // 加载登录界面
+        // 加载登录界面（同步）
         loadLoginScene();
 
-        // 配置主窗口
+        // 配置主窗口（同步）
         configurePrimaryStage();
 
-        // 显示窗口
+        notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.7));
+
+        // 立即显示窗口 - 不等待后台初始化
         primaryStage.show();
+
+        notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.9));
+
+        // 异步初始化后台服务 - 启动后立即执行
+        CompletableFuture.runAsync(() -> {
+            try {
+                logger.debug("开始异步初始化后台服务...");
+                long startTime = System.currentTimeMillis();
+
+                // 初始化数据管理器（轻量级）
+                DataService.initialize();
+
+                // 初始化缓存管理器
+                com.cashier.util.CacheManager.initialize();
+
+                // 预热缓存（可能耗时较长）
+                com.cashier.util.CacheManager.warmupCache();
+
+                // 启动完成
+                notifyPreloader(new javafx.application.Preloader.StateChangeNotification(
+                    javafx.application.Preloader.StateChangeNotification.Type.BEFORE_START));
+
+                long elapsed = System.currentTimeMillis() - startTime;
+                logger.info("后台服务初始化完成，耗时: {}ms", elapsed);
+            } catch (Exception e) {
+                logger.error("后台服务初始化失败", e);
+            }
+        });
+
+        // 延迟启动非关键后台服务（库存预警、备份、API）
+        // 这些服务在用户登录后才会真正工作，延迟启动不影响用户体验
+        java.util.Timer timer = new java.util.Timer(true); // 守护线程
+        timer.schedule(new java.util.TimerTask() {
+            @Override
+            public void run() {
+                logger.debug("延迟启动非关键后台服务...");
+            }
+        }, 3000); // 3秒后启动
+    }
+
+    @Override
+    public void stop() {
+        // 释放单实例锁
+        try {
+            if (fileLock != null && fileLock.isValid()) {
+                fileLock.release();
+                logger.info("单实例锁已释放");
+            }
+            if (channel != null && channel.isOpen()) {
+                channel.close();
+            }
+        } catch (java.io.IOException e) {
+            logger.error("释放单实例锁时发生错误", e);
+        }
+
+        // 清理资源
+        logger.info("应用程序已停止");
     }
 
     /**

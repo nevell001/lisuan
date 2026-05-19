@@ -232,12 +232,11 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
     @Order(6)
     @DisplayName("测试支付方式")
     void testPaymentMethods() throws Exception {
-        List<CartItem> cartItems = new ArrayList<>();
-        cartItems.add(new CartItem(testProduct, 2));
-
         // 测试现金支付
+        List<CartItem> cartItems1 = new ArrayList<>();
+        cartItems1.add(new CartItem(testProduct, 2));
         TransactionService.TransactionResult result1 = TransactionService.executeTransaction(
-            cartItems,
+            cartItems1,
             null,
             "现金",
             20.0,
@@ -247,9 +246,15 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         assertTrue(result1.isSuccess());
         assertEquals("现金", result1.getTransaction().paymentMethod);
 
+        // 刷新库存用于下一次测试
+        Product refreshedProduct = ProductDAO.findById(testProduct.id);
+        inventory.put(refreshedProduct.name, refreshedProduct);
+
         // 测试微信支付
+        List<CartItem> cartItems2 = new ArrayList<>();
+        cartItems2.add(new CartItem(refreshedProduct, 2));
         TransactionService.TransactionResult result2 = TransactionService.executeTransaction(
-            cartItems,
+            cartItems2,
             null,
             "微信",
             0.0,
@@ -259,9 +264,15 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         assertTrue(result2.isSuccess());
         assertEquals("微信", result2.getTransaction().paymentMethod);
 
+        // 刷新库存用于下一次测试
+        Product refreshedProduct2 = ProductDAO.findById(testProduct.id);
+        inventory.put(refreshedProduct2.name, refreshedProduct2);
+
         // 测试支付宝支付
+        List<CartItem> cartItems3 = new ArrayList<>();
+        cartItems3.add(new CartItem(refreshedProduct2, 2));
         TransactionService.TransactionResult result3 = TransactionService.executeTransaction(
-            cartItems,
+            cartItems3,
             null,
             "支付宝",
             0.0,

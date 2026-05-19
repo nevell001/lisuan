@@ -1,6 +1,5 @@
 package com.cashier.api.sync;
 
-import com.cashier.dao.ProductDAO;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.dao.MemberDAO;
 import com.cashier.model.Product;

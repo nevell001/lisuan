@@ -35,6 +35,12 @@ public enum SyncEventType {
     SYNC_REQUEST,             // 同步请求
     SYNC_RESPONSE,            // 同步响应
     
+    // 退货事件
+    RETURN_ORDER_CREATED,     // 退货单创建
+    RETURN_ORDER_APPROVED,    // 退货单审批
+    RETURN_ORDER_REJECTED,    // 退货单拒绝
+    RETURN_ORDER_COMPLETED,   // 退货单完成
+
     // 发票事件
     INVOICE_CREATED,          // 发票创建
     INVOICE_PRINTED,          // 发票打印

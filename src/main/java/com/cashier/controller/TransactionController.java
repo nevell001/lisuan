@@ -132,6 +132,10 @@ public class TransactionController {
             });
             return row;
         });
+
+        // 启用 UI 性能优化（固定行高启用更好的虚拟流）
+        transactionTable.setFixedCellSize(40.0);
+        transactionTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     }
 
     /**

@@ -32,6 +32,12 @@ public class DatabaseManager {
     private static String dbUsername;
     private static String dbPassword;
     private static int poolSize = 10;
+    private static long connectionTimeout = 15000;
+    private static long idleTimeout = 600000;
+    private static long maxLifetime = 1800000;
+    private static long leakDetectionThreshold = 0;  // 0 表示禁用
+    private static String connectionTestQuery = "SELECT 1";
+    private static long validationTimeout = 3000;
 
     static {
         // 检查是否在测试环境中运行
@@ -53,10 +59,19 @@ public class DatabaseManager {
 
                 // 连接池配置
                 config.setMaximumPoolSize(poolSize);
-                config.setMinimumIdle(2);
-                config.setConnectionTimeout(30000); // 30秒超时
-                config.setIdleTimeout(600000); // 10分钟空闲超时
-                config.setMaxLifetime(1800000); // 30分钟最大生命周期
+                config.setMinimumIdle(Math.max(2, poolSize / 4));
+                config.setConnectionTimeout(connectionTimeout);
+                config.setIdleTimeout(idleTimeout);
+                config.setMaxLifetime(maxLifetime);
+
+                // 连接泄漏检测
+                if (leakDetectionThreshold > 0) {
+                    config.setLeakDetectionThreshold(leakDetectionThreshold);
+                }
+
+                // 连接验证配置
+                config.setConnectionTestQuery(connectionTestQuery);
+                config.setValidationTimeout(validationTimeout);
 
                 // MySQL 特定配置
                 config.addDataSourceProperty("cachePrepStmts", "true");
@@ -150,6 +165,38 @@ public class DatabaseManager {
             poolSize = Integer.parseInt(props.getProperty("db.pool.size", "10"));
         } catch (NumberFormatException e) {
             poolSize = 10;
+        }
+
+        try {
+            connectionTimeout = Long.parseLong(props.getProperty("db.connection.timeout", "15000"));
+        } catch (NumberFormatException e) {
+            connectionTimeout = 15000;
+        }
+
+        try {
+            idleTimeout = Long.parseLong(props.getProperty("db.idle.timeout", "600000"));
+        } catch (NumberFormatException e) {
+            idleTimeout = 600000;
+        }
+
+        try {
+            maxLifetime = Long.parseLong(props.getProperty("db.max.lifetime", "1800000"));
+        } catch (NumberFormatException e) {
+            maxLifetime = 1800000;
+        }
+
+        try {
+            leakDetectionThreshold = Long.parseLong(props.getProperty("db.connection.leakDetectionThreshold", "0"));
+        } catch (NumberFormatException e) {
+            leakDetectionThreshold = 0;
+        }
+
+        connectionTestQuery = props.getProperty("db.connectionTestQuery", "SELECT 1");
+
+        try {
+            validationTimeout = Long.parseLong(props.getProperty("db.validationTimeout", "3000"));
+        } catch (NumberFormatException e) {
+            validationTimeout = 3000;
         }
     }
 

@@ -130,6 +130,10 @@ public class InventoryController extends BaseController<Product> {
 
         // 设置表格双击编辑监听
         setupTableDoubleClickListener(inventoryTable);
+
+        // 启用 UI 性能优化（固定行高启用更好的虚拟流）
+        inventoryTable.setFixedCellSize(40.0);
+        inventoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
     }
 
     /**
