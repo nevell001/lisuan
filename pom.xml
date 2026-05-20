@@ -313,38 +313,6 @@
                 </executions>
             </plugin>
 
-            <!-- jpackage - 原生安装包打包工具 -->
-            <plugin>
-                <groupId>org.panteleyev</groupId>
-                <artifactId>jpackage-maven-plugin</artifactId>
-                <version>1.6.0</version>
-                <configuration>
-                    <name>CashierSystem</name>
-                    <appVersion>${project.version}</appVersion>
-                    <vendor>Cashier System</vendor>
-                    <destination>target/dist</destination>
-                    <input>target</input>
-                    <mainClass>com.cashier.CashierSystemFXApplication</mainClass>
-                    <mainJar>cashier-system-fx-${project.version}-jar-with-dependencies.jar</mainJar>
-                    <!-- Windows 特定配置 -->
-                    <winMenu>true</winMenu>
-                    <winDirChooser>true</winDirChooser>
-                    <winShortcut>true</winShortcut>
-                    <winMenuGroup>CashierSystem</winMenuGroup>
-                    <!-- Linux 特定配置 -->
-                    <linuxShortcut>true</linuxShortcut>
-                    <linuxMenuGroup>Office</linuxMenuGroup>
-                    <!-- 应用图标 -->
-                    <icon>src/main/resources/images/logos/app-icon.png</icon>
-                    <!-- JVM 参数 -->
-                    <javaOptions>
-                        <option>-Dfile.encoding=UTF-8</option>
-                        <option>-Xms512m</option>
-                        <option>-Xmx1024m</option>
-                    </javaOptions>
-                </configuration>
-            </plugin>
-
             <!-- Maven Surefire 插件 - 运行测试 -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
@@ -364,9 +332,10 @@
                 <artifactId>jpackage-maven-plugin</artifactId>
                 <version>1.6.0</version>
                 <configuration>
-                    <name>收银系统</name>
+                    <name>CashierSystem</name>
                     <appVersion>${project.version}</appVersion>
-                    <vendor>CashierSystem</vendor>
+                    <vendor>Cashier System</vendor>
+                    <description>收银系统 - 库存管理、会员管理、交易管理</description>
                     <destination>target/dist</destination>
                     <input>target</input>
                     <mainJar>cashier-system-fx-${project.version}-jar-with-dependencies.jar</mainJar>
@@ -376,12 +345,17 @@
                         <option>-Xms512m</option>
                         <option>-Xmx1024m</option>
                     </javaOptions>
+                    <!-- Windows -->
                     <winMenu>true</winMenu>
-                    <winMenuGroup>收银系统</winMenuGroup>
+                    <winMenuGroup>Cashier System</winMenuGroup>
                     <winShortcut>true</winShortcut>
                     <winDirChooser>true</winDirChooser>
                     <winPerUserInstall>false</winPerUserInstall>
                     <type>EXE</type>
+                    <!-- Linux -->
+                    <linuxShortcut>true</linuxShortcut>
+                    <linuxMenuGroup>Office</linuxMenuGroup>
+                    <!-- 图标 -->
                     <icon>src/main/resources/images/logos/app-icon.png</icon>
                 </configuration>
             </plugin>

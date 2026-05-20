@@ -19,6 +19,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
  * REST API 服务器
@@ -35,6 +36,11 @@ public class ApiServer {
     // Token 存储
     private final ConcurrentHashMap<String, TokenInfo> tokens = new ConcurrentHashMap<>();
     private static final long TOKEN_EXPIRE_MS = 24 * 60 * 60 * 1000; // 24小时
+
+    // 速率限制：每个IP每分钟最多60次请求
+    private final ConcurrentHashMap<String, RateLimitEntry> rateLimitMap = new ConcurrentHashMap<>();
+    private static final int RATE_LIMIT_PER_MINUTE = 60;
+    private static final long RATE_LIMIT_WINDOW_MS = 60_000;
     
     private ApiServer() {}
     
@@ -75,7 +81,18 @@ public class ApiServer {
                 logger.debug("{} {} - {}ms", ctx.method(), ctx.path(), ms);
             });
         });
-        
+
+        // 安全响应头
+        app.before(ctx -> {
+            ctx.header("X-Content-Type-Options", "nosniff");
+            ctx.header("X-Frame-Options", "DENY");
+            ctx.header("X-XSS-Protection", "1; mode=block");
+            ctx.header("Referrer-Policy", "strict-origin-when-cross-origin");
+        });
+
+        // 速率限制
+        app.before(this::checkRateLimit);
+
         // 注册路由
         registerRoutes();
         
@@ -304,10 +321,49 @@ public class ApiServer {
     private static class TokenInfo {
         int userId;
         long expireTime;
-        
+
         TokenInfo(int userId, long expireTime) {
             this.userId = userId;
             this.expireTime = expireTime;
+        }
+    }
+
+    /**
+     * 速率限制条目
+     */
+    private static class RateLimitEntry {
+        final AtomicInteger count = new AtomicInteger(0);
+        volatile long windowStart;
+
+        RateLimitEntry() {
+            this.windowStart = System.currentTimeMillis();
+        }
+    }
+
+    /**
+     * 检查速率限制
+     */
+    private void checkRateLimit(Context ctx) {
+        String clientIp = ctx.ip();
+        long now = System.currentTimeMillis();
+
+        RateLimitEntry entry = rateLimitMap.computeIfAbsent(clientIp, k -> new RateLimitEntry());
+
+        synchronized (entry) {
+            if (now - entry.windowStart > RATE_LIMIT_WINDOW_MS) {
+                entry.windowStart = now;
+                entry.count.set(0);
+            }
+
+            int currentCount = entry.count.incrementAndGet();
+            if (currentCount > RATE_LIMIT_PER_MINUTE) {
+                ctx.status(HttpStatus.TOO_MANY_REQUESTS)
+                   .json(Map.of("success", false, "message", "请求过于频繁，请稍后再试"));
+                return;
+            }
+
+            ctx.header("X-RateLimit-Limit", String.valueOf(RATE_LIMIT_PER_MINUTE));
+            ctx.header("X-RateLimit-Remaining", String.valueOf(Math.max(0, RATE_LIMIT_PER_MINUTE - currentCount)));
         }
     }
 }

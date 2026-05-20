@@ -7,9 +7,13 @@ import java.sql.*;
 import java.util.*;
 
 /**
- * 商品数据访问对象
+ * 商品数据访问对象（旧版，静态方法）
  * 负责商品相关的数据库操作
+ *
+ * @deprecated 已被 {@link ProductDAORefactored} 替代，新代码请使用 DAOFactory.getInstance().getProductDAO()
+ * 旧版仅保留用于测试兼容，请逐步迁移至 ProductDAORefactored
  */
+@Deprecated
 public class ProductDAO {
 
     /**

@@ -59,7 +59,7 @@ public class PaymentService {
                 config.alipayPrivateKey = props.getProperty("alipay.private.key");
                 
                 config.orderExpireMinutes = Integer.parseInt(props.getProperty("order.expire.minutes", "15"));
-                config.notifyUrl = props.getProperty("notify.url", "http://localhost:8080/api/payment/notify");
+                config.notifyUrl = props.getProperty("notify.url", "https://localhost:8080/api/payment/notify");
                 
                 logger.info("支付配置加载成功");
             } catch (Exception e) {
@@ -79,7 +79,7 @@ public class PaymentService {
         config.wechatEnabled = true;
         config.alipayEnabled = true;
         config.orderExpireMinutes = 15;
-        config.notifyUrl = "http://localhost:8080/api/payment/notify";
+        config.notifyUrl = "https://localhost:8080/api/payment/notify";
     }
     
     /**

@@ -12,11 +12,22 @@ echo   Cashier System Windows Package Tool
 echo ========================================
 echo.
 
-set APP_VERSION=v2.5.0
+set APP_VERSION=v2.5.3
 set APP_NAME=Cashier System
-set VENDOR=Nevell
+set VENDOR=Cashier System
 set MAIN_CLASS=com.cashier.CashierSystemFXApplication
-set JAR_FILE=target\cashier-system-fx-%APP_VERSION%.jar
+
+REM Read version from pom.xml automatically
+for /f "tokens=2 delims=<>" %%a in ('findstr /R "<version>" pom.xml ^| findstr /V "javafx\|maven\|java\|mysql\|hikaricp\|poi\|pdfbox\|controlsfx\|fontawesomefx\|junit\|testfx\|h2\|bcrypt\|logback\|jackson\|javalin\|slf4j\|plugin"') do (
+    set "APP_VERSION=%%a"
+    goto :version_found
+)
+:version_found
+
+REM Strip leading 'v' if present
+set "APP_VERSION_NUM=%APP_VERSION:v=%"
+
+set "JAR_FILE=target\cashier-system-fx-%APP_VERSION_NUM%-jar-with-dependencies.jar"
 
 REM Check Java environment
 echo [1/6] Checking Java environment...
@@ -90,12 +101,19 @@ echo.
 REM Check application icon
 echo [4/6] Checking application icon...
 set ICON_PATH=
+REM Windows MSI/EXE 优先使用 .ico（多尺寸），回退到 .png
 if exist "src\main\resources\images\app-icon.ico" (
-    set ICON_PATH=--icon src\main\resources\images\app-icon.ico
-    echo [Info] Using custom icon
+    set "ICON_PATH=--icon src\main\resources\images\app-icon.ico"
+    echo [Info] Using .ico icon
+) else if exist "src\main\resources\images\logos\app-icon.ico" (
+    set "ICON_PATH=--icon src\main\resources\images\logos\app-icon.ico"
+    echo [Info] Using .ico icon
+) else if exist "src\main\resources\images\logos\app-icon.png" (
+    set "ICON_PATH=--icon src\main\resources\images\logos\app-icon.png"
+    echo [Info] Using .png icon (recommend .ico for better Windows support)
 ) else (
-    echo [Warning] Application icon not found (src\main\resources\images\app-icon.ico)
-    echo [Tip] Default icon will be used
+    echo [Warning] No application icon found
+    echo [Tip] Place app-icon.ico in src\main\resources\images\logos\ for best results
 )
 echo.
 
@@ -107,10 +125,10 @@ echo.
 jpackage^
     --type msi^
     --name "%APP_NAME%"^
-    --app-version %APP_VERSION:~1%^
+    --app-version %APP_VERSION_NUM%^
     --vendor "%VENDOR%"^
     --description "Complete cashier system with inventory management, member management, and transaction features"^
-    --main-jar cashier-system-fx-%APP_VERSION%.jar^
+    --main-jar cashier-system-fx-%APP_VERSION_NUM%-jar-with-dependencies.jar^
     --main-class %MAIN_CLASS%^
     --input temp\package^
     --dest dist^
@@ -136,7 +154,7 @@ echo.
 
 REM Create portable ZIP
 echo [6/6] Creating portable ZIP...
-set PORTABLE_DIR=temp\portable\%APP_NAME%-%APP_VERSION%
+set PORTABLE_DIR=temp\portable\%APP_NAME%-%APP_VERSION_NUM%
 if exist "%PORTABLE_DIR%" rmdir /S /Q "%PORTABLE_DIR%"
 mkdir "%PORTABLE_DIR%"
 mkdir "%PORTABLE_DIR%\config"
@@ -147,6 +165,8 @@ mkdir "%PORTABLE_DIR%\docker"
 REM Copy files
 copy "%JAR_FILE%" "%PORTABLE_DIR%\" >nul
 copy "start.bat" "%PORTABLE_DIR%\" >nul
+copy "launcher.vbs" "%PORTABLE_DIR%\" >nul
+copy "create-shortcut.bat" "%PORTABLE_DIR%\" >nul
 copy "README.md" "%PORTABLE_DIR%\" >nul
 
 REM Copy dependencies
@@ -163,8 +183,8 @@ xcopy /E /I /Y "docker\mysql-init" "%PORTABLE_DIR%\docker\mysql-init" >nul
 copy "docker-compose.yml" "%PORTABLE_DIR%\" >nul
 
 REM Package ZIP
-if exist "dist\%APP_NAME%-%APP_VERSION%-portable.zip" del "dist\%APP_NAME%-%APP_VERSION%-portable.zip"
-powershell -Command "Compress-Archive -Path '%PORTABLE_DIR%' -DestinationPath 'dist\%APP_NAME%-%APP_VERSION%-portable.zip'"
+if exist "dist\%APP_NAME%-%APP_VERSION_NUM%-portable.zip" del "dist\%APP_NAME%-%APP_VERSION_NUM%-portable.zip"
+powershell -Command "Compress-Archive -Path '%PORTABLE_DIR%' -DestinationPath 'dist\%APP_NAME%-%APP_VERSION_NUM%-portable.zip'"
 
 echo [Done] Portable ZIP created
 echo.
@@ -175,7 +195,7 @@ echo ========================================
 echo.
 echo Output files:
 echo   Installer: dist\%APP_NAME%-*.msi
-echo   Portable: dist\%APP_NAME%-%APP_VERSION%-portable.zip
+echo   Portable: dist\%APP_NAME%-%APP_VERSION_NUM%-portable.zip
 echo.
 echo Installer instructions:
 echo   1. Double-click .msi installer

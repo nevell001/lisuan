@@ -3,12 +3,12 @@ package com.cashier.api.controller;
 import com.cashier.api.ApiServer;
 import com.cashier.dao.UserDAO;
 import com.cashier.model.User;
+import com.cashier.util.PasswordUtil;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import java.util.HashMap;
 import java.util.Map;
 
 /**
@@ -31,9 +31,9 @@ public class AuthController {
                 return;
             }
             
-            User user = UserDAO.authenticate(request.username, request.password);
-            
-            if (user == null) {
+            User user = UserDAO.findByUsername(request.username);
+
+            if (user == null || !PasswordUtil.verifyPassword(request.password, user.password)) {
                 ctx.status(HttpStatus.UNAUTHORIZED)
                    .json(Map.of("success", false, "message", "用户名或密码错误"));
                 return;
