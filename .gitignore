@@ -3,6 +3,7 @@
 out/
 build/
 target/
+dist/
 
 # IDE 配置
 .idea/

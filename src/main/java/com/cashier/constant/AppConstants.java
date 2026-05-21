@@ -18,7 +18,7 @@ public class AppConstants {
      * 应用版本号
      * 注意：发布新版本时需要更新此值
      */
-    public static final String APP_VERSION = "2.5.3";
+    public static final String APP_VERSION = "2.5.4";
 
     /**
      * 应用标题

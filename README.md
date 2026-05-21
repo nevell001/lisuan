@@ -2,7 +2,7 @@
 
 一个功能完整的收银系统，使用 JavaFX 17 开发，提供现代化的图形化界面。
 
-**当前版本**: v2.5.3 | **最新更新**: 2026-05-19
+**当前版本**: v2.5.4 | **最新更新**: 2026-05-21
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.12-blue)
@@ -74,13 +74,33 @@
 详细规划见：[docs/ROADMAP.md](docs/ROADMAP.md)
 
 ## 🚀 快速开始
+
 ### 环境要求
 - **JDK**: Java 17 或更高版本
-- **Maven**: 3.8 或更高版本
+- **Maven**: 3.8 或更高版本（开发需要）
 - **MySQL**: 8.4 或更高版本
 - **操作系统**: Windows、macOS、Linux
 
-### 安装步骤
+### Windows 用户（推荐）
+
+1. **获取分发包**
+   - 下载 `CashierSystem-v{version}.zip`
+   - 解压到任意目录
+
+2. **配置数据库**
+   - 双击运行 `Database Config.bat`
+   - 选择数据库类型：
+     - **Local MySQL** - 本地安装的 MySQL
+     - **Docker MySQL** - Docker 容器（推荐）
+     - **Remote MySQL** - 远程 MySQL 服务器
+   - 点击 "Test Connection" 测试连接
+   - 点击 "Save & Start" 保存配置
+
+3. **启动应用**
+   - 配置完成后选择 "Yes" 自动启动
+   - 或双击 `Quick Start.bat` 手动启动
+
+### 开发者安装
 
 1. **克隆仓库**
 ```bash
@@ -93,7 +113,7 @@ cd hello
 **使用 Docker Compose（推荐）**：
 ```bash
 # 启动 MySQL 数据库
-docker-compose up -d mysql
+docker compose up -d mysql
 ```
 
 **使用本地 MySQL**：
@@ -115,14 +135,26 @@ mvn javafx:run
 **打包后运行**：
 ```bash
 mvn clean package
-java -jar target/cashier-system-fx-2.5.3-jar-with-dependencies.jar
+java -jar target/cashier-system-fx-2.5.4-jar-with-dependencies.jar
 ```
 
+### 创建分发包
 
+```bash
+# Windows
+package.bat
+
+# 手动打包
+mvn clean package -DskipTests
+mkdir -p dist/CashierSystem
+cp target/cashier-system-fx-*-jar-with-dependencies.jar dist/CashierSystem/
+cp start.bat dist/CashierSystem/
+cp create-shortcut.bat dist/CashierSystem/
+```
 
 ### 默认账户
 - **用户名**: `admin`
-- **密码**: `admin123`
+- **初始密码**: 首次启动时自动生成（查看 `logs/app.log` 或控制台输出）
 - **角色**: 管理员
 
 ## 📖 主要功能
@@ -146,26 +178,24 @@ java -jar target/cashier-system-fx-2.5.3-jar-with-dependencies.jar
 
 ## 🎯 最近更新
 
+### v2.5.4 (2026-05-21) - Windows 分发包优化 📦
+- 🖥️ **GUI 数据库配置工具** - 图形化数据库配置界面
+  - 下拉菜单选择数据库类型（Local/Docker/Remote MySQL）
+  - 实时连接测试
+  - 自动创建数据库
+  - 配置保存后可直接启动应用
+- 📦 **简化分发流程** - 一键打包 Windows 分发包
+  - `package.bat` 创建完整分发包
+  - 包含 GUI 配置工具和启动脚本
+  - 自动生成 ZIP 压缩包
+- 🗂️ **清理冗余文件** - 移除 18+ 个过时的批处理脚本
+- 📝 **更新文档** - 重写 INSTALLER.md 以反映新工作流程
+
 ### v2.5.3 (2026-05-19) - Windows 平台优化 🪟
 - 🔒 **单实例限制** - 使用 FileLock 机制防止应用多次启动
-  - 启动时检测已有实例并友好提示
-  - 自动释放锁资源，避免死锁
 - 🎨 **Splash 启动画面** - 专业的加载画面提升用户体验
-  - 显示应用 Logo 和进度条
-  - 根据加载进度显示不同状态文字
-  - 自动隐藏并切换到主界面
 - 🚀 **启动脚本优化** - start.bat 增强功能
-  - 添加运行实例检测，防止重复启动
-  - 优先使用 javaw 实现无控制台启动
-  - 更友好的中文提示信息
-- 📦 **VBS 无控制台启动器** - launcher.vbs 静默启动
-  - 自动检测 Java 环境
-  - 集成 JVM 配置文件读取
-  - 完全无控制台窗口干扰
-- 🏗️ **jpackage 配置** - 支持原生 Windows EXE 打包
-  - Maven 插件自动生成安装程序
-  - 支持开始菜单和桌面快捷方式
-  - 可自定义应用图标和 JVM 参数
+- 📦 **jpackage 配置** - 支持原生 Windows EXE 打包
 
 ### v2.5.0 (2026-05-06) - 生产级版本 🎉
 重大里程碑版本，系统已具备生产级能力：
@@ -179,68 +209,15 @@ java -jar target/cashier-system-fx-2.5.3-jar-with-dependencies.jar
 
 项目规模：179 个 Java 文件，2.2MB 源码，126 个测试全部通过
 
-### v2.5.2 (2026-05-13) - UI/UX 优化 🎨
-- 🎨 **导航优化** - 导航分组重构，19 个按钮按功能分为 7 组
-  - 收银管理、商品管理、客户管理、采购管理、数据统计、报表中心、系统设置
-- 🔍 **全局搜索** - 新增 Ctrl+Shift+F 快速搜索功能
-- 📝 **挂单功能** - 支持 F2 挂单、F3 恢复挂单
-- ✅ **表单验证** - 实时表单验证工具 FormValidator
-- 🎯 **快捷键帮助** - Ctrl+/ 查看所有快捷键
-- 📦 **组件库** - 新增 BaseController、DataTable、DialogBuilder 等可复用组件
-- 🎨 **响应式布局** - 移除硬编码尺寸，支持自适应布局
-- ♿ **无障碍支持** - 焦点环、高对比度、键盘导航优化
-- 🔧 **修复** - 修复 FXML 方法访问权限问题（197 个方法改为 public）
-
-### v2.5.1 (2026-05-08) - 国际化增强 🌍
-- 🌐 **双语界面支持** - 所有界面元素支持中英文双语显示
-  - 菜单栏：系统/System、文件/File、数据/Data、编辑/Edit、视图/View、主题/Theme、设置/Settings、帮助/Help
-  - 导航菜单：结账/Checkout、商品管理/Inventory、会员管理/Members 等 20+ 个导航项
-  - 标签页：基本设置/Basic Settings、打印设置/Print Settings、分类统计/Category Statistics 等
-  - 系统提示：确定/OK、取消/Cancel、保存成功/Saved successfully 等通用提示信息
-- 🎨 **布局优化** - 调整侧边栏和标签页宽度，适配双语文字显示
-  - 侧边栏宽度：220px → 260px
-  - 标签页宽度：自适应（最小 160px，首选 200px）
-  - 添加文字换行支持，字号 13px
-- 💰 **货币国际化** - 货币符号随语言自动切换
-  - 简体中文：¥ (CNY)
-  - 繁体中文：US$ (USD)
-  - English：$ (USD)
-  - 日本語：¥ (JPY)
-  - 한국어：₩ (KRW)
-
-### v2.4.6 (2026-04-27) - 安全优化
-- 🔒 **优化 SQL 查询并移除安全隐患**
-  - 重构 SQL 查询语句，提升性能和安全性
-  - 移除潜在的安全漏洞
-  - 升级版本至 v2.4.6
-
-### v2.4.5-fix-javafx-plugin (2026-04-05) - 修复
-- 🔧 **修复 javafx-maven-plugin 版本问题**
-  - 将 javafx-maven-plugin 版本从 0.0.13 改回 0.0.8
-  - 解决了插件版本不存在导致的启动失败问题
-  - 确保应用能够正常启动和运行
-
-### v2.4.5-refactor-transaction-semantics (2026-04-04) - 维护检查点
-- 🔒 **事务语义统一**
-  - `DatabaseManager` / `BaseDAO` 的提交、回滚后行为已统一，都会恢复 `autoCommit=true`
-  - Service 层重复事务模板已收敛到统一事务入口
-- 🧩 **交易流程收敛**
-  - `TransactionService.executeTransaction(...)` 改为统一事务模板
-  - 会员余额、积分、等级、折扣更新并入同一事务
-  - 促销使用次数更新失败时继续保证整体回滚
-
-### v2.4.5 (2026-03-14) - 发布
-- 🔧 **版本管理优化**
-  - 创建 AppConstants 集中管理版本号
-  - 帮助菜单版本号使用常量
-  - 启动脚本自动从 pom.xml 读取版本号
-  - 更新所有相关文件版本号到 v2.4.5
-
 ## 📁 项目结构
 
 ```
 hello/
 ├── pom.xml                          # Maven 配置
+├── package.bat                      # Windows 打包脚本
+├── start.bat                        # Windows 启动脚本
+├── create-shortcut.bat              # 快捷方式创建工具
+├── install.sh                       # Linux/macOS 安装脚本
 ├── src/main/java/com/cashier/
 │   ├── CashierSystemFXApplication.java  # 主程序入口
 │   ├── constant/                       # 常量定义
@@ -248,6 +225,7 @@ hello/
 │   ├── controller/                     # 控制器层
 │   ├── model/                          # 实体类
 │   ├── service/                        # 服务层
+│   ├── installer/                      # 安装配置工具
 │   ├── printer/                        # 打印机管理模块
 │   ├── scanner/                        # 扫描枪管理模块
 │   ├── notification/                   # 消息通知模块
@@ -262,9 +240,7 @@ hello/
 ├── docker/                             # Docker 配置
 │   └── mysql-init/                     # MySQL 初始化脚本
 ├── docs/                               # 项目文档
-├── install.sh                          # Linux/macOS 安装脚本
-├── install.bat                         # Windows 安装脚本
-└── start.sh / start.bat                # 启动脚本
+└── dist/                               # 分发包输出（已忽略）
 ```
 
 ## 🛠️ 技术栈
@@ -283,11 +259,13 @@ hello/
 - 检查 JDK 版本是否为 17 或更高
 - 检查 MySQL 服务是否运行
 - 查看 `config/database.properties` 配置
+- 查看 `logs/app.log` 获取详细错误信息
 
 ### 数据库连接失败
 - 确保 MySQL 8.0 正在运行
 - 检查数据库用户名和密码
 - 确认防火墙允许 3306 端口
+- 使用 `Database Config.bat` 重新配置
 
 ### 扫描枪无法工作
 - 确认扫描枪已正确连接（USB 接口）
@@ -306,50 +284,3 @@ hello/
 
 - 代码仓库: https://gitee.com/nevell/hello.git
 - 问题反馈: https://gitee.com/nevell/hello/issues
-
-��── docs/                               # 项目文档
-├── install.sh                          # Linux/macOS 安装脚本
-├── install.bat                         # Windows 安装脚本
-└── start.sh / start.bat                # 启动脚本
-```
-
-## 🛠️ 技术栈
-
-- **前端框架**: JavaFX 17.0.12
-- **构建工具**: Maven 3.8+
-- **编程语言**: Java 17
-- **数据库**: MySQL 8.4
-- **连接池**: HikariCP 5.1.0
-- **数据导出**: Apache POI 5.2.5 (Excel) + Apache PDFBox 2.0.32 (PDF)
-- **测试框架**: JUnit 5 + TestFX + H2 Database
-
-## 🔧 故障排除
-
-### 应用无法启动
-- 检查 JDK 版本是否为 17 或更高
-- 检查 MySQL 服务是否运行
-- 查看 `config/database.properties` 配置
-
-### 数据库连接失败
-- 确保 MySQL 8.0 正在运行
-- 检查数据库用户名和密码
-- 确认防火墙允许 3306 端口
-
-### 扫描枪无法工作
-- 确认扫描枪已正确连接（USB 接口）
-- 确认扫描枪处于 HID 模式
-- 检查焦点是否在正确的输入框
-
-## 📝 许可证
-
-本项目采用 **木兰宽松许可证 v2 (MulanPSL2)**
-
-## 🤝 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 📧 联系方式
-
-- 代码仓库: https://gitee.com/nevell/hello.git
-- 问题反馈: https://gitee.com/nevell/hello/issues
-

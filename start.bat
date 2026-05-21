@@ -8,17 +8,44 @@ REM ============================================
 
 set "APP_NAME=Cashier System"
 
-REM Read version from pom.xml automatically
-for /f "tokens=2 delims=<>" %%a in ('findstr /R "<version>" pom.xml ^| findstr /V "javafx\|maven\|java\|mysql\|hikaricp\|poi\|pdfbox\|controlsfx\|fontawesomefx\|junit\|testfx\|h2\|bcrypt\|logback"') do (
-    set "APP_VERSION=%%a"
-    goto :version_found
+REM Read version from pom.xml automatically (development mode)
+set "IS_PACKAGE=0"
+set "JAR_FILE="
+
+if exist "pom.xml" (
+    for /f "tokens=2 delims=<>" %%a in ('findstr /R "<version>" pom.xml ^| findstr /V "javafx\|maven\|java\|mysql\|hikaricp\|poi\|pdfbox\|controlsfx\|fontawesomefx\|junit\|testfx\|h2\|bcrypt\|logback"') do (
+        set "APP_VERSION=%%a"
+        goto :version_found
+    )
+    :version_found
+    if "%APP_VERSION%"=="" set "APP_VERSION=2.5.0"
+    set "JAR_FILE=target\cashier-system-fx-%APP_VERSION%-jar-with-dependencies.jar"
+) else (
+    REM Package mode - no pom.xml, look for JAR in current directory
+    set "IS_PACKAGE=1"
+    set "JAR_FILE="
+    for %%f in (cashier-system-fx-*-jar-with-dependencies.jar) do (
+        set "JAR_FILE=%%f"
+        set "FULLNAME=%%~nf"
+        goto :jar_found
+    )
+    :jar_found
+    if "%JAR_FILE%"=="" (
+        echo [ERROR] No JAR file found in current directory
+        echo Expected: cashier-system-fx-*-jar-with-dependencies.jar
+        pause
+        exit /b 1
+    )
+    REM Extract version from filename: cashier-system-fx-2.5.4-jar-with-dependencies
+    REM Split by '-' and get the 4th token (2.5.4)
+    for /f "tokens=4 delims=-" %%v in ("%FULLNAME%") do set "APP_VERSION=%%v"
+    if "%APP_VERSION%"=="" set "APP_VERSION=2.5.4"
+    echo [INFO] Running in package mode v%APP_VERSION%
 )
-:version_found
-if "%APP_VERSION%"=="" set "APP_VERSION=2.5.0"
+
 set "APP_DIR=%~dp0"
 set "MAIN_CLASS=com.cashier.CashierSystemFXApplication"
 set "CONFIG_FILE=%APP_DIR%\config\jvm.config"
-set "JAR_FILE=target\cashier-system-fx-%APP_VERSION%-jar-with-dependencies.jar"
 
 set "DOCKER_AVAILABLE=0"
 set "MYSQL_CONTAINER_RUNNING=0"
@@ -99,6 +126,12 @@ REM ============================================
 echo [2/9] Checking Maven installation...
 echo ----------------------------------------
 
+if "%IS_PACKAGE%"=="1" (
+    echo [SKIP] Package mode - Maven not required
+    echo.
+    goto :maven_check_done
+)
+
 where mvn >nul 2>&1
 if errorlevel 1 (
     echo [WARNING] Maven is not in PATH
@@ -125,6 +158,8 @@ if errorlevel 1 (
         echo [OK] Maven is available ^<version could not be detected^>
     )
 )
+
+:maven_check_done
 echo.
 
 REM ============================================
@@ -138,18 +173,20 @@ where docker >nul 2>&1
 if errorlevel 1 (
     echo [WARNING] Docker is not installed
     echo.
-    echo Docker is required for MySQL database container.
+    echo Docker is used for MySQL database container.
+    echo You can use local MySQL instead.
     echo.
-    echo Install Docker:
-    echo   - Download: https://www.docker.com/products/docker-desktop/
-    echo   - Winget: winget install Docker.DockerDesktop
-    echo.
-    set /p "CONTINUE=Continue without Docker? (Y/N): "
-    if /i not "!%CONTINUE%!"=="y" (
+    set /p "CONTINUE=Continue with local MySQL setup? (Y/N): "
+    if /i not "!CONTINUE!"=="y" (
+        echo [INFO] To use Docker MySQL, install Docker Desktop first
+        echo   - Download: https://www.docker.com/products/docker-desktop/
         pause
         exit /b 1
     )
+    echo [INFO] Will configure local MySQL in database setup step
+    set "DOCKER_AVAILABLE=0"
     set "DOCKER_ERROR=1"
+    goto :docker_check_done
 ) else (
     for /f "usebackq tokens=*" %%i in (`docker --version 2^>^&1`) do set "DOCKER_VERSION=%%i"
     if not "%DOCKER_VERSION%"=="" (
@@ -162,6 +199,8 @@ if errorlevel 1 (
         echo [WARNING] Docker version could not be detected, but it is available
     )
 )
+
+:docker_check_done
 echo.
 
 REM Check Docker daemon
@@ -236,6 +275,17 @@ echo ----------------------------------------
 cd /d "%APP_DIR%"
 
 if not exist "%JAR_FILE%" (
+    if "%IS_PACKAGE%"=="1" (
+        echo [ERROR] Application JAR not found: %JAR_FILE%
+        echo.
+        echo This appears to be a package distribution, but the JAR file is missing.
+        echo.
+        echo Please ensure you have the complete package:
+        echo   - cashier-system-fx-*-jar-with-dependencies.jar
+        echo.
+        pause
+        exit /b 1
+    )
     echo [INFO] Compiled JAR not found: %JAR_FILE%
     echo [INFO] Starting compilation...
     echo.
@@ -243,7 +293,7 @@ if not exist "%JAR_FILE%" (
     echo.
 
     call mvn clean package -DskipTests
-    
+
     if errorlevel 1 (
         echo [ERROR] Compilation failed
         echo.
@@ -264,7 +314,7 @@ REM ============================================
 REM   6. Start Docker MySQL Container (if needed)
 REM ============================================
 
-echo [6/9] Checking MySQL container...
+echo [6/9] Starting MySQL container...
 echo ----------------------------------------
 
 if %DOCKER_AVAILABLE%==1 (
@@ -304,10 +354,101 @@ if %DOCKER_AVAILABLE%==1 (
 echo.
 
 REM ============================================
-REM   7. Build JVM Parameters
+REM   7. Check Database Configuration
 REM ============================================
 
-echo [7/9] Building JVM parameters...
+echo [7/9] Checking database configuration...
+echo ----------------------------------------
+
+set "DB_CONFIG_FILE=%APP_DIR%config\database.properties"
+
+if not exist "%DB_CONFIG_FILE%" (
+    echo [INFO] Database configuration not found
+    echo.
+    echo Please configure database connection:
+    echo.
+
+    REM Ask for database type
+    echo Select database type:
+    echo   1. Local MySQL ^(localhost^)
+    echo   2. Docker MySQL ^(via docker-compose^)
+    echo   3. Remote MySQL
+    echo.
+    set /p "DB_TYPE=Choose ^(1/2/3^): "
+
+    if "!DB_TYPE!"=="1" (
+        set "DB_HOST=localhost"
+        set "DB_PORT=3306"
+        set "DB_NAME=cashier_system"
+        echo.
+        echo Configure local MySQL connection:
+        set /p "DB_USER=Enter MySQL username [root]: "
+        if "!DB_USER!"=="" set "DB_USER=root"
+        set /p "DB_PASS=Enter MySQL password: "
+    ) else if "!DB_TYPE!"=="2" (
+        set "DB_HOST=localhost"
+        set "DB_PORT=3306"
+        set "DB_NAME=cashier_system"
+        set "DB_USER=root"
+        set "DB_PASS=RootPassword123!"
+        echo.
+        echo [INFO] Using Docker MySQL defaults
+    ) else if "!DB_TYPE!"=="3" (
+        echo.
+        set /p "DB_HOST=Enter MySQL host: "
+        set /p "DB_PORT=Enter MySQL port [3306]: "
+        if "!DB_PORT!"=="" set "DB_PORT=3306"
+        set /p "DB_NAME=Enter database name [cashier_system]: "
+        if "!DB_NAME!"=="" set "DB_NAME=cashier_system"
+        set /p "DB_USER=Enter MySQL username: "
+        set /p "DB_PASS=Enter MySQL password: "
+    ) else (
+        echo [WARN] Invalid choice, using defaults
+        set "DB_HOST=localhost"
+        set "DB_PORT=3306"
+        set "DB_NAME=cashier_system"
+        set "DB_USER=root"
+        set "DB_PASS=RootPassword123!"
+    )
+
+    echo.
+    echo Creating database configuration...
+    echo.
+
+    REM Create config directory if not exists
+    if not exist "%APP_DIR%config" mkdir "%APP_DIR%config"
+
+    REM Write database.properties
+    (
+        echo # Cashier System Database Configuration
+        echo # Generated by start.bat on %date% %time%
+        echo.
+        echo db.url=jdbc:mysql://!DB_HOST!:!DB_PORT!/!DB_NAME!?useSSL=false^&serverTimezone=Asia/Shanghai^&allowPublicKeyRetrieval=true^&characterEncoding=utf8mb4
+        echo db.username=!DB_USER!
+        echo db.password=!DB_PASS!
+        echo db.pool.size=10
+        echo db.connection.timeout=30000
+        echo db.idle.timeout=600000
+        echo db.max.lifetime=1800000
+    ) > "%DB_CONFIG_FILE%"
+
+    echo [OK] Database configuration created: %DB_CONFIG_FILE%
+    echo.
+    echo Configuration summary:
+    echo   Host: !DB_HOST!:!DB_PORT!
+    echo   Database: !DB_NAME!
+    echo   Username: !DB_USER!
+    echo.
+) else (
+    echo [OK] Database configuration found
+)
+echo.
+
+REM ============================================
+REM   8. Build JVM Parameters
+REM ============================================
+
+echo [8/9] Building JVM parameters...
 echo ----------------------------------------
 
 set "JVM_OPTS=-Xms512m -Xmx1024m -Dfile.encoding=UTF-8"
@@ -340,7 +481,7 @@ echo       JVM Options: %JVM_OPTS%
 echo.
 
 REM ============================================
-REM   8. Start Application
+REM   9. Start Application
 REM ============================================
 
 echo [9/9] Starting application...

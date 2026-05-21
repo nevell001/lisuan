@@ -7,18 +7,23 @@ echo ========================================
 echo.
 
 set APP_NAME=Cashier System
-set APP_VERSION=v2.5.0
+set APP_VERSION=v2.5.4
 set SCRIPT_DIR=%~dp0
 set SHORTCUT_NAME=%APP_NAME%.lnk
 set WORKING_DIR=%SCRIPT_DIR%
 
-REM 检查启动器优先级：VBS > BAT
-if exist "%SCRIPT_DIR%start.vbs" (
-    set TARGET_SCRIPT=%SCRIPT_DIR%start.vbs
-    echo [Info] Using VBS launcher (recommended - no console window)
-) else (
+REM 检查启动器优先级：Quick Start > Run CashierSystem > start.bat
+if exist "%SCRIPT_DIR%Quick Start.bat" (
+    set TARGET_SCRIPT=%SCRIPT_DIR%Quick Start.bat
+    echo [Info] Using Quick Start launcher (recommended)
+) else if exist "%SCRIPT_DIR%Run CashierSystem.bat" (
+    set TARGET_SCRIPT=%SCRIPT_DIR%Run CashierSystem.bat
+    echo [Info] Using Run CashierSystem launcher
+) else if exist "%SCRIPT_DIR%start.bat" (
     set TARGET_SCRIPT=%SCRIPT_DIR%start.bat
-    echo [Info] Using batch launcher (with console window)
+    echo [Info] Using start.bat launcher
+) else (
+    goto :no_start
 )
 
 if not exist %TARGET_SCRIPT% goto :no_start
@@ -57,7 +62,7 @@ REM 使用 PowerShell 创建快捷方式（使用转义的路径）
 set "PS_SHORTCUT_PATH=%DESKTOP_PATH%\%SHORTCUT_NAME%"
 set "PS_TARGET=%TARGET_SCRIPT%"
 set "PS_WORKING=%WORKING_DIR%"
-set "PS_DESC=%APP_NAME% %APP_VERSION% - Complete Cashier System"
+set "PS_DESC=%APP_NAME% - Complete Cashier System"
 
 REM Delete existing shortcut if it exists
 if exist "%DESKTOP_PATH%\%SHORTCUT_NAME%" del "%DESKTOP_PATH%\%SHORTCUT_NAME%" 2>nul
