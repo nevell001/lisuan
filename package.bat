@@ -20,8 +20,19 @@ echo [Info] Version: %APP_VERSION_NUM%
 echo.
 
 if not exist "target\%FAT_JAR%" (
-    echo [ERROR] JAR not found. Run: mvn clean package
-    goto :error_exit
+    echo [INFO] JAR not found, starting compilation...
+    echo.
+    echo Compiling with Maven, this may take a while...
+    echo.
+    call mvn clean package -DskipTests
+    if errorlevel 1 (
+        echo.
+        echo [ERROR] Compilation failed
+        goto :error_exit
+    )
+    echo.
+    echo [OK] Compilation successful
+    echo.
 )
 
 echo [1/5] Creating distribution...
