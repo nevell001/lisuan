@@ -41,6 +41,7 @@ public class CashierSystemFXApplication extends Application {
 
     private Stage primaryStage;
     private User currentUser;
+    private Object currentController; // 当前活动的控制器，用于清理资源
 
     // 单实例控制
     private static final String APP_LOCK_FILE = System.getProperty("java.io.tmpdir") + java.io.File.separator + "cashier-system.lock";
@@ -225,6 +226,7 @@ public class CashierSystemFXApplication extends Application {
             // 获取控制器并设置应用程序引用
             MainController controller = loader.getController();
             controller.setApplication(this);
+            currentController = controller; // 保存控制器引用
 
             // 创建场景
             Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -358,6 +360,22 @@ public class CashierSystemFXApplication extends Application {
                 logger.error("停止 REST API 服务器时发生错误", e);
             }
 
+            // 关闭通知管理器
+            try {
+                com.cashier.notification.NotificationManager.getInstance().shutdown();
+                logger.info("通知管理器已关闭");
+            } catch (Exception e) {
+                logger.error("关闭通知管理器时发生错误", e);
+            }
+
+            // 关闭 UI 优化器
+            try {
+                com.cashier.util.UIOptimizer.shutdown();
+                logger.info("UI 优化器已关闭");
+            } catch (Exception e) {
+                logger.error("关闭 UI 优化器时发生错误", e);
+            }
+
             logger.info("系统服务已关闭");
         } catch (Exception e) {
             logger.error("关闭系统服务时发生错误", e);
@@ -395,6 +413,7 @@ public class CashierSystemFXApplication extends Application {
             PosModeController controller = loader.getController();
             controller.setApplication(this);
             controller.setCurrentUser(user);
+            currentController = controller; // 保存控制器引用
 
             // 创建场景
             Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -445,6 +464,7 @@ public class CashierSystemFXApplication extends Application {
             MainController controller = loader.getController();
             controller.setApplication(this);
             controller.setCurrentUser(user);
+            currentController = controller; // 保存控制器引用
 
             // 创建场景
             Scene scene = new Scene(root, WINDOW_WIDTH, WINDOW_HEIGHT);
@@ -496,6 +516,17 @@ public class CashierSystemFXApplication extends Application {
      * 返回登录界面（退出登录）
      */
     public void logoutToLoginView() {
+        // 清理当前控制器资源
+        try {
+            if (currentController instanceof com.cashier.controller.MainController) {
+                ((com.cashier.controller.MainController) currentController).cleanup();
+            } else if (currentController instanceof com.cashier.controller.PosModeController) {
+                ((com.cashier.controller.PosModeController) currentController).cleanup();
+            }
+        } catch (Exception e) {
+            logger.error("清理控制器资源时发生错误", e);
+        }
+
         // 停止库存预警服务
         try {
             com.cashier.service.InventoryAlertService.getInstance().stop();
@@ -518,6 +549,22 @@ public class CashierSystemFXApplication extends Application {
             logger.info("REST API 服务器已停止");
         } catch (Exception e) {
             logger.error("停止 REST API 服务器时发生错误", e);
+        }
+
+        // 关闭通知管理器
+        try {
+            com.cashier.notification.NotificationManager.getInstance().shutdown();
+            logger.info("通知管理器已关闭");
+        } catch (Exception e) {
+            logger.error("关闭通知管理器时发生错误", e);
+        }
+
+        // 关闭 UI 优化器
+        try {
+            com.cashier.util.UIOptimizer.shutdown();
+            logger.info("UI 优化器已关闭");
+        } catch (Exception e) {
+            logger.error("关闭 UI 优化器时发生错误", e);
         }
 
         this.currentUser = null;

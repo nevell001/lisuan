@@ -1604,4 +1604,15 @@ private Button shiftBtn;
         });
         pause.play();
     }
+
+    /**
+     * 清理资源，防止内存泄漏
+     */
+    public void cleanup() {
+        // 停止时间更新动画
+        if (timeTimeline != null) {
+            timeTimeline.stop();
+            timeTimeline = null;
+        }
+    }
 }
