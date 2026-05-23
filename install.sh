@@ -225,9 +225,11 @@ elif [ "$DB_TYPE" == "local" ]; then
 else
     echo "[Skip] Database configuration skipped"
     echo ""
-    goto create_shortcut
+    # Skip to creating shortcut
+    DB_TYPE="skip_config"
 fi
 
+if [ "$DB_TYPE" != "skip_config" ]; then
 cat > config/database.properties << EOF
 # Database Configuration
 db.url=jdbc:mysql://${DB_HOST}:${DB_PORT}/${DB_NAME}?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf8mb4
@@ -241,6 +243,7 @@ EOF
 
 echo "[Done] Database configuration updated"
 echo ""
+fi
 
 # 创建快捷方式
 echo "[8/8] Creating desktop shortcut..."
