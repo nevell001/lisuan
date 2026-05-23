@@ -74,8 +74,8 @@ logos/*
 !logos/README.md
 
 # Claude/iFlow 配置文件（本地使用，不提交）
-CLAUDE.md
-IFLOW.md
+# CLAUDE.md    # 注释掉 - 项目需要此文件
+# IFLOW.md     # 注释掉 - 项目需要此文件
 .deepseek/
 fonts/*.ttc
 src/main/resources/fonts/*.otf

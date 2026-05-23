@@ -329,7 +329,9 @@ public class PurchaseInboundController {
                 try {
                     // 创建入库单
                     SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMdd");
-                    String inboundNo = "IB" + sdf.format(new Date()) + String.format("%04d", new Random().nextInt(10000));
+                    // 使用 SecureRandom 生成更安全的随机数
+                    java.security.SecureRandom secureRandom = new java.security.SecureRandom();
+                    String inboundNo = "IB" + sdf.format(new Date()) + String.format("%04d", secureRandom.nextInt(10000));
 
                     PurchaseInbound inbound = new PurchaseInbound();
                     inbound.inboundNo = inboundNo;

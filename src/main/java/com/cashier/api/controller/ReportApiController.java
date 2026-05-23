@@ -49,7 +49,9 @@ public class ReportApiController {
                         if (tDate.equals(date)) {
                             dayTransactions.add(t);
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) {
+                        logger.warn("Failed to parse transaction timestamp: {}", t.timestamp, e);
+                    }
                 }
             }
             
@@ -115,7 +117,9 @@ public class ReportApiController {
                         if (tMonth.equals(monthStr)) {
                             monthTransactions.add(t);
                         }
-                    } catch (Exception ignored) {}
+                    } catch (Exception e) {
+                        logger.warn("Failed to parse transaction timestamp: {}", t.timestamp, e);
+                    }
                 }
             }
             

@@ -6,7 +6,7 @@
 
 set -e
 
-APP_VERSION="2.5.0"
+APP_VERSION="2.5.4"
 DB_TYPE="none"
 DB_HOST="localhost"
 DB_PORT="3306"

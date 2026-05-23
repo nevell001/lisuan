@@ -218,8 +218,8 @@ public class DatabaseConfigDialog {
             }
             showMessage(errorMsg, JOptionPane.ERROR_MESSAGE);
         } finally {
-            try { if (stmt != null) stmt.close(); } catch (Exception e) {}
-            try { if (conn != null) conn.close(); } catch (Exception e) {}
+            try { if (stmt != null) stmt.close(); } catch (Exception e) { System.err.println("Error: " + e.getMessage()); }
+            try { if (conn != null) conn.close(); } catch (Exception e) { System.err.println("Error: " + e.getMessage()); }
         }
     }
 
@@ -277,8 +277,8 @@ public class DatabaseConfigDialog {
             showMessage(errorMsg, JOptionPane.ERROR_MESSAGE);
             return;
         } finally {
-            try { if (stmt != null) stmt.close(); } catch (Exception e) {}
-            try { if (conn != null) conn.close(); } catch (Exception e) {}
+            try { if (stmt != null) stmt.close(); } catch (Exception e) { System.err.println("Error: " + e.getMessage()); }
+            try { if (conn != null) conn.close(); } catch (Exception e) { System.err.println("Error: " + e.getMessage()); }
         }
 
         // Create config directory

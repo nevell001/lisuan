@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 
 REM ============================================
 REM   Cashier System Start Script (Enhanced)
-REM   Version 2.5.0
+REM   Version 2.5.4
 REM ============================================
 
 set "APP_NAME=Cashier System"
@@ -18,7 +18,7 @@ if exist "pom.xml" (
         goto :version_found
     )
     :version_found
-    if "%APP_VERSION%"=="" set "APP_VERSION=2.5.0"
+    if "%APP_VERSION%"=="" set "APP_VERSION=2.5.4"
     set "JAR_FILE=target\cashier-system-fx-%APP_VERSION%-jar-with-dependencies.jar"
 ) else (
     REM Package mode - no pom.xml, look for JAR in current directory
