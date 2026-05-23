@@ -29,7 +29,39 @@ public class UIOptimizer {
     // 简单的对象缓存
     private static final java.util.Map<String, Object> cache = new java.util.WeakHashMap<>();
     private static final long CACHE_EXPIRE_TIME = 5 * 60 * 1000; // 5分钟
-    private static final java.util.Map<String, Long> cacheTime = new java.util.HashMap<>();
+    // 使用 LinkedHashMap 实现 LRU，避免内存泄漏
+    private static final java.util.Map<String, Long> cacheTime = new java.util.LinkedHashMap<String, Long>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(java.util.Map.Entry<String, Long> eldest) {
+            // 当缓存时间戳超过 1000 个时，移除最旧的条目
+            return size() > 1000;
+        }
+    };
+
+    static {
+        // 定期清理过期缓存时间戳（每分钟）
+        java.util.concurrent.ScheduledExecutorService cleanupExecutor =
+            java.util.concurrent.Executors.newSingleThreadScheduledExecutor(r -> {
+                Thread t = new Thread(r, "UI-Cache-Cleanup");
+                t.setDaemon(true);
+                return t;
+            });
+        cleanupExecutor.scheduleAtFixedRate(() -> {
+            try {
+                long now = System.currentTimeMillis();
+                cacheTime.entrySet().removeIf(entry -> {
+                    long age = now - entry.getValue();
+                    if (age > CACHE_EXPIRE_TIME) {
+                        cache.remove(entry.getKey());
+                        return true;
+                    }
+                    return false;
+                });
+            } catch (Exception e) {
+                logger.error("缓存清理失败", e);
+            }
+        }, 1, 1, java.util.concurrent.TimeUnit.MINUTES);
+    }
     
     /**
      * 启用TableView虚拟化

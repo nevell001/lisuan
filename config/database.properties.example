@@ -4,8 +4,8 @@
 # MySQL 数据库连接 URL
 # 格式: jdbc:mysql://主机名:端口/数据库名?参数
 # 示例:
-#   - 本机 MySQL: jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai
-#   - 远程 MySQL: jdbc:mysql://192.168.1.100:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai
+#   - 本机开发: useSSL=false（无证书加密）
+#   - 远程/生产: useSSL=true（需要配置 SSL 证书）
 db.url=jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
 
 # MySQL 用户名
