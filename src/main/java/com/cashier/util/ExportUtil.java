@@ -158,58 +158,11 @@ public class ExportUtil {
 
     /**
      * 加载中文字体
-     * 优先级：项目资源 > 系统字体
+     * 优先级：系统字体 > 文件系统 > 项目资源
+     * 注意：TTC 文件必须使用 File 对象加载，不能使用 InputStream
      */
     private static PDFont loadChineseFont(PDDocument document) throws IOException {
-        // 1. 尝试从项目资源加载中文字体
-        String[] resourcePaths = {
-            "/fonts/NotoSansSC-Regular.otf",
-            "/fonts/NotoSansSC-Regular.ttf",
-            "/com/cashier/fonts/NotoSansSC-Regular.otf",
-            "/com/cashier/fonts/NotoSansSC-Regular.ttf"
-        };
-
-        for (String fontPath : resourcePaths) {
-            try (InputStream is = ExportUtil.class.getResourceAsStream(fontPath)) {
-                if (is != null) {
-                    // 检查流是否有效（至少大于 1KB）
-                    byte[] buffer = new byte[1024];
-                    int bytesRead = is.read(buffer);
-                    if (bytesRead > 100) {
-                        // 重新获取流
-                        try (InputStream is2 = ExportUtil.class.getResourceAsStream(fontPath)) {
-                            if (is2 != null) {
-                                PDFont font = PDType0Font.load(document, is2);
-                                logger.info("成功加载项目字体: {}", fontPath);
-                                return font;
-                            }
-                        }
-                    }
-                }
-            } catch (IOException e) {
-                logger.debug("项目字体加载失败 {}: {}", fontPath, e.getMessage());
-            }
-        }
-
-        // 2. 尝试从文件系统加载
-        String[] fsPaths = {
-            "src/main/resources/fonts/NotoSansSC-Regular.ttf"
-        };
-
-        for (String fsPath : fsPaths) {
-            File fontFile = new File(fsPath);
-            if (fontFile.exists() && fontFile.length() > 1000) {
-                try {
-                    PDFont font = PDType0Font.load(document, fontFile);
-                    logger.info("成功从文件系统加载字体: {}", fsPath);
-                    return font;
-                } catch (IOException e) {
-                    logger.debug("文件系统字体加载失败 {}: {}", fsPath, e.getMessage());
-                }
-            }
-        }
-
-        // 3. 尝试加载系统字体
+        // 1. 优先尝试系统字体（TTC 文件使用 File 对象加载）
         String os = System.getProperty("os.name", "").toLowerCase();
         String[] systemFontPaths;
 
@@ -235,14 +188,13 @@ public class ExportUtil {
                 windir + "\\Fonts\\simkai.ttf"     // 楷体
             };
         } else {
-            // Linux 系统字体路径（优先使用单独的 TTF 文件）
+            // Linux 系统字体路径（TTC 文件可能有问题，优先使用 TTF）
             systemFontPaths = new String[]{
+                "/usr/share/fonts/truetype/fonts-ukij-uyghur/UKIJCJK.ttf",  // UKIJ CJK (支持中文和英文)
                 "/usr/share/fonts/truetype/lxgw-wenkai/LXGWWenKai-Regular.ttf",
                 "/usr/share/fonts/truetype/arphic-gkai00mp/gkai00mp.ttf",
-                "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",
-                "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",
-                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc",
-                "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf"
+                "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",  // Droid Sans Fallback (可能有问题)
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"  // TTC 最后尝试
             };
         }
 
@@ -250,12 +202,52 @@ public class ExportUtil {
             File fontFile = new File(fontPath);
             if (fontFile.exists()) {
                 try {
-                    PDFont font = PDType0Font.load(document, new java.io.FileInputStream(fontFile), true);
+                    // TTC 文件必须使用 File 对象加载
+                    PDFont font = PDType0Font.load(document, fontFile);
                     logger.info("成功加载系统字体: {}", fontPath);
                     return font;
                 } catch (IOException e) {
                     logger.debug("系统字体加载失败 {}: {}", fontPath, e.getMessage());
                 }
+            }
+        }
+
+        // 2. 尝试从文件系统加载
+        String[] fsPaths = {
+            "src/main/resources/fonts/NotoSansSC-Regular.ttc",
+            "src/main/resources/fonts/NotoSansSC-Regular.ttf"
+        };
+
+        for (String fsPath : fsPaths) {
+            File fontFile = new File(fsPath);
+            if (fontFile.exists() && fontFile.length() > 1000) {
+                try {
+                    PDFont font = PDType0Font.load(document, fontFile);
+                    logger.info("成功从文件系统加载字体: {}", fsPath);
+                    return font;
+                } catch (IOException e) {
+                    logger.debug("文件系统字体加载失败 {}: {}", fsPath, e.getMessage());
+                }
+            }
+        }
+
+        // 3. 尝试从项目资源加载（仅支持 TTF/OTF，不支持 TTC）
+        String[] resourcePaths = {
+            "/fonts/NotoSansSC-Regular.ttf",
+            "/fonts/NotoSansSC-Regular.otf",
+            "/com/cashier/fonts/NotoSansSC-Regular.ttf",
+            "/com/cashier/fonts/NotoSansSC-Regular.otf"
+        };
+
+        for (String fontPath : resourcePaths) {
+            try (InputStream is = ExportUtil.class.getResourceAsStream(fontPath)) {
+                if (is != null && is.available() > 1000) {
+                    PDFont font = PDType0Font.load(document, is);
+                    logger.info("成功加载项目字体: {}", fontPath);
+                    return font;
+                }
+            } catch (IOException e) {
+                logger.debug("项目字体加载失败 {}: {}", fontPath, e.getMessage());
             }
         }
 

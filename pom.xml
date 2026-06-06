@@ -386,6 +386,7 @@
                     <include>**/*.svg</include>
                     <include>**/*.otf</include>
                     <include>**/*.ttf</include>
+                    <include>**/*.ttc</include>
                 </includes>
             </resource>
         </resources>

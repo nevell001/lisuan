@@ -19,6 +19,7 @@ import javafx.scene.control.Alert;
 import javafx.scene.control.ButtonBar;
 import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
+import javafx.scene.text.Font;
 import javafx.stage.Stage;
 
 import java.io.IOException;
@@ -51,6 +52,9 @@ public class CashierSystemFXApplication extends Application {
     @Override
     public void init() throws Exception {
         notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.1));
+
+        // 加载自定义中文字体（在单例检查之前，确保字体可用）
+        loadCustomFonts();
 
         // 单实例检查 - 防止应用多次启动导致数据冲突
         java.io.File lockFile = new java.io.File(APP_LOCK_FILE);
@@ -172,6 +176,40 @@ public class CashierSystemFXApplication extends Application {
      */
     public static CashierSystemFXApplication getInstance() {
         return instance;
+    }
+
+    /**
+     * 加载自定义中文字体
+     * 确保在所有平台上中文都能正确显示
+     */
+    private void loadCustomFonts() {
+        try {
+            // 加载 Noto Sans SC Regular 字体
+            Font notoSansRegular = Font.loadFont(
+                getClass().getResourceAsStream("/fonts/NotoSansSC-Regular.ttc"), 14
+            );
+            if (notoSansRegular != null) {
+                logger.info("成功加载 Noto Sans SC Regular 字体: {}",
+                    notoSansRegular.getName());
+            } else {
+                logger.warn("Noto Sans SC Regular 字体加载失败");
+            }
+
+            // 加载 Noto Sans SC Bold 字体
+            Font notoSansBold = Font.loadFont(
+                getClass().getResourceAsStream("/fonts/NotoSansSC-Bold.ttc"), 14
+            );
+            if (notoSansBold != null) {
+                logger.info("成功加载 Noto Sans SC Bold 字体: {}",
+                    notoSansBold.getName());
+            } else {
+                logger.warn("Noto Sans SC Bold 字体加载失败");
+            }
+
+            logger.debug("自定义字体加载完成");
+        } catch (Exception e) {
+            logger.error("加载自定义字体时发生错误: {}", e.getMessage(), e);
+        }
     }
 
     /**

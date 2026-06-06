@@ -6,13 +6,34 @@
 
 set -e
 
-APP_VERSION="2.5.4"
-DB_TYPE="none"
-DB_HOST="localhost"
-DB_PORT="3306"
-DB_NAME="cashier_system"
-DB_USERNAME="root"
-DB_PASSWORD="RootPassword123!"
+# 获取脚本所在目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR"
+
+# 加载 .env 文件（如果存在）
+if [ -f ".env" ]; then
+    echo "[Info] Loading configuration from .env file..."
+    # 使用 grep 安全地加载环境变量（跳过注释和空行）
+    while IFS='=' read -r key value; do
+        # 跳过注释和空行
+        [[ "$key" =~ ^#.*$ ]] && continue
+        [[ -z "$key" ]] && continue
+        # 移除值两端的空格和引号
+        value=$(echo "$value" | sed 's/^[[:space:]]*"//;s/"[[:space:]]*$//; s/^'"'"'//;s/[[:space:]]*$//')
+        # 导出变量
+        export "$key=$value"
+    done < <(grep -E '^[A-Z_]+=' .env)
+fi
+
+# 默认值（如果 .env 中没有定义）
+APP_VERSION=${APP_VERSION:-"2.5.4"}
+DB_TYPE=${DB_TYPE:-"none"}
+DB_HOST=${DB_HOST:-"localhost"}
+DB_PORT=${DB_PORT:-"3306"}
+DB_NAME=${MYSQL_DATABASE:-"cashier_system"}
+DB_USERNAME=${MYSQL_USER:-"root"}
+DB_PASSWORD=${MYSQL_ROOT_PASSWORD:-"RootPassword123!"}
+MYSQL_CONTAINER_NAME=${MYSQL_CONTAINER_NAME:-"cashier-mysql"}
 
 JAR_PATH="target/cashier-system-fx-${APP_VERSION}-jar-with-dependencies.jar"
 
@@ -154,7 +175,7 @@ if [ "$DB_TYPE" == "docker" ]; then
         sleep 10
 
         echo "[Docker] Initializing database with complete schema..."
-        docker exec cashier-mysql mysql -uroot -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null || true
+        docker exec ${MYSQL_CONTAINER_NAME} mysql -uroot -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null || true
         echo "[Done] Database initialization completed (v2.5.0)"
         echo "[Note] Tables will be created automatically when you start the application"
         echo ""

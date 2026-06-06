@@ -14,6 +14,7 @@
     -fx-faint-focus-color: rgba(102, 126, 234, 0.1);
     -fx-text-fill: #212121;
     -fx-text-fill-disabled: #BDBDBD;
+    -fx-font-family: "Noto Sans CJK JP", "Noto Sans CJK SC", "Noto Sans SC", "UKIJ CJK", sans-serif;
 }
 
 /* ========== 场景背景 ========== */
