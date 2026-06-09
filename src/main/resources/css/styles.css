@@ -1029,13 +1029,20 @@
 
 .main-tab-pane .tab-close-button {
     -fx-background-color: transparent;
-    -fx-background-radius: 0;
+    -fx-background-radius: 4;
     -fx-cursor: hand;
-    -fx-padding: 0 0 0 8;
+    -fx-padding: 0 4 0 4;
+    -fx-background-insets: 0;
+    -fx-opacity: 1;
+    -fx-font-size: 14px;
+    -fx-text-fill: #757575;
+    -fx-font-family: "Arial", sans-serif;
+    -fx-font-weight: bold;
 }
 
 .main-tab-pane .tab-close-button:hover {
-    -fx-background-color: rgba(0,0,0,0.1);
+    -fx-background-color: #F44336;
+    -fx-text-fill: white;
 }
 
 .main-tab-pane .tab-content-area {
