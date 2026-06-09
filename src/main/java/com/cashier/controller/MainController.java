@@ -1214,20 +1214,14 @@ private Button shiftBtn;
                 return;
             }
     
-            // 创建新的标签页（设置text和graphic，CSS会隐藏默认label）
+            // 创建新的标签页
             Tab tab = new Tab(title);
-            tab.setClosable(false); // 禁用默认关闭按钮，使用自定义按钮
-            tab.getStyleClass().add("custom-tab-header"); // 添加自定义样式类
+            tab.setClosable(true); // 使用默认关闭按钮
 
-            // 创建自定义关闭按钮并设置为标签图形
-            javafx.scene.Node closeButton = createCloseButton(tab);
-            javafx.scene.layout.HBox tabHeader = new javafx.scene.layout.HBox(3);
-            tabHeader.setAlignment(javafx.geometry.Pos.CENTER);
-            tabHeader.setStyle("-fx-padding: 0 4 0 0;");
-            Label headerLabel = new Label(title);
-            headerLabel.setStyle("-fx-font-size: 13px; -fx-font-family: \"Noto Sans CJK JP\", \"Noto Sans SC\", \"WenQuanYi Micro Hei\", sans-serif;");
-            tabHeader.getChildren().addAll(headerLabel, closeButton);
-            tab.setGraphic(tabHeader);
+            // 确保关闭按钮可见
+            tab.setOnCloseRequest(event -> {
+                openTabs.remove(title);
+            });
     
             // 创建占位符内容
             VBox placeholder = new VBox(20);
@@ -1270,20 +1264,14 @@ private Button shiftBtn;
                 return;
             }
 
-            // 创建新的标签页（设置text和graphic，CSS会隐藏默认label）
+            // 创建新的标签页
             Tab tab = new Tab(title);
-            tab.setClosable(false); // 禁用默认关闭按钮，使用自定义按钮
-            tab.getStyleClass().add("custom-tab-header"); // 添加自定义样式类
+            tab.setClosable(true); // 使用默认关闭按钮
 
-            // 创建自定义关闭按钮并设置为标签图形
-            javafx.scene.Node closeButton = createCloseButton(tab);
-            javafx.scene.layout.HBox tabHeader = new javafx.scene.layout.HBox(3);
-            tabHeader.setAlignment(javafx.geometry.Pos.CENTER);
-            tabHeader.setStyle("-fx-padding: 0 4 0 0;");
-            Label headerLabel = new Label(title);
-            headerLabel.setStyle("-fx-font-size: 13px; -fx-font-family: \"Noto Sans CJK JP\", \"Noto Sans SC\", \"WenQuanYi Micro Hei\", sans-serif;");
-            tabHeader.getChildren().addAll(headerLabel, closeButton);
-            tab.setGraphic(tabHeader);
+            // 确保关闭按钮可见
+            tab.setOnCloseRequest(event -> {
+                openTabs.remove(title);
+            });
             tab.setContent(content);
 
             // 添加标签页关闭事件
