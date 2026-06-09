@@ -56,6 +56,9 @@ public class SettingsController {
     @FXML
     private ComboBox<String> themeComboBox;
 
+    @FXML
+    private ComboBox<String> fontSizeComboBox;
+
     // 打印设置标签页
     @FXML
     private CheckBox enablePrintCheckBox;
@@ -184,6 +187,16 @@ public class SettingsController {
         ));
         themeComboBox.getSelectionModel().select(0);
 
+        // 初始化字号下拉框
+        I18nManager i18n = I18nManager.getInstance();
+        fontSizeComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
+            i18n.get("settings.font_size_small"),
+            i18n.get("settings.font_size_medium"),
+            i18n.get("settings.font_size_large"),
+            i18n.get("settings.font_size_extra_large")
+        ));
+        fontSizeComboBox.getSelectionModel().select(1); // 默认选中中等
+
         // 初始化纸张大小下拉框
         paperSizeComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
             "58mm (热敏纸)",
@@ -285,6 +298,11 @@ public class SettingsController {
         String savedLanguageName = convertLanguageTagToName(savedLanguage);
         languageComboBox.getSelectionModel().select(savedLanguageName);
 
+        // 加载字号偏好 - 从数据库加载当前用户的字号偏好
+        String savedFontSize = DataService.loadFontSizePreference(username);
+        String savedFontSizeName = convertFontSizeCodeToName(savedFontSize);
+        fontSizeComboBox.getSelectionModel().select(savedFontSizeName);
+
         // 记录初始加载时的语言，用于检测变化
         initialLanguage = savedLanguage;
 
@@ -341,6 +359,13 @@ public class SettingsController {
             // 应用语言设置
             if (selectedLanguage != null) {
                 applyLanguageSetting(newLanguageTag);
+            }
+
+            // 应用字号设置
+            String selectedFontSize = fontSizeComboBox.getSelectionModel().getSelectedItem();
+            if (selectedFontSize != null) {
+                String fontSizeCode = convertFontSizeNameToCode(selectedFontSize);
+                applyFontSizeToCurrentScene(fontSizeCode);
             }
 
             // 应用货币设置
@@ -508,6 +533,57 @@ public class SettingsController {
     }
 
     /**
+     * 将字号代码转换为字号名称
+     * @param fontSizeCode 字号代码
+     * @return 字号名称
+     */
+    private String convertFontSizeCodeToName(String fontSizeCode) {
+        if (fontSizeCode == null) {
+            return I18nManager.getInstance().get("settings.font_size_medium");
+        }
+        I18nManager i18n = I18nManager.getInstance();
+        switch (fontSizeCode) {
+            case "small":
+                return i18n.get("settings.font_size_small");
+            case "medium":
+                return i18n.get("settings.font_size_medium");
+            case "large":
+                return i18n.get("settings.font_size_large");
+            case "extra-large":
+                return i18n.get("settings.font_size_extra_large");
+            default:
+                return i18n.get("settings.font_size_medium");
+        }
+    }
+
+    /**
+     * 将字号名称转换为字号代码
+     * @param fontSizeName 字号名称
+     * @return 字号代码
+     */
+    private String convertFontSizeNameToCode(String fontSizeName) {
+        if (fontSizeName == null) {
+            return "medium";
+        }
+        I18nManager i18n = I18nManager.getInstance();
+        String small = i18n.get("settings.font_size_small");
+        String medium = i18n.get("settings.font_size_medium");
+        String large = i18n.get("settings.font_size_large");
+        String extraLarge = i18n.get("settings.font_size_extra_large");
+
+        if (fontSizeName.equals(small)) {
+            return "small";
+        } else if (fontSizeName.equals(medium)) {
+            return "medium";
+        } else if (fontSizeName.equals(large)) {
+            return "large";
+        } else if (fontSizeName.equals(extraLarge)) {
+            return "extra-large";
+        }
+        return "medium";
+    }
+
+    /**
      * 货币代码转显示名称
      */
     private String convertCurrencyCodeToName(String currencyCode) {
@@ -574,6 +650,21 @@ public class SettingsController {
                 com.cashier.CashierSystemFXApplication app = com.cashier.CashierSystemFXApplication.getInstance();
                 if (app != null) {
                     app.applyTheme(themeComboBox.getScene(), themeCode);
+                }
+            });
+        }
+    }
+
+    /**
+     * 应用字号到当前场景
+     * @param fontSizeCode 字号代码
+     */
+    private void applyFontSizeToCurrentScene(String fontSizeCode) {
+        if (fontSizeComboBox.getScene() != null) {
+            javafx.application.Platform.runLater(() -> {
+                com.cashier.CashierSystemFXApplication app = com.cashier.CashierSystemFXApplication.getInstance();
+                if (app != null) {
+                    app.applyFontSize(fontSizeComboBox.getScene(), fontSizeCode);
                 }
             });
         }
@@ -951,7 +1042,12 @@ public class SettingsController {
         String username = (currentUser != null) ? currentUser.username : "default";
         DataService.saveLanguagePreference(username, languageTag);
 
-        logger.info("SettingsController: 设置保存成功，主题: {}, 语言: {}, 用户: {}", themeCode, languageTag, username);
+        // 保存字号偏好 - 保存到当前用户
+        String fontSizeName = fontSizeComboBox.getSelectionModel().getSelectedItem();
+        String fontSizeCode = convertFontSizeNameToCode(fontSizeName);
+        DataService.saveFontSizePreference(username, fontSizeCode);
+
+        logger.info("SettingsController: 设置保存成功，主题: {}, 语言: {}, 字号: {}, 用户: {}", themeCode, languageTag, fontSizeCode, username);
     }
     /**
      * 显示成功消息

@@ -330,6 +330,26 @@ public class CashierSystemFXApplication extends Application {
     }
 
     /**
+     * 应用字号
+     * @param scene 场景
+     * @param fontSize 字号代码 (small, medium, large, extra-large)
+     */
+    public void applyFontSize(Scene scene, String fontSize) {
+        if (scene == null) {
+            return;
+        }
+
+        // 移除现有的字号样式类
+        scene.getRoot().getStyleClass().removeAll("font-size-small", "font-size-medium", "font-size-large", "font-size-extra-large");
+
+        // 添加新的字号样式类
+        String styleClass = "font-size-" + fontSize;
+        scene.getRoot().getStyleClass().add(styleClass);
+
+        logger.info("应用字号: {}", fontSize);
+    }
+
+    /**
      * 处理退出
      */
     private void handleExit() {
@@ -467,6 +487,10 @@ public class CashierSystemFXApplication extends Application {
             String currentTheme = DataService.loadThemePreference();
             applyTheme(scene, currentTheme);
 
+            // 应用字号
+            String currentFontSize = DataService.loadFontSizePreference(user.username);
+            applyFontSize(scene, currentFontSize);
+
             // 设置场景
             primaryStage.setScene(scene);
 
@@ -524,6 +548,10 @@ public class CashierSystemFXApplication extends Application {
             // 应用主题
             String currentTheme = DataService.loadThemePreference();
             applyTheme(scene, currentTheme);
+
+            // 应用字号
+            String currentFontSize = DataService.loadFontSizePreference(user.username);
+            applyFontSize(scene, currentFontSize);
 
             // 设置场景
             primaryStage.setScene(scene);

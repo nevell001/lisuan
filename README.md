@@ -2,7 +2,7 @@
 
 一个功能完整的收银系统，使用 JavaFX 17 开发，提供现代化的图形化界面。
 
-**当前版本**: v2.5.4 | **最新更新**: 2026-05-21
+**当前版本**: v2.5.5 | **最新更新**: 2026-06-09
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.12-blue)
@@ -135,7 +135,7 @@ mvn javafx:run
 **打包后运行**：
 ```bash
 mvn clean package
-java -jar target/cashier-system-fx-2.5.4-jar-with-dependencies.jar
+java -jar target/cashier-system-fx-2.5.5-jar-with-dependencies.jar
 ```
 
 ### 创建分发包
@@ -177,6 +177,28 @@ cp create-shortcut.bat dist/CashierSystem/
 - **钻石会员**: 10000+积分（8.5折）
 
 ## 🎯 最近更新
+
+### v2.5.5 (2026-06-09) - 界面优化与用户体验提升 ✨
+- 🏷️ **标签页宽度优化** - 标签宽度减少50%，显示更紧凑
+  - CSS min-width 从 160px 减至 97px
+  - CSS pref-width 从 200px 减至 121px
+  - 适配多语言标签显示
+- ❌ **标签关闭按钮优化** - 改进视觉设计
+  - 增强按钮可见性和点击区域
+  - 优化悬停效果和颜色对比度
+  - 位置右移，与标签文字更协调
+- 🔤 **字号调整功能** - 系统设置新增字号选项
+  - 支持小、中、大、超大四档字号
+  - 超大字号下导航按钮自适应缩放
+  - 用户偏好持久化存储
+- 🌐 **fcitx5 输入法兼容性** - Linux 平台输入法支持优化
+  - 添加 GTK_IM_MODULE、QT_IM_MODULE 环境变量
+  - 修正 XMODIFIERS 配置
+  - 解决中文输入法切换问题
+- 🌍 **国际化补全** - 补充缺失的翻译键
+  - 添加库存状态、排序方式翻译
+  - 完善繁体中文显示支持
+  - 修复英文登录卡顿问题
 
 ### v2.5.4 (2026-05-21) - Windows 分发包优化 📦
 - 🖥️ **GUI 数据库配置工具** - 图形化数据库配置界面

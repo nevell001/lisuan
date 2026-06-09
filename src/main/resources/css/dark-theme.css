@@ -465,8 +465,8 @@
 .tab-pane .tab {
     -fx-background-color: #424242;
     -fx-text-fill: #E0E0E0;
-    -fx-min-width: 160px;
-    -fx-pref-width: 200px;
+    -fx-min-width: 97px;
+    -fx-pref-width: 121px;
 }
 
 .tab-pane .tab .tab-label {
@@ -591,8 +591,8 @@
 .tab-pane .tab {
     -fx-background-color: #424242;
     -fx-text-fill: #E0E0E0;
-    -fx-min-width: 160px;
-    -fx-pref-width: 200px;
+    -fx-min-width: 97px;
+    -fx-pref-width: 121px;
 }
 
 .tab-pane .tab .tab-label {
@@ -795,4 +795,117 @@
 
 .member-table .table-row-cell {
     -fx-alignment: CENTER;
+}
+/* ========== 字号大小类 ========== */
+/* 小字号 - 10% smaller */
+.font-size-small {
+    -fx-font-size: 12px;
+}
+
+.font-size-small .label {
+    -fx-font-size: 12px;
+}
+
+.font-size-small .button {
+    -fx-font-size: 12px;
+}
+
+.font-size-small .text-field,
+.font-size-small .password-field,
+.font-size-small .text-area,
+.font-size-small .combo-box {
+    -fx-font-size: 12px;
+}
+
+.font-size-small .table-view .table-cell {
+    -fx-font-size: 12px;
+}
+
+.font-size-small .tab-pane .tab .tab-label {
+    -fx-font-size: 11px;
+}
+
+/* 中等字号 - 默认 */
+.font-size-medium {
+    -fx-font-size: 14px;
+}
+
+/* 大字号 - 15% larger */
+.font-size-large {
+    -fx-font-size: 16px;
+}
+
+.font-size-large .label {
+    -fx-font-size: 16px;
+}
+
+.font-size-large .button {
+    -fx-font-size: 16px;
+}
+
+.font-size-large .text-field,
+.font-size-large .password-field,
+.font-size-large .text-area,
+.font-size-large .combo-box {
+    -fx-font-size: 16px;
+}
+
+.font-size-large .table-view .table-cell {
+    -fx-font-size: 15px;
+}
+
+.font-size-large .tab-pane .tab .tab-label {
+    -fx-font-size: 13px;
+}
+
+/* 超大字号 - 25% larger */
+.font-size-extra-large {
+    -fx-font-size: 18px;
+}
+
+.font-size-extra-large .label {
+    -fx-font-size: 18px;
+}
+
+.font-size-extra-large .button {
+    -fx-font-size: 18px;
+}
+
+.font-size-extra-large .text-field,
+.font-size-extra-large .password-field,
+.font-size-extra-large .text-area,
+.font-size-extra-large .combo-box {
+    -fx-font-size: 18px;
+}
+
+.font-size-extra-large .table-view .table-cell {
+    -fx-font-size: 17px;
+}
+
+.font-size-extra-large .tab-pane .tab .tab-label {
+    -fx-font-size: 15px;
+}
+
+/* 导航按钮字号适配 */
+.font-size-small .nav-button {
+    -fx-font-size: 11px;
+    -fx-padding: 8px 8px;
+}
+
+.font-size-medium .nav-button {
+    -fx-font-size: 12px;
+    -fx-padding: 8px 8px;
+}
+
+.font-size-large .nav-button {
+    -fx-font-size: 13px;
+    -fx-padding: 10px 10px;
+    -fx-min-width: 100px;
+}
+
+.font-size-extra-large .nav-button {
+    -fx-font-size: 14px;
+    -fx-padding: 10px 12px;
+    -fx-min-width: 110px;
+    -fx-wrap-text: true;
 }

@@ -35,6 +35,14 @@ CONFIG_FILE="config/jvm.config"
 APP_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$APP_DIR"
 
+# 设置输入法环境变量（Linux fcitx5 兼容性）
+if [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
+    export GTK_IM_MODULE=fcitx
+    export QT_IM_MODULE=fcitx
+    export XMODIFIERS=@im=fcitx
+    echo "[Info] Input method environment set for fcitx5"
+fi
+
 echo "========================================"
 echo "  Cashier System Startup"
 echo "========================================"

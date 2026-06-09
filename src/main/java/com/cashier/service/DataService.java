@@ -354,6 +354,43 @@ public class DataService {
     }
 
     /**
+     * 加载字号偏好
+     */
+    public static String loadFontSizePreference() {
+        return loadFontSizePreference("default");
+    }
+
+    /**
+     * 加载指定用户的字号偏好
+     */
+    public static String loadFontSizePreference(String username) {
+        try {
+            return FontSizePreferenceDAO.getFontSizePreference(username);
+        } catch (SQLException e) {
+            logger.error("加载字号偏好失败", e);
+            return "medium"; // 默认中等字号
+        }
+    }
+
+    /**
+     * 保存字号偏好
+     */
+    public static void saveFontSizePreference(String fontSize) {
+        saveFontSizePreference("default", fontSize);
+    }
+
+    /**
+     * 保存指定用户的字号偏好
+     */
+    public static void saveFontSizePreference(String username, String fontSize) {
+        try {
+            FontSizePreferenceDAO.setFontSizePreference(username, fontSize);
+        } catch (SQLException e) {
+            logger.error("保存字号偏好失败", e);
+        }
+    }
+
+    /**
      * 检查是否有活跃班次
      */
     public static boolean hasActiveShift() {

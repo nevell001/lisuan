@@ -84,6 +84,9 @@
 
                         <Label text="%settings.theme_label_colon" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
                         <ComboBox fx:id="themeComboBox" GridPane.columnIndex="1" GridPane.rowIndex="2" prefWidth="150"/>
+
+                        <Label text="%settings.font_size_label_colon" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                        <ComboBox fx:id="fontSizeComboBox" GridPane.columnIndex="1" GridPane.rowIndex="3" prefWidth="150"/>
                     </GridPane>
 
                     <Separator/>
