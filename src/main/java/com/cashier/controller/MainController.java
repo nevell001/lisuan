@@ -1224,7 +1224,7 @@ private Button shiftBtn;
             javafx.scene.layout.HBox tabHeader = new javafx.scene.layout.HBox(4);
             tabHeader.setAlignment(javafx.geometry.Pos.CENTER);
             Label headerLabel = new Label(title);
-            headerLabel.setStyle("-fx-font-size: 13px;");
+            headerLabel.setStyle("-fx-font-size: 13px; -fx-font-family: \"Noto Sans CJK JP\", \"Noto Sans SC\", sans-serif;");
             tabHeader.getChildren().addAll(headerLabel, closeButton);
             tab.setGraphic(tabHeader);
             tab.setText(""); // 清空text，只使用graphic显示
@@ -1280,7 +1280,7 @@ private Button shiftBtn;
             javafx.scene.layout.HBox tabHeader = new javafx.scene.layout.HBox(4);
             tabHeader.setAlignment(javafx.geometry.Pos.CENTER);
             Label headerLabel = new Label(title);
-            headerLabel.setStyle("-fx-font-size: 13px;");
+            headerLabel.setStyle("-fx-font-size: 13px; -fx-font-family: \"Noto Sans CJK JP\", \"Noto Sans SC\", sans-serif;");
             tabHeader.getChildren().addAll(headerLabel, closeButton);
             tab.setGraphic(tabHeader);
             tab.setText(""); // 清空text，只使用graphic显示
