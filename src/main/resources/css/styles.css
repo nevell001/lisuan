@@ -1006,6 +1006,15 @@
     -fx-cursor: hand;
 }
 
+/* 隐藏使用自定义graphic的标签页的默认文本标签 */
+.main-tab-pane .tab.custom-tab-header .tab-label {
+    -fx-opacity: 0;
+    -fx-max-width: 0;
+    -fx-pref-width: 0;
+    -fx-min-width: 0;
+    -fx-padding: 0;
+}
+
 .main-tab-pane .tab:hover {
     -fx-background-color: #EEEEEE;
 }

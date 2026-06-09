@@ -1217,6 +1217,7 @@ private Button shiftBtn;
             // 创建新的标签页（不设置text，避免重复显示）
             Tab tab = new Tab();
             tab.setClosable(false); // 禁用默认关闭按钮，使用自定义按钮
+            tab.getStyleClass().add("custom-tab-header"); // 添加自定义样式类
 
             // 创建自定义关闭按钮并设置为标签图形
             javafx.scene.Node closeButton = createCloseButton(tab);
@@ -1272,6 +1273,7 @@ private Button shiftBtn;
             // 创建新的标签页（不设置text，避免重复显示）
             Tab tab = new Tab();
             tab.setClosable(false); // 禁用默认关闭按钮，使用自定义按钮
+            tab.getStyleClass().add("custom-tab-header"); // 添加自定义样式类
 
             // 创建自定义关闭按钮并设置为标签图形
             javafx.scene.Node closeButton = createCloseButton(tab);
