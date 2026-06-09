@@ -5,7 +5,9 @@
 
 /* ========== 全局样式 ========== */
 .root {
-    -fx-font-family: "Noto Sans CJK JP", "Noto Sans CJK SC", "Noto Sans SC", "UKIJ CJK", sans-serif;
+    -fx-font-family: "Noto Sans CJK JP", "Noto Sans CJK JP Bold", "Noto Sans SC", "Noto Sans CJK SC",
+                     "WenQuanYi Micro Hei", "WenQuanYi Zen Hei", "Microsoft YaHei", "SimHei", "UKIJ CJK",
+                     "DejaVu Sans", "Liberation Sans", "Ubuntu", "Arial", sans-serif;
     -fx-font-size: 14px;
     -fx-text-fill: #212121;
 }
