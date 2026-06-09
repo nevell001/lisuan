@@ -1,11 +1,20 @@
 # 收银系统数据库配置示例
 # 复制此文件为 database.properties 并修改相应配置
 
-# MySQL 数据库连接 URL
-# 格式: jdbc:mysql://主机名:端口/数据库名?参数
-# 示例:
-#   - 本机开发: useSSL=false（无证书加密）
-#   - 远程/生产: useSSL=true（需要配置 SSL 证书）
+# ========================================
+# 数据库 SSL/TLS 安全配置
+# ========================================
+# 开发环境: useSSL=false（本地开发，数据库在同一台机器）
+# 生产环境: useSSL=true&requireSSL=true&verifyServerCertificate=true
+#
+# ⚠️ 安全警告:
+# - 生产环境必须启用 SSL/TLS 加密
+# - 未加密的数据库连接可能导致数据泄露
+#
+# 生产环境推荐配置:
+# db.url=jdbc:mysql://db.example.com:3306/cashier_system?useSSL=true&requireSSL=true&verifyServerCertificate=true&trustCertificateKeyStoreUrl=file:/path/to/keystore.jks
+#
+# 开发环境配置（当前默认）:
 db.url=jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
 
 # MySQL 用户名

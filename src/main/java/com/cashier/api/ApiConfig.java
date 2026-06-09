@@ -27,20 +27,40 @@ public class ApiConfig {
     }
     
     private static void loadConfig() {
+        // 优先从环境变量读取敏感配置（生产环境推荐）
+        String envTokenSecret = System.getenv("TOKEN_SECRET");
+        if (envTokenSecret != null && !envTokenSecret.trim().isEmpty()) {
+            tokenSecret = envTokenSecret;
+            logger.info("使用环境变量 TOKEN_SECRET");
+        }
+
+        String envCorsOrigins = System.getenv("CORS_ALLOWED_ORIGINS");
+        if (envCorsOrigins != null && !envCorsOrigins.trim().isEmpty()) {
+            corsOrigins = envCorsOrigins;
+            logger.info("使用环境变量 CORS_ALLOWED_ORIGINS: {}", corsOrigins);
+        }
+
         File configFile = new File(CONFIG_FILE);
         if (configFile.exists()) {
             try (FileInputStream fis = new FileInputStream(configFile)) {
                 Properties props = new Properties();
                 props.load(fis);
-                
+
                 enabled = Boolean.parseBoolean(props.getProperty("api.enabled", "true"));
                 port = Integer.parseInt(props.getProperty("api.port", "8080"));
                 host = props.getProperty("api.host", "0.0.0.0");
-                corsOrigins = props.getProperty("cors.allowed.origins", "*");
+
+                // 只有在环境变量未设置时才从配置文件读取
+                if (tokenSecret.equals("default_secret_key")) {
+                    tokenSecret = props.getProperty("token.secret", "default_secret_key");
+                }
+                if (corsOrigins.equals("*")) {
+                    corsOrigins = props.getProperty("cors.allowed.origins", "*");
+                }
                 tokenExpireHours = Integer.parseInt(props.getProperty("token.expire.hours", "24"));
-                tokenSecret = props.getProperty("token.secret", "default_secret_key");
-                
+
                 logger.info("API 配置加载成功: enabled={}, port={}", enabled, port);
+                logger.warn("生产环境请设置环境变量 TOKEN_SECRET 和 CORS_ALLOWED_ORIGINS");
             } catch (Exception e) {
                 logger.warn("加载 API 配置失败，使用默认值: {}", e.getMessage());
             }

@@ -69,11 +69,30 @@ public class ApiServer {
             mapper.disable(SerializationFeature.FAIL_ON_EMPTY_BEANS);
             config.jsonMapper(new JavalinJackson(mapper, false));
             
-            // CORS 配置
+            // CORS 配置 - 从配置读取允许的来源
+            String corsOrigins = ApiConfig.getCorsOrigins();
+            logger.info("CORS 配置: 允许来源 = {}", corsOrigins);
             config.bundledPlugins.enableCors(cors -> {
-                cors.addRule(rule -> {
-                    rule.allowHost("/*");
-                });
+                if ("*".equals(corsOrigins)) {
+                    // 开发环境：允许所有来源
+                    cors.addRule(rule -> {
+                        rule.allowHost("/*");
+                    });
+                    logger.warn("⚠️ CORS 配置为允许所有来源 - 生产环境请设置 CORS_ALLOWED_ORIGINS 环境变量");
+                } else {
+                    // 生产环境：仅允许指定来源
+                    String[] origins = corsOrigins.split(",");
+                    for (String origin : origins) {
+                        origin = origin.trim();
+                        if (!origin.isEmpty()) {
+                            final String allowedOrigin = origin;
+                            cors.addRule(rule -> {
+                                rule.allowHost(allowedOrigin);
+                            });
+                        }
+                    }
+                    logger.info("✓ CORS 已限制为以下来源: {}", corsOrigins);
+                }
             });
             
             // 启用请求日志
