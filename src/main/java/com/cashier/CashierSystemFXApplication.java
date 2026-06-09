@@ -444,6 +444,13 @@ public class CashierSystemFXApplication extends Application {
      */
     private void switchToPosModeView(User user) {
         try {
+            // 加载用户特定的语言偏好并应用到 I18nManager
+            // 必须在加载 FXML 之前设置，确保使用正确的 ResourceBundle
+            String userLanguage = DataService.loadLanguagePreference(user.username);
+            com.cashier.i18n.I18nManager.getInstance().setLocale(userLanguage);
+            logger.info("用户 {} 的语言偏好: {}, I18nManager 当前语言: {}",
+                       user.username, userLanguage, com.cashier.i18n.I18nManager.getInstance().getCurrentLanguageTag());
+
             FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/PosModeView.fxml");
             Parent root = loader.load();
 
@@ -495,6 +502,13 @@ public class CashierSystemFXApplication extends Application {
      */
     private void loadFullMainView(User user) {
         try {
+            // 加载用户特定的语言偏好并应用到 I18nManager
+            // 必须在加载 FXML 之前设置，确保使用正确的 ResourceBundle
+            String userLanguage = DataService.loadLanguagePreference(user.username);
+            com.cashier.i18n.I18nManager.getInstance().setLocale(userLanguage);
+            logger.info("用户 {} 的语言偏好: {}, I18nManager 当前语言: {}",
+                       user.username, userLanguage, com.cashier.i18n.I18nManager.getInstance().getCurrentLanguageTag());
+
             FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/MainView.fxml");
             Parent root = loader.load();
 
