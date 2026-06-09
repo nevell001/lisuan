@@ -988,8 +988,8 @@
 /* ========== TabPane 样式 ========== */
 .main-tab-pane {
     -fx-background-color: transparent;
-    -fx-tab-min-height: 28;
-    -fx-tab-max-height: 32;
+    -fx-tab-min-height: 24;
+    -fx-tab-max-height: 28;
 }
 
 .main-tab-pane .tab-header-area {

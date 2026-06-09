@@ -1165,11 +1165,11 @@ private Button shiftBtn;
     private javafx.scene.Node createCloseButton(Tab tab) {
         Label closeButton = new Label("×");
         closeButton.setStyle(
-            "-fx-font-size: 15px; " +
+            "-fx-font-size: 13px; " +
             "-fx-font-weight: bold; " +
             "-fx-text-fill: #9E9E9E; " +
             "-fx-cursor: hand; " +
-            "-fx-padding: 0 3 0 3;"
+            "-fx-padding: 0 2 0 2;"
         );
         closeButton.setOnMouseClicked(event -> {
             // 从标签面板中移除标签页
@@ -1179,22 +1179,22 @@ private Button shiftBtn;
         });
         closeButton.setOnMouseEntered(event -> {
             closeButton.setStyle(
-                "-fx-font-size: 15px; " +
+                "-fx-font-size: 13px; " +
                 "-fx-font-weight: bold; " +
                 "-fx-text-fill: white; " +
                 "-fx-background-color: #F44336; " +
-                "-fx-background-radius: 3; " +
+                "-fx-background-radius: 2; " +
                 "-fx-cursor: hand; " +
-                "-fx-padding: 0 3 0 3;"
+                "-fx-padding: 0 2 0 2;"
             );
         });
         closeButton.setOnMouseExited(event -> {
             closeButton.setStyle(
-                "-fx-font-size: 15px; " +
+                "-fx-font-size: 13px; " +
                 "-fx-font-weight: bold; " +
                 "-fx-text-fill: #9E9E9E; " +
                 "-fx-cursor: hand; " +
-                "-fx-padding: 0 3 0 3;"
+                "-fx-padding: 0 2 0 2;"
             );
         });
         return closeButton;
@@ -1214,14 +1214,20 @@ private Button shiftBtn;
                 return;
             }
     
-            // 创建新的标签页
-            Tab tab = new Tab(title);
-            tab.setClosable(true); // 使用默认关闭按钮
+            // 创建新的标签页（使用自定义graphic控制宽度）
+            Tab tab = new Tab();
+            tab.setClosable(false); // 禁用默认关闭按钮
 
-            // 确保关闭按钮可见
-            tab.setOnCloseRequest(event -> {
-                openTabs.remove(title);
-            });
+            // 创建紧凑的标签头
+            javafx.scene.Node closeButton = createCloseButton(tab);
+            javafx.scene.layout.HBox tabHeader = new javafx.scene.layout.HBox(2);
+            tabHeader.setAlignment(javafx.geometry.Pos.CENTER);
+            tabHeader.setStyle("-fx-padding: 0 2 0 2; -fx-background-color: transparent;");
+            Label headerLabel = new Label(title);
+            headerLabel.setStyle("-fx-font-size: 11px; -fx-font-family: \"Noto Sans CJK JP\", \"Noto Sans SC\", \"Microsoft YaHei\", sans-serif; -fx-text-fill: #212121;");
+            tabHeader.getChildren().addAll(headerLabel, closeButton);
+            tab.setGraphic(tabHeader);
+            tab.setText("");
     
             // 创建占位符内容
             VBox placeholder = new VBox(20);
@@ -1264,14 +1270,20 @@ private Button shiftBtn;
                 return;
             }
 
-            // 创建新的标签页
-            Tab tab = new Tab(title);
-            tab.setClosable(true); // 使用默认关闭按钮
+            // 创建新的标签页（使用自定义graphic控制宽度）
+            Tab tab = new Tab();
+            tab.setClosable(false); // 禁用默认关闭按钮
 
-            // 确保关闭按钮可见
-            tab.setOnCloseRequest(event -> {
-                openTabs.remove(title);
-            });
+            // 创建紧凑的标签头
+            javafx.scene.Node closeButton = createCloseButton(tab);
+            javafx.scene.layout.HBox tabHeader = new javafx.scene.layout.HBox(2);
+            tabHeader.setAlignment(javafx.geometry.Pos.CENTER);
+            tabHeader.setStyle("-fx-padding: 0 2 0 2; -fx-background-color: transparent;");
+            Label headerLabel = new Label(title);
+            headerLabel.setStyle("-fx-font-size: 11px; -fx-font-family: \"Noto Sans CJK JP\", \"Noto Sans SC\", \"Microsoft YaHei\", sans-serif; -fx-text-fill: #212121;");
+            tabHeader.getChildren().addAll(headerLabel, closeButton);
+            tab.setGraphic(tabHeader);
+            tab.setText("");
             tab.setContent(content);
 
             // 添加标签页关闭事件
