@@ -1165,11 +1165,11 @@ private Button shiftBtn;
     private javafx.scene.Node createCloseButton(Tab tab) {
         Label closeButton = new Label("×");
         closeButton.setStyle(
-            "-fx-font-size: 16px; " +
+            "-fx-font-size: 15px; " +
             "-fx-font-weight: bold; " +
             "-fx-text-fill: #9E9E9E; " +
             "-fx-cursor: hand; " +
-            "-fx-padding: 0 4 0 4;"
+            "-fx-padding: 0 3 0 3;"
         );
         closeButton.setOnMouseClicked(event -> {
             // 从标签面板中移除标签页
@@ -1179,22 +1179,22 @@ private Button shiftBtn;
         });
         closeButton.setOnMouseEntered(event -> {
             closeButton.setStyle(
-                "-fx-font-size: 16px; " +
+                "-fx-font-size: 15px; " +
                 "-fx-font-weight: bold; " +
                 "-fx-text-fill: white; " +
                 "-fx-background-color: #F44336; " +
                 "-fx-background-radius: 3; " +
                 "-fx-cursor: hand; " +
-                "-fx-padding: 0 4 0 4;"
+                "-fx-padding: 0 3 0 3;"
             );
         });
         closeButton.setOnMouseExited(event -> {
             closeButton.setStyle(
-                "-fx-font-size: 16px; " +
+                "-fx-font-size: 15px; " +
                 "-fx-font-weight: bold; " +
                 "-fx-text-fill: #9E9E9E; " +
                 "-fx-cursor: hand; " +
-                "-fx-padding: 0 4 0 4;"
+                "-fx-padding: 0 3 0 3;"
             );
         });
         return closeButton;
@@ -1221,7 +1221,7 @@ private Button shiftBtn;
 
             // 创建自定义关闭按钮并设置为标签图形
             javafx.scene.Node closeButton = createCloseButton(tab);
-            javafx.scene.layout.HBox tabHeader = new javafx.scene.layout.HBox(4);
+            javafx.scene.layout.HBox tabHeader = new javafx.scene.layout.HBox(3);
             tabHeader.setAlignment(javafx.geometry.Pos.CENTER);
             Label headerLabel = new Label(title);
             headerLabel.setStyle("-fx-font-size: 13px; -fx-font-family: \"Noto Sans CJK JP\", \"Noto Sans SC\", sans-serif;");
@@ -1277,7 +1277,7 @@ private Button shiftBtn;
 
             // 创建自定义关闭按钮并设置为标签图形
             javafx.scene.Node closeButton = createCloseButton(tab);
-            javafx.scene.layout.HBox tabHeader = new javafx.scene.layout.HBox(4);
+            javafx.scene.layout.HBox tabHeader = new javafx.scene.layout.HBox(3);
             tabHeader.setAlignment(javafx.geometry.Pos.CENTER);
             Label headerLabel = new Label(title);
             headerLabel.setStyle("-fx-font-size: 13px; -fx-font-family: \"Noto Sans CJK JP\", \"Noto Sans SC\", sans-serif;");
