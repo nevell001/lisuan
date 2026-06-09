@@ -1029,20 +1029,34 @@
 
 .main-tab-pane .tab-close-button {
     -fx-background-color: transparent;
-    -fx-background-radius: 4;
+    -fx-background-radius: 3;
     -fx-cursor: hand;
-    -fx-padding: 0 4 0 4;
+    -fx-padding: 2 4 2 4;
     -fx-background-insets: 0;
     -fx-opacity: 1;
-    -fx-font-size: 14px;
-    -fx-text-fill: #757575;
-    -fx-font-family: "Arial", sans-serif;
-    -fx-font-weight: bold;
+    -fx-min-width: 16;
+    -fx-min-height: 16;
+    -fx-pref-width: 16;
+    -fx-pref-height: 16;
+    -fx-max-width: 16;
+    -fx-max-height: 16;
+}
+
+.main-tab-pane .tab-close-button > .container {
+    -fx-shape: "M 0 0 L 7 7 M 7 0 L 0 7";
+    -fx-stroke: #9E9E9E;
+    -fx-stroke-width: 2;
+    -fx-stroke-type: outside;
+    -fx-scale-shape: false;
+    -fx-center-shape: false;
 }
 
 .main-tab-pane .tab-close-button:hover {
-    -fx-background-color: #F44336;
-    -fx-text-fill: white;
+    -fx-background-color: rgba(244, 67, 54, 0.15);
+}
+
+.main-tab-pane .tab-close-button:hover > .container {
+    -fx-stroke: #F44336;
 }
 
 .main-tab-pane .tab-content-area {

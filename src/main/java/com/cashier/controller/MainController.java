@@ -1157,6 +1157,50 @@ private Button shiftBtn;
     }
 
     /**
+     * 创建自定义关闭按钮
+     * 解决 Linux 系统下默认关闭按钮不显示的问题
+     * @param tab 要关闭的标签页
+     * @return 关闭按钮节点
+     */
+    private javafx.scene.Node createCloseButton(Tab tab) {
+        Label closeButton = new Label("×");
+        closeButton.setStyle(
+            "-fx-font-size: 16px; " +
+            "-fx-font-weight: bold; " +
+            "-fx-text-fill: #9E9E9E; " +
+            "-fx-cursor: hand; " +
+            "-fx-padding: 0 4 0 4;"
+        );
+        closeButton.setOnMouseClicked(event -> {
+            // 从标签面板中移除标签页
+            tabPane.getTabs().remove(tab);
+            // 从打开的标签页映射中移除
+            openTabs.remove(tab.getText());
+        });
+        closeButton.setOnMouseEntered(event -> {
+            closeButton.setStyle(
+                "-fx-font-size: 16px; " +
+                "-fx-font-weight: bold; " +
+                "-fx-text-fill: white; " +
+                "-fx-background-color: #F44336; " +
+                "-fx-background-radius: 3; " +
+                "-fx-cursor: hand; " +
+                "-fx-padding: 0 4 0 4;"
+            );
+        });
+        closeButton.setOnMouseExited(event -> {
+            closeButton.setStyle(
+                "-fx-font-size: 16px; " +
+                "-fx-font-weight: bold; " +
+                "-fx-text-fill: #9E9E9E; " +
+                "-fx-cursor: hand; " +
+                "-fx-padding: 0 4 0 4;"
+            );
+        });
+        return closeButton;
+    }
+
+    /**
          * 显示占位符内容
          * @param title 标题
          * @param icon 图标
@@ -1172,7 +1216,16 @@ private Button shiftBtn;
     
             // 创建新的标签页
             Tab tab = new Tab(title);
-            tab.setClosable(true);
+            tab.setClosable(false); // 禁用默认关闭按钮，使用自定义按钮
+
+            // 创建自定义关闭按钮并设置为标签图形
+            javafx.scene.Node closeButton = createCloseButton(tab);
+            javafx.scene.layout.HBox tabHeader = new javafx.scene.layout.HBox(4);
+            tabHeader.setAlignment(javafx.geometry.Pos.CENTER);
+            Label headerLabel = new Label(title);
+            headerLabel.setStyle("-fx-font-size: 13px;");
+            tabHeader.getChildren().addAll(headerLabel, closeButton);
+            tab.setGraphic(tabHeader);
     
             // 创建占位符内容
             VBox placeholder = new VBox(20);
@@ -1191,12 +1244,7 @@ private Button shiftBtn;
             placeholder.getChildren().addAll(iconLabel, titleLabel, messageLabel);
             
             tab.setContent(placeholder);
-    
-            // 添加标签页关闭事件
-            tab.setOnClosed(event -> {
-                openTabs.remove(title);
-            });
-    
+
             // 添加到标签页管理器
             openTabs.put(title, tab);
     
@@ -1222,7 +1270,16 @@ private Button shiftBtn;
 
             // 创建新的标签页
             Tab tab = new Tab(title);
-            tab.setClosable(true);
+            tab.setClosable(false); // 禁用默认关闭按钮，使用自定义按钮
+
+            // 创建自定义关闭按钮并设置为标签图形
+            javafx.scene.Node closeButton = createCloseButton(tab);
+            javafx.scene.layout.HBox tabHeader = new javafx.scene.layout.HBox(4);
+            tabHeader.setAlignment(javafx.geometry.Pos.CENTER);
+            Label headerLabel = new Label(title);
+            headerLabel.setStyle("-fx-font-size: 13px;");
+            tabHeader.getChildren().addAll(headerLabel, closeButton);
+            tab.setGraphic(tabHeader);
             tab.setContent(content);
 
             // 添加标签页关闭事件
