@@ -1214,8 +1214,8 @@ private Button shiftBtn;
                 return;
             }
     
-            // 创建新的标签页
-            Tab tab = new Tab(title);
+            // 创建新的标签页（不设置text，避免重复显示）
+            Tab tab = new Tab();
             tab.setClosable(false); // 禁用默认关闭按钮，使用自定义按钮
 
             // 创建自定义关闭按钮并设置为标签图形
@@ -1226,6 +1226,7 @@ private Button shiftBtn;
             headerLabel.setStyle("-fx-font-size: 13px;");
             tabHeader.getChildren().addAll(headerLabel, closeButton);
             tab.setGraphic(tabHeader);
+            tab.setText(""); // 清空text，只使用graphic显示
     
             // 创建占位符内容
             VBox placeholder = new VBox(20);
@@ -1268,8 +1269,8 @@ private Button shiftBtn;
                 return;
             }
 
-            // 创建新的标签页
-            Tab tab = new Tab(title);
+            // 创建新的标签页（不设置text，避免重复显示）
+            Tab tab = new Tab();
             tab.setClosable(false); // 禁用默认关闭按钮，使用自定义按钮
 
             // 创建自定义关闭按钮并设置为标签图形
@@ -1280,6 +1281,7 @@ private Button shiftBtn;
             headerLabel.setStyle("-fx-font-size: 13px;");
             tabHeader.getChildren().addAll(headerLabel, closeButton);
             tab.setGraphic(tabHeader);
+            tab.setText(""); // 清空text，只使用graphic显示
             tab.setContent(content);
 
             // 添加标签页关闭事件
