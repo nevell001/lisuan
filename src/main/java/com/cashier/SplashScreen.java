@@ -50,7 +50,7 @@ public class SplashScreen extends Preloader {
 
         VBox root = new VBox(20, logo, progress, statusLabel);
         root.setStyle("-fx-background-color: #f5f5f5; -fx-padding: 40; -fx-alignment: center;");
-        root.getStylesheets().add("/css/styles.css");
+        root.getStylesheets().add("/css/splash.css");
 
         Scene scene = new Scene(root, 400, 280);
         stage.setScene(scene);

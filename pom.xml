@@ -297,6 +297,9 @@
                         <manifest>
                             <mainClass>com.cashier.CashierSystemFXApplication</mainClass>
                         </manifest>
+                        <manifestEntries>
+                            <JavaFX-Preloader-Class>com.cashier.SplashScreen</JavaFX-Preloader-Class>
+                        </manifestEntries>
                     </archive>
                     <descriptorRefs>
                         <descriptorRef>jar-with-dependencies</descriptorRef>

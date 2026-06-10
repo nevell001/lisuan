@@ -1,0 +1,37 @@
+/*
+ * Splash 启动画面样式
+ */
+
+.splash-root {
+    -fx-background-color: #f5f5f5;
+    -fx-padding: 40;
+    -fx-alignment: center;
+    -fx-spacing: 20;
+}
+
+.splash-logo {
+    -fx-fit-width: 96;
+    -fx-fit-height: 96;
+    -fx-smooth: true;
+}
+
+.splash-progress {
+    -fx-pref-width: 300;
+    -fx-accent: #4CAF50;
+}
+
+.splash-progress .bar {
+    -fx-background-insets: 0;
+}
+
+.splash-progress .track {
+    -fx-background-color: #e0e0e0;
+    -fx-background-insets: 0;
+    -fx-background-radius: 4;
+}
+
+.splash-status {
+    -fx-font-size: 14px;
+    -fx-text-fill: #666;
+    -fx-font-family: "Microsoft YaHei", "PingFang SC", sans-serif;
+}
