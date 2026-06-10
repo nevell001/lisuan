@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ============================================
-# Cashier System Installation Script (Linux/Mac)
+# LiSuan Installation Script (Linux/Mac)
 # ============================================
 
 set -e
@@ -26,7 +26,7 @@ if [ -f ".env" ]; then
 fi
 
 # 默认值（如果 .env 中没有定义）
-APP_VERSION=${APP_VERSION:-"2.5.4"}
+APP_VERSION=${APP_VERSION:-"2.5.6"}
 DB_TYPE=${DB_TYPE:-"none"}
 DB_HOST=${DB_HOST:-"localhost"}
 DB_PORT=${DB_PORT:-"3306"}
@@ -35,10 +35,10 @@ DB_USERNAME=${MYSQL_USER:-"root"}
 DB_PASSWORD=${MYSQL_ROOT_PASSWORD:-"RootPassword123!"}
 MYSQL_CONTAINER_NAME=${MYSQL_CONTAINER_NAME:-"cashier-mysql"}
 
-JAR_PATH="target/cashier-system-fx-${APP_VERSION}-jar-with-dependencies.jar"
+JAR_PATH="target/lisuan-fx-${APP_VERSION}-jar-with-dependencies.jar"
 
 echo "========================================"
-echo "  Cashier System Installation"
+echo "  LiSuan Installation"
 echo "========================================"
 echo ""
 
@@ -277,19 +277,19 @@ if [[ "$OSTYPE" == "linux-gnu"* ]]; then
         DESKTOP_DIR="${XDG_DESKTOP_DIR:-$HOME/Desktop}"
         mkdir -p "$DESKTOP_DIR"
 
-        cat > "$DESKTOP_DIR/cashier-system.desktop" << EOF
+        cat > "$DESKTOP_DIR/lisuan.desktop" << EOF
 [Desktop Entry]
 Version=1.0
 Type=Application
-Name=Cashier System
-Comment=Cashier System v${APP_VERSION}
+Name=LiSuan
+Comment=LiSuan v${APP_VERSION}
 Exec=bash $(pwd)/start.sh
 Icon=$(pwd)/images/logos/app-icon.png
 Terminal=true
 Categories=Office;
 EOF
 
-        chmod +x "$DESKTOP_DIR/cashier-system.desktop"
+        chmod +x "$DESKTOP_DIR/lisuan.desktop"
         echo "[Done] Desktop shortcut created"
     fi
 elif [[ "$OSTYPE" == "darwin"* ]]; then
@@ -306,7 +306,7 @@ echo "========================================"
 echo ""
 echo "Application Info:"
 echo "  Version: ${APP_VERSION}"
-echo "  JAR: target/cashier-system-fx-${APP_VERSION}.jar"
+echo "  JAR: target/lisuan-fx-${APP_VERSION}.jar"
 echo ""
 
 if [ "$DB_TYPE" == "docker" ]; then
