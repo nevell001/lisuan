@@ -11,7 +11,7 @@
     <packaging>jar</packaging>
 
     <name>LiSuan</name>
-    <description>狸算收银系统 - 现代化收银系统</description>
+    <description>狸算(LiSuan)收银系统 - 现代化收银系统</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -338,7 +338,7 @@
                     <name>LiSuan</name>
                     <appVersion>${project.version}</appVersion>
                     <vendor>LiSuan</vendor>
-                    <description>狸算收银系统 - 现代化收银系统</description>
+                    <description>狸算(LiSuan)收银系统 - 现代化收银系统</description>
                     <destination>target/dist</destination>
                     <input>target</input>
                     <runtimeImage>target/custom-jre</runtimeImage>

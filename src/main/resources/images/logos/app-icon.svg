@@ -30,5 +30,5 @@
   </g>
 
   <!-- Version text (optional, for development) -->
-  <text x="128" y="220" font-family="Arial, sans-serif" font-size="14" fill="#FFFFFF" text-anchor="middle" opacity="0.8">收银系统</text>
+  <text x="128" y="220" font-family="Arial, sans-serif" font-size="14" fill="#FFFFFF" text-anchor="middle" opacity="0.8">狸算收银系统</text>
 </svg>

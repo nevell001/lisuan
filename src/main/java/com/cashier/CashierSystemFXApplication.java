@@ -34,7 +34,7 @@ import org.slf4j.Logger;
 public class CashierSystemFXApplication extends Application {
 
     private static final Logger logger = LoggerFactoryUtil.getLogger(CashierSystemFXApplication.class);
-    private static final String APP_TITLE = "收银系统";
+    private static final String APP_TITLE = "狸算(LiSuan)收银系统";
     private static final double WINDOW_WIDTH = 1300;
     private static final double WINDOW_HEIGHT = 800;
 

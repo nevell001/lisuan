@@ -12,7 +12,7 @@ public class AppConstants {
     /**
      * 应用名称
      */
-    public static final String APP_NAME = "收银系统 Cashier System";
+    public static final String APP_NAME = "狸算(LiSuan)收银系统 LiSuan Cashier System";
 
     /**
      * 应用版本号
@@ -23,7 +23,7 @@ public class AppConstants {
     /**
      * 应用标题
      */
-    public static final String APP_TITLE = "收银系统";
+    public static final String APP_TITLE = "狸算(LiSuan)收银系统";
 
     /**
      * 应用副标题

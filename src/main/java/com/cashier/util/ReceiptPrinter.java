@@ -79,10 +79,10 @@ public class ReceiptPrinter {
         // 店铺信息（带 Logo）
         sb.append("========================================\n");
         sb.append("              ╔═══╗                    \n");
+        sb.append("              ║狸算║                    \n");
         sb.append("              ║收银║                    \n");
-        sb.append("              ║系统║                    \n");
         sb.append("              ╚═══╝                    \n");
-        sb.append("           收银系统小票\n");
+        sb.append("        狸算(LiSuan)收银系统小票\n");
         sb.append("========================================\n\n");
 
         // 交易信息
@@ -462,7 +462,7 @@ public class ReceiptPrinter {
             // 店铺名称
             content.append(new String(EscPosUtils.ALIGN_CENTER));
             content.append(new String(EscPosUtils.DOUBLE_HEIGHT_WIDTH_ON));
-            content.append("收银系统\n");
+            content.append("狸算(LiSuan)收银系统\n");
             content.append(new String(EscPosUtils.FONT_NORMAL));
             content.append(new String(EscPosUtils.ALIGN_LEFT));
             content.append(new String(EscPosUtils.LINE_FEED));

@@ -11,7 +11,7 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 /**
- * 收银系统图形化安装程序
+ * 狸算(LiSuan)收银系统图形化安装程序
  */
 public class Installer {
     private static final Logger LOGGER = Logger.getLogger(Installer.class.getName());
@@ -43,7 +43,7 @@ public class Installer {
     
     public void start() {
         SwingUtilities.invokeLater(() -> {
-            frame = new JFrame("收银系统安装程序 v" + APP_VERSION);
+            frame = new JFrame("狸算(LiSuan)收银系统安装程序 v" + APP_VERSION);
             frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
             frame.setSize(700, 500);
             frame.setLocationRelativeTo(null);
@@ -64,7 +64,7 @@ public class Installer {
         headerPanel.setBackground(new Color(70, 130, 180));
         headerPanel.setPreferredSize(new Dimension(700, 60));
         
-        JLabel titleLabel = new JLabel("收银系统安装程序", SwingConstants.CENTER);
+        JLabel titleLabel = new JLabel("狸算(LiSuan)收银系统安装程序", SwingConstants.CENTER);
         titleLabel.setForeground(Color.WHITE);
         titleLabel.setFont(new Font("微软雅黑", Font.BOLD, 20));
         headerPanel.add(titleLabel, BorderLayout.CENTER);

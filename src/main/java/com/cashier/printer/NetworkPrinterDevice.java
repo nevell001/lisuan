@@ -321,7 +321,7 @@ public class NetworkPrinterDevice implements PrinterDevice {
         }
 
         // 如果没有图片 Logo，使用文本 Logo 作为备用
-        byte[] textLogo = LogoPrinter.createTextLogo("收银系统");
+        byte[] textLogo = LogoPrinter.createTextLogo("狸算(LiSuan)收银系统");
         if (textLogo != null) {
             outputStream.write(textLogo);
             logger.debug("已打印文本 Logo");

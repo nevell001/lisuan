@@ -296,7 +296,7 @@ public class LoginController {
         Alert alert = new Alert(Alert.AlertType.INFORMATION);
         alert.setTitle("关于");
         alert.setHeaderText(AppConstants.APP_NAME + " v" + AppConstants.APP_VERSION);
-        alert.setContentText("现代化收银系统 - " + AppConstants.APP_SUBTITLE + "\n\n" +
+        alert.setContentText("狸算(LiSuan)收银系统 - " + AppConstants.APP_SUBTITLE + "\n\n" +
                 "技术栈：\n" +
                 "- JavaFX " + AppConstants.JAVAFX_VERSION + "\n" +
                 "- Maven " + AppConstants.MIN_MAVEN_VERSION + "+\n" +

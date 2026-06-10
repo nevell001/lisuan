@@ -55,7 +55,7 @@ public class SplashScreen extends Preloader {
         Scene scene = new Scene(root, 400, 280);
         stage.setScene(scene);
         stage.initStyle(StageStyle.UNDECORATED);
-        stage.setTitle("收银系统");
+        stage.setTitle("狸算(LiSuan)收银系统");
         stage.setResizable(false);
         stage.centerOnScreen();
 
