@@ -25,7 +25,7 @@ echo [INFO] Version: %APP_VERSION%
 echo.
 
 REM Check JAR file
-set "FAT_JAR=cashier-system-fx-%APP_VERSION%-jar-with-dependencies.jar"
+set "FAT_JAR=lisuan-fx-%APP_VERSION%-jar-with-dependencies.jar"
 if not exist "target\%FAT_JAR%" (
     echo [ERROR] JAR not found: target\%FAT_JAR%
     echo.

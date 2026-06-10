@@ -5,13 +5,13 @@
          http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.cashier</groupId>
-    <artifactId>cashier-system-fx</artifactId>
+    <groupId>com.lisuan</groupId>
+    <artifactId>lisuan-fx</artifactId>
     <version>2.5.6</version>
     <packaging>jar</packaging>
 
-    <name>Cashier System FX</name>
-    <description>现代化收银系统 - JavaFX 版本</description>
+    <name>LiSuan</name>
+    <description>狸算收银系统 - 现代化收银系统</description>
 
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
@@ -277,9 +277,9 @@
                     <mainClass>com.cashier.CashierSystemFXApplication</mainClass>
                     <compress>2</compress>
                     <noHeaderFiles>true</noHeaderFiles>
-                    <launcher>cashier-system</launcher>
-                    <jlinkImageName>cashier-system-image</jlinkImageName>
-                    <jlinkZipName>cashier-system</jlinkZipName>
+                    <launcher>lisuan</launcher>
+                    <jlinkImageName>lisuan-image</jlinkImageName>
+                    <jlinkZipName>lisuan</jlinkZipName>
                     <jvmArgs>
                         <jvmArg>-Dfile.encoding=UTF-8</jvmArg>
                         <jvmArg>-Dsun.jnu.encoding=UTF-8</jvmArg>
@@ -342,7 +342,7 @@
                     <destination>target/dist</destination>
                     <input>target</input>
                     <runtimeImage>target/custom-jre</runtimeImage>
-                    <mainJar>cashier-system-fx-${project.version}-jar-with-dependencies.jar</mainJar>
+                    <mainJar>lisuan-fx-${project.version}-jar-with-dependencies.jar</mainJar>
                     <mainClass>com.cashier.CashierSystemFXApplication</mainClass>
                     <javaOptions>
                         <option>-Dfile.encoding=UTF-8</option>

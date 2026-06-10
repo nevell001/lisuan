@@ -14,7 +14,7 @@ for /f "tokens=3 delims=<>" %%a in ('findstr /R "<version>" pom.xml ^| findstr /
 
 set "APP_VERSION_NUM=%APP_VERSION:v=%"
 set APP_NAME=CashierSystem
-set FAT_JAR=cashier-system-fx-%APP_VERSION_NUM%-jar-with-dependencies.jar
+set FAT_JAR=lisuan-fx-%APP_VERSION_NUM%-jar-with-dependencies.jar
 
 echo [Info] Version: %APP_VERSION_NUM%
 echo.
@@ -91,7 +91,7 @@ echo     echo [ERROR] Java is not installed or not in PATH >> "dist\%APP_NAME%\D
 echo     pause >> "dist\%APP_NAME%\Database Config.bat"
 echo     exit /b 1 >> "dist\%APP_NAME%\Database Config.bat"
 echo ^) >> "dist\%APP_NAME%\Database Config.bat"
-echo for %%%%f in ^(cashier-system-fx-*-jar-with-dependencies.jar^) do set "CLASSPATH=lib;%%%%f" >> "dist\%APP_NAME%\Database Config.bat"
+echo for %%%%f in ^(lisuan-fx-*-jar-with-dependencies.jar^) do set "CLASSPATH=lib;%%%%f" >> "dist\%APP_NAME%\Database Config.bat"
 echo echo Starting Database Configuration GUI... >> "dist\%APP_NAME%\Database Config.bat"
 echo java -cp "%%CLASSPATH%%" com.cashier.installer.DatabaseConfigDialog >> "dist\%APP_NAME%\Database Config.bat"
 

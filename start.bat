@@ -19,12 +19,12 @@ if exist "pom.xml" (
     )
     :version_found
     if "%APP_VERSION%"=="" set "APP_VERSION=2.5.4"
-    set "JAR_FILE=target\cashier-system-fx-%APP_VERSION%-jar-with-dependencies.jar"
+    set "JAR_FILE=target\lisuan-fx-%APP_VERSION%-jar-with-dependencies.jar"
 ) else (
     REM Package mode - no pom.xml, look for JAR in current directory
     set "IS_PACKAGE=1"
     set "JAR_FILE="
-    for %%f in (cashier-system-fx-*-jar-with-dependencies.jar) do (
+    for %%f in (lisuan-fx-*-jar-with-dependencies.jar) do (
         set "JAR_FILE=%%f"
         set "FULLNAME=%%~nf"
         goto :jar_found
@@ -32,11 +32,11 @@ if exist "pom.xml" (
     :jar_found
     if "%JAR_FILE%"=="" (
         echo [ERROR] No JAR file found in current directory
-        echo Expected: cashier-system-fx-*-jar-with-dependencies.jar
+        echo Expected: lisuan-fx-*-jar-with-dependencies.jar
         pause
         exit /b 1
     )
-    REM Extract version from filename: cashier-system-fx-2.5.4-jar-with-dependencies
+    REM Extract version from filename: lisuan-fx-2.5.4-jar-with-dependencies
     REM Split by '-' and get the 4th token (2.5.4)
     for /f "tokens=4 delims=-" %%v in ("%FULLNAME%") do set "APP_VERSION=%%v"
     if "%APP_VERSION%"=="" set "APP_VERSION=2.5.4"
@@ -281,7 +281,7 @@ if not exist "%JAR_FILE%" (
         echo This appears to be a package distribution, but the JAR file is missing.
         echo.
         echo Please ensure you have the complete package:
-        echo   - cashier-system-fx-*-jar-with-dependencies.jar
+        echo   - lisuan-fx-*-jar-with-dependencies.jar
         echo.
         pause
         exit /b 1
