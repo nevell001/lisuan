@@ -329,7 +329,7 @@
                 </configuration>
             </plugin>
 
-            <!-- jpackage 插件 - 创建原生安装包（内嵌 JRE） -->
+            <!-- jpackage 插件 - Windows 原生安装包（内嵌 JRE） -->
             <plugin>
                 <groupId>org.panteleyev</groupId>
                 <artifactId>jpackage-maven-plugin</artifactId>
@@ -356,9 +356,6 @@
                     <winDirChooser>true</winDirChooser>
                     <winPerUserInstall>false</winPerUserInstall>
                     <type>EXE</type>
-                    <!-- Linux -->
-                    <linuxShortcut>true</linuxShortcut>
-                    <linuxMenuGroup>Office</linuxMenuGroup>
                     <!-- 图标 -->
                     <icon>src/main/resources/images/logos/app-icon.ico</icon>
                 </configuration>
