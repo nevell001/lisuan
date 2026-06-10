@@ -1,21 +1,18 @@
 #!/bin/bash
 # ========================================
-# 收银系统 - jpackage 原生打包脚本
+# 狸算收银系统 - jpackage 原生打包脚本
 # Linux/macOS 版本
 # ========================================
 
 set -e
 
 echo "========================================"
-echo "  收银系统 - jpackage 原生打包"
+echo "  狸算收银系统 - jpackage 原生打包"
 echo "========================================"
 echo ""
 
 # 从 pom.xml 读取版本号
-APP_VERSION=$(grep -A 1 "<artifactId>cashier-system-fx</artifactId>" pom.xml | grep "<version>" | sed 's/.*<version>\(.*\)<\/version>.*/\1/' | head -1)
-if [ -z "$APP_VERSION" ]; then
-    APP_VERSION=$(grep "<version>" pom.xml | grep -v "javafx\|maven\|java\|mysql\|hikaricp\|poi\|pdfbox\|controlsfx\|fontawesomefx\|junit\|testfx\|h2\|bcrypt\|logback\|jackson\|javalin\|slf4j\|plugin" | head -1 | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
-fi
+APP_VERSION=$(grep "<version>" pom.xml | grep -v "javafx\|maven\|java\|mysql\|hikaricp\|poi\|pdfbox\|controlsfx\|fontawesomefx\|junit\|testfx\|h2\|bcrypt\|logback\|jackson\|javalin\|slf4j\|plugin" | head -1 | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
 if [ -z "$APP_VERSION" ]; then
     APP_VERSION="2.5.5"
 fi
@@ -39,9 +36,6 @@ if ! command -v jpackage &> /dev/null; then
     echo "jpackage 是 JDK 14+ 自带的工具。"
     echo "请确保 JDK 的 bin 目录在 PATH 中"
     echo ""
-    echo "检查 JDK:"
-    java -version
-    echo ""
     exit 1
 fi
 
@@ -55,7 +49,7 @@ echo ""
 # 检测平台并设置对应参数
 OS_TYPE=$(uname -s)
 PKG_TYPE=""
-PKG_NAME="CashierSystem"
+PKG_NAME="LiSuan"
 
 echo "[2/3] 开始打包..."
 echo ""
@@ -67,13 +61,14 @@ case "$OS_TYPE" in
             PKG_TYPE="deb"
         fi
         echo "[INFO] 检测到 Linux 平台，生成 $PKG_TYPE 包"
-        
+        echo ""
+
         jpackage \
             --type $PKG_TYPE \
             --name "$PKG_NAME" \
             --app-version "$APP_VERSION" \
-            --vendor "Cashier System" \
-            --description "现代化收银系统 - 库存管理、会员管理、交易管理" \
+            --vendor "LiSuan" \
+            --description "狸算收银系统 - 现代化收银系统" \
             --dest target/dist \
             --input target \
             --main-jar "$FAT_JAR" \
@@ -83,19 +78,22 @@ case "$OS_TYPE" in
             --java-options "-Dfile.encoding=UTF-8" \
             --linux-menu-group "Office" \
             --linux-shortcut \
+            --linux-app-category "Business" \
+            --linux-package-deps \
             --icon src/main/resources/images/logos/app-icon.png
         ;;
-    
+
     Darwin*)
         PKG_TYPE="dmg"
         echo "[INFO] 检测到 macOS 平台，生成 $PKG_TYPE 包"
-        
+        echo ""
+
         jpackage \
             --type $PKG_TYPE \
             --name "$PKG_NAME" \
             --app-version "$APP_VERSION" \
-            --vendor "Cashier System" \
-            --description "现代化收银系统 - 库存管理、会员管理、交易管理" \
+            --vendor "LiSuan" \
+            --description "狸算收银系统 - 现代化收银系统" \
             --dest target/dist \
             --input target \
             --main-jar "$FAT_JAR" \
@@ -103,10 +101,10 @@ case "$OS_TYPE" in
             --java-options "-Xms512m" \
             --java-options "-Xmx1024m" \
             --java-options "-Dfile.encoding=UTF-8" \
-            --mac-package-name "Cashier System" \
-            --icon src/main/resources/images/logos/app-icon.png
+            --mac-package-name "LiSuan" \
+            --icon src/main/resources/images/logos/app-icon.icns
         ;;
-    
+
     *)
         echo "[ERROR] 不支持的平台: $OS_TYPE"
         exit 1
@@ -131,6 +129,18 @@ echo "  [SUCCESS] 原生安装包已创建"
 echo "========================================"
 echo ""
 echo "安装包位置: target/dist/"
+echo ""
+
+# 显示文件大小
+PKG_FILE=$(find target/dist -name "LiSuan-*" -type f 2>/dev/null | head -1)
+if [ -n "$PKG_FILE" ]; then
+    PKG_SIZE=$(du -h "$PKG_FILE" | cut -f1)
+    echo "安装包: $PKG_FILE"
+    echo "安装包大小: $PKG_SIZE"
+    echo ""
+fi
+
+echo "注意: macOS/Linux 版本需要系统已安装 Java 17+"
 echo ""
 
 # 打开输出目录
