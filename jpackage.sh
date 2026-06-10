@@ -17,7 +17,11 @@ if [ -z "$APP_VERSION" ]; then
     APP_VERSION="2.5.5"
 fi
 
+# JavaFX 版本
+JAVAFX_VERSION="17.0.12"
+
 echo "[INFO] 版本: $APP_VERSION"
+echo "[INFO] JavaFX: $JAVAFX_VERSION"
 echo ""
 
 # 检查 JAR 文件
@@ -50,9 +54,28 @@ echo ""
 OS_TYPE=$(uname -s)
 PKG_TYPE=""
 PKG_NAME="LiSuan"
+ARCH=$(uname -m)
 
 echo "[2/3] 开始打包..."
+echo "[INFO] 平台: $OS_TYPE $ARCH"
 echo ""
+
+# 确定 JavaFX 平台后缀
+case "$OS_TYPE" in
+    Linux*)
+        JAVAFX_PLATFORM="linux"
+        ;;
+    Darwin*)
+        if [ "$ARCH" = "arm64" ]; then
+            JAVAFX_PLATFORM="mac-aarch64"
+        else
+            JAVAFX_PLATFORM="mac"
+        fi
+        ;;
+    *)
+        JAVAFX_PLATFORM=""
+        ;;
+esac
 
 case "$OS_TYPE" in
     Linux*)
@@ -63,6 +86,17 @@ case "$OS_TYPE" in
         echo "[INFO] 检测到 Linux 平台，生成 $PKG_TYPE 包"
         echo ""
 
+        # 构建模块路径（仅包含平台特定的 jar）
+        JAVAFX_MODULES=""
+        if [ -n "$JAVAFX_PLATFORM" ]; then
+            JFX_BASE="$HOME/.m2/repository/org/openjfx/javafx-base/$JAVAFX_VERSION/javafx-base-$JAVAFX_VERSION-$JAVAFX_PLATFORM.jar"
+            JFX_CONTROLS="$HOME/.m2/repository/org/openjfx/javafx-controls/$JAVAFX_VERSION/javafx-controls-$JAVAFX_VERSION-$JAVAFX_PLATFORM.jar"
+            JFX_FXML="$HOME/.m2/repository/org/openjfx/javafx-fxml/$JAVAFX_VERSION/javafx-fxml-$JAVAFX_VERSION-$JAVAFX_PLATFORM.jar"
+            JFX_GRAPHICS="$HOME/.m2/repository/org/openjfx/javafx-graphics/$JAVAFX_VERSION/javafx-graphics-$JAVAFX_VERSION-$JAVAFX_PLATFORM.jar"
+            JAVAFX_MOD_PATH="--module-path $JFX_BASE:$JFX_CONTROLS:$JFX_FXML:$JFX_GRAPHICS"
+            JAVAFX_MODULES="$JAVAFX_MOD_PATH --add-modules javafx.controls,javafx.fxml,javafx.graphics"
+        fi
+
         jpackage \
             --type $PKG_TYPE \
             --name "$PKG_NAME" \
@@ -76,6 +110,7 @@ case "$OS_TYPE" in
             --java-options "-Xms512m" \
             --java-options "-Xmx1024m" \
             --java-options "-Dfile.encoding=UTF-8" \
+            $JAVAFX_MODULES \
             --linux-menu-group "Office" \
             --linux-shortcut \
             --linux-app-category "Business" \
@@ -86,7 +121,19 @@ case "$OS_TYPE" in
     Darwin*)
         PKG_TYPE="dmg"
         echo "[INFO] 检测到 macOS 平台，生成 $PKG_TYPE 包"
+        echo "[INFO] JavaFX 平台: $JAVAFX_PLATFORM"
         echo ""
+
+        # 构建模块路径（仅包含平台特定的 jar）
+        JAVAFX_MODULES=""
+        if [ -n "$JAVAFX_PLATFORM" ]; then
+            JFX_BASE="$HOME/.m2/repository/org/openjfx/javafx-base/$JAVAFX_VERSION/javafx-base-$JAVAFX_VERSION-$JAVAFX_PLATFORM.jar"
+            JFX_CONTROLS="$HOME/.m2/repository/org/openjfx/javafx-controls/$JAVAFX_VERSION/javafx-controls-$JAVAFX_VERSION-$JAVAFX_PLATFORM.jar"
+            JFX_FXML="$HOME/.m2/repository/org/openjfx/javafx-fxml/$JAVAFX_VERSION/javafx-fxml-$JAVAFX_VERSION-$JAVAFX_PLATFORM.jar"
+            JFX_GRAPHICS="$HOME/.m2/repository/org/openjfx/javafx-graphics/$JAVAFX_VERSION/javafx-graphics-$JAVAFX_VERSION-$JAVAFX_PLATFORM.jar"
+            JAVAFX_MOD_PATH="--module-path $JFX_BASE:$JFX_CONTROLS:$JFX_FXML:$JFX_GRAPHICS"
+            JAVAFX_MODULES="$JAVAFX_MOD_PATH --add-modules javafx.controls,javafx.fxml,javafx.graphics"
+        fi
 
         jpackage \
             --type $PKG_TYPE \
@@ -101,8 +148,9 @@ case "$OS_TYPE" in
             --java-options "-Xms512m" \
             --java-options "-Xmx1024m" \
             --java-options "-Dfile.encoding=UTF-8" \
+            $JAVAFX_MODULES \
             --mac-package-name "LiSuan" \
-            --icon src/main/resources/images/logos/app-icon.icns
+            --icon src/main/resources/images/logos/app-icon.png
         ;;
 
     *)
