@@ -13,13 +13,38 @@ import java.util.Map;
 
 /**
  * 商品数据访问对象（重构版）
- * 支持实例方法和分页查询
+ * 支持实例方法和分页查询，使用 BaseDAO 通用方法简化代码
  */
 public class ProductDAORefactored extends BaseDAO {
 
-    private static final String SELECT_COLUMNS = 
+    private static final String SELECT_COLUMNS =
         "id, product_code, name, price, quantity, category, barcode, unit, description, " +
         "brand, supplier, spec, min_stock, cost, version";
+
+    // 行映射器（静态复用）
+    private static final RowMapper<Product> PRODUCT_MAPPER = new RowMapper<Product>() {
+        @Override
+        public Product mapRow(ResultSet rs, int rowNum) throws SQLException {
+            Product product = new Product(
+                rs.getInt("id"),
+                rs.getString("product_code"),
+                rs.getString("name"),
+                rs.getBigDecimal("price"),
+                rs.getInt("quantity"),
+                rs.getString("category"),
+                rs.getString("barcode"),
+                rs.getString("unit"),
+                rs.getString("description"),
+                rs.getString("brand"),
+                rs.getString("supplier"),
+                rs.getString("spec"),
+                rs.getInt("min_stock"),
+                rs.getBigDecimal("cost")
+            );
+            product.version = rs.getInt("version");
+            return product;
+        }
+    };
 
     /**
      * 分页查询所有商品
@@ -35,19 +60,9 @@ public class ProductDAORefactored extends BaseDAO {
         long total = count();
         int offset = (pageNum - 1) * pageSize;
 
-        List<Product> products = new ArrayList<>();
         String sql = "SELECT " + SELECT_COLUMNS + " FROM products ORDER BY name LIMIT ? OFFSET ?";
+        List<Product> products = queryList(sql, PRODUCT_MAPPER, pageSize, offset);
 
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, pageSize);
-            pstmt.setInt(2, offset);
-            ResultSet rs = pstmt.executeQuery();
-
-            while (rs.next()) {
-                products.add(mapRowToProduct(rs));
-            }
-        }
         return new PageResult<>(products, pageNum, pageSize, total);
     }
 
@@ -66,15 +81,7 @@ public class ProductDAORefactored extends BaseDAO {
      * @throws SQLException 数据库操作异常
      */
     public long count() throws SQLException {
-        String sql = "SELECT COUNT(*) FROM products";
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            if (rs.next()) {
-                return rs.getLong(1);
-            }
-        }
-        return 0;
+        return queryLong("SELECT COUNT(*) FROM products");
     }
 
     /**
@@ -85,15 +92,7 @@ public class ProductDAORefactored extends BaseDAO {
      */
     public Product findById(int id) throws SQLException {
         String sql = "SELECT " + SELECT_COLUMNS + " FROM products WHERE id = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                return mapRowToProduct(rs);
-            }
-        }
-        return null;
+        return queryOneOrNull(sql, PRODUCT_MAPPER, id);
     }
 
     /**
@@ -104,16 +103,7 @@ public class ProductDAORefactored extends BaseDAO {
      */
     public Product findByName(String name) throws SQLException {
         String sql = "SELECT " + SELECT_COLUMNS + " FROM products WHERE name = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, name);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return mapRowToProduct(rs);
-                }
-            }
-        }
-        return null;
+        return queryOneOrNull(sql, PRODUCT_MAPPER, name);
     }
 
     /**
@@ -124,16 +114,7 @@ public class ProductDAORefactored extends BaseDAO {
      */
     public Product findByProductCode(String productCode) throws SQLException {
         String sql = "SELECT " + SELECT_COLUMNS + " FROM products WHERE product_code = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, productCode);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return mapRowToProduct(rs);
-                }
-            }
-        }
-        return null;
+        return queryOneOrNull(sql, PRODUCT_MAPPER, productCode);
     }
 
     /**
@@ -144,16 +125,7 @@ public class ProductDAORefactored extends BaseDAO {
      */
     public Product findByBarcode(String barcode) throws SQLException {
         String sql = "SELECT " + SELECT_COLUMNS + " FROM products WHERE barcode = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, barcode);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    return mapRowToProduct(rs);
-                }
-            }
-        }
-        return null;
+        return queryOneOrNull(sql, PRODUCT_MAPPER, barcode);
     }
 
     /**
@@ -163,18 +135,8 @@ public class ProductDAORefactored extends BaseDAO {
      * @throws SQLException 数据库操作异常
      */
     public List<Product> findByCategory(String category) throws SQLException {
-        List<Product> products = new ArrayList<>();
         String sql = "SELECT " + SELECT_COLUMNS + " FROM products WHERE category = ? ORDER BY name";
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, category);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    products.add(mapRowToProduct(rs));
-                }
-            }
-        }
-        return products;
+        return queryList(sql, PRODUCT_MAPPER, category);
     }
 
     /**
@@ -190,7 +152,7 @@ public class ProductDAORefactored extends BaseDAO {
             pstmt.setInt(1, id);
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
-                    return mapRowToProduct(rs);
+                    return PRODUCT_MAPPER.mapRow(rs, 1);
                 }
             }
         }
@@ -220,8 +182,9 @@ public class ProductDAORefactored extends BaseDAO {
             }
 
             try (ResultSet rs = pstmt.executeQuery()) {
+                int rowNum = 0;
                 while (rs.next()) {
-                    Product product = mapRowToProduct(rs);
+                    Product product = PRODUCT_MAPPER.mapRow(rs, ++rowNum);
                     products.put(product.id, product);
                 }
             }
@@ -238,12 +201,7 @@ public class ProductDAORefactored extends BaseDAO {
      */
     public boolean updateQuantity(int id, int delta) throws SQLException {
         String sql = "UPDATE products SET quantity = quantity + ? WHERE id = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, delta);
-            pstmt.setInt(2, id);
-            return pstmt.executeUpdate() > 0;
-        }
+        return executeUpdate(sql, delta, id) > 0;
     }
 
     /**
@@ -269,16 +227,8 @@ public class ProductDAORefactored extends BaseDAO {
      * @throws SQLException 数据库操作异常
      */
     public List<Product> findLowStock() throws SQLException {
-        List<Product> products = new ArrayList<>();
         String sql = "SELECT " + SELECT_COLUMNS + " FROM products WHERE quantity <= min_stock ORDER BY quantity";
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery(sql)) {
-            while (rs.next()) {
-                products.add(mapRowToProduct(rs));
-            }
-        }
-        return products;
+        return queryList(sql, PRODUCT_MAPPER);
     }
 
     /**
@@ -294,42 +244,19 @@ public class ProductDAORefactored extends BaseDAO {
         if (pageSize < 1) pageSize = 20;
 
         String searchPattern = "%" + keyword + "%";
+
+        // 统计总数
         String countSql = "SELECT COUNT(*) FROM products WHERE name LIKE ? OR product_code LIKE ? OR barcode LIKE ? OR description LIKE ?";
-        
-        long total = 0;
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(countSql)) {
-            pstmt.setString(1, searchPattern);
-            pstmt.setString(2, searchPattern);
-            pstmt.setString(3, searchPattern);
-            pstmt.setString(4, searchPattern);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    total = rs.getLong(1);
-                }
-            }
-        }
+        long total = queryLong(countSql, searchPattern, searchPattern, searchPattern, searchPattern);
 
         int offset = (pageNum - 1) * pageSize;
-        List<Product> products = new ArrayList<>();
         String sql = "SELECT " + SELECT_COLUMNS + " FROM products " +
                      "WHERE name LIKE ? OR product_code LIKE ? OR barcode LIKE ? OR description LIKE ? " +
                      "ORDER BY name LIMIT ? OFFSET ?";
 
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setString(1, searchPattern);
-            pstmt.setString(2, searchPattern);
-            pstmt.setString(3, searchPattern);
-            pstmt.setString(4, searchPattern);
-            pstmt.setInt(5, pageSize);
-            pstmt.setInt(6, offset);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                while (rs.next()) {
-                    products.add(mapRowToProduct(rs));
-                }
-            }
-        }
+        List<Product> products = queryList(sql, PRODUCT_MAPPER,
+            searchPattern, searchPattern, searchPattern, searchPattern, pageSize, offset);
+
         return new PageResult<>(products, pageNum, pageSize, total);
     }
 
@@ -362,7 +289,7 @@ public class ProductDAORefactored extends BaseDAO {
      */
     public boolean insertWithConnection(Connection conn, Product product) throws SQLException {
         validateProduct(product);
-        
+
         // 检查商品编号是否已存在
         if (existsByProductCode(conn, product.productCode)) {
             throw new SQLException("商品编号 '" + product.productCode + "' 已存在");
@@ -374,7 +301,7 @@ public class ProductDAORefactored extends BaseDAO {
         try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             setProductParameters(pstmt, product);
             int affectedRows = pstmt.executeUpdate();
-            
+
             if (affectedRows > 0) {
                 try (ResultSet rs = pstmt.getGeneratedKeys()) {
                     if (rs.next()) {
@@ -569,26 +496,5 @@ public class ProductDAORefactored extends BaseDAO {
             }
         }
         return references.toString();
-    }
-
-    private Product mapRowToProduct(ResultSet rs) throws SQLException {
-        Product product = new Product(
-            rs.getInt("id"),
-            rs.getString("product_code"),
-            rs.getString("name"),
-            rs.getBigDecimal("price"),
-            rs.getInt("quantity"),
-            rs.getString("category"),
-            rs.getString("barcode"),
-            rs.getString("unit"),
-            rs.getString("description"),
-            rs.getString("brand"),
-            rs.getString("supplier"),
-            rs.getString("spec"),
-            rs.getInt("min_stock"),
-            rs.getBigDecimal("cost")
-        );
-        product.version = rs.getInt("version");
-        return product;
     }
 }
