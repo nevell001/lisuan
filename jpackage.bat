@@ -1,7 +1,7 @@
 @echo off
 REM ========================================
 REM LiSuan - jpackage Packaging Script
-REM Version 2.5.5
+REM Version 2.5.6
 REM Creates Windows EXE with embedded JRE
 REM ========================================
 
@@ -19,7 +19,7 @@ for /f "tokens=3 delims=<>" %%a in ('findstr /R "<version>" pom.xml ^| findstr /
     goto :version_found
 )
 :version_found
-if "%APP_VERSION%"=="" set "APP_VERSION=2.5.5"
+if "%APP_VERSION%"=="" set "APP_VERSION=2.5.6"
 
 echo [INFO] Version: %APP_VERSION%
 echo.
