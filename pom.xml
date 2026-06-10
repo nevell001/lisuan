@@ -329,7 +329,7 @@
                 </configuration>
             </plugin>
 
-            <!-- jpackage 插件 - 创建原生安装包 -->
+            <!-- jpackage 插件 - 创建原生安装包（内嵌 JRE） -->
             <plugin>
                 <groupId>org.panteleyev</groupId>
                 <artifactId>jpackage-maven-plugin</artifactId>
@@ -341,6 +341,7 @@
                     <description>收银系统 - 库存管理、会员管理、交易管理</description>
                     <destination>target/dist</destination>
                     <input>target</input>
+                    <runtimeImage>target/custom-jre</runtimeImage>
                     <mainJar>cashier-system-fx-${project.version}-jar-with-dependencies.jar</mainJar>
                     <mainClass>com.cashier.CashierSystemFXApplication</mainClass>
                     <javaOptions>
