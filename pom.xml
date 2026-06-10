@@ -359,7 +359,7 @@
                     <linuxShortcut>true</linuxShortcut>
                     <linuxMenuGroup>Office</linuxMenuGroup>
                     <!-- 图标 -->
-                    <icon>src/main/resources/images/logos/app-icon.png</icon>
+                    <icon>src/main/resources/images/logos/app-icon.ico</icon>
                 </configuration>
             </plugin>
         </plugins>
