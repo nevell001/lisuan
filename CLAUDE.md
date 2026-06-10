@@ -228,6 +228,19 @@ productDAO.update(product);
 - Provides `getConnection()`, transaction management methods
 - `executeInTransaction()` for transactional operations
 - Automatic logger setup via `LoggerFactoryUtil`
+- **通用查询方法**（v2.5.5+）:
+  - `queryList()` - 查询列表
+  - `queryOne()/queryOneOrNull()` - 查询单个对象
+  - `queryScalar()/queryInt()/queryLong()` - 查询单值
+  - `executeUpdate()` - 执行更新
+  - `executeInsertReturnId()` - 执行插入并返回ID
+  - `batchUpdate()` - 批量更新
+  - `exists()` - 检查记录存在
+  - `count()` - 统计记录数
+
+**RowMapper** (`dao/RowMapper.java`)
+- Functional interface for mapping ResultSet to objects
+- Used with BaseDAO query methods
 
 **DAOFactory** (`dao/DAOFactory.java`)
 - Singleton factory for DAO instance management
@@ -410,17 +423,43 @@ public class YourClass {
 public class YourEntityDAO extends BaseDAO {
     private static final String SELECT_COLUMNS = "id, name, ...";
 
+    // 定义静态 RowMapper 复用
+    private static final RowMapper<YourEntity> ENTITY_MAPPER = rs -> {
+        return new YourEntity(
+            rs.getInt("id"),
+            rs.getString("name"),
+            // ... 其他字段
+        );
+    };
+
+    // 使用通用方法简化查询
     public YourEntity findById(int id) throws SQLException {
         String sql = "SELECT " + SELECT_COLUMNS + " FROM your_table WHERE id = ?";
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            pstmt.setInt(1, id);
-            ResultSet rs = pstmt.executeQuery();
-            if (rs.next()) {
-                return mapRowToEntity(rs);
-            }
-        }
-        return null;
+        return queryOneOrNull(sql, ENTITY_MAPPER, id);
+    }
+
+    public List<YourEntity> findAll() throws SQLException {
+        String sql = "SELECT " + SELECT_COLUMNS + " FROM your_table ORDER BY name";
+        return queryList(sql, ENTITY_MAPPER);
+    }
+
+    public long count() throws SQLException {
+        return queryLong("SELECT COUNT(*) FROM your_table");
+    }
+
+    public int insert(YourEntity entity) throws SQLException {
+        String sql = "INSERT INTO your_table (name) VALUES (?)";
+        return (int) executeInsertReturnId(sql, entity.name);
+    }
+
+    public boolean update(YourEntity entity) throws SQLException {
+        String sql = "UPDATE your_table SET name = ? WHERE id = ?";
+        return executeUpdate(sql, entity.name, entity.id) > 0;
+    }
+
+    public boolean delete(int id) throws SQLException {
+        String sql = "DELETE FROM your_table WHERE id = ?";
+        return executeUpdate(sql, id) > 0;
     }
 
     // In DAOFactory.registerDefaults():
