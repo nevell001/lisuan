@@ -1,8 +1,8 @@
-# 狸算收银系统 (Li Suan POS)
+# 狸算(LiSuan)收银系统
 
-狸算收银系统 - 功能完整的收银系统，基于 JavaFX 17 开发。
+狸算(LiSuan)收银系统 - 功能完整的收银系统，基于 JavaFX 17 开发。
 
-**当前版本**: v2.5.5 | **最新更新**: 2026-06-09
+**当前版本**: v2.5.6 | **最新更新**: 2026-06-10
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.12-blue)
@@ -163,6 +163,12 @@ java -jar target/cashier-system-fx-*-jar-with-dependencies.jar
 | 钻石会员 | 10000+ | 8.5折 |
 
 ## 最近更新
+
+### v2.5.6 (2026-06-10)
+- 品牌名称统一为"狸算(LiSuan)收银系统"
+- 更新所有用户界面和文档中的品牌信息
+- 更新 Docker 容器名称为 lisuan-mysql
+- 小票打印和图标中的品牌信息更新
 
 ### v2.5.5 (2026-06-09)
 - 标签页宽度优化（减小约 50%）
