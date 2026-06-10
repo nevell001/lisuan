@@ -69,6 +69,6 @@ jpackage.bat
 mvn clean package jpackage:jpackage
 ```
 
-## 狸算
+## 狸算收银系统
 
-狸算 - 现代化收银系统
+狸算收银系统 - 现代化收银系统

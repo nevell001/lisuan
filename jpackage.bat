@@ -89,7 +89,7 @@ jpackage ^
     --name "LiSuan" ^
     --app-version "%APP_VERSION%" ^
     --vendor "LiSuan" ^
-    --description "LiSuan - Modern POS System" ^
+    --description "Li Suan POS - Modern Cashier System" ^
     --dest "target\dist" ^
     --input "target" ^
     --runtime-image "%JRE_OUTPUT%" ^
