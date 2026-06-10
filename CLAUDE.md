@@ -523,7 +523,7 @@ The codebase is migrating from static `ProductDAO` to instance-based `ProductDAO
 - ✅ Completed: `CartController`, `InventoryController`, `ProductEditController`, `RestockController`, `InventoryAlertController`, `InventoryCheckController`, `ProfitReportController`, `PurchaseOrderController`, `PurchaseInboundController`
 - ✅ Completed: API Controllers (`ProductApiController`, `InventoryApiController`, `TransactionApiController`)
 - ✅ Completed: `CacheManager`, `ProductDataImporter`
-- ⏳ Pending: `DataService`, `TransactionService`, `ReturnService`
+- ✅ Completed: `DataService`, `TransactionService`, `ReturnService`
 - ⏳ Pending: `SyncBroadcastService` (has unused import)
 
 **Migration Pattern:**
