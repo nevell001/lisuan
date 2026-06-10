@@ -150,7 +150,7 @@ case "$OS_TYPE" in
             --java-options "-Dfile.encoding=UTF-8" \
             $JAVAFX_MODULES \
             --mac-package-name "LiSuan" \
-            --icon src/main/resources/images/logos/app-icon.png
+            --icon src/main/resources/images/logos/app-icon.icns
         ;;
 
     *)
