@@ -1,6 +1,6 @@
 # Windows 安装指南
 
-本指南介绍如何在 Windows 系统上安装和运行收银系统。
+本指南介绍如何在 Windows 系统上安装和运行狸算(LiSuan)。
 
 ## 系统要求
 
@@ -16,7 +16,7 @@
 
 ### 第一步：安装 MySQL 数据库
 
-收银系统需要 MySQL 数据库来存储数据。选择以下方式之一：
+狸算需要 MySQL 数据库来存储数据。选择以下方式之一：
 
 #### 方式 A：使用 MySQL Installer（推荐新手）
 
@@ -45,9 +45,9 @@ docker-compose up -d mysql
 
 ### 第二步：运行安装程序
 
-1. 双击 `CashierSystem-2.5.5.exe` 安装程序
+1. 双击 `LiSuan-2.5.5.exe` 安装程序
 2. 点击"下一步"阅读许可协议
-3. 选择安装位置（默认：`C:\Program Files\CashierSystem`）
+3. 选择安装位置（默认：`C:\Program Files\LiSuan`）
 4. 点击"安装"开始安装
 
 安装完成后：
@@ -61,7 +61,7 @@ docker-compose up -d mysql
 
 ### 数据库配置向导
 
-首次运行收银系统时，会自动打开数据库配置向导：
+首次运行狸算时，会自动打开数据库配置向导：
 
 1. **选择数据库类型**
    - **Local MySQL** - 本机安装的 MySQL

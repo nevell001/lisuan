@@ -1,6 +1,6 @@
 @echo off
 REM ========================================
-REM Cashier System - jpackage Packaging Script
+REM LiSuan - jpackage Packaging Script
 REM Version 2.5.5
 REM Creates Windows EXE with embedded JRE
 REM ========================================
@@ -8,7 +8,7 @@ REM ========================================
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo   Cashier System - jpackage Packaging
+echo   LiSuan - jpackage Packaging
 echo   (With Embedded JRE)
 echo ========================================
 echo.
@@ -86,10 +86,10 @@ echo.
 
 jpackage ^
     --type exe ^
-    --name "CashierSystem" ^
+    --name "LiSuan" ^
     --app-version "%APP_VERSION%" ^
-    --vendor "Cashier System" ^
-    --description "Modern POS System - Inventory, Member, Transaction Management" ^
+    --vendor "LiSuan" ^
+    --description "LiSuan - Modern POS System" ^
     --dest "target\dist" ^
     --input "target" ^
     --runtime-image "%JRE_OUTPUT%" ^
@@ -99,7 +99,7 @@ jpackage ^
     --java-options "-Xmx1024m" ^
     --java-options "-Dfile.encoding=UTF-8" ^
     --win-menu ^
-    --win-menu-group "Cashier System" ^
+    --win-menu-group "LiSuan" ^
     --win-shortcut ^
     --win-dir-chooser ^
     --win-per-user-install false ^
@@ -124,11 +124,11 @@ echo   [SUCCESS] Native installer created
 echo   With embedded JRE - No Java required!
 echo ========================================
 echo.
-echo Installer location: target\dist\CashierSystem-%APP_VERSION%.exe
+echo Installer location: target\dist\LiSuan-%APP_VERSION%.exe
 echo.
 
 REM Show file size
-for %%F in ("target\dist\CashierSystem-%APP_VERSION%.exe") do (
+for %%F in ("target\dist\LiSuan-%APP_VERSION%.exe") do (
     set "SIZE=%%~zF"
     set /a "SIZE_MB=!SIZE!/1048576"
     echo Installer size: !SIZE_MB! MB

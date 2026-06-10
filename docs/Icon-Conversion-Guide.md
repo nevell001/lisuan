@@ -68,3 +68,7 @@ jpackage.bat
 ```bash
 mvn clean package jpackage:jpackage
 ```
+
+## 狸算
+
+狸算 - 现代化收银系统

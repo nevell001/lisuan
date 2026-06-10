@@ -335,10 +335,10 @@
                 <artifactId>jpackage-maven-plugin</artifactId>
                 <version>1.6.0</version>
                 <configuration>
-                    <name>CashierSystem</name>
+                    <name>LiSuan</name>
                     <appVersion>${project.version}</appVersion>
-                    <vendor>Cashier System</vendor>
-                    <description>收银系统 - 库存管理、会员管理、交易管理</description>
+                    <vendor>LiSuan</vendor>
+                    <description>狸算 - 现代化收银系统</description>
                     <destination>target/dist</destination>
                     <input>target</input>
                     <runtimeImage>target/custom-jre</runtimeImage>
@@ -351,7 +351,7 @@
                     </javaOptions>
                     <!-- Windows -->
                     <winMenu>true</winMenu>
-                    <winMenuGroup>Cashier System</winMenuGroup>
+                    <winMenuGroup>LiSuan</winMenuGroup>
                     <winShortcut>true</winShortcut>
                     <winDirChooser>true</winDirChooser>
                     <winPerUserInstall>false</winPerUserInstall>
