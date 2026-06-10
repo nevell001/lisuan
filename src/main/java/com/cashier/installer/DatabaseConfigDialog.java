@@ -32,9 +32,9 @@ public class DatabaseConfigDialog {
     }
 
     public void show() {
-        frame = new JFrame("Cashier System - Database Configuration");
+        frame = new JFrame("LiSuan - Database Configuration");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
-        frame.setSize(500, 350);
+        frame.setSize(500, 400);
         frame.setLocationRelativeTo(null);
         frame.setResizable(false);
 
@@ -50,7 +50,7 @@ public class DatabaseConfigDialog {
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         // Title
-        JLabel titleLabel = new JLabel("Database Configuration", SwingConstants.CENTER);
+        JLabel titleLabel = new JLabel("LiSuan - Database Configuration", SwingConstants.CENTER);
         titleLabel.setFont(new Font("Arial", Font.BOLD, 16));
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2;
         mainPanel.add(titleLabel, gbc);
@@ -113,7 +113,7 @@ public class DatabaseConfigDialog {
         mainPanel.add(buttonPanel, gbc);
 
         // Info label
-        JLabel infoLabel = new JLabel("<html><center>Configure your MySQL database connection.<br>For Docker MySQL, make sure Docker is running.</center></html>");
+        JLabel infoLabel = new JLabel("<html><center>Configure LiSuan database connection.<br>For Docker MySQL, make sure Docker is running.</center></html>");
         infoLabel.setForeground(Color.GRAY);
         gbc.gridy = 8;
         mainPanel.add(infoLabel, gbc);
@@ -319,6 +319,7 @@ public class DatabaseConfigDialog {
             }
 
             frame.dispose();
+            System.exit(0);
 
         } catch (IOException e) {
             showMessage("Failed to save configuration: " + e.getMessage(), JOptionPane.ERROR_MESSAGE);
@@ -364,6 +365,6 @@ public class DatabaseConfigDialog {
     }
 
     private void showMessage(String message, int messageType) {
-        JOptionPane.showMessageDialog(frame, message, "Database Configuration", messageType);
+        JOptionPane.showMessageDialog(frame, message, "LiSuan", messageType);
     }
 }

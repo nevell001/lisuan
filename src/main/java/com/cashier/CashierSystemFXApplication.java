@@ -91,6 +91,9 @@ public class CashierSystemFXApplication extends Application {
 
         notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.3));
 
+        // 检查数据库配置
+        checkDatabaseConfiguration();
+
         // 立即设置应用图标（同步）
         setupApplicationIcon();
 
@@ -680,6 +683,42 @@ public class CashierSystemFXApplication extends Application {
      */
     public Stage getPrimaryStage() {
         return primaryStage;
+    }
+
+    /**
+     * 检查数据库配置
+     * 如果配置不存在，显示配置向导
+     */
+    private void checkDatabaseConfiguration() {
+        java.nio.file.Path configPath = java.nio.file.Paths.get("config", "database.properties");
+
+        if (!java.nio.file.Files.exists(configPath)) {
+            logger.info("数据库配置不存在，启动配置向导");
+
+            // 使用 Swing 显示配置向导
+            try {
+                javax.swing.UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName());
+            } catch (Exception e) {
+                logger.warn("无法设置系统外观", e);
+            }
+
+            try {
+                javax.swing.SwingUtilities.invokeAndWait(() -> {
+                    com.cashier.installer.DatabaseConfigDialog.main(new String[]{});
+                });
+            } catch (Exception e) {
+                logger.error("配置向导执行失败", e);
+            }
+
+            // 配置完成后检查文件是否创建
+            if (!java.nio.file.Files.exists(configPath)) {
+                logger.warn("用户取消配置，退出应用");
+                javafx.application.Platform.exit();
+                System.exit(0);
+            }
+
+            logger.info("数据库配置完成");
+        }
     }
 
     /**
