@@ -27,7 +27,7 @@ jobs:
       - name: Force sync from Gitee
         run: |
           # 添加 Gitee 远程
-          git remote add gitee https://gitee.com/nevell/hello.git || true
+          git remote add gitee https://gitee.com/nevell/lisuan.git || true
           
           # 获取 Gitee 更新
           git fetch gitee main

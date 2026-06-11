@@ -120,8 +120,8 @@
 
 ```bash
 # 克隆仓库
-git clone https://gitee.com/nevell/hello.git
-cd hello
+git clone https://gitee.com/nevell/lisuan.git
+cd lisuan
 
 # 启动 MySQL（Docker）
 docker compose up -d mysql
@@ -290,5 +290,5 @@ java -jar target/cashier-system-fx-*-jar-with-dependencies.jar
 
 ---
 
-**仓库**: https://gitee.com/nevell/hello.git
-**问题反馈**: https://gitee.com/nevell/hello/issues
+**仓库**: https://gitee.com/nevell/lisuan.git
+**问题反馈**: https://gitee.com/nevell/lisuan/issues
