@@ -4,7 +4,7 @@
 -- 更新日期: 2026-03-07
 -- 说明: 为 products 表的 name 字段添加 UNIQUE 约束
 --
--- 使用方法: docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD --default-character-set=utf8mb4 cashier_system < 08-v2.4.3-product-name-unique.sql
+-- 使用方法: docker exec lisuan-mysql mysql -uroot -pYOUR_ROOT_PASSWORD --default-character-set=utf8mb4 lisuan_system < 08-v2.4.3-product-name-unique.sql
 --
 -- 注意事项:
 -- 1. 执行此脚本前，请先检查并处理重复的商品名称
@@ -15,7 +15,7 @@
 SET NAMES utf8mb4;
 SET CHARACTER SET utf8mb4;
 
-USE cashier_system;
+USE lisuan_system;
 
 -- ============================================
 -- 检查是否有重复的商品名称
@@ -59,7 +59,7 @@ SELECT
     CONSTRAINT_NAME AS 约束名称,
     COLUMN_NAME AS 字段名称
 FROM information_schema.KEY_COLUMN_USAGE
-WHERE TABLE_SCHEMA = 'cashier_system'
+WHERE TABLE_SCHEMA = 'lisuan_system'
   AND TABLE_NAME = 'products'
   AND CONSTRAINT_NAME = 'uk_product_name';
 

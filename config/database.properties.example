@@ -12,10 +12,10 @@
 # - 未加密的数据库连接可能导致数据泄露
 #
 # 生产环境推荐配置:
-# db.url=jdbc:mysql://db.example.com:3306/cashier_system?useSSL=true&requireSSL=true&verifyServerCertificate=true&trustCertificateKeyStoreUrl=file:/path/to/keystore.jks
+# db.url=jdbc:mysql://db.example.com:3306/lisuan_system?useSSL=true&requireSSL=true&verifyServerCertificate=true&trustCertificateKeyStoreUrl=file:/path/to/keystore.jks
 #
 # 开发环境配置（当前默认）:
-db.url=jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+db.url=jdbc:mysql://localhost:3306/lisuan_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
 
 # MySQL 用户名
 # 常见值: root, mysql, 或您创建的专用用户

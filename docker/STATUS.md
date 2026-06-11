@@ -6,8 +6,8 @@
 - ✅ MySQL 8.0 容器运行正常
 - ✅ DBeaver 可用于数据库管理 (https://dbeaver.io/download/)
 - ✅ root 用户已创建并设置密码
-- ✅ cashier 用户已创建并授权
-- ✅ 数据库 `cashier_system` 已创建
+- ✅ lisuan 用户已创建并授权
+- ✅ 数据库 `lisuan_system` 已创建
 - ✅ 配置文件已生成
 
 ### ⚠️ 需要注意的事项
@@ -24,7 +24,7 @@
 2. **方案2**: 使用容器的实际IP地址：
    ```bash
    # 获取容器IP
-   docker inspect cashier-mysql | grep IPAddress
+   docker inspect lisuan-mysql | grep IPAddress
    ```
 
 3. **方案3**: 使用网络模式：
@@ -53,14 +53,14 @@
 **从命令行测试**:
 ```bash
 # 进入MySQL容器
-docker exec -it cashier-mysql bash
+docker exec -it lisuan-mysql bash
 
 # 连接MySQL
-mysql --socket=/var/run/mysqld/mysqld.sock -u cashier -pYOUR_PASSWORD
+mysql --socket=/var/run/mysqld/mysqld.sock -u lisuan -pYOUR_PASSWORD
 
 # 查看数据库
 SHOW DATABASES;
-USE cashier_system;
+USE lisuan_system;
 SHOW TABLES;
 ```
 
@@ -70,8 +70,8 @@ SHOW TABLES;
 3. 连接配置:
    - 主机: localhost
    - 端口: 3306
-   - 数据库: cashier_system
-   - 用户名: cashier
+   - 数据库: lisuan_system
+   - 用户名: lisuan
    - 密码: (请修改您的密码)
 
 ### 2. 启动收银系统
@@ -81,7 +81,7 @@ SHOW TABLES;
 mvn javafx:run
 
 # 方式2: 使用 JAR
-java -jar target/cashier-system-fx.jar
+java -jar target/lisuan-system-fx.jar
 ```
 
 ### 3. 数据初始化
@@ -98,8 +98,8 @@ java -jar target/cashier-system-fx.jar
 |-----|---|
 | **主机** | `host.docker.internal` (Apple Silicon) 或 `localhost` (Intel/Windows) |
 | **端口** | `3306` |
-| **数据库** | `cashier_system` |
-| **用户名** | `cashier` |
+| **数据库** | `lisuan_system` |
+| **用户名** | `lisuan` |
 | **密码** | (请修改 YOUR_CASHIER_PASSWORD_HERE) |
 | **Root 密码** | (请修改 YOUR_ROOT_PASSWORD_HERE) |
 
@@ -110,16 +110,16 @@ java -jar target/cashier-system-fx.jar
 ### Docker 管理
 ```bash
 # 查看容器状态
-docker ps | grep cashier
+docker ps | grep lisuan
 
 # 查看日志
-docker logs -f cashier-mysql
+docker logs -f lisuan-mysql
 
 # 进入MySQL容器
-docker exec -it cashier-mysql bash
+docker exec -it lisuan-mysql bash
 
 # 通过套接字连接MySQL（推荐）
-docker exec -it cashier-mysql mysql --socket=/var/run/mysqld/mysqld.sock -u cashier -p
+docker exec -it lisuan-mysql mysql --socket=/var/run/mysqld/mysqld.sock -u lisuan -p
 
 # 停止容器
 docker compose stop
@@ -151,7 +151,7 @@ DESCRIBE users;
 SELECT * FROM users LIMIT 10;
 
 -- 备份数据
-mysqldump -u cashier -p cashier_system > backup.sql
+mysqldump -u lisuan -p lisuan_system > backup.sql
 ```
 
 ---
@@ -169,7 +169,7 @@ hello/
 │   │   ├── 01-create-user.sql
 │   │   └── 02-fix-root.sql
 │   ├── mysql-backup/          # 备份目录
-│   └── create-cashier-user.sql
+│   └── create-lisuan-user.sql
 ├── config/
 │   ├── database.properties.example
 │   └── database.properties    # ✅ 已生成（已配置 host.docker.internal）
@@ -187,16 +187,16 @@ hello/
 docker compose up -d
 
 # 查看状态
-docker ps | grep cashier
+docker ps | grep lisuan
 
 # 测试连接
-docker exec cashier-mysql mysql --socket=/var/run/mysqld/mysqld.sock -u cashier -pYOUR_PASSWORD -e "SELECT 1"
+docker exec lisuan-mysql mysql --socket=/var/run/mysqld/mysqld.sock -u lisuan -pYOUR_PASSWORD -e "SELECT 1"
 
 # 启动应用
 mvn javafx:run
 
 # 查看日志
-docker logs -f cashier-mysql
+docker logs -f lisuan-mysql
 ```
 
 ---
@@ -208,20 +208,20 @@ docker logs -f cashier-mysql
 **错误**: `Communications link failure`
 
 **解决方案**:
-1. 确认容器正在运行: `docker ps | grep cashier`
-2. 检查端口: `docker port cashier-mysql`
+1. 确认容器正在运行: `docker ps | grep lisuan`
+2. 检查端口: `docker port lisuan-mysql`
 3. Apple Silicon: 使用 `host.docker.internal`
 4. 其他平台: 使用 `localhost`
 
 ### 问题2: 密码认证失败
 
-**错误**: `Access denied for user 'cashier'`
+**错误**: `Access denied for user 'lisuan'`
 
 **解决方案**:
 ```bash
-# 重置cashier用户密码
-docker exec cashier-mysql mysql --socket=/var/run/mysqld/mysqld.sock -u root -pYOUR_ROOT_PASSWORD <<EOF
-ALTER USER 'cashier'@'%' IDENTIFIED BY 'YourNewPassword123!';
+# 重置lisuan用户密码
+docker exec lisuan-mysql mysql --socket=/var/run/mysqld/mysqld.sock -u root -pYOUR_ROOT_PASSWORD <<EOF
+ALTER USER 'lisuan'@'%' IDENTIFIED BY 'YourNewPassword123!';
 FLUSH PRIVILEGES;
 EOF
 ```
@@ -231,7 +231,7 @@ EOF
 **解决方案**:
 ```bash
 # 查看日志找出问题
-docker logs cashier-mysql
+docker logs lisuan-mysql
 
 # 删除并重新创建
 docker compose down -v

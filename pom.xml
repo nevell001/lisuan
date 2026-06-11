@@ -394,6 +394,30 @@
     </build>
 
     <profiles>
+        <!-- 打包向导配置 -->
+        <profile>
+            <id>packager</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.openjfx</groupId>
+                        <artifactId>javafx-maven-plugin</artifactId>
+                        <version>${javafx.maven.plugin.version}</version>
+                        <configuration>
+                            <mainClass>com.cashier.packager.PackageWizardApp</mainClass>
+                            <compress>2</compress>
+                            <noHeaderFiles>true</noHeaderFiles>
+                            <launcher>lisuan-packager</launcher>
+                            <jvmArgs>
+                                <jvmArg>-Dfile.encoding=UTF-8</jvmArg>
+                                <jvmArg>-Dsun.jnu.encoding=UTF-8</jvmArg>
+                            </jvmArgs>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
         <!-- Windows 平台配置 -->
         <profile>
             <id>windows</id>

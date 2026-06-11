@@ -19,10 +19,7 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.util.Duration;
 
-import java.io.*;
 import java.time.Instant;
-import java.util.Map;
-import java.util.Properties;
 
 /**
  * 登录控制器
@@ -38,9 +35,6 @@ public class LoginController {
     private PasswordField passwordField;
 
     @FXML
-    private CheckBox rememberMeCheckBox;
-
-    @FXML
     private Label errorLabel;
 
     @FXML
@@ -53,7 +47,6 @@ public class LoginController {
     private ProgressIndicator loadingIndicator;
 
     private CashierSystemFXApplication application;
-    private static final String CONFIG_FILE = "config/login_config.properties";
     private static final int MAX_LOGIN_ATTEMPTS = 5;
     private static final long LOCKOUT_DURATION_MINUTES = 5; // 锁定5分钟
     private int loginAttempts = 0;
@@ -64,9 +57,6 @@ public class LoginController {
      */
     @FXML
     private void initialize() {
-        // 加载记住的密码
-        loadSavedCredentials();
-
         // 设置默认焦点
         usernameField.requestFocus();
 
@@ -152,13 +142,6 @@ public class LoginController {
 
                 // 更新最后登录时间到数据库
                 UserDAO.updateLastLoginTimeByUsername(username);
-
-                // 保存记住的用户名（不保存密码）
-                if (rememberMeCheckBox.isSelected()) {
-                    saveCredentials(username, true);
-                } else {
-                    clearSavedCredentials();
-                }
 
                 // 重置登录尝试次数
                 loginAttempts = 0;
@@ -390,7 +373,6 @@ public class LoginController {
     private void setLoginState(boolean loading) {
         usernameField.setDisable(loading);
         passwordField.setDisable(loading);
-        rememberMeCheckBox.setDisable(loading);
 
         // 显示/隐藏加载指示器
         loadingIndicator.setVisible(loading);
@@ -465,69 +447,5 @@ public class LoginController {
                 scaleUp.play();
             }
         });
-    }
-
-    /**
-     * 保存记住的用户名（不保存密码，出于安全考虑）
-     * @param username 用户名
-     * @param remember 是否记住
-     */
-    private void saveCredentials(String username, boolean remember) {
-        try {
-            File configFile = new File(CONFIG_FILE);
-            configFile.getParentFile().mkdirs();
-
-            Properties props = new Properties();
-            props.setProperty("username", username);
-            props.setProperty("remember", String.valueOf(remember));
-            // 安全改进：不再保存密码，只保存用户名
-
-            try (OutputStream output = new FileOutputStream(configFile)) {
-                props.store(output, "Login Configuration - Password NOT stored for security");
-            }
-        } catch (IOException e) {
-            logger.error("保存用户名失败", e);
-        }
-    }
-
-    /**
-     * 加载保存的用户名（不加载密码）
-     */
-    private void loadSavedCredentials() {
-        try {
-            File configFile = new File(CONFIG_FILE);
-            if (!configFile.exists()) {
-                return;
-            }
-
-            Properties props = new Properties();
-            try (InputStream input = new FileInputStream(configFile)) {
-                props.load(input);
-            }
-
-            String remember = props.getProperty("remember", "false");
-            if ("true".equals(remember)) {
-                usernameField.setText(props.getProperty("username", ""));
-                // 安全改进：不自动填充密码，用户需要手动输入
-                passwordField.setText("");
-                rememberMeCheckBox.setSelected(true);
-            }
-        } catch (IOException e) {
-            logger.error("加载用户名失败", e);
-        }
-    }
-
-    /**
-     * 清除保存的凭据
-     */
-    private void clearSavedCredentials() {
-        try {
-            File configFile = new File(CONFIG_FILE);
-            if (configFile.exists()) {
-                configFile.delete();
-            }
-        } catch (Exception e) {
-            logger.error("清除凭据失败", e);
-        }
     }
 }

@@ -45,10 +45,10 @@ docker-compose restart
 
 | 项目 | 值 |
 |-----|---|
-| 容器名称 | cashier-mysql |
+| 容器名称 | lisuan-mysql |
 | 端口 | 3306 |
-| 数据库 | cashier_system |
-| 用户名 | cashier |
+| 数据库 | lisuan_system |
+| 用户名 | lisuan |
 | 密码 | ⚠️ 请修改为您的密码 |
 | Root 密码 | ⚠️ 请修改为您的密码 |
 
@@ -62,22 +62,22 @@ docker-compose restart
   - 连接配置:
     - 主机: localhost
     - 端口: 3306
-    - 数据库: cashier_system
-    - 用户名: cashier
+    - 数据库: lisuan_system
+    - 用户名: lisuan
     - 密码: (您设置的密码)
 
 ## 数据持久化
 
-数据存储在 Docker 卷 `cashier-mysql-data` 中，即使删除容器也不会丢失。
+数据存储在 Docker 卷 `lisuan-mysql-data` 中，即使删除容器也不会丢失。
 
 ## 备份数据
 
 ```bash
 # 备份到 docker/mysql-backup 目录
-docker exec cashier-mysql mysqldump -u root -pYOUR_ROOT_PASSWORD cashier_system > docker/mysql-backup/backup_$(date +%Y%m%d).sql
+docker exec lisuan-mysql mysqldump -u root -pYOUR_ROOT_PASSWORD lisuan_system > docker/mysql-backup/backup_$(date +%Y%m%d).sql
 
 # 恢复备份
-docker exec -i cashier-mysql mysql -u root -pYOUR_ROOT_PASSWORD cashier_system < docker/mysql-backup/backup_20250203.sql
+docker exec -i lisuan-mysql mysql -u root -pYOUR_ROOT_PASSWORD lisuan_system < docker/mysql-backup/backup_20250203.sql
 ```
 
 ## 配置文件
@@ -91,13 +91,13 @@ docker exec -i cashier-mysql mysql -u root -pYOUR_ROOT_PASSWORD cashier_system <
 
 ```bash
 # 查看容器状态
-docker ps -a | grep cashier-mysql
+docker ps -a | grep lisuan-mysql
 
 # 查看容器日志
-docker logs cashier-mysql
+docker logs lisuan-mysql
 
 # 进入容器
-docker exec -it cashier-mysql bash
+docker exec -it lisuan-mysql bash
 
 # 重启容器
 docker-compose restart mysql

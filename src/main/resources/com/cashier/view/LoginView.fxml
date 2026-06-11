@@ -46,12 +46,6 @@
                           onAction="#handleLogin"/>
         </VBox>
 
-        <!-- 记住密码 -->
-        <HBox spacing="20" alignment="CENTER_LEFT" styleClass="checkbox-row">
-            <CheckBox fx:id="rememberMeCheckBox" text="%login.remember" styleClass="remember-checkbox"/>
-            <HBox HBox.hgrow="ALWAYS"/>
-        </HBox>
-
         <!-- 错误提示 -->
         <Label fx:id="errorLabel"
                styleClass="error-label"
@@ -79,10 +73,8 @@
         </VBox>
     </VBox>
 
-    <!-- 提示信息 -->
+    <!-- 版本信息 -->
     <VBox spacing="8" alignment="CENTER" styleClass="hint-section">
-        <Label text="%login.default_account"
-               styleClass="hint-label"/>
         <Label fx:id="versionLabel"
                styleClass="version-label"/>
     </VBox>

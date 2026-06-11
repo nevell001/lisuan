@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<?import javafx.geometry.Insets?>
+<?import javafx.scene.control.*?>
+<?import javafx.scene.layout.*?>
+<?import javafx.scene.text.Font?>
+
+<VBox xmlns:http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+      fx:controller="com.cashier.packager.PackageWizardController"
+      prefWidth="800" prefHeight="600" styleClass="wizard-root">
+
+    <padding>
+        <Insets top="20" right="30" bottom="20" left="30"/>
+    </padding>
+
+    <!-- 标题 -->
+    <HBox alignment="CENTER_LEFT" spacing="15" styleClass="wizard-header">
+        <ImageView fitWidth="48" fitHeight="48" preserveRatio="true">
+            <image>
+                <Image url="@/images/logos/app-icon.png"/>
+            </image>
+        </ImageView>
+        <VBox spacing="5">
+            <Label text="狸算(LiSuan)收银系统 - 打包向导" styleClass="wizard-title">
+                <font>
+                    <Font size="20" weight="BOLD"/>
+                </font>
+            </Label>
+            <Label text="按照提示配置打包选项，生成 Windows 安装程序" styleClass="wizard-subtitle"
+                   textFill="gray">
+                <font>
+                    <Font size="12"/>
+                </font>
+            </Label>
+        </VBox>
+        <Region HBox.hgrow="ALWAYS"/>
+        <Label text="版本 2.5.6" styleClass="wizard-version" textFill="gray"/>
+    </HBox>
+
+    <Separator/>
+
+    <!-- 步骤指示器 -->
+    <HBox alignment="CENTER" spacing="10" padding="15">
+        <ToggleButton fx:id="step1Button" text="1. 基本信息" selected="true" styleClass="step-button"/>
+        <Label text="→" textFill="gray"/>
+        <ToggleButton fx:id="step2Button" text="2. 打包选项" styleClass="step-button"/>
+        <Label text="→" textFill="gray"/>
+        <ToggleButton fx:id="step3Button" text="3. 数据库配置" styleClass="step-button"/>
+        <Label text="→" textFill="gray"/>
+        <ToggleButton fx:id="step4Button" text="4. 确认打包" styleClass="step-button"/>
+    </HBox>
+
+    <!-- 主内容区域 -->
+    <VBox fx:id="wizardContainer" spacing="20" VBox.vgrow="ALWAYS" style="-fx-padding: 20; -fx-background-color: #f8f8f8; -fx-background-radius: 8;">
+
+        <!-- 步骤 1: 基本信息 -->
+        <VBox fx:id="step1Content" spacing="15">
+            <Label text="基本信息" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+            <GridPane hgap="15" vgap="15">
+                <Label text="应用名称:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                <TextField fx:id="appNameField" prefWidth="300" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                <Label text="版本号:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                <TextField fx:id="appVersionField" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                <Label text="开发商:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                <TextField fx:id="vendorField" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+                <Label text="应用图标:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="3">
+                    <TextField fx:id="iconPathField" prefWidth="300" promptText="选择 .ico 或 .png 文件"/>
+                    <Button text="浏览..." onAction="#handleBrowseIcon"/>
+                </HBox>
+
+                <Label text="应用描述:" GridPane.columnIndex="0" GridPane.rowIndex="4" GridPane.valignment="TOP"/>
+                <TextArea fx:id="descriptionArea" prefRowCount="3" prefWidth="400" GridPane.columnIndex="1" GridPane.rowIndex="4"
+                          promptText="简短描述应用的功能"/>
+            </GridPane>
+        </VBox>
+
+        <!-- 步骤 2: 打包选项 -->
+        <VBox fx:id="step2Content" spacing="15" visible="false" managed="false">
+            <Label text="打包选项" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+            <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 5;">
+                <CheckBox fx:id="embedJreCheckBox" text="嵌入 JRE（推荐）" selected="true"/>
+                <Label text="将 JRE 嵌入安装包，用户无需安装 Java" textFill="gray" style="-fx-font-size: 11px;">
+                    <VBox.margin>
+                        <Insets left="25"/>
+                    </VBox.margin>
+                </Label>
+            </VBox>
+
+            <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 5;">
+                <CheckBox fx:id="createShortcutCheckBox" text="创建桌面快捷方式" selected="true"/>
+                <CheckBox fx:id="addMenuCheckBox" text="添加到开始菜单" selected="true"/>
+                <CheckBox fx:id="dirChooserCheckBox" text="允许用户选择安装目录" selected="true"/>
+            </VBox>
+
+            <GridPane hgap="15" vgap="15">
+                <Label text="最小内存 (MB):" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                <Spinner fx:id="memoryMinSpinner" prefWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                <Label text="最大内存 (MB):" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                <Spinner fx:id="memoryMaxSpinner" prefWidth="150" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+            </GridPane>
+        </VBox>
+
+        <!-- 步骤 3: 数据库配置 -->
+        <VBox fx:id="step3Content" spacing="15" visible="false" managed="false">
+            <Label text="数据库配置" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+            <GridPane hgap="15" vgap="15">
+                <Label text="数据库类型:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                <ComboBox fx:id="dbTypeComboBox" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="0"/>
+
+                <Label text="主机地址:" GridPane.columnIndex="0" GridPane.rowIndex="1"/>
+                <TextField fx:id="dbHostField" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="1"/>
+
+                <Label text="端口:" GridPane.columnIndex="0" GridPane.rowIndex="2"/>
+                <TextField fx:id="dbPortField" prefWidth="100" GridPane.columnIndex="1" GridPane.rowIndex="2"/>
+
+                <Label text="数据库名:" GridPane.columnIndex="0" GridPane.rowIndex="3"/>
+                <TextField fx:id="dbNameField" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="3"/>
+
+                <Label text="用户名:" GridPane.columnIndex="0" GridPane.rowIndex="4"/>
+                <TextField fx:id="dbUsernameField" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="4"/>
+
+                <Label text="密码:" GridPane.columnIndex="0" GridPane.rowIndex="5"/>
+                <PasswordField fx:id="dbPasswordField" prefWidth="200" GridPane.columnIndex="1" GridPane.rowIndex="5"/>
+            </GridPane>
+
+            <HBox spacing="10" alignment="CENTER_LEFT">
+                <Button fx:id="testConnectionButton" text="测试连接" onAction="#handleTestConnection"/>
+                <Label text="测试数据库连接是否正常" textFill="gray" style="-fx-font-size: 11px;"/>
+            </HBox>
+        </VBox>
+
+        <!-- 步骤 4: 确认打包 -->
+        <VBox fx:id="step4Content" spacing="15" visible="false" managed="false">
+            <Label text="确认打包信息" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
+
+            <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 5;">
+                <Label text="打包配置摘要:" style="-fx-font-weight: bold;"/>
+                <GridPane hgap="15" vgap="5">
+                    <Label text="应用名称:" GridPane.columnIndex="0" GridPane.rowIndex="0" textFill="gray"/>
+                    <Label fx:id="summaryAppName" text="LiSuan" GridPane.columnIndex="1" GridPane.rowIndex="0" style="-fx-font-weight: bold;"/>
+
+                    <Label text="版本:" GridPane.columnIndex="0" GridPane.rowIndex="1" textFill="gray"/>
+                    <Label fx:id="summaryVersion" text="2.5.6" GridPane.columnIndex="1" GridPane.rowIndex="1" style="-fx-font-weight: bold;"/>
+
+                    <Label text="嵌入 JRE:" GridPane.columnIndex="0" GridPane.rowIndex="2" textFill="gray"/>
+                    <Label fx:id="summaryEmbedJre" text="是" GridPane.columnIndex="1" GridPane.rowIndex="2" style="-fx-font-weight: bold;"/>
+
+                    <Label text="输出目录:" GridPane.columnIndex="0" GridPane.rowIndex="3" textFill="gray"/>
+                    <Label fx:id="summaryOutputDir" text="target/dist" GridPane.columnIndex="1" GridPane.rowIndex="3" style="-fx-font-weight: bold;"/>
+                </GridPane>
+            </VBox>
+
+            <GridPane hgap="15" vgap="15">
+                <Label text="输出目录:" GridPane.columnIndex="0" GridPane.rowIndex="0"/>
+                <HBox spacing="10" GridPane.columnIndex="1" GridPane.rowIndex="0">
+                    <TextField fx:id="outputDirField" prefWidth="400" promptText="选择 EXE 文件输出目录"/>
+                    <Button text="浏览..." onAction="#handleBrowseOutputDir"/>
+                </HBox>
+            </GridPane>
+
+            <TextArea prefRowCount="8" prefWidth="750" editable="false" wrapText="true"
+                      style="-fx-font-family: monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1e1e; -fx-text-fill: #00ff00;"
+                      text="打包说明：
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+1. 确保 Maven 和 JDK 已安装并配置环境变量
+2. 确保项目目录有写入权限
+3. 打包过程可能需要 5-10 分钟，请耐心等待
+4. 生成的 EXE 文件可直接分发安装
+
+打包完成后：
+- 安装包将保存到指定输出目录
+- 用户运行 EXE 即可安装，无需配置
+- 内嵌 JRE 版本无需用户安装 Java"/>
+        </VBox>
+
+    </VBox>
+
+    <!-- 进度和日志区域 -->
+    <VBox spacing="10" VBox.vgrow="ALWAYS">
+        <ProgressBar fx:id="progressBar" prefWidth="750" progress="0" visible="false"/>
+        <HBox alignment="CENTER_LEFT" spacing="10">
+            <ProgressIndicator fx:id="progressIndicator" prefWidth="25" prefHeight="25" visible="false"/>
+            <Label fx:id="statusLabel" text="" textFill="gray"/>
+        </HBox>
+        <TextArea fx:id="logTextArea" prefRowCount="6" editable="false"
+                  style="-fx-font-family: monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1e1e; -fx-text-fill: #cccccc;"/>
+    </VBox>
+
+    <!-- 导航按钮 -->
+    <HBox alignment="CENTER_RIGHT" spacing="10" padding="10">
+        <Region HBox.hgrow="ALWAYS"/>
+        <Button fx:id="backButton" text="&lt; 上一步" onAction="#handleBack" prefWidth="100"/>
+        <Button fx:id="nextButton" text="下一步 &gt;" onAction="#handleNext" prefWidth="100" styleClass="primary-button"/>
+        <Button fx:id="finishButton" text="开始打包" onAction="#handleFinish" prefWidth="100" visible="false" managed="false" styleClass="primary-button"/>
+        <Button fx:id="cancelButton" text="取消" onAction="#handleCancel" prefWidth="80"/>
+    </HBox>
+
+</VBox>

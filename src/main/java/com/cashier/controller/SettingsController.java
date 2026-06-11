@@ -996,42 +996,45 @@ public class SettingsController {
      */
     private void saveSettings() {
         Map<String, String> settings = new java.util.HashMap<>();
-        
+
         // 基本设置
         settings.put("storeName", storeNameField.getText().trim());
         settings.put("storeAddress", storeAddressField.getText().trim());
         settings.put("storePhone", storePhoneField.getText().trim());
         settings.put("taxRate", taxRateField.getText().trim());
-        settings.put("language", languageComboBox.getSelectionModel().getSelectedItem());
-        settings.put("theme", themeComboBox.getSelectionModel().getSelectedItem());
-        
+        String selectedLanguage = languageComboBox.getSelectionModel().getSelectedItem();
+        settings.put("language", selectedLanguage != null ? selectedLanguage : "简体中文");
+        String selectedTheme = themeComboBox.getSelectionModel().getSelectedItem();
+        settings.put("theme", selectedTheme != null ? selectedTheme : "浅色主题");
+        String selectedCurrency = currencyComboBox.getSelectionModel().getSelectedItem();
+        settings.put("currency", selectedCurrency != null ? selectedCurrency : "¥ 人民币 (CNY)");
+
         // 打印设置
         settings.put("enablePrint", String.valueOf(enablePrintCheckBox.isSelected()));
         settings.put("printerName", printerNameField.getText().trim());
-        settings.put("paperSize", paperSizeComboBox.getSelectionModel().getSelectedItem());
+        String selectedPaperSize = paperSizeComboBox.getSelectionModel().getSelectedItem();
+        settings.put("paperSize", selectedPaperSize != null ? selectedPaperSize : "58mm (热敏纸)");
         settings.put("printLogo", String.valueOf(printLogoCheckBox.isSelected()));
         settings.put("logoPath", logoPathField.getText().trim());
         settings.put("printBarcode", String.valueOf(printBarcodeCheckBox.isSelected()));
-        
+
         // 备份设置
         settings.put("autoBackup", String.valueOf(autoBackupCheckBox.isSelected()));
-        settings.put("backupFrequency", backupFrequencyComboBox.getSelectionModel().getSelectedItem());
+        String selectedBackupFreq = backupFrequencyComboBox.getSelectionModel().getSelectedItem();
+        settings.put("backupFrequency", selectedBackupFreq != null ? selectedBackupFreq : "每天");
         settings.put("backupPath", backupPathField.getText().trim());
-        
+
         // 安全设置
         settings.put("autoLogout", String.valueOf(autoLogoutCheckBox.isSelected()));
         settings.put("autoLogoutMinutes", String.valueOf(autoLogoutMinutesSpinner.getValue()));
         settings.put("passwordComplexity", String.valueOf(passwordComplexityCheckBox.isSelected()));
         settings.put("passwordMinLength", String.valueOf(passwordMinLengthSpinner.getValue()));
         settings.put("passwordMaxAttempts", String.valueOf(passwordMaxAttemptsSpinner.getValue()));
-        
-        // 保存到文件
-        DataService.saveSettings(
-            Double.parseDouble(settings.getOrDefault("taxRate", "0.0")),
-            0
-        );
 
-        // 保存主题偏好
+        // 保存所有设置到数据库
+        DataService.saveSettings(settings);
+
+        // 保存主题偏好（单独存储到主题偏好表）
         String themeName = settings.getOrDefault("theme", "浅色主题");
         String themeCode = convertThemeNameToCode(themeName);
         DataService.saveThemePreference(themeCode);

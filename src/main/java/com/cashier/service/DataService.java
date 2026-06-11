@@ -254,10 +254,17 @@ public class DataService {
     public static Map<String, String> loadSettings() {
         Map<String, String> settings = new HashMap<>();
         try {
-            double taxRate = SystemSettingsDAO.getTaxRate();
-            int transactionCount = SystemSettingsDAO.getTransactionCount();
-            settings.put("taxRate", String.valueOf(taxRate));
-            settings.put("transactionCount", String.valueOf(transactionCount));
+            // 使用 getAllSettings 加载所有设置
+            Map<String, String> allSettings = SystemSettingsDAO.getAllSettings();
+            settings.putAll(allSettings);
+
+            // 确保必要字段存在（默认值）
+            if (!settings.containsKey("taxRate")) {
+                settings.put("taxRate", "0.0");
+            }
+            if (!settings.containsKey("transactionCount")) {
+                settings.put("transactionCount", "0");
+            }
         } catch (SQLException e) {
             logger.error("加载设置数据失败", e);
             // 返回默认值
@@ -270,10 +277,12 @@ public class DataService {
     /**
      * 保存设置数据
      */
-    public static void saveSettings(double taxRate, int transactionCount) {
+    public static void saveSettings(Map<String, String> settings) {
         try {
-            SystemSettingsDAO.setTaxRate(taxRate);
-            SystemSettingsDAO.setTransactionCount(transactionCount);
+            for (Map.Entry<String, String> entry : settings.entrySet()) {
+                SystemSettingsDAO.setSetting(entry.getKey(), entry.getValue());
+            }
+            logger.info("保存设置数据成功，共保存 {} 个设置项", settings.size());
         } catch (SQLException e) {
             logger.error("保存设置数据失败", e);
         }

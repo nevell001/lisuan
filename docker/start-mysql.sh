@@ -53,7 +53,7 @@ if [ ! -f "config/database.properties" ]; then
 fi
 
 # 检查是否已存在容器
-if docker ps -a | grep -q "cashier-mysql"; then
+if docker ps -a | grep -q "lisuan-mysql"; then
     echo -e "${YELLOW}检测到已存在的 MySQL 容器${NC}"
     read -p "是否删除旧容器并重新创建？(y/N): " -n 1 -r
     echo
@@ -79,7 +79,7 @@ echo -e "${YELLOW}等待 MySQL 启动...${NC}"
 sleep 10
 
 # 检查容器状态
-if docker ps | grep -q "cashier-mysql"; then
+if docker ps | grep -q "lisuan-mysql"; then
     echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}✓ MySQL 启动成功！${NC}"
     echo -e "${GREEN}========================================${NC}"
@@ -87,8 +87,8 @@ if docker ps | grep -q "cashier-mysql"; then
     echo "数据库连接信息："
     echo -e "  主机: ${GREEN}localhost${NC}"
     echo -e "  端口: ${GREEN}3306${NC}"
-    echo -e "  数据库: ${GREEN}cashier_system${NC}"
-    echo -e "  用户名: ${GREEN}cashier${NC}"
+    echo -e "  数据库: ${GREEN}lisuan_system${NC}"
+    echo -e "  用户名: ${GREEN}lisuan${NC}"
     echo -e "  密码: ${YELLOW}(请修改为您设置的密码)${NC}"
     echo ""
     echo "管理工具："
@@ -98,7 +98,7 @@ if docker ps | grep -q "cashier-mysql"; then
     echo "  查看日志: $DOCKER_COMPOSE logs -f mysql"
     echo "  停止容器: $DOCKER_COMPOSE stop"
     echo "  重启容器: $DOCKER_COMPOSE restart"
-    echo "  进入容器: docker exec -it cashier-mysql bash"
+    echo "  进入容器: docker exec -it lisuan-mysql bash"
     echo ""
     echo "下一步："
     echo "  1. 修改 config/database.properties"

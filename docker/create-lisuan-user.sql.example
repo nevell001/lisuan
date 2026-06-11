@@ -1,0 +1,9 @@
+-- 创建狸算收银系统数据库用户（示例模板）
+-- 复制此文件为 create-lisuan-user.sql 并填入实际密码
+-- 或者使用环境变量: docker exec -i lisuan-mysql mysql -uroot -p${MYSQL_ROOT_PASSWORD} < this_file.sql
+
+CREATE USER IF NOT EXISTS 'lisuan'@'%' IDENTIFIED WITH mysql_native_password BY 'YOUR_PASSWORD_HERE';
+GRANT ALL PRIVILEGES ON lisuan_system.* TO 'lisuan'@'%';
+FLUSH PRIVILEGES;
+SELECT 'LiSuan user created successfully!' AS status;
+SELECT user, host, plugin FROM mysql.user WHERE user='lisuan';

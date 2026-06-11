@@ -4,13 +4,13 @@
 -- 更新日期: 2026-03-08
 -- 说明: 修复促销表结构，添加 promotion_code 字段，修复日期字段类型问题
 --
--- 使用方法: docker exec cashier-mysql mysql -uroot -pYOUR_ROOT_PASSWORD --default-character-set=utf8mb4 cashier_system < 09-v2.4.3-fix-promotions.sql
+-- 使用方法: docker exec lisuan-mysql mysql -uroot -pYOUR_ROOT_PASSWORD --default-character-set=utf8mb4 lisuan_system < 09-v2.4.3-fix-promotions.sql
 -- ============================================
 
 SET NAMES utf8mb4;
 SET CHARACTER SET utf8mb4;
 
-USE cashier_system;
+USE lisuan_system;
 
 -- ============================================
 -- 检查表结构
@@ -22,7 +22,7 @@ SELECT
     IS_NULLABLE AS 可空,
     COLUMN_DEFAULT AS 默认值
 FROM information_schema.COLUMNS
-WHERE TABLE_SCHEMA = 'cashier_system'
+WHERE TABLE_SCHEMA = 'lisuan_system'
   AND TABLE_NAME = 'promotions'
 ORDER BY ORDINAL_POSITION;
 
@@ -33,7 +33,7 @@ ORDER BY ORDINAL_POSITION;
 SET @column_exists = (
     SELECT COUNT(*)
     FROM information_schema.COLUMNS
-    WHERE TABLE_SCHEMA = 'cashier_system'
+    WHERE TABLE_SCHEMA = 'lisuan_system'
       AND TABLE_NAME = 'promotions'
       AND COLUMN_NAME = 'promotion_code'
 );
@@ -79,7 +79,7 @@ SELECT
     DATA_TYPE AS 数据类型,
     IS_NULLABLE AS 可空
 FROM information_schema.COLUMNS
-WHERE TABLE_SCHEMA = 'cashier_system'
+WHERE TABLE_SCHEMA = 'lisuan_system'
   AND TABLE_NAME = 'promotions'
   AND COLUMN_NAME = 'promotion_code';
 

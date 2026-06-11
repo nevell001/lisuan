@@ -1,13 +1,13 @@
 @echo off
 chcp 65001 >nul 2>&1
 REM ============================================
-REM Cashier System MySQL Docker Quick Start Script (Windows)
+REM LiSuan MySQL Docker Quick Start Script (Windows)
 REM ============================================
 
 setlocal enabledelayedexpansion
 
 echo ========================================
-echo   Cashier System MySQL Docker Startup
+echo   LiSuan MySQL Docker Startup
 echo ========================================
 echo.
 
@@ -40,7 +40,7 @@ if not exist "config\database.properties" (
 echo.
 
 REM Check if container already exists
-docker ps -a | findstr "cashier-mysql" >nul
+docker ps -a | findstr "lisuan-mysql" >nul
 if %errorlevel% equ 0 (
     echo [3/4] Detected existing MySQL container
     set /p REPLY="Remove old container and recreate? (y/N): "
@@ -65,7 +65,7 @@ echo [Wait] Waiting for MySQL to start...
 timeout /t 15 /nobreak >nul
 
 REM Check container status
-docker ps | findstr "cashier-mysql" >nul
+docker ps | findstr "lisuan-mysql" >nul
 if %errorlevel% equ 0 (
     goto :success
 ) else (
@@ -81,8 +81,8 @@ echo.
 echo Database connection info:
 echo   Host: localhost
 echo   Port: 3306
-echo   Database: cashier_system
-echo   Username: cashier
+echo   Database: lisuan_system
+echo   Username: lisuan
 echo   Password: (请修改您的密码)
 echo.
 echo Management tools:
@@ -92,11 +92,11 @@ echo Common commands:
 echo   View logs: docker-compose logs -f mysql
 echo   Stop container: docker-compose stop
 echo   Restart container: docker-compose restart
-echo   Enter container: docker exec -it cashier-mysql bash
+echo   Enter container: docker exec -it lisuan-mysql bash
 echo.
 echo Next steps:
 echo   1. Modify config\database.properties
-echo   2. Start cashier system application
+echo   2. Start LiSuan application
 echo   3. Application will automatically migrate data to MySQL
 echo.
 pause

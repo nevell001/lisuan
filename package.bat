@@ -13,7 +13,7 @@ for /f "tokens=3 delims=<>" %%a in ('findstr /R "<version>" pom.xml ^| findstr /
 :version_found
 
 set "APP_VERSION_NUM=%APP_VERSION:v=%"
-set APP_NAME=CashierSystem
+set APP_NAME=LiSuan
 set FAT_JAR=lisuan-fx-%APP_VERSION_NUM%-jar-with-dependencies.jar
 
 echo [Info] Version: %APP_VERSION_NUM%
