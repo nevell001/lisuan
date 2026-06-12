@@ -6,6 +6,9 @@ REM   LiSuan Start Script (Enhanced)
 REM   Version 2.5.4
 REM ============================================
 
+REM Switch to script directory first
+cd /d "%~dp0"
+
 set "APP_NAME=LiSuan"
 
 REM Read version from pom.xml automatically (development mode)
