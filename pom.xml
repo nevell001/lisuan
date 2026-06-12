@@ -19,6 +19,7 @@
         <maven.compiler.target>17</maven.compiler.target>
         <javafx.version>17.0.12</javafx.version>
         <javafx.maven.plugin.version>0.0.8</javafx.maven.plugin.version>
+        <innosetup.skip>true</innosetup.skip>
     </properties>
 
     <repositories>
@@ -458,6 +459,7 @@
             </activation>
             <properties>
                 <javafx.runtime.path>${env.JAVA_HOME}/javafx-sdk-${javafx.version}/lib</javafx.runtime.path>
+                <innosetup.skip>false</innosetup.skip>
             </properties>
         </profile>
 
