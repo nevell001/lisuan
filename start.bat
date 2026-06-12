@@ -13,7 +13,7 @@ set "IS_PACKAGE=0"
 set "JAR_FILE="
 
 if exist "pom.xml" (
-    for /f "tokens=2 delims=<>" %%a in ('findstr /R "<version>" pom.xml ^| findstr /V "javafx\|maven\|java\|mysql\|hikaricp\|poi\|pdfbox\|controlsfx\|fontawesomefx\|junit\|testfx\|h2\|bcrypt\|logback"') do (
+    for /f "tokens=2 delims=<>" %%a in ('findstr /R "<version>" pom.xml ^| findstr /V "javafx maven java mysql hikaricp poi pdfbox controlsfx fontawesomefx junit testfx h2 bcrypt logback slf4j"') do (
         set "APP_VERSION=%%a"
         goto :version_found
     )
