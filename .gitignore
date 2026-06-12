@@ -48,6 +48,8 @@ AGENTS.md
 *.tmp
 *.bak
 *.backup
+*.lock
+temp/
 
 # 导出文件
 exports/
