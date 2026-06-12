@@ -339,6 +339,7 @@ public class CashierSystemFXApplication extends Application {
      */
     public void applyFontSize(Scene scene, String fontSize) {
         if (scene == null) {
+            logger.warn("applyFontSize: scene is null");
             return;
         }
 
@@ -349,7 +350,7 @@ public class CashierSystemFXApplication extends Application {
         String styleClass = "font-size-" + fontSize;
         scene.getRoot().getStyleClass().add(styleClass);
 
-        logger.info("应用字号: {}", fontSize);
+        logger.info("应用字号: {}, 样式类: {}, 当前根样式类: {}", fontSize, styleClass, scene.getRoot().getStyleClass());
     }
 
     /**

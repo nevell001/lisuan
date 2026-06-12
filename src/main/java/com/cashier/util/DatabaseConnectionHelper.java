@@ -77,7 +77,7 @@ public class DatabaseConnectionHelper {
             dbUsername = props.getProperty("db.username");
 
             // 优先从环境变量读取密码
-            String envPassword = System.getenv("CASHER_DB_PASSWORD");
+            String envPassword = System.getenv("LISUAN_DB_PASSWORD");
             if (envPassword != null && !envPassword.isEmpty()) {
                 dbPassword = envPassword;
             } else {
@@ -96,23 +96,23 @@ public class DatabaseConnectionHelper {
             return DiagnosticResult.failure(
                 "数据库 URL 未配置",
                 "请在 config/database.properties 中设置 db.url 参数\n" +
-                "示例：jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai"
+                "示例：jdbc:mysql://localhost:3306/lisuan_system?useSSL=false&serverTimezone=Asia/Shanghai"
             );
         }
         if (dbUsername == null || dbUsername.isEmpty()) {
             return DiagnosticResult.failure(
                 "数据库用户名未配置",
                 "请在 config/database.properties 中设置 db.username 参数\n" +
-                "示例：root 或 cashier"
+                "示例：root 或 lisuan"
             );
         }
         if (dbPassword == null || dbPassword.isEmpty()) {
             return DiagnosticResult.failure(
                 "数据库密码未配置",
                 "请在 config/database.properties 中设置 db.password 参数\n" +
-                "或者设置环境变量 CASHER_DB_PASSWORD 来存储密码（更安全）\n" +
-                "Windows: set CASHER_DB_PASSWORD=YourPassword\n" +
-                "Linux/Mac: export CASHER_DB_PASSWORD=YourPassword"
+                "或者设置环境变量 LISUAN_DB_PASSWORD 来存储密码（更安全）\n" +
+                "Windows: set LISUAN_DB_PASSWORD=YourPassword\n" +
+                "Linux/Mac: export LISUAN_DB_PASSWORD=YourPassword"
             );
         }
 
@@ -185,7 +185,7 @@ public class DatabaseConnectionHelper {
                 "请检查以下项目：\n" +
                 "1. 用户名是否正确：当前配置为 " + dbUsername + "\n" +
                 "2. 密码是否正确\n" +
-                "3. 用户是否有访问 cashier_system 数据库的权限\n\n" +
+                "3. 用户是否有访问 lisuan_system 数据库的权限\n\n" +
                 "如果忘记密码，可以重置：\n" +
                 "mysql -u root -p\n" +
                 "ALTER USER '" + dbUsername + "'@'localhost' IDENTIFIED BY '新密码';"
@@ -195,11 +195,11 @@ public class DatabaseConnectionHelper {
         // Unknown database - 数据库不存在
         if (errorMessage != null && errorMessage.contains("Unknown database")) {
             return DiagnosticResult.failure(
-                "数据库不存在：cashier_system",
+                "数据库不存在：lisuan_system",
                 "请创建数据库：\n" +
                 "mysql -u root -p\n" +
-                "CREATE DATABASE cashier_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n" +
-                "GRANT ALL PRIVILEGES ON cashier_system.* TO '" + dbUsername + "'@'localhost';\n" +
+                "CREATE DATABASE lisuan_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;\n" +
+                "GRANT ALL PRIVILEGES ON lisuan_system.* TO '" + dbUsername + "'@'localhost';\n" +
                 "FLUSH PRIVILEGES;"
             );
         }

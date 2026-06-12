@@ -81,7 +81,7 @@ public class DatabaseConfigDialog {
         gbc.gridx = 0; gbc.gridy = 4;
         mainPanel.add(new JLabel("Database:"), gbc);
         gbc.gridx = 1;
-        dbNameField = new JTextField("cashier_system", 20);
+        dbNameField = new JTextField("lisuan_system", 20);
         mainPanel.add(dbNameField, gbc);
 
         // Username
@@ -130,7 +130,7 @@ public class DatabaseConfigDialog {
             case "Local MySQL":
                 hostField.setText("localhost");
                 portField.setText("3306");
-                dbNameField.setText("cashier_system");
+                dbNameField.setText("lisuan_system");
                 userField.setText("root");
                 passField.setText("");
                 hostField.setEditable(false);
@@ -139,7 +139,7 @@ public class DatabaseConfigDialog {
             case "Docker MySQL":
                 hostField.setText("localhost");
                 portField.setText("3306");
-                dbNameField.setText("cashier_system");
+                dbNameField.setText("lisuan_system");
                 userField.setText("root");
                 passField.setText("RootPassword123!");
                 hostField.setEditable(false);
@@ -148,7 +148,7 @@ public class DatabaseConfigDialog {
             case "Remote MySQL":
                 hostField.setText("");
                 portField.setText("3306");
-                dbNameField.setText("cashier_system");
+                dbNameField.setText("lisuan_system");
                 userField.setText("");
                 passField.setText("");
                 hostField.setEditable(true);

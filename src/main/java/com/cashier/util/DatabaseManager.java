@@ -209,8 +209,8 @@ public class DatabaseManager {
             configFile.getParentFile().mkdirs();
 
             Properties props = new Properties();
-            props.setProperty("db.url", "jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf8mb4");
-            props.setProperty("db.username", "cashier");
+            props.setProperty("db.url", "jdbc:mysql://localhost:3306/lisuan_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf8mb4");
+            props.setProperty("db.username", "lisuan");
             // 安全提示：建议使用环境变量 CASHER_DB_PASSWORD 存储密码，避免明文存储
             // Windows: set CASHER_DB_PASSWORD=YourPassword
             // Linux/Mac: export CASHER_DB_PASSWORD=YourPassword
@@ -273,8 +273,8 @@ public class DatabaseManager {
              Statement stmt = conn.createStatement()) {
 
             // 创建数据库（如果不存在）
-            stmt.execute("CREATE DATABASE IF NOT EXISTS cashier_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-            stmt.execute("USE cashier_system");
+            stmt.execute("CREATE DATABASE IF NOT EXISTS lisuan_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            stmt.execute("USE lisuan_system");
 
             // 创建用户表
             stmt.execute("""
@@ -1171,7 +1171,7 @@ public class DatabaseManager {
             }
 
             // 检查是否可以使用 Docker 容器
-            if (isDockerContainerRunning("cashier-mysql")) {
+            if (isDockerContainerRunning("lisuan-mysql")) {
                 return backupViaDocker(backupFile);
             } else {
                 return backupViaLocalCommand(backupFile);
@@ -1192,13 +1192,13 @@ public class DatabaseManager {
         // 构建 docker exec 命令 - 使用环境变量传递密码
         String[] command = {
             "docker", "exec", "-e", "MYSQL_PWD=" + dbPassword,
-            "cashier-mysql",
+            "lisuan-mysql",
             "mysqldump",
             "-u" + dbUsername,
             "--single-transaction",
             "--routines",
             "--triggers",
-            "cashier_system",
+            "lisuan_system",
             "-r", containerPath
         };
 
@@ -1220,7 +1220,7 @@ public class DatabaseManager {
 
         // 从容器复制文件到本地
         String[] copyCommand = {
-            "docker", "cp", "cashier-mysql:" + containerPath,
+            "docker", "cp", "lisuan-mysql:" + containerPath,
             backupFile.getAbsolutePath()
         };
 
@@ -1229,7 +1229,7 @@ public class DatabaseManager {
 
         if (copyExitCode == 0) {
             // 清理容器中的临时文件
-            Runtime.getRuntime().exec(new String[]{"docker", "exec", "cashier-mysql", "rm", "-f", containerPath});
+            Runtime.getRuntime().exec(new String[]{"docker", "exec", "lisuan-mysql", "rm", "-f", containerPath});
 
             logger.info("数据库备份成功: {}", backupFile.getAbsolutePath());
             return true;
@@ -1253,7 +1253,7 @@ public class DatabaseManager {
             "--single-transaction",
             "--routines",
             "--triggers",
-            "cashier_system"
+            "lisuan_system"
         );
         
         // 设置环境变量传递密码
@@ -1286,7 +1286,7 @@ public class DatabaseManager {
 
         try {
             // 检查是否可以使用 Docker 容器
-            if (isDockerContainerRunning("cashier-mysql")) {
+            if (isDockerContainerRunning("lisuan-mysql")) {
                 return restoreViaDocker(backupFile);
             } else {
                 return restoreViaLocalCommand(backupFile);
@@ -1307,7 +1307,7 @@ public class DatabaseManager {
         // 复制文件到容器
         String[] copyCommand = {
             "docker", "cp", backupFile.getAbsolutePath(),
-            "cashier-mysql:" + containerPath
+            "lisuan-mysql:" + containerPath
         };
 
         Process copyProcess = Runtime.getRuntime().exec(copyCommand);
@@ -1321,9 +1321,9 @@ public class DatabaseManager {
         // 构建 docker exec 命令 - 使用环境变量传递密码
         String[] command = {
             "docker", "exec", "-e", "MYSQL_PWD=" + dbPassword,
-            "cashier-mysql",
+            "lisuan-mysql",
             "bash", "-c",
-            "mysql -u" + dbUsername + " cashier_system < " + containerPath
+            "mysql -u" + dbUsername + " lisuan_system < " + containerPath
         };
 
         logger.info("执行 Docker 恢复命令...");
@@ -1349,7 +1349,7 @@ public class DatabaseManager {
         int exitCode = process.waitFor();
 
         // 清理容器中的临时文件
-        Runtime.getRuntime().exec(new String[]{"docker", "exec", "cashier-mysql", "rm", "-f", containerPath});
+        Runtime.getRuntime().exec(new String[]{"docker", "exec", "lisuan-mysql", "rm", "-f", containerPath});
 
         if (exitCode == 0) {
             logger.info("数据库恢复成功: {}", backupFile.getAbsolutePath());
@@ -1370,7 +1370,7 @@ public class DatabaseManager {
             "--host=" + getHostFromUrl(dbUrl),
             "--port=" + getPortFromUrl(dbUrl),
             "--user=" + dbUsername,
-            "cashier_system"
+            "lisuan_system"
         );
         
         // 设置环境变量传递密码

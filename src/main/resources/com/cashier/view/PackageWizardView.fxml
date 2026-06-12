@@ -4,10 +4,12 @@
 <?import javafx.scene.control.*?>
 <?import javafx.scene.layout.*?>
 <?import javafx.scene.text.Font?>
+<?import javafx.scene.image.ImageView?>
+<?import javafx.scene.image.Image?>
 
-<VBox xmlns:http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
+<VBox xmlns="http://javafx.com/javafx/17" xmlns:fx="http://javafx.com/fxml/1"
       fx:controller="com.cashier.packager.PackageWizardController"
-      prefWidth="800" prefHeight="600" styleClass="wizard-root">
+      prefWidth="800" prefHeight="750" styleClass="wizard-root">
 
     <padding>
         <Insets top="20" right="30" bottom="20" left="30"/>
@@ -21,17 +23,11 @@
             </image>
         </ImageView>
         <VBox spacing="5">
-            <Label text="狸算(LiSuan)收银系统 - 打包向导" styleClass="wizard-title">
-                <font>
-                    <Font size="20" weight="BOLD"/>
-                </font>
-            </Label>
+            <Label text="狸算(LiSuan)收银系统 - 打包向导" styleClass="wizard-title"
+                   style="-fx-font-size: 20px; -fx-font-weight: bold;"/>
             <Label text="按照提示配置打包选项，生成 Windows 安装程序" styleClass="wizard-subtitle"
-                   textFill="gray">
-                <font>
-                    <Font size="12"/>
-                </font>
-            </Label>
+                   textFill="gray"
+                   style="-fx-font-size: 12px;"/>
         </VBox>
         <Region HBox.hgrow="ALWAYS"/>
         <Label text="版本 2.5.6" styleClass="wizard-version" textFill="gray"/>
@@ -40,7 +36,10 @@
     <Separator/>
 
     <!-- 步骤指示器 -->
-    <HBox alignment="CENTER" spacing="10" padding="15">
+    <HBox alignment="CENTER" spacing="10">
+        <padding>
+            <Insets topRightBottomLeft="15"/>
+        </padding>
         <ToggleButton fx:id="step1Button" text="1. 基本信息" selected="true" styleClass="step-button"/>
         <Label text="→" textFill="gray"/>
         <ToggleButton fx:id="step2Button" text="2. 打包选项" styleClass="step-button"/>
@@ -50,8 +49,9 @@
         <ToggleButton fx:id="step4Button" text="4. 确认打包" styleClass="step-button"/>
     </HBox>
 
-    <!-- 主内容区域 -->
-    <VBox fx:id="wizardContainer" spacing="20" VBox.vgrow="ALWAYS" style="-fx-padding: 20; -fx-background-color: #f8f8f8; -fx-background-radius: 8;">
+    <!-- 主内容区域 - 包装在 ScrollPane 中以支持滚动 -->
+    <ScrollPane fitToWidth="true" VBox.vgrow="ALWAYS" style="-fx-background: transparent; -fx-border-color: transparent;">
+        <VBox fx:id="wizardContainer" spacing="15" style="-fx-padding: 15; -fx-background-color: #f8f8f8; -fx-background-radius: 8;">
 
         <!-- 步骤 1: 基本信息 -->
         <VBox fx:id="step1Content" spacing="15">
@@ -75,7 +75,8 @@
 
                 <Label text="应用描述:" GridPane.columnIndex="0" GridPane.rowIndex="4" GridPane.valignment="TOP"/>
                 <TextArea fx:id="descriptionArea" prefRowCount="3" prefWidth="400" GridPane.columnIndex="1" GridPane.rowIndex="4"
-                          promptText="简短描述应用的功能"/>
+                          promptText="简短描述应用的功能"
+                          style="-fx-control-inner-background: white; -fx-text-fill: black;"/>
             </GridPane>
         </VBox>
 
@@ -84,7 +85,7 @@
             <Label text="打包选项" style="-fx-font-size: 16px; -fx-font-weight: bold;"/>
 
             <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 5;">
-                <CheckBox fx:id="embedJreCheckBox" text="嵌入 JRE（推荐）" selected="true"/>
+                <CheckBox fx:id="embedJreCheckBox" text="嵌入 JRE（推荐）" selected="true" style="-fx-text-fill: #333333;"/>
                 <Label text="将 JRE 嵌入安装包，用户无需安装 Java" textFill="gray" style="-fx-font-size: 11px;">
                     <VBox.margin>
                         <Insets left="25"/>
@@ -93,9 +94,24 @@
             </VBox>
 
             <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 5;">
-                <CheckBox fx:id="createShortcutCheckBox" text="创建桌面快捷方式" selected="true"/>
-                <CheckBox fx:id="addMenuCheckBox" text="添加到开始菜单" selected="true"/>
-                <CheckBox fx:id="dirChooserCheckBox" text="允许用户选择安装目录" selected="true"/>
+                <CheckBox fx:id="createExeInstallerCheckBox" text="创建 EXE 安装程序 (需要 WiX)" selected="false" style="-fx-text-fill: #333333;"/>
+                <Label text="如未安装 WiX 工具，请取消勾选，将创建应用文件夹" textFill="gray" style="-fx-font-size: 11px;">
+                    <VBox.margin>
+                        <Insets left="25"/>
+                    </VBox.margin>
+                </Label>
+            </VBox>
+
+            <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 5;">
+                <CheckBox fx:id="createShortcutCheckBox" text="创建桌面快捷方式" selected="true" style="-fx-text-fill: #333333;"/>
+            </VBox>
+
+            <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 5;">
+                <CheckBox fx:id="addMenuCheckBox" text="添加到开始菜单" selected="true" style="-fx-text-fill: #333333;"/>
+            </VBox>
+
+            <VBox spacing="10" style="-fx-background-color: white; -fx-padding: 15; -fx-background-radius: 5;">
+                <CheckBox fx:id="dirChooserCheckBox" text="允许用户选择安装目录" selected="true" style="-fx-text-fill: #333333;"/>
             </VBox>
 
             <GridPane hgap="15" vgap="15">
@@ -166,8 +182,8 @@
                 </HBox>
             </GridPane>
 
-            <TextArea prefRowCount="8" prefWidth="750" editable="false" wrapText="true"
-                      style="-fx-font-family: monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1e1e; -fx-text-fill: #00ff00;"
+            <TextArea prefRowCount="6" prefWidth="750" editable="false" wrapText="true" styleClass="info-area"
+                      style="-fx-font-family: monospace; -fx-font-size: 11px; -fx-text-fill: #00ff00; -fx-wrap-text: true;"
                       text="打包说明：
 ━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 1. 确保 Maven 和 JDK 已安装并配置环境变量
@@ -180,22 +196,25 @@
 - 用户运行 EXE 即可安装，无需配置
 - 内嵌 JRE 版本无需用户安装 Java"/>
         </VBox>
-
-    </VBox>
+        </VBox>
+    </ScrollPane>
 
     <!-- 进度和日志区域 -->
-    <VBox spacing="10" VBox.vgrow="ALWAYS">
+    <VBox spacing="8">
         <ProgressBar fx:id="progressBar" prefWidth="750" progress="0" visible="false"/>
         <HBox alignment="CENTER_LEFT" spacing="10">
             <ProgressIndicator fx:id="progressIndicator" prefWidth="25" prefHeight="25" visible="false"/>
-            <Label fx:id="statusLabel" text="" textFill="gray"/>
+            <Label fx:id="statusLabel" text="" textFill="#333333"/>
         </HBox>
-        <TextArea fx:id="logTextArea" prefRowCount="6" editable="false"
-                  style="-fx-font-family: monospace; -fx-font-size: 11px; -fx-control-inner-background: #1e1e1e; -fx-text-fill: #cccccc;"/>
+        <TextArea fx:id="logTextArea" prefRowCount="4" editable="false" styleClass="log-area"
+                  style="-fx-font-family: monospace; -fx-font-size: 11px; -fx-text-fill: #cccccc;"/>
     </VBox>
 
     <!-- 导航按钮 -->
-    <HBox alignment="CENTER_RIGHT" spacing="10" padding="10">
+    <HBox alignment="CENTER_RIGHT" spacing="10">
+        <padding>
+            <Insets topRightBottomLeft="10"/>
+        </padding>
         <Region HBox.hgrow="ALWAYS"/>
         <Button fx:id="backButton" text="&lt; 上一步" onAction="#handleBack" prefWidth="100"/>
         <Button fx:id="nextButton" text="下一步 &gt;" onAction="#handleNext" prefWidth="100" styleClass="primary-button"/>

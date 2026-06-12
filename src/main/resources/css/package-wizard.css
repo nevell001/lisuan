@@ -93,6 +93,7 @@
     -fx-border-radius: 4;
     -fx-border-width: 1;
     -fx-padding: 8;
+    -fx-text-fill: black;
 }
 
 .text-field:focused, .text-area:focused {
@@ -105,6 +106,14 @@
     -fx-font-size: 12px;
 }
 
+.check-box > .text {
+    -fx-text-fill: #333333 !important;
+}
+
+.check-box .text {
+    -fx-text-fill: #333333 !important;
+}
+
 .check-box .box {
     -fx-background-color: white;
     -fx-border-color: #6c757d;
@@ -114,6 +123,14 @@
 .check-box:selected .box {
     -fx-background-color: #007bff;
     -fx-border-color: #007bff;
+}
+
+.check-box:selected > .text {
+    -fx-text-fill: #333333 !important;
+}
+
+.check-box:selected .text {
+    -fx-text-fill: #333333 !important;
 }
 
 /* ComboBox */
@@ -209,8 +226,19 @@
     -fx-background-color: transparent;
 }
 
-/* TextArea 滚动条 */
-.text-area .content {
+/* TextArea 默认样式 */
+.text-area {
+    -fx-background-color: white;
+    -fx-text-fill: black;
+}
+
+/* 日志区域 - 终端风格 */
+.log-area .content {
+    -fx-background-color: #1e1e1e;
+}
+
+/* 打包说明区域 - 终端风格 */
+.info-area .content {
     -fx-background-color: #1e1e1e;
 }
 

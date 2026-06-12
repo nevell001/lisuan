@@ -16,7 +16,7 @@ import java.util.logging.Logger;
 public class Installer {
     private static final Logger LOGGER = Logger.getLogger(Installer.class.getName());
     private static final String APP_VERSION = "2.5.0";
-    private static final String DB_NAME = "cashier_system";
+    private static final String DB_NAME = "lisuan_system";
     
     private JFrame frame;
     private JTextArea logArea;
@@ -418,7 +418,7 @@ public class Installer {
             
             // Import sample data
             log("  导入示例数据...");
-            executeCommand("docker exec cashier-mysql mysql -uroot -p" + dbPassword + " --default-character-set=utf8mb4 " + DB_NAME + " < docker/mysql-init/00-init-complete.sql", new File("."));
+            executeCommand("docker exec lisuan-mysql mysql -uroot -p" + dbPassword + " --default-character-set=utf8mb4 " + DB_NAME + " < docker/mysql-init/00-init-complete.sql", new File("."));
             
         } else {
             // Use local MySQL

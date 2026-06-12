@@ -112,9 +112,27 @@
 
 ### Windows 用户
 
-1. 下载 `CashierSystem-v{version}.zip` 并解压
-2. 双击 `Database Config.bat` 配置数据库
-3. 双击 `Quick Start.bat` 启动应用
+**开发模式**:
+```bash
+# 启动 MySQL（Docker 或本地）
+docker compose up -d mysql
+
+# 编译并运行
+mvn clean package
+start.bat
+```
+
+**分发包模式**:
+```bash
+# 确保 MySQL 正在运行
+# 直接启动
+start.bat
+```
+
+**注意**:
+- 需要安装 Java 17+
+- 需要安装 Maven 3.8+（开发模式）
+- JavaFX 运行时会自动从 Maven 本地仓库加载
 
 ### 开发者安装
 
@@ -264,7 +282,13 @@ java -jar target/cashier-system-fx-*-jar-with-dependencies.jar
 **应用无法启动**
 - 检查 JDK 版本是否为 17+
 - 检查 MySQL 服务是否运行
-- 查看 `logs/app.log`
+- 确保已执行 `mvn clean package` 构建项目
+- 查看 `logs/cashier-system.log`
+
+**启动时提示"缺少 JavaFX 运行时组件"**
+- 确保已安装 Maven 3.8+
+- 执行 `mvn clean install` 下载依赖
+- JavaFX 将自动从 Maven 本地仓库加载
 
 **数据库连接失败**
 - 确保 MySQL 正在运行

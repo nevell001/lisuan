@@ -16,7 +16,7 @@ import java.util.List;
  */
 public class BackupDAO {
     private static final Logger logger = LoggerFactory.getLogger(BackupDAO.class);
-    
+
     /**
      * 创建备份表
      */
@@ -44,7 +44,7 @@ public class BackupDAO {
                 auto_backup BOOLEAN
             )
             """;
-        
+
         String configSql = """
             CREATE TABLE IF NOT EXISTS backup_config (
                 id INT PRIMARY KEY,
@@ -86,7 +86,7 @@ public class BackupDAO {
                 update_time DATETIME
             )
             """;
-        
+
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement()) {
             stmt.execute(backupSql);
@@ -94,7 +94,7 @@ public class BackupDAO {
             logger.info("备份表创建成功");
         }
     }
-    
+
     /**
      * 插入备份记录
      */
@@ -106,10 +106,10 @@ public class BackupDAO {
                 content_type, scope, operator, remark, error_message, checksum, auto_backup
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
-        
+
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+
             pstmt.setString(1, record.backupId);
             pstmt.setString(2, record.backupType != null ? record.backupType.name() : "MANUAL");
             pstmt.setString(3, record.target != null ? record.target.name() : "LOCAL");
@@ -129,27 +129,27 @@ public class BackupDAO {
             pstmt.setString(17, record.errorMessage);
             pstmt.setString(18, record.checksum);
             pstmt.setBoolean(19, record.autoBackup);
-            
+
             return pstmt.executeUpdate() > 0;
         }
     }
-    
+
     /**
      * 更新备份状态
      */
     public static boolean updateStatus(String backupId, BackupRecord.BackupStatus status) throws SQLException {
         String sql = "UPDATE backup_records SET status = ? WHERE backup_id = ?";
-        
+
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+
             pstmt.setString(1, status.name());
             pstmt.setString(2, backupId);
-            
+
             return pstmt.executeUpdate() > 0;
         }
     }
-    
+
     /**
      * 更新备份完成信息
      */
@@ -157,15 +157,15 @@ public class BackupDAO {
                                         long fileSize, String checksum, BackupRecord.BackupStatus status,
                                         String errorMessage) throws SQLException {
         String sql = """
-            UPDATE backup_records SET 
-                local_path = ?, remote_path = ?, file_size = ?, checksum = ?, 
+            UPDATE backup_records SET
+                local_path = ?, remote_path = ?, file_size = ?, checksum = ?,
                 status = ?, finish_time = ?, duration_seconds = ?, error_message = ?
             WHERE backup_id = ?
             """;
-        
+
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+
             pstmt.setString(1, localPath);
             pstmt.setString(2, remotePath);
             pstmt.setLong(3, fileSize);
@@ -175,22 +175,22 @@ public class BackupDAO {
             pstmt.setInt(7, 0); // duration will be calculated
             pstmt.setString(8, errorMessage);
             pstmt.setString(9, backupId);
-            
+
             return pstmt.executeUpdate() > 0;
         }
     }
-    
+
     /**
      * 根据ID查询
      */
     public static BackupRecord findById(String backupId) throws SQLException {
         String sql = "SELECT * FROM backup_records WHERE backup_id = ?";
-        
+
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+
             pstmt.setString(1, backupId);
-            
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 if (rs.next()) {
                     return mapResultSetToBackupRecord(rs);
@@ -199,19 +199,19 @@ public class BackupDAO {
         }
         return null;
     }
-    
+
     /**
      * 查询最近的备份记录
      */
     public static List<BackupRecord> findRecent(int limit) throws SQLException {
         String sql = "SELECT * FROM backup_records ORDER BY create_time DESC LIMIT ?";
         List<BackupRecord> records = new ArrayList<>();
-        
+
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+
             pstmt.setInt(1, limit);
-            
+
             try (ResultSet rs = pstmt.executeQuery()) {
                 while (rs.next()) {
                     records.add(mapResultSetToBackupRecord(rs));
@@ -220,108 +220,103 @@ public class BackupDAO {
         }
         return records;
     }
-    
+
     /**
      * 查询成功的备份记录
      */
     public static List<BackupRecord> findSuccessful() throws SQLException {
         String sql = "SELECT * FROM backup_records WHERE status = 'SUCCESS' ORDER BY create_time DESC";
         List<BackupRecord> records = new ArrayList<>();
-        
+
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-            
+
             while (rs.next()) {
                 records.add(mapResultSetToBackupRecord(rs));
             }
         }
         return records;
     }
-    
+
     /**
      * 删除过期备份记录
      */
     public static int deleteExpired(int retentionDays) throws SQLException {
         String sql = "DELETE FROM backup_records WHERE create_time < DATE_SUB(NOW(), INTERVAL ? DAY)";
-        
+
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+
             pstmt.setInt(1, retentionDays);
             return pstmt.executeUpdate();
         }
     }
-    
+
     /**
      * 统计备份数量
      */
     public static int countBackups() throws SQLException {
         String sql = "SELECT COUNT(*) FROM backup_records";
-        
+
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-            
+
             if (rs.next()) {
                 return rs.getInt(1);
             }
         }
         return 0;
     }
-    
+
     // ========== 配置操作 ==========
-    
+
     /**
      * 获取备份配置
      */
     public static BackupConfig getConfig() throws SQLException {
         String sql = "SELECT * FROM backup_config WHERE id = 1";
-        
+
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
-            
+
             if (rs.next()) {
                 return mapResultSetToBackupConfig(rs);
             }
         }
-        
+
         // 返回默认配置
         BackupConfig config = new BackupConfig();
         saveConfig(config);
         return config;
     }
-    
+
     /**
      * 保存备份配置
      */
     public static boolean saveConfig(BackupConfig config) throws SQLException {
+        // MySQL 使用 INSERT ... ON DUPLICATE KEY UPDATE
         String sql = """
-            INSERT OR REPLACE INTO backup_config (
-                id, auto_backup_enabled, target, content_type, backup_interval_hours,
-                retention_days, max_backup_count, last_backup_time, next_backup_time,
-                aliyun_endpoint, aliyun_bucket, aliyun_access_key, aliyun_secret_key,
-                tencent_region, tencent_bucket, tencent_secret_id, tencent_secret_key,
-                qiniu_domain, qiniu_bucket, qiniu_access_key, qiniu_secret_key,
-                aws_region, aws_bucket, aws_access_key, aws_secret_key,
-                ftp_host, ftp_port, ftp_user, ftp_password, ftp_path,
-                webdav_url, webdav_user, webdav_password, webdav_path,
-                local_backup_path, update_time
-            ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-            """;
-        
-        // SQLite 使用 INSERT OR REPLACE
-        String sqliteSql = """
-            INSERT OR REPLACE INTO backup_config (
+            INSERT INTO backup_config (
                 id, auto_backup_enabled, target, content_type, backup_interval_hours,
                 retention_days, max_backup_count, local_backup_path, update_time
             ) VALUES (1, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                auto_backup_enabled = VALUES(auto_backup_enabled),
+                target = VALUES(target),
+                content_type = VALUES(content_type),
+                backup_interval_hours = VALUES(backup_interval_hours),
+                retention_days = VALUES(retention_days),
+                max_backup_count = VALUES(max_backup_count),
+                local_backup_path = VALUES(local_backup_path),
+                update_time = VALUES(update_time)
             """;
-        
+
         try (Connection conn = DatabaseManager.getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sqliteSql)) {
-            
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+
             pstmt.setBoolean(1, config.autoBackupEnabled);
             pstmt.setString(2, config.target != null ? config.target.name() : "LOCAL");
             pstmt.setString(3, config.contentType != null ? config.contentType.name() : "FULL");
@@ -330,29 +325,29 @@ public class BackupDAO {
             pstmt.setInt(6, config.maxBackupCount);
             pstmt.setString(7, config.localBackupPath);
             pstmt.setTimestamp(8, new Timestamp(System.currentTimeMillis()));
-            
+
             return pstmt.executeUpdate() > 0;
         }
     }
-    
+
     /**
      * 更新最后备份时间
      */
     public static boolean updateLastBackupTime(Date lastBackupTime) throws SQLException {
         String sql = "UPDATE backup_config SET last_backup_time = ?, next_backup_time = ? WHERE id = 1";
-        
+
         Date nextTime = new Date(lastBackupTime.getTime() + 24 * 60 * 60 * 1000L);
-        
+
         try (Connection conn = DatabaseManager.getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
-            
+
             pstmt.setTimestamp(1, new Timestamp(lastBackupTime.getTime()));
             pstmt.setTimestamp(2, new Timestamp(nextTime.getTime()));
-            
+
             return pstmt.executeUpdate() > 0;
         }
     }
-    
+
     /**
      * ResultSet 映射到 BackupRecord
      */
@@ -366,16 +361,16 @@ public class BackupDAO {
         record.remotePath = rs.getString("remote_path");
         record.fileSize = rs.getLong("file_size");
         record.status = BackupRecord.BackupStatus.valueOf(rs.getString("status"));
-        
+
         Timestamp createTime = rs.getTimestamp("create_time");
         if (createTime != null) record.createTime = new Date(createTime.getTime());
-        
+
         Timestamp startTime = rs.getTimestamp("start_time");
         if (startTime != null) record.startTime = new Date(startTime.getTime());
-        
+
         Timestamp finishTime = rs.getTimestamp("finish_time");
         if (finishTime != null) record.finishTime = new Date(finishTime.getTime());
-        
+
         record.durationSeconds = rs.getInt("duration_seconds");
         record.contentType = BackupRecord.BackupContentType.valueOf(rs.getString("content_type"));
         record.scope = BackupRecord.BackupScope.valueOf(rs.getString("scope"));
@@ -384,10 +379,10 @@ public class BackupDAO {
         record.errorMessage = rs.getString("error_message");
         record.checksum = rs.getString("checksum");
         record.autoBackup = rs.getBoolean("auto_backup");
-        
+
         return record;
     }
-    
+
     /**
      * ResultSet 映射到 BackupConfig
      */
@@ -401,16 +396,16 @@ public class BackupDAO {
         config.retentionDays = rs.getInt("retention_days");
         config.maxBackupCount = rs.getInt("max_backup_count");
         config.localBackupPath = rs.getString("local_backup_path");
-        
+
         Timestamp lastBackup = rs.getTimestamp("last_backup_time");
         if (lastBackup != null) config.lastBackupTime = new Date(lastBackup.getTime());
-        
+
         Timestamp nextBackup = rs.getTimestamp("next_backup_time");
         if (nextBackup != null) config.nextBackupTime = new Date(nextBackup.getTime());
-        
+
         Timestamp updateTime = rs.getTimestamp("update_time");
         if (updateTime != null) config.updateTime = new Date(updateTime.getTime());
-        
+
         return config;
     }
 }

@@ -299,6 +299,8 @@
                         </manifest>
                         <manifestEntries>
                             <JavaFX-Preloader-Class>com.cashier.SplashScreen</JavaFX-Preloader-Class>
+                            <Add-Opens>java.base/java.lang=ALL-UNNAMED java.base/java.util=ALL-UNNAMED java.base/java.lang.reflect=ALL-UNNAMED java.desktop/java.awt=ALL-UNNAMED</Add-Opens>
+                            <Add-Exports>java.base/sun.util.logging=ALL-UNNAMED java.base/sun.reflect=ALL-UNNAMED</Add-Exports>
                         </manifestEntries>
                     </archive>
                     <descriptorRefs>
@@ -359,6 +361,34 @@
                     <!-- 图标 -->
                     <icon>src/main/resources/images/logos/app-icon.ico</icon>
                 </configuration>
+            </plugin>
+
+            <!-- Inno Setup 安装程序插件 (仅 Windows) -->
+            <plugin>
+                <groupId>org.codehaus.mojo</groupId>
+                <artifactId>exec-maven-plugin</artifactId>
+                <version>3.1.0</version>
+                <executions>
+                    <!-- 创建安装程序 (需安装 Inno Setup) -->
+                    <execution>
+                        <id>create-installer</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>exec</goal>
+                        </goals>
+                        <configuration>
+                            <skip>${innosetup.skip}</skip>
+                            <executable>ISCC.exe</executable>
+                            <basedir>${env.ProgramFiles(x86)}\Inno Setup 6</basedir>
+                            <arguments>
+                                <argument>/O+${project.build.directory}\installer-output</argument>
+                                <argument>/DAppVersion=${project.version}</argument>
+                                <argument>${project.basedir}\installer\lisuan-installer.iss</argument>
+                            </arguments>
+                            <workingDirectory>${project.basedir}</workingDirectory>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
 

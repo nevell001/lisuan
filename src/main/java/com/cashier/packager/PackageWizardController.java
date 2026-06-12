@@ -40,6 +40,7 @@ public class PackageWizardController {
 
     // 打包选项页
     @FXML private CheckBox embedJreCheckBox;
+    @FXML private CheckBox createExeInstallerCheckBox;
     @FXML private CheckBox createShortcutCheckBox;
     @FXML private CheckBox addMenuCheckBox;
     @FXML private CheckBox dirChooserCheckBox;
@@ -77,6 +78,112 @@ public class PackageWizardController {
     private int currentStep = 1;
     private static final int TOTAL_STEPS = 4;
     private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+
+    /**
+     * 查找 Maven 命令
+     * 优先使用 PATH 中的 mvn.cmd (Windows) 或 mvn (Linux/Mac)
+     */
+    private String findMavenCommand() {
+        String osName = System.getProperty("os.name").toLowerCase();
+        String mavenCmd = osName.contains("win") ? "mvn.cmd" : "mvn";
+
+        // 首先检查 PATH 中的 Maven
+        try {
+            ProcessBuilder pb = new ProcessBuilder(mavenCmd, "--version");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            if (p.waitFor() == 0) {
+                return mavenCmd;
+            }
+        } catch (Exception e) {
+            // 继续尝试其他方法
+        }
+
+        // 检查常见 Maven 安装路径
+        String[] mavenPaths = {
+            System.getenv("MAVEN_HOME") + "\\bin\\mvn.cmd",
+            System.getenv("MAVEN_HOME") + "/bin/mvn",
+            "C:\\Program Files\\Apache Maven\\bin\\mvn.cmd",
+            "C:\\Maven\\bin\\mvn.cmd",
+            System.getProperty("user.home") + "\\.m2\\wrapper\\dists\\*\\*\\bin\\mvn.cmd"
+        };
+
+        for (String path : mavenPaths) {
+            if (path != null && !path.contains("*")) {
+                File f = new File(path);
+                if (f.exists()) {
+                    return path;
+                }
+            }
+        }
+
+        // 如果都找不到，返回默认命令名
+        return mavenCmd;
+    }
+
+    /**
+     * 查找 jpackage 命令
+     * jpackage 通常在 JDK bin 目录中
+     */
+    private String findJpackageCommand() {
+        // 首先检查 PATH 中的 jpackage
+        try {
+            ProcessBuilder pb = new ProcessBuilder("jpackage", "--version");
+            pb.redirectErrorStream(true);
+            Process p = pb.start();
+            if (p.waitFor() == 0) {
+                return "jpackage";
+            }
+        } catch (Exception e) {
+            // 继续尝试其他方法
+        }
+
+        // 检查 JAVA_HOME 下的 bin 目录
+        String javaHome = System.getenv("JAVA_HOME");
+        if (javaHome != null) {
+            String[] jpackagePaths = {
+                javaHome + "\\bin\\jpackage.exe",
+                javaHome + "/bin/jpackage",
+                javaHome + "\\bin\\jpackage.cmd"
+            };
+            for (String path : jpackagePaths) {
+                File f = new File(path);
+                if (f.exists()) {
+                    return path;
+                }
+            }
+        }
+
+        // 检查常见 JDK 安装路径
+        String[] jdkPaths = {
+            "C:\\Program Files\\Java\\jdk-*\\bin\\jpackage.exe",
+            "C:\\Program Files\\Java\\jdk-*\\bin\\jpackage",
+            "C:\\Java\\jdk-*\\bin\\jpackage.exe",
+            System.getProperty("user.home") + "\\scoop\\apps\\openjdk*\\current\\bin\\jpackage.exe"
+        };
+
+        for (String path : jdkPaths) {
+            if (path.contains("*")) {
+                // 处理通配符
+                File parentDir = new File(path).getParentFile();
+                if (parentDir != null && parentDir.exists()) {
+                    File[] matches = parentDir.listFiles((dir, name) ->
+                        name.startsWith("jpackage") || name.startsWith("jpackage.exe"));
+                    if (matches != null && matches.length > 0) {
+                        return matches[0].getAbsolutePath();
+                    }
+                }
+            } else {
+                File f = new File(path);
+                if (f.exists()) {
+                    return path;
+                }
+            }
+        }
+
+        // 返回默认命令名
+        return "jpackage";
+    }
 
     @FXML
     private void initialize() {
@@ -129,6 +236,13 @@ public class PackageWizardController {
 
         // 默认输出目录
         outputDirField.setText(System.getProperty("user.dir") + "\\target\\dist");
+
+        // 默认图标路径
+        String defaultIconPath = System.getProperty("user.dir") + "\\src\\main\\resources\\images\\logos\\app-icon.ico";
+        File iconFile = new File(defaultIconPath);
+        if (iconFile.exists()) {
+            iconPathField.setText(defaultIconPath);
+        }
 
         // 默认数据库配置
         dbNameField.setText("lisuan_system");
@@ -376,84 +490,91 @@ public class PackageWizardController {
             @Override
             protected Void call() throws Exception {
                 try {
-                    // 步骤 1: 编译项目
-                    updateProgress(0.1, 1.0);
-                    updateMessage("正在编译项目...");
-                    appendLog("[1/5] 正在编译项目...");
+                    String appName = appNameField.getText().trim();
+                    String mavenCmd = findMavenCommand();
+                    String version = appVersionField.getText().trim();
+                    String fatJar = "target/" + "lisuan-fx-" + version + "-jar-with-dependencies.jar";
+                    File jarFile = new File(fatJar);
 
-                    ProcessBuilder mvnCompile = new ProcessBuilder("mvn", "clean", "compile", "-q");
-                    mvnCompile.directory(new File(System.getProperty("user.dir")));
-                    mvnCompile.redirectErrorStream(true);
-
-                    Process compileProcess = mvnCompile.start();
-                    logProcessOutput(compileProcess);
-
-                    if (compileProcess.waitFor() != 0) {
-                        throw new RuntimeException("编译失败");
-                    }
-                    appendLog("✓ 编译完成\n");
-
-                    // 步骤 2: 打包 JAR
-                    updateProgress(0.3, 1.0);
-                    updateMessage("正在打包 JAR...");
-                    appendLog("[2/5] 正在打包 JAR...");
-
-                    ProcessBuilder mvnPackage = new ProcessBuilder("mvn", "package", "-DskipTests", "-q");
-                    mvnPackage.directory(new File(System.getProperty("user.dir")));
-                    mvnPackage.redirectErrorStream(true);
-
-                    Process packageProcess = mvnPackage.start();
-                    logProcessOutput(packageProcess);
-
-                    if (packageProcess.waitFor() != 0) {
-                        throw new RuntimeException("打包失败");
-                    }
-                    appendLog("✓ JAR 打包完成\n");
-
-                    // 步骤 3: 创建自定义 JRE（如果选择嵌入）
-                    if (embedJreCheckBox.isSelected()) {
+                    // 检查 JAR 是否已存在，如果存在则跳过编译
+                    if (jarFile.exists()) {
                         updateProgress(0.5, 1.0);
-                        updateMessage("正在创建自定义 JRE...");
-                        appendLog("[3/5] 正在创建自定义 JRE...");
+                        updateMessage("发现已编译的 JAR，跳过编译步骤...");
+                        appendLog("发现已存在的 JAR 文件，跳过 Maven 编译\n");
+                    } else {
+                        // 步骤 1: 编译项目
+                        updateProgress(0.1, 1.0);
+                        updateMessage("正在编译项目...");
+                        appendLog("[1/3] 正在编译项目...");
 
-                        createCustomJre();
-                        appendLog("✓ 自定义 JRE 创建完成\n");
+                        appendLog("使用 Maven: " + mavenCmd + "\n");
+
+                        ProcessBuilder mvnCompile = new ProcessBuilder(mavenCmd, "compile", "-q");
+                        mvnCompile.directory(new File(System.getProperty("user.dir")));
+                        mvnCompile.redirectErrorStream(true);
+
+                        Process compileProcess = mvnCompile.start();
+                        logProcessOutput(compileProcess);
+
+                        if (compileProcess.waitFor() != 0) {
+                            throw new RuntimeException("编译失败");
+                        }
+                        appendLog("✓ 编译完成\n");
+
+                        // 步骤 2: 打包 JAR
+                        updateProgress(0.3, 1.0);
+                        updateMessage("正在打包 JAR...");
+                        appendLog("[2/3] 正在打包 JAR...");
+
+                        ProcessBuilder mvnPackage = new ProcessBuilder(mavenCmd, "package", "-DskipTests", "-q");
+                        mvnPackage.directory(new File(System.getProperty("user.dir")));
+                        mvnPackage.redirectErrorStream(true);
+
+                        Process packageProcess = mvnPackage.start();
+                        logProcessOutput(packageProcess);
+
+                        if (packageProcess.waitFor() != 0) {
+                            throw new RuntimeException("打包失败");
+                        }
+                        appendLog("✓ JAR 打包完成\n");
                     }
 
-                    // 步骤 4: 保存数据库配置
-                    updateProgress(0.7, 1.0);
+                    // 步骤 3: 保存数据库配置
+                    updateProgress(0.6, 1.0);
                     updateMessage("正在保存数据库配置...");
-                    appendLog("[4/5] 正在保存数据库配置...");
+                    appendLog("[3/4] 正在保存数据库配置...");
 
                     saveDatabaseConfig();
                     appendLog("✓ 数据库配置已保存\n");
 
-                    // 步骤 5: 使用 jpackage 创建 EXE
+                    // 步骤 4: 创建分发包
                     updateProgress(0.8, 1.0);
-                    updateMessage("正在创建 EXE 安装包...");
-                    appendLog("[5/5] 正在创建 EXE 安装包...");
+                    updateMessage("正在创建分发包...");
+                    appendLog("[4/4] 正在创建分发包...");
 
                     createExePackage();
-                    appendLog("✓ EXE 安装包创建完成\n");
+                    appendLog("✓ 分发包创建完成\n");
 
                     updateProgress(1.0, 1.0);
                     appendLog("========================================");
                     appendLog("打包完成！");
                     appendLog("输出位置: " + outputDirField.getText());
+                    appendLog("启动方式: 双击 " + appName + ".bat");
                     appendLog("========================================");
+
+                    // 打开输出目录
+                    try {
+                        Runtime.getRuntime().exec("explorer " + outputDirField.getText());
+                        appendLog("\n已打开输出目录");
+                    } catch (IOException e) {
+                        logger.error("无法打开输出目录", e);
+                    }
 
                     javafx.application.Platform.runLater(() -> {
                         showAlert(Alert.AlertType.INFORMATION, "打包成功",
-                                "EXE 安装包已创建！\n\n" +
-                                "输出位置: " + outputDirField.getText() + "\n\n" +
-                                "是否打开输出目录？");
-
-                        // 打开输出目录
-                        try {
-                            Runtime.getRuntime().exec("explorer " + outputDirField.getText());
-                        } catch (IOException e) {
-                            logger.error("无法打开输出目录", e);
-                        }
+                                "分发包已创建！\n\n" +
+                                "输出位置: " + outputDirField.getText() + "\\" + appName + "\n\n" +
+                                "启动方式: 双击 " + appName + ".bat");
                     });
 
                 } catch (Exception e) {
@@ -553,74 +674,80 @@ public class PackageWizardController {
     private void createExePackage() throws Exception {
         String version = appVersionField.getText().trim();
         String fatJar = "lisuan-fx-" + version + "-jar-with-dependencies.jar";
-        String jrePath = embedJreCheckBox.isSelected() ? "target/custom-jre" : null;
+        String appName = appNameField.getText().trim();
+        File outputDir = new File(outputDirField.getText().trim());
 
-        ProcessBuilder jpackage;
-        if (embedJreCheckBox.isSelected()) {
-            jpackage = new ProcessBuilder(
-                    "jpackage",
-                    "--type", "exe",
-                    "--name", appNameField.getText().trim(),
-                    "--app-version", version,
-                    "--vendor", vendorField.getText().trim(),
-                    "--description", descriptionArea.getText().trim(),
-                    "--dest", outputDirField.getText().trim(),
-                    "--input", "target",
-                    "--runtime-image", jrePath,
-                    "--main-jar", fatJar,
-                    "--main-class", "com.cashier.CashierSystemFXApplication",
-                    "--java-options", "-Xms" + memoryMinSpinner.getValue() + "m",
-                    "--java-options", "-Xmx" + memoryMaxSpinner.getValue() + "m",
-                    "--java-options", "-Dfile.encoding=UTF-8"
-            );
-        } else {
-            jpackage = new ProcessBuilder(
-                    "jpackage",
-                    "--type", "exe",
-                    "--name", appNameField.getText().trim(),
-                    "--app-version", version,
-                    "--vendor", vendorField.getText().trim(),
-                    "--description", descriptionArea.getText().trim(),
-                    "--dest", outputDirField.getText().trim(),
-                    "--input", "target",
-                    "--main-jar", fatJar,
-                    "--main-class", "com.cashier.CashierSystemFXApplication",
-                    "--java-options", "-Xms" + memoryMinSpinner.getValue() + "m",
-                    "--java-options", "-Xmx" + memoryMaxSpinner.getValue() + "m",
-                    "--java-options", "-Dfile.encoding=UTF-8"
-            );
+        appendLog("使用 PowerShell 打包方案\n");
+        logger.info("Using PowerShell packaging");
+
+        // 检查 package-simple.ps1 是否存在
+        File ps1Script = new File("package-simple.ps1");
+        if (!ps1Script.exists()) {
+            String error = "找不到打包脚本: " + ps1Script.getAbsolutePath();
+            appendLog(error + "\n");
+            logger.error(error);
+            throw new RuntimeException(error);
         }
 
-        // 添加可选功能
-        if (addMenuCheckBox.isSelected()) {
-            jpackage.command().add("--win-menu");
-            jpackage.command().add("--win-menu-group=" + appNameField.getText().trim());
-        }
-        if (createShortcutCheckBox.isSelected()) {
-            jpackage.command().add("--win-shortcut");
-        }
-        if (dirChooserCheckBox.isSelected()) {
-            jpackage.command().add("--win-dir-chooser");
+        // 检查输出目录
+        if (!outputDir.exists()) {
+            outputDir.mkdirs();
+            appendLog("创建输出目录: " + outputDir.getAbsolutePath() + "\n");
         }
 
-        // 添加图标
-        String iconPath = iconPathField.getText().trim();
-        if (!iconPath.isEmpty() && new File(iconPath).exists()) {
-            jpackage.command().add("--icon=" + iconPath);
-        } else {
-            jpackage.command().add("--icon=src/main/resources/images/logos/app-icon.ico");
+        // 清理已存在的应用目录
+        File existingAppDir = new File(outputDir, appName);
+        if (existingAppDir.exists()) {
+            appendLog("清理已存在的输出目录: " + existingAppDir.getAbsolutePath() + "\n");
+            deleteDirectory(existingAppDir);
         }
 
-        jpackage.command().add("--win-per-user-install");
-        jpackage.command().add("false");
+        appendLog("启动 PowerShell 打包脚本...\n");
 
-        jpackage.redirectErrorStream(true);
-        Process jpackageProcess = jpackage.start();
-        logProcessOutput(jpackageProcess);
+        // 构建 PowerShell 命令
+        ProcessBuilder psBuilder = new ProcessBuilder(
+            "powershell",
+            "-ExecutionPolicy", "Bypass",
+            "-File", ps1Script.getAbsolutePath()
+        );
 
-        if (jpackageProcess.waitFor() != 0) {
-            throw new RuntimeException("jpackage 打包失败");
+        // 设置环境变量，告诉脚本不要等待用户输入
+        psBuilder.environment().put("FROM_JAVA", "1");
+
+        psBuilder.directory(new File(System.getProperty("user.dir")));
+        psBuilder.redirectErrorStream(true);
+
+        appendLog("执行命令: powershell -ExecutionPolicy Bypass -File " + ps1Script.getName() + "\n");
+
+        Process psProcess = psBuilder.start();
+
+        // 捕获输出
+        StringBuilder output = new StringBuilder();
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(psProcess.getInputStream(), "UTF-8"))) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                output.append(line).append("\n");
+                final String outputLine = line;
+                javafx.application.Platform.runLater(() -> appendLog(outputLine));
+            }
         }
+
+        int exitCode = psProcess.waitFor();
+        logger.info("PowerShell exit code: {}", exitCode);
+        logger.info("PowerShell output:\n{}", output);
+
+        if (exitCode != 0) {
+            String error = "PowerShell 打包失败 (退出码: " + exitCode + ")";
+            appendLog(error + "\n");
+            if (!output.isEmpty()) {
+                appendLog("错误输出:\n" + output.toString() + "\n");
+            }
+            throw new RuntimeException(error);
+        }
+
+        appendLog("✓ 打包完成\n");
+        appendLog("输出位置: " + existingAppDir.getAbsolutePath() + "\n");
+        appendLog("启动方式: 双击 " + appName + ".bat\n");
     }
 
     private void logProcessOutput(Process process) throws IOException {

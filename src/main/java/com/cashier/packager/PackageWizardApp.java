@@ -19,7 +19,7 @@ public class PackageWizardApp extends Application {
                 Objects.requireNonNull(getClass().getResource("/com/cashier/view/PackageWizardView.fxml")));
         Parent root = loader.load();
 
-        Scene scene = new Scene(root, 800, 650);
+        Scene scene = new Scene(root, 800, 750);
         scene.getStylesheets().add(
                 Objects.requireNonNull(getClass().getResource("/css/package-wizard.css")).toExternalForm());
 

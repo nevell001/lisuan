@@ -854,7 +854,7 @@ public class SettingsController {
             DataService.backupData(backupBasePath);
             
             // 获取最新的备份文件名
-            File[] sqlFiles = backupDir.listFiles((dir, name) -> name.startsWith("cashier_system_") && name.endsWith(".sql"));
+            File[] sqlFiles = backupDir.listFiles((dir, name) -> name.startsWith("lisuan_system_") && name.endsWith(".sql"));
             if (sqlFiles != null && sqlFiles.length > 0) {
                 java.util.Arrays.sort(sqlFiles, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
                 showSuccess("数据备份成功！\n备份文件: " + sqlFiles[0].getName());
@@ -887,7 +887,7 @@ public class SettingsController {
             return;
         }
         
-        File[] sqlFiles = backupDir.listFiles((dir, name) -> name.startsWith("cashier_system_") && name.endsWith(".sql"));
+        File[] sqlFiles = backupDir.listFiles((dir, name) -> name.startsWith("lisuan_system_") && name.endsWith(".sql"));
         
         if (sqlFiles == null || sqlFiles.length == 0) {
             showError("未找到任何备份文件！\n路径: " + backupBasePath + "\n请先进行数据备份。");

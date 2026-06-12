@@ -481,6 +481,26 @@ echo       JVM Options: %JVM_OPTS%
 echo.
 
 REM ============================================
+REM   8.5. Setup JavaFX Module Path
+REM ============================================
+
+echo [8.5/9] Setting up JavaFX...
+echo ----------------------------------------
+
+set "JFX_BASE=%USERPROFILE%\.m2\repository\org\openjfx"
+set "JFX_PATH=%JFX_BASE%\javafx-base\17.0.12;%JFX_BASE%\javafx-controls\17.0.12;%JFX_BASE%\javafx-fxml\17.0.12;%JFX_BASE%\javafx-graphics\17.0.12"
+
+REM Check if JavaFX modules exist
+if not exist "%JFX_BASE%\javafx-base\17.0.12" (
+    echo [WARNING] JavaFX 17.0.12 not found in Maven repository
+    echo [INFO] Will use fallback method
+    set "JFX_PATH="
+) else (
+    echo [OK] JavaFX modules found
+)
+echo.
+
+REM ============================================
 REM   9. Start Application
 REM ============================================
 
@@ -500,15 +520,23 @@ if exist "%JAR_FILE%" (
     echo [INFO] Using packaged JAR: %JAR_FILE%
     echo.
 
+    REM Build Java command
+    if not "%JFX_PATH%"=="" (
+        echo [INFO] Using JavaFX module path
+        set "JAVA_CMD=java --module-path "%JFX_PATH%" --add-modules javafx.controls,javafx.fxml,javafx.graphics %JVM_OPTS% -jar "%JAR_FILE%""
+    ) else (
+        echo [INFO] Using standard classpath
+        set "JAVA_CMD=java %JVM_OPTS% -jar "%JAR_FILE%""
+    )
+
     REM Use javaw for console-free startup (Windows only)
-    REM Check if javaw is available
     where javaw >nul 2>&1
     if not errorlevel 1 (
         echo [INFO] Using javaw for console-free startup...
-        javaw %JVM_OPTS% -jar "%JAR_FILE%"
+        javaw --module-path "%JFX_PATH%" --add-modules javafx.controls,javafx.fxml,javafx.graphics %JVM_OPTS% -jar "%JAR_FILE%"
     ) else (
         echo [INFO] javaw not found, using java...
-        start /B java %JVM_OPTS% -jar "%JAR_FILE%"
+        %JAVA_CMD%
     )
 ) else (
     echo [INFO] JAR not found, using Maven JavaFX plugin...
