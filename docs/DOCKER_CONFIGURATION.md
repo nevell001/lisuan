@@ -62,7 +62,7 @@ docker compose restart
 docker compose down -v
 
 # 进入容器
-docker exec -it cashier-mysql bash
+docker exec -it lisuan-mysql bash
 ```
 
 ## 📊 配置变量说明
@@ -70,10 +70,10 @@ docker exec -it cashier-mysql bash
 | 变量 | 默认值 | 说明 |
 |------|--------|------|
 | `DB_TYPE` | docker | 数据库类型：docker/local/none |
-| `MYSQL_CONTAINER_NAME` | cashier-mysql | 容器名称 |
+| `MYSQL_CONTAINER_NAME` | lisuan-mysql | 容器名称 |
 | `MYSQL_IMAGE` | mysql:8.4 | MySQL 镜像版本 |
 | `MYSQL_ROOT_PASSWORD` | - | Root 密码（必填） |
-| `MYSQL_DATABASE` | cashier_system | 数据库名称 |
+| `MYSQL_DATABASE` | lisuan_system | 数据库名称 |
 | `MYSQL_USER` | cashier | 应用用户名 |
 | `MYSQL_PASSWORD` | - | 应用密码（必填） |
 | `DB_HOST` | localhost | 数据库主机 |

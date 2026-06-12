@@ -29,42 +29,89 @@ if ! [[ "$NEW_VERSION" =~ ^[0-9]+\.[0-9]+\.[0-9]+$ ]]; then
     exit 1
 fi
 
-# Files to update
+# Detect sed -i syntax (macOS vs Linux)
+if [[ "$OSTYPE" == "darwin"* ]]; then
+    SED_INPLACE="sed -i ''"
+else
+    SED_INPLACE="sed -i"
+fi
+
+# Helper: sed with compatible -i flag
+sed_i() {
+    if [[ "$OSTYPE" == "darwin"* ]]; then
+        sed -i '' "$@"
+    else
+        sed -i "$@"
+    fi
+}
+
+echo "[1/7] Updating version in Java files..."
+sed_i "s/APP_VERSION = \"[0-9]\+\.[0-9]\+\.[0-9]\+\"/APP_VERSION = \"$NEW_VERSION\"/g" \
+    src/main/java/com/cashier/constant/AppConstants.java
+
+echo "[2/7] Updating version in pom.xml..."
+sed_i "s/<version>[0-9]\+\.[0-9]\+\.[0-9]\+<\/version>/<version>$NEW_VERSION<\/version>/g" pom.xml
+
+echo "[3/7] Updating version in batch scripts..."
+for f in start.bat quick-start.bat install.bat; do
+    if [ -f "$f" ]; then
+        sed_i "s/set \"APP_VERSION=[0-9]\+\.[0-9]\+\.[0-9]\+\"/set \"APP_VERSION=$NEW_VERSION\"/g" "$f"
+        sed_i "s/Version [0-9]\+\.[0-9]\+\.[0-9]\+/Version $NEW_VERSION/g" "$f"
+    fi
+done
+
+echo "[4/7] Updating version in diagnose.bat and create-shortcut.bat..."
+if [ -f "diagnose.bat" ]; then
+    sed_i "s/set \"APP_VERSION=[0-9]\+\.[0-9]\+\.[0-9]\+\"/set \"APP_VERSION=$NEW_VERSION\"/g" diagnose.bat
+    sed_i "s/APP_VERSION=\"[0-9]\+\.[0-9]\+\.[0-9]\+\"/APP_VERSION=\"$NEW_VERSION\"/g" diagnose.bat
+fi
+if [ -f "create-shortcut.bat" ]; then
+    sed_i "s/APP_VERSION=v[0-9]\+\.[0-9]\+\.[0-9]\+/APP_VERSION=v$NEW_VERSION/g" create-shortcut.bat
+fi
+
+echo "[5/7] Updating version in PowerShell scripts..."
+for f in run-app.ps1 package-simple.ps1; do
+    if [ -f "$f" ]; then
+        sed_i "s/\\\$APP_VERSION = \"[0-9]\+\.[0-9]\+\.[0-9]\+\"/\$APP_VERSION = \"$NEW_VERSION\"/g" "$f"
+    fi
+done
+
+echo "[6/7] Updating version in shell scripts and .env..."
+if [ -f "start.sh" ]; then
+    sed_i "s/APP_VERSION=\"[0-9]\+\.[0-9]\+\.[0-9]\+\"/APP_VERSION=\"$NEW_VERSION\"/g" start.sh
+fi
+if [ -f "install.sh" ]; then
+    sed_i "s/APP_VERSION:-\"[0-9]\+\.[0-9]\+\.[0-9]\+\"/APP_VERSION:-\"$NEW_VERSION\"/g" install.sh
+fi
+if [ -f ".env.example" ]; then
+    sed_i "s/APP_VERSION=[0-9]\+\.[0-9]\+\.[0-9]\+/APP_VERSION=$NEW_VERSION/g" .env.example
+fi
+
+echo "[7/7] Verifying updates..."
+echo ""
+
+# Files that should have been updated
 FILES=(
     "src/main/java/com/cashier/constant/AppConstants.java"
     "pom.xml"
-    "install.sh"
     "start.bat"
-    "package.bat"
-    "jpackage.bat"
+    "quick-start.bat"
+    "install.bat"
+    "diagnose.bat"
+    "create-shortcut.bat"
+    "run-app.ps1"
+    "package-simple.ps1"
+    "start.sh"
+    "install.sh"
+    ".env.example"
 )
-
-echo "[1/5] Updating version in Java files..."
-sed -i '' "s/APP_VERSION = \"[0-9]\+\.[0-9]\+\.[0-9]\+\"/APP_VERSION = \"$NEW_VERSION\"/g" \
-    src/main/java/com/cashier/constant/AppConstants.java
-
-echo "[2/5] Updating version in pom.xml..."
-sed -i '' "s/<version>[0-9]\+\.[0-9]\+\.[0-9]\+<\/version>/<version>$NEW_VERSION<\/version>/g" pom.xml
-
-echo "[3/5] Updating version in shell scripts..."
-sed -i '' "s/APP_VERSION=-\"[0-9]\+\.[0-9]\+\.[0-9]\+\"/APP_VERSION=\"$NEW_VERSION\"/g" install.sh
-sed -i '' "s/APP_VERSION=-\"[0-9]\+\.[0-9]\+\.[0-9]\+\"/APP_VERSION=\"$NEW_VERSION\"/g" install.sh
-
-echo "[4/5] Updating version in batch scripts..."
-sed -i '' "s/VERSION\\" 2\.[0-9]\+\.[0-9]\+/VERSION\\" $NEW_VERSION/g" start.bat
-sed -i '' "s/VERSION\\" 2\.[0-9]\+\.[0-9]\+/VERSION\\" $NEW_VERSION/g" package.bat
-sed -i '' "s/set \"APP_VERSION=2\.[0-9]\+\.[0-9]\+\"/set \"APP_VERSION=$NEW_VERSION\"/g" start.bat
-sed -i '' "s/set \"APP_VERSION=2\.[0-9]\+\.[0-9]\+\"/set \"APP_VERSION=$NEW_VERSION\"/g" package.bat
-sed -i '' "s/REM Version 2\.[0-9]\+\.[0-9]\+/REM Version $NEW_VERSION/g" jpackage.bat
-sed -i '' "s/set \"APP_VERSION=2\.[0-9]\+\.[0-9]\+\"/set \"APP_VERSION=$NEW_VERSION\"/g" jpackage.bat
-
-echo "[5/5] Verifying updates..."
-echo ""
 
 # Count updated files
 UPDATED=0
 for file in "${FILES[@]}"; do
-    if git diff --quiet "$file" 2>/dev/null; then
+    if [ ! -f "$file" ]; then
+        echo "  [ ] $file (not found)"
+    elif git diff --quiet "$file" 2>/dev/null; then
         echo "  [ ] $file (no change)"
     else
         echo "  [X] $file (updated)"

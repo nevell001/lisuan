@@ -48,7 +48,7 @@ public class AppConstants {
     /**
      * JavaFX 版本
      */
-    public static final String JAVAFX_VERSION = "17.0.8";
+    public static final String JAVAFX_VERSION = "17.0.12";
 
     /**
      * 最低 JDK 版本要求

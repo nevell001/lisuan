@@ -112,10 +112,10 @@ mysql -u root -p
 CREATE USER 'cashier'@'%' IDENTIFIED BY 'YourStrongPassword123!';
 
 -- 创建数据库
-CREATE DATABASE cashier_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE lisuan_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- 授予权限
-GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'%';
+GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'%';
 
 -- 刷新权限
 FLUSH PRIVILEGES;
@@ -172,7 +172,7 @@ cp config/database.properties.example config/database.properties
 **config/database.properties**:
 ```properties
 # 修改为实际的主机地址
-db.url=jdbc:mysql://192.168.1.100:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai
+db.url=jdbc:mysql://192.168.1.100:3306/lisuan_system?useSSL=false&serverTimezone=Asia/Shanghai
 
 # 修改为实际的用户名和密码
 db.username=cashier
@@ -186,7 +186,7 @@ db.pool.size=10
 
 | 参数 | 说明 | 示例值 |
 |-----|------|--------|
-| db.url | 数据库连接地址 | jdbc:mysql://localhost:3306/cashier_system |
+| db.url | 数据库连接地址 | jdbc:mysql://localhost:3306/lisuan_system |
 | db.username | 数据库用户名 | cashier |
 | db.password | 数据库密码 | YourPassword123 |
 | db.pool.size | 连接池大小 | 10 (2-3台收银机) |
@@ -267,7 +267,7 @@ sudo ufw reload
 创建基本任务 → 每天 02:00
 → 操作: 启动程序
 → 程序: mysqldump
-→ 参数: --user=root --password=YourPass --result-file=D:\backup\cashier_%date:~0,10%.sql cashier_system
+→ 参数: --user=root --password=YourPass --result-file=D:\backup\cashier_%date:~0,10%.sql lisuan_system
 ```
 
 **macOS/Linux - Cron**:
@@ -276,7 +276,7 @@ sudo ufw reload
 crontab -e
 
 # 每天凌晨 2 点备份
-0 2 * * * mysqldump -u root -pYourPass cashier_system > /backup/cashier_$(date +\%Y\%m\%d).sql
+0 2 * * * mysqldump -u root -pYourPass lisuan_system > /backup/cashier_$(date +\%Y\%m\%d).sql
 ```
 
 ### 手动备份
@@ -284,10 +284,10 @@ crontab -e
 **使用 mysqldump**:
 ```bash
 # 完整备份
-mysqldump -u root -p cashier_system > backup_$(date +%Y%m%d).sql
+mysqldump -u root -p lisuan_system > backup_$(date +%Y%m%d).sql
 
 # 压缩备份
-mysqldump -u root -p cashier_system | gzip > backup_$(date +%Y%m%d).sql.gz
+mysqldump -u root -p lisuan_system | gzip > backup_$(date +%Y%m%d).sql.gz
 ```
 
 **使用应用内置备份**:
@@ -297,11 +297,11 @@ mysqldump -u root -p cashier_system | gzip > backup_$(date +%Y%m%d).sql.gz
 
 ```bash
 # 从 SQL 文件恢复
-mysql -u root -p cashier_system < backup_20250203.sql
+mysql -u root -p lisuan_system < backup_20250203.sql
 
 # 或使用命令行
 mysql -u root -p
-USE cashier_system;
+USE lisuan_system;
 SOURCE /path/to/backup.sql;
 ```
 
@@ -445,7 +445,7 @@ mysql -u root -p
 SHOW DATABASES;
 
 # 使用数据库
-USE cashier_system;
+USE lisuan_system;
 
 # 查看表
 SHOW TABLES;
@@ -467,7 +467,7 @@ SELECT
     table_schema AS 'Database',
     ROUND(SUM(data_length + index_length) / 1024 / 1024, 2) AS 'Size (MB)'
 FROM information_schema.tables
-WHERE table_schema = 'cashier_system'
+WHERE table_schema = 'lisuan_system'
 GROUP BY table_schema;
 ```
 
@@ -475,14 +475,14 @@ GROUP BY table_schema;
 
 ```
 # 本机 MySQL
-jdbc:mysql://localhost:3306/cashier_system
+jdbc:mysql://localhost:3306/lisuan_system
 
 # 局域网 MySQL
-jdbc:mysql://192.168.1.100:3306/cashier_system
+jdbc:mysql://192.168.1.100:3306/lisuan_system
 
 # 带超时配置
-jdbc:mysql://localhost:3306/cashier_system?connectTimeout=10000&socketTimeout=30000
+jdbc:mysql://localhost:3306/lisuan_system?connectTimeout=10000&socketTimeout=30000
 
 # SSL 连接
-jdbc:mysql://localhost:3306/cashier_system?useSSL=true&requireSSL=true
+jdbc:mysql://localhost:3306/lisuan_system?useSSL=true&requireSSL=true
 ```

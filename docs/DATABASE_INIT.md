@@ -23,13 +23,13 @@ CREATE USER IF NOT EXISTS 'cashier'@'%' IDENTIFIED BY 'YourStrongPassword123!';
 CREATE USER IF NOT EXISTS 'cashier'@'localhost' IDENTIFIED BY 'YourStrongPassword123!';
 
 -- 授予权限
-GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'%';
-GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'localhost';
+GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'%';
+GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'localhost';
 ```
 
 **作用**:
 - 创建应用专用用户 `cashier`
-- 授予对 `cashier_system` 数据库的完全访问权限
+- 授予对 `lisuan_system` 数据库的完全访问权限
 - 支持本地和远程连接
 
 ### 2. 应用启动初始化
@@ -59,7 +59,7 @@ private static void initializeDatabase() {
 
 ```properties
 # MySQL 数据库连接 URL
-db.url=jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai
+db.url=jdbc:mysql://localhost:3306/lisuan_system?useSSL=false&serverTimezone=Asia/Shanghai
 
 # MySQL 用户名
 db.username=cashier
@@ -313,7 +313,7 @@ CREATE TABLE IF NOT EXISTS settings (
 
 ```java
 // 备份到指定文件
-File backupFile = new File("backup/cashier_system_20260204.sql");
+File backupFile = new File("backup/lisuan_system_20260204.sql");
 boolean success = DatabaseManager.backup(backupFile);
 ```
 
@@ -321,30 +321,30 @@ boolean success = DatabaseManager.backup(backupFile);
 
 ```bash
 # 备份整个数据库
-mysqldump -u cashier -p cashier_system > backup.sql
+mysqldump -u cashier -p lisuan_system > backup.sql
 
 # 备份到 Docker 容器
-docker exec cashier-mysql mysqldump -u cashier -p cashier_system > backup.sql
+docker exec lisuan-mysql mysqldump -u cashier -p lisuan_system > backup.sql
 ```
 
 ### 数据库恢复
 
 ```bash
 # 恢复数据库
-mysql -u cashier -p cashier_system < backup.sql
+mysql -u cashier -p lisuan_system < backup.sql
 
 # 在 Docker 容器中恢复
-docker exec -i cashier-mysql mysql -u cashier -p cashier_system < backup.sql
+docker exec -i lisuan-mysql mysql -u cashier -p lisuan_system < backup.sql
 ```
 
 ### Docker 卷备份
 
 ```bash
 # 备份 Docker 数据卷
-docker run --rm -v cashier-mysql-data:/data -v $(pwd):/backup alpine tar czf /backup/mysql-data-backup.tar.gz /data
+docker run --rm -v lisuan-mysql-data:/data -v $(pwd):/backup alpine tar czf /backup/mysql-data-backup.tar.gz /data
 
 # 恢复 Docker 数据卷
-docker run --rm -v cashier-mysql-data:/data -v $(pwd):/backup alpine tar xzf /backup/mysql-data-backup.tar.gz -C /
+docker run --rm -v lisuan-mysql-data:/data -v $(pwd):/backup alpine tar xzf /backup/mysql-data-backup.tar.gz -C /
 ```
 
 ---
@@ -373,7 +373,7 @@ docker run --rm -v cashier-mysql-data:/data -v $(pwd):/backup alpine tar xzf /ba
 CREATE USER 'newuser'@'%' IDENTIFIED BY 'password';
 
 -- 授予权限
-GRANT ALL PRIVILEGES ON cashier_system.* TO 'newuser'@'%';
+GRANT ALL PRIVILEGES ON lisuan_system.* TO 'newuser'@'%';
 
 -- 刷新权限
 FLUSH PRIVILEGES;
@@ -406,7 +406,7 @@ docker-compose restart mysql
 **解决**: 确保 JDBC URL 包含 `serverTimezone=Asia/Shanghai`
 
 ```properties
-db.url=jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai
+db.url=jdbc:mysql://localhost:3306/lisuan_system?useSSL=false&serverTimezone=Asia/Shanghai
 ```
 
 ### 3. 字符编码问题
@@ -416,7 +416,7 @@ db.url=jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=As
 **解决**: 数据库和表使用 `utf8mb4` 字符集
 
 ```sql
-CREATE DATABASE cashier_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE lisuan_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 ### 4. 权限不足
@@ -426,7 +426,7 @@ CREATE DATABASE cashier_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 **解决**:
 ```sql
 -- 重新授予权限
-GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'%';
+GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'%';
 FLUSH PRIVILEGES;
 ```
 

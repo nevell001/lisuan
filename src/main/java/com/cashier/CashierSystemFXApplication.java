@@ -45,7 +45,7 @@ public class CashierSystemFXApplication extends Application {
     private Object currentController; // 当前活动的控制器，用于清理资源
 
     // 单实例控制
-    private static final String APP_LOCK_FILE = System.getProperty("java.io.tmpdir") + java.io.File.separator + "cashier-system.lock";
+    private static final String APP_LOCK_FILE = System.getProperty("java.io.tmpdir") + java.io.File.separator + "lisuan.lock";
     private static java.nio.channels.FileLock fileLock;
     private static java.nio.channels.FileChannel channel;
 

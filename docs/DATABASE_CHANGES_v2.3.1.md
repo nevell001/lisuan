@@ -91,21 +91,21 @@ CREATE TABLE members (
 
 ```bash
 # 对于从 v2.3.0 升级到 v2.3.1
-mysql -u root -p cashier_system < docker/mysql-init/02-alter-tables.sql
+mysql -u root -p lisuan_system < docker/mysql-init/02-alter-tables.sql
 ```
 
 ### 方式二：使用 04-v2.3.1-updates.sql（独立升级）
 
 ```bash
 # 专门针对 v2.3.1 的升级脚本
-mysql -u root -p cashier_system < docker/mysql-init/04-v2.3.1-updates.sql
+mysql -u root -p lisuan_system < docker/mysql-init/04-v2.3.1-updates.sql
 ```
 
 ### 方式三：使用 00-init-complete.sql（完整初始化）
 
 ```bash
 # 完整初始化（包含所有版本变更）
-mysql -u root -p cashier_system < docker/mysql-init/00-init-complete.sql
+mysql -u root -p lisuan_system < docker/mysql-init/00-init-complete.sql
 ```
 
 ## 自动迁移逻辑

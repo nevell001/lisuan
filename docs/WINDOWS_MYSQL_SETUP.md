@@ -114,7 +114,7 @@
 5. 创建数据库和用户：
    ```sql
    -- 创建数据库
-   CREATE DATABASE IF NOT EXISTS cashier_system
+   CREATE DATABASE IF NOT EXISTS lisuan_system
    CHARACTER SET utf8mb4
    COLLATE utf8mb4_unicode_ci;
 
@@ -123,8 +123,8 @@
    IDENTIFIED BY 'YourStrongPassword123!';
 
    -- 授予权限
-   GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'localhost';
-   GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'%';
+   GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'localhost';
+   GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'%';
 
    -- 刷新权限
    FLUSH PRIVILEGES;
@@ -149,7 +149,7 @@
 
 ```sql
 -- 创建数据库
-CREATE DATABASE IF NOT EXISTS cashier_system
+CREATE DATABASE IF NOT EXISTS lisuan_system
 CHARACTER SET utf8mb4
 COLLATE utf8mb4_unicode_ci;
 
@@ -158,8 +158,8 @@ CREATE USER IF NOT EXISTS 'cashier'@'localhost'
 IDENTIFIED BY 'YourStrongPassword123!';
 
 -- 授予权限
-GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'localhost';
-GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'%';
+GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'localhost';
+GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'%';
 
 -- 刷新权限
 FLUSH PRIVILEGES;
@@ -171,7 +171,7 @@ FLUSH PRIVILEGES;
 2. 登录（默认用户名：root，密码根据安装设置）
 3. 点击 "数据库" 标签
 4. 创建新数据库：
-   - 数据库名：`cashier_system`
+   - 数据库名：`lisuan_system`
    - 排序规则：`utf8mb4_unicode_ci`
 5. 点击 "创建"
 6. 点击 "用户账户" 标签
@@ -179,7 +179,7 @@ FLUSH PRIVILEGES;
    - 用户名：`cashier`
    - 主机名：`任意主机 (%)`
    - 密码：`YourStrongPassword123!`
-8. 在 "数据库特定权限" 部分，选择 `cashier_system` 数据库
+8. 在 "数据库特定权限" 部分，选择 `lisuan_system` 数据库
 9. 勾选 "检查全部"，点击 "执行"
 
 ## 配置应用连接
@@ -189,7 +189,7 @@ FLUSH PRIVILEGES;
 
 ```properties
 # 数据库连接配置
-db.url=jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf8mb4
+db.url=jdbc:mysql://localhost:3306/lisuan_system?useSSL=false&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=utf8mb4
 db.username=cashier
 db.password=YourStrongPassword123!
 db.pool.size=10
@@ -226,7 +226,7 @@ mvn test-compile exec:java -Dexec.mainClass="com.cashier.TestMySQLConnection"
 
 ```cmd
 cd "C:\Program Files\MySQL\MySQL Server 8.0\bin"
-mysql -u cashier -p cashier_system
+mysql -u cashier -p lisuan_system
 ```
 
 ## 常见问题
@@ -279,7 +279,7 @@ mysql -u cashier -p cashier_system
 SHOW VARIABLES LIKE 'character_set%';
 
 -- 修改数据库字符集（如果需要）
-ALTER DATABASE cashier_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+ALTER DATABASE lisuan_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 ```
 
 ### 问题 4: 连接超时
@@ -308,7 +308,7 @@ max_connections = 200
 1. 使用 root 登录 MySQL
 2. 重新授予权限：
    ```sql
-   GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'localhost';
+   GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'localhost';
    FLUSH PRIVILEGES;
    ```
 

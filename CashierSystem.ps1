@@ -12,11 +12,11 @@ $MainClass = "com.cashier.CashierSystemFXApplication"
 $JVM_OPTS = "-Xms512m", "-Xmx1024m", "-Dfile.encoding=UTF-8", "-Dsun.java2d.dpiaware=true"
 
 # Find JAR file
-$JarFile = Get-ChildItem -Path "$ScriptDir\*" -Filter "cashier-system-fx-*-jar-with-dependencies.jar" -File | Select-Object -First 1
+$JarFile = Get-ChildItem -Path "$ScriptDir\*" -Filter "lisuan-fx-*-jar-with-dependencies.jar" -File | Select-Object -First 1
 
 if (-not $JarFile) {
     # Try target directory
-    $JarFile = Get-ChildItem -Path "$ScriptDir\target\*" -Filter "cashier-system-fx-*-jar-with-dependencies.jar" -File | Select-Object -First 1
+    $JarFile = Get-ChildItem -Path "$ScriptDir\target\*" -Filter "lisuan-fx-*-jar-with-dependencies.jar" -File | Select-Object -First 1
 }
 
 if (-not $JarFile) {

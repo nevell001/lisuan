@@ -112,6 +112,19 @@
 
 ### Windows 用户
 
+**首次安装流程**:
+```
+1. install.bat      → 构建 JAR（检查 Java/Maven 环境，编译打包）
+2. DataConfig.bat   → 配置数据库（GUI 工具，填写数据库连接信息）
+3. 点击 Save & Start → 自动启动应用
+```
+
+**日常启动**:
+```bash
+start.bat          → 启动应用（控制台模式，可看到错误输出）
+start.bat --gui    → 启动应用（无控制台窗口，后台运行）
+```
+
 **开发模式**:
 ```bash
 # 启动 MySQL（Docker 或本地）
@@ -119,13 +132,6 @@ docker compose up -d mysql
 
 # 编译并运行
 mvn clean package
-start.bat
-```
-
-**分发包模式**:
-```bash
-# 确保 MySQL 正在运行
-# 直接启动
 start.bat
 ```
 
@@ -149,7 +155,7 @@ mvn javafx:run
 
 # 打包
 mvn clean package
-java -jar target/cashier-system-fx-*-jar-with-dependencies.jar
+java -jar target/lisuan-fx-*-jar-with-dependencies.jar
 ```
 
 ### 默认账户
@@ -234,7 +240,7 @@ java -jar target/cashier-system-fx-*-jar-with-dependencies.jar
 - **测试**: JUnit 5 + TestFX + H2
 - **API 服务**: Javalin 6.1.3
 - **序列化**: Jackson
-- **文档**: Apache POI 5.2.5 + PDFBox 2.0.32
+- **文档**: Apache POI 5.2.5 + PDFBox 3.0.4
 - **日志**: SLF4J + Logback
 
 ## REST API
@@ -283,7 +289,7 @@ java -jar target/cashier-system-fx-*-jar-with-dependencies.jar
 - 检查 JDK 版本是否为 17+
 - 检查 MySQL 服务是否运行
 - 确保已执行 `mvn clean package` 构建项目
-- 查看 `logs/cashier-system.log`
+- 查看 `logs/` 目录下的日志文件
 
 **启动时提示"缺少 JavaFX 运行时组件"**
 - 确保已安装 Maven 3.8+

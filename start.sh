@@ -26,7 +26,7 @@ APP_VERSION=$(grep -E "^[[:space:]]*<version>[^<]+</version>[[:space:]]*$" pom.x
 
 # Fallback if version not found
 if [ -z "$APP_VERSION" ]; then
-    APP_VERSION="2.5.4"
+    APP_VERSION="2.5.6"
 fi
 MAIN_CLASS="com.cashier.CashierSystemFXApplication"
 CONFIG_FILE="config/jvm.config"
@@ -90,7 +90,7 @@ echo ""
 
 # 检查依赖文件
 echo "[4/6] Checking dependency files..."
-JAR_FILE="target/cashier-system-fx-${APP_VERSION}-jar-with-dependencies.jar"
+JAR_FILE="target/lisuan-fx-${APP_VERSION}-jar-with-dependencies.jar"
 
 if [ ! -f "$JAR_FILE" ]; then
     echo "[Warning] Compiled JAR file not found"
@@ -132,6 +132,20 @@ fi
 echo "[Done] JVM parameters built"
 echo ""
 
+# 构建 JavaFX 模块路径
+JFX_BASE="$HOME/.m2/repository/org/openjfx"
+JFX_VERSION="17.0.12"
+JFX_PATH="$JFX_BASE/javafx-base/$JFX_VERSION:$JFX_BASE/javafx-controls/$JFX_VERSION:$JFX_BASE/javafx-fxml/$JFX_VERSION:$JFX_BASE/javafx-graphics/$JFX_VERSION"
+
+JFX_MODULES=""
+if [ -d "$JFX_BASE/javafx-base/$JFX_VERSION" ]; then
+    JFX_MODULES="--module-path $JFX_PATH --add-modules javafx.controls,javafx.fxml,javafx.graphics"
+    echo "[OK] JavaFX modules found"
+else
+    echo "[Warning] JavaFX not found in Maven repository"
+    echo "[Info] Will use standard classpath"
+fi
+
 # 启动应用
 echo "[6/6] Starting application..."
 echo ""
@@ -142,14 +156,15 @@ echo ""
 echo "Starting, please wait..."
 echo ""
 
-# 使用 Maven JavaFX 插件启动（推荐用于 JavaFX 应用）
-mvn javafx:run
+# 使用 JAR 直接运行
+java $JFX_MODULES $JVM_OPTS -jar "$JAR_FILE"
 
 # 检查退出码
-if [ $? -ne 0 ]; then
+EXIT_CODE=$?
+if [ $EXIT_CODE -ne 0 ]; then
     echo ""
     echo "========================================"
-    echo "[Error] Application exited abnormally (Error code: $?)"
+    echo "[Error] Application exited abnormally (Error code: $EXIT_CODE)"
     echo "========================================"
     echo ""
     echo "Check log file: logs/app.log"

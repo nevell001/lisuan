@@ -182,10 +182,10 @@ ALTER USER 'cashier'@'%' REQUIRE X509;
 
 ```properties
 # 启用 SSL
-db.url=jdbc:mysql://db.example.com:3306/cashier_system?useSSL=true&requireSSL=true&verifyServerCertificate=true
+db.url=jdbc:mysql://db.example.com:3306/lisuan_system?useSSL=true&requireSSL=true&verifyServerCertificate=true
 
 # 如使用自签名证书，需配置信任库
-# db.url=jdbc:mysql://db.example.com:3306/cashier_system?useSSL=true&requireSSL=true&verifyServerCertificate=false&trustCertificateKeyStoreUrl=file:/path/to/keystore.jks&trustCertificateKeyStorePassword=keystore_password
+# db.url=jdbc:mysql://db.example.com:3306/lisuan_system?useSSL=true&requireSSL=true&verifyServerCertificate=false&trustCertificateKeyStoreUrl=file:/path/to/keystore.jks&trustCertificateKeyStorePassword=keystore_password
 ```
 
 ---
@@ -238,7 +238,7 @@ sudo firewall-cmd --reload
 services:
   mysql:
     image: mysql:8.4
-    container_name: cashier-mysql-prod
+    container_name: lisuan-mysql-prod
     restart: always
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
@@ -248,7 +248,7 @@ services:
     ports:
       - "127.0.0.1:3306:3306"  # 仅监听本地
     volumes:
-      - cashier-mysql-data:/var/lib/mysql
+      - lisuan-mysql-data:/var/lib/mysql
       - ./docker/mysql-init:/docker-entrypoint-initdb.d:ro
       - ./docker/mysql-backup:/backup
     command: >
@@ -257,7 +257,7 @@ services:
       --require-secure-transports=ON
       --bind-address=0.0.0.0
     networks:
-      - cashier-network
+      - lisuan-network
     healthcheck:
       test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-p${MYSQL_ROOT_PASSWORD}"]
       interval: 10s
@@ -279,7 +279,7 @@ services:
       mysql:
         condition: service_healthy
     networks:
-      - cashier-network
+      - lisuan-network
 
   nginx:
     image: nginx:alpine
@@ -294,13 +294,13 @@ services:
     depends_on:
       - app
     networks:
-      - cashier-network
+      - lisuan-network
 
 volumes:
-  cashier-mysql-data:
+  lisuan-mysql-data:
 
 networks:
-  cashier-network:
+  lisuan-network:
     driver: bridge
 ```
 

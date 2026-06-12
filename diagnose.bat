@@ -35,7 +35,7 @@ if exist "pom.xml" (
     :version_found
     if "!APP_VERSION!"=="" (
         echo [WARN] Version not found, using default
-        set "APP_VERSION=2.5.4"
+        set "APP_VERSION=2.5.6"
     )
     echo [FINAL] APP_VERSION: !APP_VERSION!
     echo.

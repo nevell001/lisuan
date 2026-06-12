@@ -70,7 +70,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 This is a **POS (Point of Sale) cashier system** built with JavaFX 17. It's a desktop application for retail operations including cash register functionality, inventory management, member management, purchasing, returns, and reporting.
 
-**Current Version:** v2.5.0 | **Main Entry:** `com.cashier.CashierSystemFXApplication`
+**Current Version:** v2.5.6 | **Main Entry:** `com.cashier.CashierSystemFXApplication`
 
 **Tech Stack:**
 - JavaFX 17.0.12 for UI
@@ -98,7 +98,7 @@ mvn javafx:run
 
 # Package
 mvn clean package
-java -jar target/cashier-system-fx-2.5.0-jar-with-dependencies.jar
+java -jar target/lisuan-fx-2.5.6-jar-with-dependencies.jar
 
 # Run tests
 mvn test
@@ -368,8 +368,8 @@ productDAO.update(product);
 
 **Data Export (v2.4.0)**
 - Excel: Apache POI 5.2.5
-- PDF: Apache PDFBox 2.0.32
-- Chinese font: `NotoSansSC-Regular.ttf`
+- PDF: Apache PDFBox 3.0.4
+- Chinese font: `NotoSansSC-Regular.ttc`
 - Export history tracked in `export_history` table
 
 **Notification System (v2.4.1)**

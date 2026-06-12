@@ -95,14 +95,14 @@ docker pull mysql:8.4
 
 # 启动 MySQL 容器
 docker run -d \
-  --name cashier-mysql \
+  --name lisuan-mysql \
   --restart unless-stopped \
   -p 3306:3306 \
   -e MYSQL_ROOT_PASSWORD=RootPassword123! \
-  -e MYSQL_DATABASE=cashier_system \
+  -e MYSQL_DATABASE=lisuan_system \
   -e MYSQL_USER=cashier \
   -e MYSQL_PASSWORD=YourStrongPassword123! \
-  -v cashier-mysql-data:/var/lib/mysql \
+  -v lisuan-mysql-data:/var/lib/mysql \
   mysql:8.4 \
   --character-set-server=utf8mb4 \
   --collation-server=utf8mb4_unicode_ci
@@ -118,18 +118,18 @@ version: '3.8'
 services:
   mysql:
     image: mysql:8.4
-    container_name: cashier-mysql
+    container_name: lisuan-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: RootPassword123!
-      MYSQL_DATABASE: cashier_system
+      MYSQL_DATABASE: lisuan_system
       MYSQL_USER: cashier
       MYSQL_PASSWORD: YourStrongPassword123!
       TZ: Asia/Shanghai
     ports:
       - "3306:3306"
     volumes:
-      - cashier-mysql-data:/var/lib/mysql
+      - lisuan-mysql-data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
     command:
       - --character-set-server=utf8mb4
@@ -144,7 +144,7 @@ services:
       retries: 5
 
 volumes:
-  cashier-mysql-data:
+  lisuan-mysql-data:
     driver: local
 ```
 
@@ -173,7 +173,7 @@ docker-compose down -v
 | 变量 | 说明 | 示例值 |
 |-----|------|--------|
 | `MYSQL_ROOT_PASSWORD` | root 用户密码（必需） | RootPassword123! |
-| `MYSQL_DATABASE` | 创建的数据库名 | cashier_system |
+| `MYSQL_DATABASE` | 创建的数据库名 | lisuan_system |
 | `MYSQL_USER` | 创建的专用用户名 | cashier |
 | `MYSQL_PASSWORD` | 专用用户密码 | YourStrongPassword123! |
 | `TZ` | 时区 | Asia/Shanghai |
@@ -195,7 +195,7 @@ docker-compose down -v
 ### 数据卷
 
 ```bash
--v cashier-mysql-data:/var/lib/mysql
+-v lisuan-mysql-data:/var/lib/mysql
 #            ↑
 #            容器内 MySQL 数据目录
 ```
@@ -214,10 +214,10 @@ docker-compose down -v
 
 ```bash
 # 进入容器
-docker exec -it cashier-mysql mysql -u root -p
+docker exec -it lisuan-mysql mysql -u root -p
 
 # 或使用 bash
-docker exec -it cashier-mysql bash
+docker exec -it lisuan-mysql bash
 mysql -u root -p
 ```
 
@@ -228,12 +228,12 @@ mysql -u root -p
 CREATE USER 'cashier'@'%' IDENTIFIED BY 'YourStrongPassword123!';
 
 -- 创建数据库（如果不存在）
-CREATE DATABASE IF NOT EXISTS cashier_system
+CREATE DATABASE IF NOT EXISTS lisuan_system
 CHARACTER SET utf8mb4
 COLLATE utf8mb4_unicode_ci;
 
 -- 授予权限
-GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'%';
+GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'%';
 
 -- 刷新权限
 FLUSH PRIVILEGES;
@@ -258,7 +258,7 @@ mkdir -p mysql-init
 CREATE USER IF NOT EXISTS 'cashier'@'%' IDENTIFIED BY 'YourStrongPassword123!';
 
 -- 授予所有权限
-GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'%';
+GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'%';
 
 -- 刷新权限
 FLUSH PRIVILEGES;
@@ -267,7 +267,7 @@ FLUSH PRIVILEGES;
 3. **修改 docker-compose.yml** 添加卷挂载：
 ```yaml
 volumes:
-  - cashier-mysql-data:/var/lib/mysql
+  - lisuan-mysql-data:/var/lib/mysql
   - ./mysql-init:/docker-entrypoint-initdb.d  # 添加这行
 ```
 
@@ -289,35 +289,35 @@ docker-compose up -d
 docker volume ls
 
 # 查看卷详情
-docker volume inspect cashier-mysql-data
+docker volume inspect lisuan-mysql-data
 
 # 备份数据卷
 docker run --rm \
-  -v cashier-mysql-data:/data \
+  -v lisuan-mysql-data:/data \
   -v $(pwd):/backup \
-  alpine tar czf /backup/cashier-mysql-backup.tar.gz -C /data .
+  alpine tar czf /backup/lisuan-mysql-backup.tar.gz -C /data .
 
 # 恢复数据卷
 docker run --rm \
-  -v cashier-mysql-data:/data \
+  -v lisuan-mysql-data:/data \
   -v $(pwd):/backup \
-  alpine tar xzf /backup/cashier-mysql-backup.tar.gz -C /data
+  alpine tar xzf /backup/lisuan-mysql-backup.tar.gz -C /data
 
 # 删除数据卷（谨慎！）
-docker volume rm cashier-mysql-data
+docker volume rm lisuan-mysql-data
 ```
 
 ### 使用 mysqldump 备份
 
 ```bash
 # 备份整个数据库
-docker exec cashier-mysql mysqldump -u root -pRootPassword123! cashier_system > backup_$(date +%Y%m%d).sql
+docker exec lisuan-mysql mysqldump -u root -pRootPassword123! lisuan_system > backup_$(date +%Y%m%d).sql
 
 # 备份并压缩
-docker exec cashier-mysql mysqldump -u root -pRootPassword123! cashier_system | gzip > backup_$(date +%Y%m%d).sql.gz
+docker exec lisuan-mysql mysqldump -u root -pRootPassword123! lisuan_system | gzip > backup_$(date +%Y%m%d).sql.gz
 
 # 从备份恢复
-docker exec -i cashier-mysql mysql -u root -pRootPassword123! cashier_system < backup_20250203.sql
+docker exec -i lisuan-mysql mysql -u root -pRootPassword123! lisuan_system < backup_20250203.sql
 ```
 
 ---
@@ -328,60 +328,60 @@ docker exec -i cashier-mysql mysql -u root -pRootPassword123! cashier_system < b
 
 ```bash
 # 启动容器
-docker start cashier-mysql
+docker start lisuan-mysql
 
 # 停止容器
-docker stop cashier-mysql
+docker stop lisuan-mysql
 
 # 重启容器
-docker restart cashier-mysql
+docker restart lisuan-mysql
 
 # 查看容器状态
-docker ps -a | grep cashier-mysql
+docker ps -a | grep lisuan-mysql
 
 # 查看容器日志
-docker logs cashier-mysql
+docker logs lisuan-mysql
 
 # 实时查看日志
-docker logs -f cashier-mysql
+docker logs -f lisuan-mysql
 
 # 删除容器（数据保留）
-docker rm cashier-mysql
+docker rm lisuan-mysql
 
 # 删除容器和数据卷（谨慎！）
-docker rm -v cashier-mysql
+docker rm -v lisuan-mysql
 ```
 
 ### 进入容器
 
 ```bash
 # 进入 MySQL 命令行
-docker exec -it cashier-mysql mysql -u cashier -pYourStrongPassword123! cashier_system
+docker exec -it lisuan-mysql mysql -u cashier -pYourStrongPassword123! lisuan_system
 
 # 进入容器 Bash
-docker exec -it cashier-mysql bash
+docker exec -it lisuan-mysql bash
 
 # 查看容器资源使用
-docker stats cashier-mysql
+docker stats lisuan-mysql
 ```
 
 ### 数据库操作
 
 ```bash
 # 执行 SQL 文件
-docker exec -i cashier-mysql mysql -u root -pRootPassword123! < init.sql
+docker exec -i lisuan-mysql mysql -u root -pRootPassword123! < init.sql
 
 # 查看数据库列表
-docker exec cashier-mysql mysql -u root -pRootPassword123! -e "SHOW DATABASES;"
+docker exec lisuan-mysql mysql -u root -pRootPassword123! -e "SHOW DATABASES;"
 
 # 查看表列表
-docker exec cashier-mysql mysql -u root -pRootPassword123! cashier_system -e "SHOW TABLES;"
+docker exec lisuan-mysql mysql -u root -pRootPassword123! lisuan_system -e "SHOW TABLES;"
 
 # 查看表结构
-docker exec cashier-mysql mysql -u root -pRootPassword123! cashier_system -e "DESCRIBE users;"
+docker exec lisuan-mysql mysql -u root -pRootPassword123! lisuan_system -e "DESCRIBE users;"
 
 # 查看表数据
-docker exec cashier-mysql mysql -u root -pRootPassword123! cashier_system -e "SELECT * FROM users LIMIT 10;"
+docker exec lisuan-mysql mysql -u root -pRootPassword123! lisuan_system -e "SELECT * FROM users LIMIT 10;"
 ```
 
 ---
@@ -436,7 +436,7 @@ services:
   mysql:
     # ... 其他配置 ...
     volumes:
-      - cashier-mysql-data:/var/lib/mysql
+      - lisuan-mysql-data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d
       - ./my.cnf:/etc/mysql/conf.d/custom.cnf:ro  # 添加这行
 ```
@@ -475,16 +475,16 @@ docker run -d -p 3307:3306 ...  # 使用 3307 端口
 **解决方案**:
 ```bash
 # 1. 检查容器是否运行
-docker ps | grep cashier-mysql
+docker ps | grep lisuan-mysql
 
 # 2. 检查容器日志
-docker logs cashier-mysql
+docker logs lisuan-mysql
 
 # 3. 检查网络连通性
 telnet localhost 3306
 
 # 4. 测试连接
-docker exec cashier-mysql mysql -u cashier -pYourStrongPassword123! -e "SELECT 1;"
+docker exec lisuan-mysql mysql -u cashier -pYourStrongPassword123! -e "SELECT 1;"
 ```
 
 ### 问题 3: 权限错误
@@ -494,10 +494,10 @@ docker exec cashier-mysql mysql -u cashier -pYourStrongPassword123! -e "SELECT 1
 **解决方案**:
 ```bash
 # 重新创建用户
-docker exec -it cashier-mysql mysql -u root -pRootPassword123! <<EOF
+docker exec -it lisuan-mysql mysql -u root -pRootPassword123! <<EOF
 DROP USER IF EXISTS 'cashier'@'%';
 CREATE USER 'cashier'@'%' IDENTIFIED BY 'YourStrongPassword123!';
-GRANT ALL PRIVILEGES ON cashier_system.* TO 'cashier'@'%';
+GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'%';
 FLUSH PRIVILEGES;
 EOF
 ```
@@ -509,16 +509,16 @@ EOF
 **解决方案**:
 ```bash
 # 检查数据卷是否存在
-docker volume ls | grep cashier-mysql-data
+docker volume ls | grep lisuan-mysql-data
 
 # 查看数据卷内容
-docker run --rm -v cashier-mysql-data:/data alpine ls -la /data
+docker run --rm -v lisuan-mysql-data:/data alpine ls -la /data
 
 # 恢复数据（如果有备份）
 docker run --rm \
-  -v cashier-mysql-data:/data \
+  -v lisuan-mysql-data:/data \
   -v $(pwd):/backup \
-  alpine tar xzf /backup/cashier-mysql-backup.tar.gz -C /data
+  alpine tar xzf /backup/lisuan-mysql-backup.tar.gz -C /data
 ```
 
 ### 问题 5: 容器启动后立即退出
@@ -528,10 +528,10 @@ docker run --rm \
 **解决方案**:
 ```bash
 # 查看详细日志
-docker logs cashier-mysql --tail 100
+docker logs lisuan-mysql --tail 100
 
 # 检查容器状态
-docker inspect cashier-mysql
+docker inspect lisuan-mysql
 
 # 以交互模式运行查看错误
 docker run -it --rm mysql:8.4 --verbose --help
@@ -545,13 +545,13 @@ docker run -it --rm mysql:8.4 --verbose --help
 
 ```properties
 # 本机 Docker MySQL
-db.url=jdbc:mysql://localhost:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai
+db.url=jdbc:mysql://localhost:3306/lisuan_system?useSSL=false&serverTimezone=Asia/Shanghai
 
 # 如果使用其他端口
-# db.url=jdbc:mysql://localhost:3307/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai
+# db.url=jdbc:mysql://localhost:3307/lisuan_system?useSSL=false&serverTimezone=Asia/Shanghai
 
 # Docker 容器 IP（跨机器访问）
-# db.url=jdbc:mysql://192.168.1.100:3306/cashier_system?useSSL=false&serverTimezone=Asia/Shanghai
+# db.url=jdbc:mysql://192.168.1.100:3306/lisuan_system?useSSL=false&serverTimezone=Asia/Shanghai
 
 # 用户名和密码
 db.username=cashier
@@ -610,7 +610,7 @@ long_query_time = 2
 
 1. **修改默认密码**
    ```bash
-   docker exec cashier-mysql mysql -u root -p \
+   docker exec lisuan-mysql mysql -u root -p \
      -e "ALTER USER 'root'@'%' IDENTIFIED BY 'NewStrongPassword123!';"
    ```
 
@@ -629,7 +629,7 @@ long_query_time = 2
 4. **定期备份**
    ```bash
    # 添加到 crontab
-   0 2 * * * docker exec cashier-mysql mysqldump -u root -pRootPassword123! cashier_system | gzip > /backup/cashier_$(date +\%Y\%m\%d).sql.gz
+   0 2 * * * docker exec lisuan-mysql mysqldump -u root -pRootPassword123! lisuan_system | gzip > /backup/cashier_$(date +\%Y\%m\%d).sql.gz
    ```
 
 5. **更新镜像**
@@ -645,7 +645,7 @@ long_query_time = 2
 
 ```bash
 # 1. 备份数据
-docker exec cashier-mysql mysqldump -u root -pRootPassword123! --all-databases > backup.sql
+docker exec lisuan-mysql mysqldump -u root -pRootPassword123! --all-databases > backup.sql
 
 # 2. 停止并删除旧容器
 docker-compose down
@@ -657,7 +657,7 @@ docker pull mysql:8.4
 docker-compose up -d
 
 # 5. 恢复数据
-docker exec -i cashier-mysql mysql -u root -pRootPassword123! < backup.sql
+docker exec -i lisuan-mysql mysql -u root -pRootPassword123! < backup.sql
 ```
 
 ---
@@ -672,18 +672,18 @@ version: '3.8'
 services:
   mysql:
     image: mysql:8.4
-    container_name: cashier-mysql
+    container_name: lisuan-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: RootPassword123!
-      MYSQL_DATABASE: cashier_system
+      MYSQL_DATABASE: lisuan_system
       MYSQL_USER: cashier
       MYSQL_PASSWORD: YourStrongPassword123!
       TZ: Asia/Shanghai
     ports:
       - "3306:3306"
     volumes:
-      - cashier-mysql-data:/var/lib/mysql
+      - lisuan-mysql-data:/var/lib/mysql
       - ./mysql-init:/docker-entrypoint-initdb.d:ro
       - ./my.cnf:/etc/mysql/conf.d/custom.cnf:ro
       - ./mysql-backup:/backup
@@ -700,14 +700,14 @@ services:
       retries: 5
       start_period: 30s
     networks:
-      - cashier-network
+      - lisuan-network
 
 volumes:
-  cashier-mysql-data:
+  lisuan-mysql-data:
     driver: local
 
 networks:
-  cashier-network:
+  lisuan-network:
     driver: bridge
 ```
 
@@ -773,7 +773,7 @@ chmod +x dbeaver-ce-latest-stable-linux.gtk.x86_64.noarch.rpm
 **连接配置**：
 - **主机**: `localhost`
 - **端口**: `3306`
-- **数据库**: `cashier_system`
+- **数据库**: `lisuan_system`
 - **用户名**: `cashier`
 - **密码**: `YourStrongPassword123!`（请替换为您设置的密码）
 - **驱动**: 使用默认驱动（MySQL Connector/J）
@@ -791,7 +791,7 @@ chmod +x dbeaver-ce-latest-stable-linux.gtk.x86_64.noarch.rpm
 **浏览数据库结构**：
 1. 在左侧"数据库导航器"中找到您的连接
 2. 展开连接，查看所有数据库
-3. 展开 `cashier_system` 数据库，查看所有表
+3. 展开 `lisuan_system` 数据库，查看所有表
 4. 右键点击表，可以查看表结构、数据、索引等
 
 **执行 SQL 查询**：
@@ -903,7 +903,7 @@ docker system prune -a
 ## 技术支持
 
 如遇问题：
-1. 查看容器日志: `docker logs cashier-mysql`
+1. 查看容器日志: `docker logs lisuan-mysql`
 2. 查看本文档的故障排查部分
 3. 检查 Docker 官方文档: https://docs.docker.com/
 4. 检查 MySQL 官方文档: https://dev.mysql.com/doc/

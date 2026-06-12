@@ -4,11 +4,11 @@
 services:
   mysql:
     image: mysql:8.4
-    container_name: cashier-mysql
+    container_name: lisuan-mysql
     restart: unless-stopped
     environment:
       MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD}
-      MYSQL_DATABASE: cashier_system
+      MYSQL_DATABASE: lisuan_system
       TZ: Asia/Shanghai
       MYSQL_CHARSET: utf8mb4
       MYSQL_COLLATION: utf8mb4_unicode_ci
@@ -16,7 +16,7 @@ services:
     ports:
       - "127.0.0.1:3306:3306"  # 仅本机访问
     volumes:
-      - cashier-mysql-data:/var/lib/mysql
+      - lisuan-mysql-data:/var/lib/mysql
       - ./docker/mysql-init/00-init-complete.sql:/docker-entrypoint-initdb.d/00-init-complete.sql:ro
       - ./docker/mysql-backup:/backup
     healthcheck:
@@ -26,12 +26,12 @@ services:
       retries: 10
       start_period: 60s
     networks:
-      - cashier-network
+      - lisuan-network
 
 volumes:
-  cashier-mysql-data:
+  lisuan-mysql-data:
     driver: local
 
 networks:
-  cashier-network:
+  lisuan-network:
     driver: bridge

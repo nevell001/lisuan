@@ -30,25 +30,50 @@ if errorlevel 1 (
     exit /b 1
 )
 
-echo [1/5] Updating version in Java files...
+echo [1/7] Updating version in Java files...
 powershell -Command "(Get-Content 'src\main\java\com\cashier\constant\AppConstants.java') -replace 'APP_VERSION = \"[\d\.]+\"', 'APP_VERSION = \"%NEW_VERSION%\"' | Set-Content 'src\main\java\com\cashier\constant\AppConstants.java'"
 
-echo [2/5] Updating version in pom.xml...
+echo [2/7] Updating version in pom.xml...
 powershell -Command "(Get-Content 'pom.xml') -replace '<version>[\d\.]+</version>', '<version>%NEW_VERSION%</version>' | Set-Content 'pom.xml'"
 
-echo [3/5] Updating version in batch scripts...
-powershell -Command "(Get-Content 'start.bat') -replace 'VERSION\" 2\.[\d\.]+', 'VERSION\" %NEW_VERSION%' | Set-Content 'start.bat'"
-powershell -Command "(Get-Content 'package.bat') -replace 'VERSION\" 2\.[\d\.]+', 'VERSION\" %NEW_VERSION%' | Set-Content 'package.bat'"
-powershell -Command "(Get-Content 'jpackage.bat') -replace 'REM Version 2\.[\d\.]+', 'REM Version %NEW_VERSION%' | Set-Content 'jpackage.bat'"
-powershell -Command "(Get-Content 'start.bat') -replace 'set \"APP_VERSION=2\.[\d\.]+\"', 'set \"APP_VERSION=%NEW_VERSION%\"' | Set-Content 'start.bat'"
-powershell -Command "(Get-Content 'package.bat') -replace 'set \"APP_VERSION=2\.[\d\.]+\"', 'set \"APP_VERSION=%NEW_VERSION%\"' | Set-Content 'package.bat'"
-powershell -Command "(Get-Content 'jpackage.bat') -replace 'set \"APP_VERSION=2\.[\d\.]+\"', 'set \"APP_VERSION=%NEW_VERSION%\"' | Set-Content 'jpackage.bat'"
+echo [3/7] Updating version in batch scripts...
+for %%F in (start.bat quick-start.bat install.bat) do (
+    if exist "%%F" (
+        powershell -Command "(Get-Content '%%F') -replace 'set \"APP_VERSION=[\d\.]+\"', 'set \"APP_VERSION=%NEW_VERSION%\"' | Set-Content '%%F'"
+        powershell -Command "(Get-Content '%%F') -replace 'Version [\d\.]+', 'Version %NEW_VERSION%' | Set-Content '%%F'"
+    )
+)
 
-echo [4/5] Skipping install.sh (Unix script)...
+echo [4/7] Updating version in diagnose.bat and create-shortcut.bat...
+if exist "diagnose.bat" (
+    powershell -Command "(Get-Content 'diagnose.bat') -replace 'set \"APP_VERSION=[\d\.]+\"', 'set \"APP_VERSION=%NEW_VERSION%\"' | Set-Content 'diagnose.bat'"
+    powershell -Command "(Get-Content 'diagnose.bat') -replace 'APP_VERSION=\"[\d\.]+\"', 'APP_VERSION=\"%NEW_VERSION%\"' | Set-Content 'diagnose.bat'"
+)
+if exist "create-shortcut.bat" (
+    powershell -Command "(Get-Content 'create-shortcut.bat') -replace 'APP_VERSION=v[\d\.]+', 'APP_VERSION=v%NEW_VERSION%' | Set-Content 'create-shortcut.bat'"
+)
+
+echo [5/7] Updating version in PowerShell scripts...
+for %%F in (run-app.ps1 package-simple.ps1) do (
+    if exist "%%F" (
+        powershell -Command "(Get-Content '%%F') -replace '\$APP_VERSION = \"[\d\.]+\"', '```$APP_VERSION = \"%NEW_VERSION%\"' | Set-Content '%%F'"
+    )
+)
+
+echo [6/7] Updating version in shell scripts...
+if exist "start.sh" (
+    powershell -Command "(Get-Content 'start.sh') -replace 'APP_VERSION=\"[\d\.]+\"', 'APP_VERSION=\"%NEW_VERSION%\"' | Set-Content 'start.sh'"
+)
+if exist "install.sh" (
+    powershell -Command "(Get-Content 'install.sh') -replace 'APP_VERSION:-\"[\d\.]+\"', 'APP_VERSION:-\"%NEW_VERSION%\"' | Set-Content 'install.sh'"
+)
+if exist ".env.example" (
+    powershell -Command "(Get-Content '.env.example') -replace 'APP_VERSION=[\d\.]+', 'APP_VERSION=%NEW_VERSION%' | Set-Content '.env.example'"
+)
+
+echo [7/7] Verifying updates...
 echo.
 
-echo [5/5] Verifying updates...
-echo.
 echo ========================================
 echo   Version update complete!
 echo ========================================

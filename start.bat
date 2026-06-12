@@ -41,6 +41,7 @@ echo ----------------------------------------
 if not exist "config" mkdir config
 if not exist "data" mkdir data
 if not exist "logs" mkdir logs
+if not exist "temp" mkdir temp
 
 echo [OK] Directory check passed
 echo.
@@ -91,9 +92,22 @@ echo.
 echo [5/5] Building JVM parameters...
 echo ----------------------------------------
 
-set "JVM_OPTS=-Xms512m -Xmx1024m -Dfile.encoding=UTF-8"
+set "JVM_OPTS="
+set "JVM_CONFIG_FILE=config\jvm.config"
 
-echo [Done] JVM parameters: %JVM_OPTS%
+if exist "%JVM_CONFIG_FILE%" (
+    echo [INFO] Reading JVM config from %JVM_CONFIG_FILE%
+    for /f "usebackq eol=# tokens=*" %%a in ("%JVM_CONFIG_FILE%") do (
+        set "JVM_OPTS=!JVM_OPTS! %%a"
+    )
+)
+
+REM Default JVM params (if jvm.config is empty or missing)
+if "!JVM_OPTS!"=="" (
+    set "JVM_OPTS=-Xms512m -Xmx1024m -Dfile.encoding=UTF-8"
+)
+
+echo [Done] JVM parameters: !JVM_OPTS!
 echo.
 
 echo [INFO] Setting up JavaFX...
@@ -118,14 +132,27 @@ echo.
 echo Starting application...
 echo.
 
+if "%1"=="--gui" goto :launch_gui
+
+echo [INFO] Using java (console mode)...
+echo [INFO] Use "start.bat --gui" to launch without console window
+echo.
+java --module-path "%JFX_PATH%" --add-modules javafx.controls,javafx.fxml,javafx.graphics !JVM_OPTS! -jar "%JAR_FILE%"
+goto :after_launch
+
+:launch_gui
 where javaw >nul 2>&1
-if not errorlevel 1 (
-    echo [INFO] Using javaw...
-    javaw --module-path "%JFX_PATH%" --add-modules javafx.controls,javafx.fxml,javafx.graphics %JVM_OPTS% -jar "%JAR_FILE%"
-) else (
-    echo [INFO] Using java...
-    java --module-path "%JFX_PATH%" --add-modules javafx.controls,javafx.fxml,javafx.graphics %JVM_OPTS% -jar "%JAR_FILE%"
-)
+if errorlevel 1 goto :launch_console
+echo [INFO] Using javaw (GUI mode)...
+start "" javaw --module-path "%JFX_PATH%" --add-modules javafx.controls,javafx.fxml,javafx.graphics !JVM_OPTS! -jar "%JAR_FILE%"
+echo [INFO] Application launched in background
+goto :eof
+
+:launch_console
+echo [WARNING] javaw not found, using java instead
+java --module-path "%JFX_PATH%" --add-modules javafx.controls,javafx.fxml,javafx.graphics !JVM_OPTS! -jar "%JAR_FILE%"
+
+:after_launch
 
 echo.
 echo =========================================

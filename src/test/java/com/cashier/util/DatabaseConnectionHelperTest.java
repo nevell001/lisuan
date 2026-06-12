@@ -38,7 +38,7 @@ public class DatabaseConnectionHelperTest {
     @Test
     public void testExtractHostPort() {
         // 测试 URL 解析
-        String url1 = "jdbc:mysql://localhost:3306/cashier_system?useSSL=false";
+        String url1 = "jdbc:mysql://localhost:3306/lisuan_system?useSSL=false";
         String url2 = "jdbc:mysql://192.168.1.100:3307/dbname";
         String url3 = "jdbc:mysql://db.example.com/cashier";
 

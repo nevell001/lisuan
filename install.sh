@@ -30,10 +30,10 @@ APP_VERSION=${APP_VERSION:-"2.5.6"}
 DB_TYPE=${DB_TYPE:-"none"}
 DB_HOST=${DB_HOST:-"localhost"}
 DB_PORT=${DB_PORT:-"3306"}
-DB_NAME=${MYSQL_DATABASE:-"cashier_system"}
+DB_NAME=${MYSQL_DATABASE:-"lisuan_system"}
 DB_USERNAME=${MYSQL_USER:-"root"}
 DB_PASSWORD=${MYSQL_ROOT_PASSWORD:-"RootPassword123!"}
-MYSQL_CONTAINER_NAME=${MYSQL_CONTAINER_NAME:-"cashier-mysql"}
+MYSQL_CONTAINER_NAME=${MYSQL_CONTAINER_NAME:-"lisuan-mysql"}
 
 JAR_PATH="target/lisuan-fx-${APP_VERSION}-jar-with-dependencies.jar"
 
@@ -176,7 +176,7 @@ if [ "$DB_TYPE" == "docker" ]; then
 
         echo "[Docker] Initializing database with complete schema..."
         docker exec ${MYSQL_CONTAINER_NAME} mysql -uroot -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null || true
-        echo "[Done] Database initialization completed (v2.5.0)"
+        echo "[Done] Database initialization completed (v2.5.6)"
         echo "[Note] Tables will be created automatically when you start the application"
         echo ""
     fi
@@ -215,7 +215,7 @@ if [ "$DB_TYPE" == "local" ]; then
             echo "[Local MySQL] Initializing database with complete schema..."
             mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null || true
 
-            echo "[Done] Database initialization completed (v2.5.0)"
+            echo "[Done] Database initialization completed (v2.5.6)"
             echo ""
         else
             echo "[Error] Failed to connect to MySQL"
