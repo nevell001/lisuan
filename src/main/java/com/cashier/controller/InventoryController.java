@@ -10,6 +10,7 @@ import com.cashier.model.Product;
 import com.cashier.model.Unit;
 import com.cashier.util.FXMLUtils;
 import com.cashier.util.StatusBarManager;
+import com.cashier.util.FormValidator;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
@@ -165,10 +166,10 @@ public class InventoryController extends BaseController<Product> {
         priceColumn.setSortable(true);
         priceColumn.setComparator((s1, s2) -> {
             try {
-                double d1 = Double.parseDouble(s1);
-                double d2 = Double.parseDouble(s2);
+                double d1 = FormValidator.parseDouble(s1, 0);
+                double d2 = FormValidator.parseDouble(s2, 0);
                 return Double.compare(d1, d2);
-            } catch (NumberFormatException e) {
+            } catch (IllegalArgumentException e) {
                 return s1.compareTo(s2);
             }
         });
@@ -176,10 +177,10 @@ public class InventoryController extends BaseController<Product> {
         quantityColumn.setSortable(true);
         quantityColumn.setComparator((s1, s2) -> {
             try {
-                int i1 = Integer.parseInt(s1);
-                int i2 = Integer.parseInt(s2);
+                int i1 = FormValidator.parseInt(s1, 0);
+                int i2 = FormValidator.parseInt(s2, 0);
                 return Integer.compare(i1, i2);
-            } catch (NumberFormatException e) {
+            } catch (IllegalArgumentException e) {
                 return s1.compareTo(s2);
             }
         });
@@ -187,8 +188,8 @@ public class InventoryController extends BaseController<Product> {
         minStockColumn.setSortable(true);
         minStockColumn.setComparator((s1, s2) -> {
             try {
-                int i1 = Integer.parseInt(s1);
-                int i2 = Integer.parseInt(s2);
+                int i1 = FormValidator.parseInt(s1);
+                int i2 = FormValidator.parseInt(s2);
                 return Integer.compare(i1, i2);
             } catch (NumberFormatException e) {
                 return s1.compareTo(s2);

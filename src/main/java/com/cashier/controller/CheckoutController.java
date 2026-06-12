@@ -15,6 +15,7 @@ import com.cashier.util.FXUtils;
 import com.cashier.util.ReceiptPrinter;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.FormValidator;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -514,7 +515,7 @@ public class CheckoutController {
 
         // 实现税费计算：从系统设置中读取税率
         Map<String, String> settings = DataService.loadSettings();
-        double taxRate = Double.parseDouble(settings.getOrDefault("taxRate", "0.0"));
+        double taxRate = FormValidator.parseDouble(settings.getOrDefault("taxRate", "0.0"));
         transaction.tax = transaction.totalAmount
             .multiply(BigDecimal.valueOf(taxRate))
             .divide(BigDecimal.valueOf(100));

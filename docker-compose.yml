@@ -1,0 +1,36 @@
+services:
+  mysql:
+    image: mysql:8.4
+    container_name: lisuan-mysql
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: RootPassword123!
+      MYSQL_DATABASE: lisuan_system
+      MYSQL_USER: lisuan
+      MYSQL_PASSWORD: LisuanPassword123!
+      TZ: Asia/Shanghai
+      MYSQL_CHARSET: utf8mb4
+      MYSQL_COLLATION: utf8mb4_unicode_ci
+    command: --mysql-native-password=ON --bind-address=0.0.0.0 --skip-name-resolve
+    ports:
+      - "0.0.0.0:3306:3306"
+    volumes:
+      - lisuan-mysql-data:/var/lib/mysql
+      - ./docker/mysql-init/00-init-complete.sql:/docker-entrypoint-initdb.d/00-init-complete.sql:ro
+      - ./docker/mysql-backup:/backup
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+    networks:
+      - lisuan-network
+
+volumes:
+  lisuan-mysql-data:
+    driver: local
+
+networks:
+  lisuan-network:
+    driver: bridge

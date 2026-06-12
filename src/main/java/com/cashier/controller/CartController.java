@@ -35,6 +35,7 @@ import javafx.scene.media.MediaPlayer;
 import javafx.util.Duration;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.FormValidator;
 
 import java.io.IOException;
 import java.math.BigDecimal;
@@ -983,7 +984,7 @@ public class CartController {
         transaction.totalAmount = getFinalAmount();  // 使用最终金额（包含会员折扣和促销优惠）
         // 实现税费计算：从系统设置中读取税率
         Map<String, String> settings = DataService.loadSettings();
-        double taxRate = Double.parseDouble(settings.getOrDefault("taxRate", "0.0"));
+        double taxRate = FormValidator.parseDouble(settings.getOrDefault("taxRate", "0.0"));
         transaction.tax = transaction.totalAmount
             .multiply(BigDecimal.valueOf(taxRate))
             .divide(BigDecimal.valueOf(100));
@@ -1647,9 +1648,9 @@ public class CartController {
                     String value = kv[1].trim();
 
                     if ("productId".equals(key)) {
-                        productId = Integer.parseInt(value);
+                        productId = FormValidator.parseInt(value);
                     } else if ("quantity".equals(key)) {
-                        quantity = Integer.parseInt(value);
+                        quantity = FormValidator.parseInt(value);
                     }
                 }
             }

@@ -2,6 +2,7 @@ package com.cashier.controller;
 
 import com.cashier.service.DataService;
 import com.cashier.i18n.I18nManager;
+import com.cashier.util.FormValidator;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -975,11 +976,11 @@ public class SettingsController {
 
         // 验证税率
         try {
-            double taxRate = Double.parseDouble(taxRateField.getText().trim());
+            double taxRate = FormValidator.parseDouble(taxRateField.getText().trim());
             if (taxRate < 0 || taxRate > 1) {
                 errorMessage += "税率必须在0到1之间！\n";
             }
-        } catch (NumberFormatException e) {
+        } catch (IllegalArgumentException e) {
             errorMessage += "税率格式不正确！\n";
         }
 

@@ -7,6 +7,7 @@ import com.cashier.util.CurrencyUtil;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.FormValidator;
 import javafx.fxml.FXML;
 
 import java.math.BigDecimal;
@@ -113,7 +114,7 @@ public class RestockController {
         try {
             String text = quantityField.getText().trim();
             if (!text.isEmpty()) {
-                int quantity = Integer.parseInt(text);
+                int quantity = FormValidator.parseInt(text);
                 if (quantity > 0) {
                     // 入库后库存
                     int afterStock = product.quantity + quantity;
@@ -165,7 +166,7 @@ public class RestockController {
      */
     public int getRestockQuantity() {
         try {
-            return Integer.parseInt(quantityField.getText().trim());
+            return FormValidator.parseInt(quantityField.getText().trim());
         } catch (NumberFormatException e) {
             return 0;
         }
@@ -185,7 +186,7 @@ public class RestockController {
     @FXML
     public void handleConfirm() {
         if (isInputValid()) {
-            int quantity = Integer.parseInt(quantityField.getText().trim());
+            int quantity = FormValidator.parseInt(quantityField.getText().trim());
 
             // 更新库存
             product.quantity += quantity;
@@ -222,7 +223,7 @@ public class RestockController {
 
         // 验证入库数量
         try {
-            int quantity = Integer.parseInt(quantityField.getText().trim());
+            int quantity = FormValidator.parseInt(quantityField.getText().trim());
             if (quantity <= 0) {
                 errorMessage += "入库数量必须大于0！\n";
             }

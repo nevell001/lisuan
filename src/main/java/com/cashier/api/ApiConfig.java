@@ -24,6 +24,24 @@ public class ApiConfig {
     
     static {
         loadConfig();
+
+        // 安全检查：警告使用默认密钥
+        if (tokenSecret.equals("default_secret_key")) {
+            logger.warn("========================================");
+            logger.warn("安全警告: 使用默认 TOKEN_SECRET 密钥！");
+            logger.warn("请设置环境变量 TOKEN_SECRET 或在 api.properties 中配置");
+            logger.warn("生产环境必须使用强随机密钥！");
+            logger.warn("========================================");
+        }
+
+        // CORS 警告
+        if (corsOrigins.equals("*") || corsOrigins.contains("*")) {
+            logger.warn("========================================");
+            logger.warn("安全警告: CORS 配置允许所有来源 (*)");
+            logger.warn("请设置环境变量 CORS_ALLOWED_ORIGINS 限制允许的域名");
+            logger.warn("生产环境必须限制 CORS 来源！");
+            logger.warn("========================================");
+        }
     }
     
     private static void loadConfig() {
@@ -99,5 +117,25 @@ public class ApiConfig {
     
     public static void setPort(int value) {
         port = value;
+    }
+
+    /**
+     * 检查配置是否适合生产环境
+     * @return 如果配置安全返回 true，否则返回 false
+     */
+    public static boolean isProductionReady() {
+        boolean ready = true;
+
+        if (tokenSecret.equals("default_secret_key") || tokenSecret.length() < 32) {
+            logger.error("生产环境检查失败: TOKEN_SECRET 不安全");
+            ready = false;
+        }
+
+        if (corsOrigins.equals("*") || corsOrigins.contains("*")) {
+            logger.error("生产环境检查失败: CORS 配置不安全");
+            ready = false;
+        }
+
+        return ready;
     }
 }

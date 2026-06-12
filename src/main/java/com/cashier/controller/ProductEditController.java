@@ -13,6 +13,7 @@ import com.cashier.model.Unit;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.FormValidator;
 import javafx.fxml.FXML;
 
 import java.math.BigDecimal;
@@ -346,7 +347,7 @@ public class ProductEditController {
                             // 添加新商品
                             product = new Product(
                                 nameField.getText().trim(),
-                                Double.parseDouble(priceField.getText().trim()),
+                                FormValidator.parseDouble(priceField.getText().trim()),
                                 0  // 库存数量默认为0，通过进销存管理
                             );
             
@@ -358,7 +359,7 @@ public class ProductEditController {
                             }
             
                             // 更新商品信息
-                            product.minStock = Integer.parseInt(minStockField.getText().trim());
+                            product.minStock = FormValidator.parseInt(minStockField.getText().trim());
                             product.category = categoryComboBox.getSelectionModel().getSelectedItem();
                             if (product.category == null || product.category.trim().isEmpty()) {
                                 product.category = "默认分类";
@@ -423,7 +424,7 @@ public class ProductEditController {
                             }
             
                             // 更新商品信息
-                            product.minStock = Integer.parseInt(minStockField.getText().trim());
+                            product.minStock = FormValidator.parseInt(minStockField.getText().trim());
                             product.category = categoryComboBox.getSelectionModel().getSelectedItem();
                             if (product.category == null || product.category.trim().isEmpty()) {
                                 product.category = "默认分类";
@@ -519,32 +520,32 @@ public class ProductEditController {
 
         // 验证单价
         try {
-            double price = Double.parseDouble(priceField.getText().trim());
+            double price = FormValidator.parseDouble(priceField.getText().trim());
             if (price <= 0) {
                 errorMessage += "单价必须大于0！\n";
             }
-        } catch (NumberFormatException e) {
+        } catch (IllegalArgumentException e) {
             errorMessage += "单价格式不正确！\n";
         }
 
         // 验证最低库存
         try {
-            int minStock = Integer.parseInt(minStockField.getText().trim());
+            int minStock = FormValidator.parseInt(minStockField.getText().trim());
             if (minStock < 0) {
                 errorMessage += "最低库存不能为负数！\n";
             }
-        } catch (NumberFormatException e) {
+        } catch (IllegalArgumentException e) {
             errorMessage += "最低库存格式不正确！\n";
         }
 
         // 验证成本价
         if (!costField.getText().trim().isEmpty()) {
             try {
-                double cost = Double.parseDouble(costField.getText().trim());
+                double cost = FormValidator.parseDouble(costField.getText().trim());
                 if (cost < 0) {
                     errorMessage += "成本价不能为负数！\n";
                 }
-            } catch (NumberFormatException e) {
+            } catch (IllegalArgumentException e) {
                 errorMessage += "成本价格式不正确！\n";
             }
         }

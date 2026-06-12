@@ -8,6 +8,7 @@ import com.cashier.model.Product;
 import com.cashier.util.CurrencyUtil;
 import com.cashier.util.FXMLUtils;
 import com.cashier.util.StatusBarManager;
+import com.cashier.util.FormValidator;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
@@ -438,7 +439,7 @@ public class TransactionController {
                 try {
                     // 尝试将时间戳转换为 Date
                     if (t.timestamp != null && !t.timestamp.isEmpty()) {
-                        long time = Long.parseLong(t.timestamp);
+                        long time = FormValidator.parseLong(t.timestamp);
                         java.util.Date date = new java.util.Date(time);
                         timestampStr = sdf.format(date);
                     } else {

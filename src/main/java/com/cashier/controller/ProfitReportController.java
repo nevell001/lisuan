@@ -15,6 +15,7 @@ import com.cashier.model.PurchaseOrder;
 import com.cashier.model.Transaction;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.FormValidator;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -528,7 +529,7 @@ public class ProfitReportController {
         try {
             String ratioStr = com.cashier.dao.SystemSettingsDAO.getSetting("operatingCostRatio");
             if (ratioStr != null) {
-                costRatio = Double.parseDouble(ratioStr);
+                costRatio = FormValidator.parseDouble(ratioStr);
             }
         } catch (Exception e) {
             logger.warn("加载运营成本比例设置失败，使用默认值: {}", e.getMessage());
@@ -1060,10 +1061,10 @@ public class ProfitReportController {
         // 每日利润构造函数（使用不同参数顺序区分）
         public ProfitReportRecord(String date, String revenueStr, String costStr, String profitStr, String marginStr) {
             this.date = date;
-            this.revenue = Double.parseDouble(revenueStr);
-            this.cost = Double.parseDouble(costStr);
-            this.profit = Double.parseDouble(profitStr);
-            this.margin = Double.parseDouble(marginStr);
+            this.revenue = FormValidator.parseDouble(revenueStr);
+            this.cost = FormValidator.parseDouble(costStr);
+            this.profit = FormValidator.parseDouble(profitStr);
+            this.margin = FormValidator.parseDouble(marginStr);
         }
     }
 }

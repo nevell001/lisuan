@@ -437,4 +437,109 @@ public class FormValidator {
             label.getStyleClass().add("required-field");
         }
     }
+
+    /**
+     * 安全解析 Double
+     * @param value 字符串值
+     * @param defaultValue 默认值
+     * @return 解析后的值或默认值
+     */
+    public static double parseDouble(String value, double defaultValue) {
+        if (value == null || value.trim().isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            logger.warn("无法解析为数字: {}, 使用默认值: {}", value, defaultValue);
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 安全解析 Double（非空）
+     * @param value 字符串值
+     * @return 解析后的值
+     * @throws IllegalArgumentException 如果解析失败
+     */
+    public static double parseDouble(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalArgumentException("值不能为空");
+        }
+        try {
+            return Double.parseDouble(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("无效的数字: " + value);
+        }
+    }
+
+    /**
+     * 安全解析 Integer
+     * @param value 字符串值
+     * @param defaultValue 默认值
+     * @return 解析后的值或默认值
+     */
+    public static int parseInt(String value, int defaultValue) {
+        if (value == null || value.trim().isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            logger.warn("无法解析为整数: {}, 使用默认值: {}", value, defaultValue);
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 安全解析 Integer（非空）
+     * @param value 字符串值
+     * @return 解析后的值
+     * @throws IllegalArgumentException 如果解析失败
+     */
+    public static int parseInt(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalArgumentException("值不能为空");
+        }
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("无效的整数: " + value);
+        }
+    }
+
+    /**
+     * 安全解析 Long
+     * @param value 字符串值
+     * @param defaultValue 默认值
+     * @return 解析后的值或默认值
+     */
+    public static long parseLong(String value, long defaultValue) {
+        if (value == null || value.trim().isEmpty()) {
+            return defaultValue;
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            logger.warn("无法解析为长整数: {}, 使用默认值: {}", value, defaultValue);
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 安全解析 Long（非空）
+     * @param value 字符串值
+     * @return 解析后的值
+     * @throws IllegalArgumentException 如果解析失败
+     */
+    public static long parseLong(String value) {
+        if (value == null || value.trim().isEmpty()) {
+            throw new IllegalArgumentException("值不能为空");
+        }
+        try {
+            return Long.parseLong(value.trim());
+        } catch (NumberFormatException e) {
+            throw new IllegalArgumentException("无效的长整数: " + value);
+        }
+    }
 }

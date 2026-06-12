@@ -9,6 +9,7 @@ import com.cashier.model.*;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.FormValidator;
 
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
@@ -719,7 +720,7 @@ public class InventoryCheckController {
                 if (check.checkNo != null && check.checkNo.startsWith(prefix)) {
                     String seqStr = check.checkNo.substring(prefix.length());
                     try {
-                        int seq = Integer.parseInt(seqStr);
+                        int seq = FormValidator.parseInt(seqStr);
                         if (seq > maxSeq) {
                             maxSeq = seq;
                         }

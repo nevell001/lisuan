@@ -5,6 +5,7 @@ import com.cashier.service.DataService;
 import com.cashier.model.Member;
 import com.cashier.model.RechargeRecord;
 import com.cashier.util.CurrencyUtil;
+import com.cashier.util.FormValidator;
 import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -170,7 +171,7 @@ public class RechargeController {
                 return;
             }
 
-            double amount = Double.parseDouble(amountText);
+            double amount = FormValidator.parseDouble(amountText, 0);
             if (amount <= 0) {
                 newBalanceLabel.setText(CurrencyUtil.format(member.getBalance().doubleValue()));
                 bonusPointsLabel.setText("0");
@@ -201,7 +202,7 @@ public class RechargeController {
     @FXML
     public void handleOk() {
         if (isInputValid()) {
-            rechargeAmount = Double.parseDouble(amountField.getText().trim());
+            rechargeAmount = FormValidator.parseDouble(amountField.getText().trim());
             String paymentMethod = paymentMethodComboBox.getSelectionModel().getSelectedItem();
 
             boolean success = com.cashier.service.MemberService.recharge(member, rechargeAmount, paymentMethod, "系统");
@@ -235,7 +236,7 @@ public class RechargeController {
             if (amountText.isEmpty()) {
                 errorMessage += "充值金额不能为空！\n";
             } else {
-                double amount = Double.parseDouble(amountText);
+                double amount = FormValidator.parseDouble(amountText);
                 if (amount <= 0) {
                     errorMessage += "充值金额必须大于0！\n";
                 }
@@ -243,7 +244,7 @@ public class RechargeController {
                     errorMessage += "单次充值金额不能超过10000元！\n";
                 }
             }
-        } catch (NumberFormatException e) {
+        } catch (IllegalArgumentException e) {
             errorMessage += "充值金额格式不正确！\n";
         }
 

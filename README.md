@@ -2,7 +2,7 @@
 
 狸算(LiSuan)收银系统 - 功能完整的收银系统，基于 JavaFX 17 开发。
 
-**当前版本**: v2.5.6 | **最新更新**: 2026-06-10
+**当前版本**: v2.5.7 | **最新更新**: 2026-06-12
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.12-blue)
@@ -187,6 +187,15 @@ java -jar target/lisuan-fx-*-jar-with-dependencies.jar
 | 钻石会员 | 10000+ | 8.5折 |
 
 ## 最近更新
+
+### v2.5.7 (2026-06-12)
+- **环境感知配置**: 支持 development/production 环境区分
+- **数据库用户分离**: 开发环境使用 root，生产环境使用 lisuan 专用用户
+- **安全性增强**: FormValidator 安全解析方法，防止 NumberFormatException
+- **安装脚本优化**: .env 文件支持，自动环境检测
+- **Windows 配置工具**: DataConfig.bat 支持环境变量
+- **脚本一致性**: start.sh/start.bat 移除冗余 temp 目录创建
+- **品牌统一**: 所有脚本显示"LiSuan System"
 
 ### v2.5.6 (2026-06-10)
 - 品牌名称统一为"狸算(LiSuan)收银系统"

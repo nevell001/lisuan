@@ -5,6 +5,7 @@ import com.cashier.model.*;
 import com.cashier.service.ReturnService;
 import com.cashier.util.CurrencyUtil;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.FormValidator;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -104,7 +105,7 @@ public class ReturnReportController {
                     setText(null);
                 } else {
                     try {
-                        Date date = new Date(Long.parseLong(item));
+                        Date date = new Date(FormValidator.parseLong(item));
                         setText(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(date));
                     } catch (Exception e) {
                         setText(item);
@@ -121,7 +122,7 @@ public class ReturnReportController {
                     setText(null);
                 } else {
                     try {
-                        double amount = Double.parseDouble(item);
+                        double amount = FormValidator.parseDouble(item);
                         setText(CurrencyUtil.format(amount));
                     } catch (Exception e) {
                         setText(item);

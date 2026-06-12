@@ -7,6 +7,7 @@ import com.cashier.util.CurrencyUtil;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.FormValidator;
 
 import java.sql.SQLException;
 import java.math.BigDecimal;
@@ -835,7 +836,7 @@ public class PurchaseOrderController {
                 if (order.orderNo != null && order.orderNo.startsWith(prefix)) {
                     String seqStr = order.orderNo.substring(prefix.length());
                     try {
-                        int seq = Integer.parseInt(seqStr);
+                        int seq = FormValidator.parseInt(seqStr);
                         if (seq > maxSeq) {
                             maxSeq = seq;
                         }

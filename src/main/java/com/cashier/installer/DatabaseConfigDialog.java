@@ -135,12 +135,18 @@ public class DatabaseConfigDialog {
 
     private void updateFields() {
         String type = (String) dbTypeCombo.getSelectedItem();
+        // 根据环境变量选择默认用户（生产环境使用 lisuan，开发环境使用 root）
+        String env = System.getenv("ENVIRONMENT");
+        boolean isProduction = "production".equalsIgnoreCase(env);
+        String defaultUser = isProduction ? "lisuan" : "root";
+        String defaultPassword = isProduction ? "LisuanPassword123!" : "RootPassword123!";
+
         switch (type) {
             case "Local MySQL":
                 hostField.setText("localhost");
                 portField.setText("3306");
                 dbNameField.setText("lisuan_system");
-                userField.setText("root");
+                userField.setText(defaultUser);
                 passField.setText("");
                 hostField.setEditable(false);
                 portField.setEditable(false);
@@ -149,8 +155,8 @@ public class DatabaseConfigDialog {
                 hostField.setText("localhost");
                 portField.setText("3306");
                 dbNameField.setText("lisuan_system");
-                userField.setText("root");
-                passField.setText("RootPassword123!");
+                userField.setText(defaultUser);
+                passField.setText(defaultPassword);
                 hostField.setEditable(false);
                 portField.setEditable(false);
                 break;

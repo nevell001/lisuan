@@ -25,7 +25,6 @@ data/
 # 配置文件（敏感信息）
 config/*.properties
 config/*.config
-docker-compose.yml
 docker/create-cashier-user.sql
 .env
 

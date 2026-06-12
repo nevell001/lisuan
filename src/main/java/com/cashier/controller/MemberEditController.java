@@ -2,6 +2,7 @@ package com.cashier.controller;
 
 import com.cashier.dao.MemberDAO;
 import com.cashier.model.Member;
+import com.cashier.util.FormValidator;
 import com.cashier.service.MemberService;
 import javafx.collections.FXCollections;
 import javafx.fxml.FXML;
@@ -236,31 +237,31 @@ public class MemberEditController {
 
         // 验证积分
         try {
-            double points = Double.parseDouble(pointsField.getText().trim());
+            double points = FormValidator.parseDouble(pointsField.getText().trim());
             if (points < 0) {
                 errorMessage += "积分不能为负数！\n";
             }
-        } catch (NumberFormatException e) {
+        } catch (IllegalArgumentException e) {
             errorMessage += "积分格式不正确！\n";
         }
 
         // 验证折扣
         try {
-            double discount = Double.parseDouble(discountField.getText().trim());
+            double discount = FormValidator.parseDouble(discountField.getText().trim());
             if (discount < 0 || discount > 10) {
                 errorMessage += "折扣必须在0到10之间（0表示免费，10表示不打折）！\n";
             }
-        } catch (NumberFormatException e) {
+        } catch (IllegalArgumentException e) {
             errorMessage += "折扣格式不正确！\n";
         }
 
         // 验证余额
         try {
-            double balance = Double.parseDouble(balanceField.getText().trim());
+            double balance = FormValidator.parseDouble(balanceField.getText().trim());
             if (balance < 0) {
                 errorMessage += "余额不能为负数！\n";
             }
-        } catch (NumberFormatException e) {
+        } catch (IllegalArgumentException e) {
             errorMessage += "余额格式不正确！\n";
         }
 

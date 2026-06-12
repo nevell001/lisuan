@@ -9,6 +9,7 @@ import com.cashier.model.Transaction;
 import com.cashier.util.CurrencyUtil;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.FormValidator;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
@@ -380,9 +381,9 @@ public class InventoryReportController {
         int inventoryDaysThreshold;
 
         try {
-            turnoverThreshold = Double.parseDouble(turnoverThresholdField.getText());
-            slowSalesThreshold = Integer.parseInt(slowSalesThresholdField.getText());
-            inventoryDaysThreshold = Integer.parseInt(inventoryDaysField.getText());
+            turnoverThreshold = FormValidator.parseDouble(turnoverThresholdField.getText());
+            slowSalesThreshold = FormValidator.parseInt(slowSalesThresholdField.getText());
+            inventoryDaysThreshold = FormValidator.parseInt(inventoryDaysField.getText());
         } catch (NumberFormatException e) {
             showError("阈值输入格式错误！");
             return;

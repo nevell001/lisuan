@@ -1,32 +1,24 @@
 #!/bin/bash
 
 # ============================================
-# Cashier System Startup Script (Linux/Mac)
+# LiSuan System Startup Script (Linux/Mac)
 # ============================================
 #
-# 安全提示：
-# 为了安全起见，建议设置环境变量 CASHER_DB_PASSWORD 来存储数据库密码
-#
-# Linux/Mac 设置方式:
-#   export CASHER_DB_PASSWORD="YourPassword"
-#   ./start.sh
-#
-# 或者创建 .env 文件（需要先 source .env）:
-#   echo 'export CASHER_DB_PASSWORD="YourPassword"' >> .env
-#   source .env
-#   ./start.sh
-#
-# 如果设置了环境变量，config/database.properties 中的 db.password 将被忽略
+# 数据库配置：
+# 应用启动时会从 config/database.properties 读取数据库连接信息
+# 安装脚本 install.sh 会根据 ENVIRONMENT 变量自动配置：
+#   - development: 使用 root 用户（便于开发调试）
+#   - production: 使用 lisuan 用户（更安全）
 # ============================================
 
-APP_NAME="Cashier System"
+APP_NAME="LiSuan System"
 
-# Read version from pom.xml automatically
-APP_VERSION=$(grep -E "^[[:space:]]*<version>[^<]+</version>[[:space:]]*$" pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
+# Read version from pom.xml automatically (get first occurrence - project version)
+APP_VERSION=$(awk '/<version>[^<]+<\/version>/ {gsub(/.*<version>|<\/version>.*/, ""); if ($0 !~ /\$\{/) {print; exit}}' pom.xml)
 
 # Fallback if version not found
 if [ -z "$APP_VERSION" ]; then
-    APP_VERSION="2.5.6"
+    APP_VERSION="2.5.7"
 fi
 MAIN_CLASS="com.cashier.CashierSystemFXApplication"
 CONFIG_FILE="config/jvm.config"
@@ -44,7 +36,7 @@ if [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
 fi
 
 echo "========================================"
-echo "  Cashier System Startup"
+echo "  LiSuan System Startup"
 echo "========================================"
 echo ""
 
@@ -135,12 +127,22 @@ echo ""
 # 构建 JavaFX 模块路径
 JFX_BASE="$HOME/.m2/repository/org/openjfx"
 JFX_VERSION="17.0.12"
-JFX_PATH="$JFX_BASE/javafx-base/$JFX_VERSION:$JFX_BASE/javafx-controls/$JFX_VERSION:$JFX_BASE/javafx-fxml/$JFX_VERSION:$JFX_BASE/javafx-graphics/$JFX_VERSION"
+
+# Detect platform
+if [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
+    JFX_PLATFORM="linux"
+elif [[ "$OSTYPE" == "darwin"* ]]; then
+    JFX_PLATFORM="mac"
+else
+    JFX_PLATFORM="win"
+fi
+
+JFX_PATH="$JFX_BASE/javafx-base/$JFX_VERSION/javafx-base-$JFX_VERSION-$JFX_PLATFORM.jar:$JFX_BASE/javafx-controls/$JFX_VERSION/javafx-controls-$JFX_VERSION-$JFX_PLATFORM.jar:$JFX_BASE/javafx-fxml/$JFX_VERSION/javafx-fxml-$JFX_VERSION-$JFX_PLATFORM.jar:$JFX_BASE/javafx-graphics/$JFX_VERSION/javafx-graphics-$JFX_VERSION-$JFX_PLATFORM.jar"
 
 JFX_MODULES=""
-if [ -d "$JFX_BASE/javafx-base/$JFX_VERSION" ]; then
+if [ -f "$JFX_BASE/javafx-base/$JFX_VERSION/javafx-base-$JFX_VERSION-$JFX_PLATFORM.jar" ]; then
     JFX_MODULES="--module-path $JFX_PATH --add-modules javafx.controls,javafx.fxml,javafx.graphics"
-    echo "[OK] JavaFX modules found"
+    echo "[OK] JavaFX modules found ($JFX_PLATFORM)"
 else
     echo "[Warning] JavaFX not found in Maven repository"
     echo "[Info] Will use standard classpath"

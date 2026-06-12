@@ -12,6 +12,7 @@ import javafx.scene.control.cell.PropertyValueFactory;
 import javafx.scene.layout.GridPane;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.FormValidator;
 
 import java.math.BigDecimal;
 import java.text.SimpleDateFormat;
@@ -311,7 +312,7 @@ public class PromotionController {
 
                     // 解析最大使用次数
                     String maxUsageText = maxUsageField.getText().trim();
-                    int maxUsage = maxUsageText.isEmpty() ? -1 : Integer.parseInt(maxUsageText);
+                    int maxUsage = maxUsageText.isEmpty() ? -1 : FormValidator.parseInt(maxUsageText);
 
                     if (maxUsage != -1 && maxUsage < 0) {
                         throw new IllegalArgumentException("最大使用次数不能为负数");

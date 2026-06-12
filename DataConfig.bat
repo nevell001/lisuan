@@ -3,11 +3,24 @@ setlocal
 
 cd /d "%~dp0"
 
+REM 加载 .env 文件（如果存在）
+if exist ".env" (
+    echo [INFO] Loading configuration from .env file...
+    for /f "usebackq tokens=1,2 delims==" %%a in (".env") do (
+        REM 跳过注释行
+        echo %%a | findstr /r "^[#]" >nul
+        if errorlevel 1 (
+            set "%%a=%%b"
+        )
+    )
+)
+
 echo =========================================
 echo   LiSuan Database Configuration
 echo =========================================
 echo.
 
+echo [INFO] ENVIRONMENT: %ENVIRONMENT%
 echo [INFO] Launching database configuration tool...
 echo.
 

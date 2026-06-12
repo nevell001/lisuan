@@ -26,14 +26,28 @@ if [ -f ".env" ]; then
 fi
 
 # 默认值（如果 .env 中没有定义）
-APP_VERSION=${APP_VERSION:-"2.5.6"}
+APP_VERSION=${APP_VERSION:-"2.5.7"}
 DB_TYPE=${DB_TYPE:-"none"}
 DB_HOST=${DB_HOST:-"localhost"}
 DB_PORT=${DB_PORT:-"3306"}
 DB_NAME=${MYSQL_DATABASE:-"lisuan_system"}
-DB_USERNAME=${MYSQL_USER:-"root"}
-DB_PASSWORD=${MYSQL_ROOT_PASSWORD:-"RootPassword123!"}
+MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-"RootPassword123!"}
 MYSQL_CONTAINER_NAME=${MYSQL_CONTAINER_NAME:-"lisuan-mysql"}
+
+# 环境类型：development 或 production
+ENVIRONMENT=${ENVIRONMENT:-"development"}
+
+# 开发环境使用 root，生产环境使用专用用户
+if [ "$ENVIRONMENT" = "production" ]; then
+    DB_USERNAME=${MYSQL_USER:-"lisuan"}
+    DB_PASSWORD=${MYSQL_PASSWORD:-"LisuanPassword123!"}
+else
+    # 开发环境默认使用 root（便于调试）
+    DB_USERNAME="root"
+    DB_PASSWORD=${MYSQL_ROOT_PASSWORD:-"RootPassword123!"}
+    MYSQL_USER=${MYSQL_USER:-"lisuan"}
+    MYSQL_PASSWORD=${MYSQL_PASSWORD:-"LisuanPassword123!"}
+fi
 
 JAR_PATH="target/lisuan-fx-${APP_VERSION}-jar-with-dependencies.jar"
 
@@ -109,35 +123,34 @@ echo ""
 # 编译项目
 echo "[6/8] Compiling project..."
 if [ -f "$JAR_PATH" ]; then
-    read -p "[Warning] Detected existing compiled files. Recompile? (y/N): " REPLY
-    if [[ "$REPLY" =~ ^[Yy]$ ]]; then
-        echo "[Clean] Cleaning old files..."
-        mvn clean
-    else
-        echo "[Skip] Skipping compilation"
-    fi
+    echo "[Skip] Detected existing compiled files, skipping compilation"
+    echo "[Tip] Run 'mvn clean package -DskipTests' to recompile"
+else
+    mvn clean package -DskipTests
+    echo "[Done] Project compiled"
 fi
-
-mvn clean package -DskipTests
-echo "[Done] Project compiled"
 echo ""
 
 # 数据库安装选项
 echo "[7/8] Database Installation"
 echo ""
 echo "Please select database installation option:"
-echo "  1 - Install Docker (Recommended)"
-echo "  2 - Use existing local MySQL"
+echo "  1 - Docker MySQL (Recommended)"
+echo "  2 - Local MySQL"
+echo "  3 - Remote MySQL"
 echo ""
-read -p "Enter option (1/2, default=1): " DB_CHOICE
+read -p "Enter option (1/2/3, default=1): " DB_CHOICE
 DB_CHOICE=${DB_CHOICE:-1}
 
 if [ "$DB_CHOICE" == "1" ]; then
     DB_TYPE="docker"
-    echo "[Info] Selected: Install Docker"
+    echo "[Info] Selected: Docker MySQL"
 elif [ "$DB_CHOICE" == "2" ]; then
     DB_TYPE="local"
-    echo "[Info] Selected: Use existing local MySQL"
+    echo "[Info] Selected: Local MySQL"
+elif [ "$DB_CHOICE" == "3" ]; then
+    DB_TYPE="remote"
+    echo "[Info] Selected: Remote MySQL"
 else
     echo "[Warning] Invalid option, defaulting to Docker"
     DB_TYPE="docker"
@@ -174,8 +187,12 @@ if [ "$DB_TYPE" == "docker" ]; then
         echo "[Docker] Waiting for MySQL to be ready..."
         sleep 10
 
+        echo "[Docker] Creating database if not exists..."
+        docker exec ${MYSQL_CONTAINER_NAME} mysql -uroot -p${MYSQL_ROOT_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null
+
         echo "[Docker] Initializing database with complete schema..."
-        docker exec ${MYSQL_CONTAINER_NAME} mysql -uroot -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null || true
+        docker exec ${MYSQL_CONTAINER_NAME} mysql -uroot -p${MYSQL_ROOT_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null
+
         echo "[Done] Database initialization completed (v2.5.6)"
         echo "[Note] Tables will be created automatically when you start the application"
         echo ""
@@ -234,15 +251,68 @@ if [ "$DB_TYPE" == "local" ]; then
     fi
 fi
 
+# 远程 MySQL 设置
+if [ "$DB_TYPE" == "remote" ]; then
+    echo "[Remote MySQL] Configuring remote MySQL connection..."
+    echo ""
+    echo "Please enter your remote MySQL connection details:"
+    echo ""
+
+    read -p "MySQL Host: " DB_HOST_INPUT
+    DB_HOST=${DB_HOST_INPUT}
+
+    read -p "MySQL Port (default=3306): " DB_PORT_INPUT
+    DB_PORT=${DB_PORT_INPUT:-3306}
+
+    read -p "MySQL Username: " DB_USERNAME_INPUT
+    DB_USERNAME=${DB_USERNAME_INPUT}
+
+    read -s -p "MySQL Password: " DB_PASSWORD_INPUT
+    DB_PASSWORD=${DB_PASSWORD_INPUT}
+    echo ""
+
+    echo ""
+    echo "[Remote MySQL] Testing connection..."
+    if command -v mysql &> /dev/null; then
+        if mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} -e "SELECT 1" &> /dev/null; then
+            echo "[Remote MySQL] Connection successful"
+            echo ""
+
+            echo "[Remote MySQL] Creating database if not exists..."
+            mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null || true
+
+            echo "[Remote MySQL] Initializing database with complete schema..."
+            mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null || true
+
+            echo "[Done] Database initialization completed (v2.5.6)"
+            echo ""
+        else
+            echo "[Error] Failed to connect to MySQL"
+            echo "Please check your connection details:"
+            echo "  Host: ${DB_HOST}"
+            echo "  Port: ${DB_PORT}"
+            echo "  Username: ${DB_USERNAME}"
+            echo ""
+            echo "[Note] Database will be initialized automatically when you start the application"
+            echo ""
+        fi
+    else
+        echo "[Warning] MySQL client not found in PATH"
+        echo ""
+        echo "[Note] Database will be initialized automatically when you start the application"
+        echo ""
+    fi
+fi
+
 # 更新配置文件
 if [ "$DB_TYPE" == "docker" ]; then
     DB_HOST="localhost"
     DB_PORT="3306"
-    DB_USERNAME="root"
-    DB_PASSWORD="RootPassword123!"
     echo "[Config] Updating database.properties for Docker MySQL..."
 elif [ "$DB_TYPE" == "local" ]; then
     echo "[Config] Updating database.properties for Local MySQL..."
+elif [ "$DB_TYPE" == "remote" ]; then
+    echo "[Config] Updating database.properties for Remote MySQL..."
 else
     echo "[Skip] Database configuration skipped"
     echo ""

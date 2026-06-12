@@ -8,7 +8,31 @@ REM ============================================
 
 cd /d "%~dp0"
 
-set "APP_VERSION=2.5.6"
+REM 加载 .env 文件（如果存在）
+if exist ".env" (
+    echo [INFO] Loading configuration from .env file...
+    for /f "usebackq tokens=1,2 delims==" %%a in (".env") do (
+        REM 跳过注释行
+        echo %%a | findstr /r "^[#]" >nul
+        if errorlevel 1 (
+            set "%%a=%%b"
+        )
+    )
+)
+
+set "APP_VERSION=2.5.7"
+
+REM 环境类型：development 或 production
+if "%ENVIRONMENT%"=="" set "ENVIRONMENT=development"
+
+REM 根据环境设置默认数据库用户
+if /i "%ENVIRONMENT%"=="production" (
+    set "DB_USER=lisuan"
+    set "DB_PASSWORD=LisuanPassword123!"
+) else (
+    set "DB_USER=root"
+    set "DB_PASSWORD=RootPassword123!"
+)
 
 cls
 echo.
@@ -96,11 +120,9 @@ echo This may take a while on first run...
 echo.
 
 if exist "target\lisuan-fx-%APP_VERSION%-jar-with-dependencies.jar" (
-    set /p "REBUILD=Rebuild existing JAR? (y/N): "
-    if /i "!REBUILD!"=="y" (
-        echo [CLEAN] Cleaning old files...
-        call mvn clean
-    )
+    echo [SKIP] Detected existing compiled files, skipping compilation
+    echo [TIP] Run 'mvn clean package -DskipTests' to rebuild
+    goto :build_done
 )
 
 echo Compiling...
@@ -111,6 +133,8 @@ if errorlevel 1 (
     pause
     exit /b 1
 )
+
+:build_done
 
 echo [OK] Project built successfully
 echo.
@@ -131,11 +155,22 @@ echo [INFO] Creating database configuration tool...
     echo.
     echo cd /d "%%~dp0"
     echo.
+    echo REM 加载 .env 文件（如果存在）
+    echo if exist ".env" ^(
+    echo     echo [INFO^] Loading configuration from .env file...
+    echo     for /f "usebackq tokens=1,2 delims==" %%%%a in ^(".env"^) do ^(
+    echo         echo %%%%a ^| findstr /r "^[#^]" ^>nul
+    echo         if errorlevel 1 ^(
+    echo             set "%%%%a=%%%%b"
+    echo         ^)
+    echo     ^)
+    echo ^)
+    echo.
     echo echo =========================================
     echo echo   LiSuan Database Configuration
     echo echo =========================================
     echo echo.
-    echo.
+    echo echo [INFO^] ENVIRONMENT: %%ENVIRONMENT%%
     echo echo [INFO] Launching database configuration tool...
     echo echo.
     echo REM Build classpath

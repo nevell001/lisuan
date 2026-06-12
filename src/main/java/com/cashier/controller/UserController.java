@@ -7,6 +7,7 @@ import com.cashier.util.PasswordUtil;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.FormValidator;
 
 import java.sql.SQLException;
 import java.util.List;
@@ -275,7 +276,7 @@ public class UserController {
                 // 验证ID（仅当手动输入时）
                 if (user == null && !autoIdCheckBox.isSelected() && !idField.getText().trim().isEmpty()) {
                     try {
-                        int id = Integer.parseInt(idField.getText().trim());
+                        int id = FormValidator.parseInt(idField.getText().trim());
                         if (id <= 0) {
                             showError("ID必须是大于0的数字！");
                             return null;
