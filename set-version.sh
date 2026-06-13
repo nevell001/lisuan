@@ -76,7 +76,7 @@ for f in run-app.ps1 package-simple.ps1; do
     fi
 done
 
-echo "[6/7] Updating version in shell scripts and .env..."
+echo "[6/8] Updating version in shell scripts and .env..."
 if [ -f "start.sh" ]; then
     sed_i "s/APP_VERSION=\"[0-9]\+\.[0-9]\+\.[0-9]\+\"/APP_VERSION=\"$NEW_VERSION\"/g" start.sh
 fi
@@ -87,7 +87,17 @@ if [ -f ".env.example" ]; then
     sed_i "s/APP_VERSION=[0-9]\+\.[0-9]\+\.[0-9]\+/APP_VERSION=$NEW_VERSION/g" .env.example
 fi
 
-echo "[7/7] Verifying updates..."
+echo "[7/8] Updating version in i18n files..."
+# Extract version components for i18n pattern (e.g., 2.5.7 -> 2\.5\.6 -> 2\.5\.7)
+OLD_VERSION_PATTERN="v[0-9]\+\.[0-9]\+\.[0-9]\+"
+NEW_VERSION_PATTERN="v$NEW_VERSION"
+for f in src/main/resources/com/cashier/i18n/messages*.properties; do
+    if [ -f "$f" ]; then
+        sed_i "s/$OLD_VERSION_PATTERN/$NEW_VERSION_PATTERN/g" "$f"
+    fi
+done
+
+echo "[8/8] Verifying updates..."
 echo ""
 
 # Files that should have been updated
@@ -104,6 +114,12 @@ FILES=(
     "start.sh"
     "install.sh"
     ".env.example"
+    "src/main/resources/com/cashier/i18n/messages.properties"
+    "src/main/resources/com/cashier/i18n/messages_en.properties"
+    "src/main/resources/com/cashier/i18n/messages_zh_CN.properties"
+    "src/main/resources/com/cashier/i18n/messages_zh_TW.properties"
+    "src/main/resources/com/cashier/i18n/messages_ja.properties"
+    "src/main/resources/com/cashier/i18n/messages_ko.properties"
 )
 
 # Count updated files
