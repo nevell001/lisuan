@@ -19,49 +19,33 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class ProductDAOTest extends DatabaseTestBase {
 
-    private static Product testProduct;
-    private static int insertedProductId;
+    private Product testProduct;
+    private int insertedProductId;
 
     @BeforeAll
     @DisplayName("初始化测试环境")
     public static void setUpBeforeClass() throws SQLException {
-        // 初始化测试数据库
         initTestDatabase();
-
-        // 创建测试商品
-        testProduct = new Product(
-            0,
-            "TEST001",
-            "测试商品-单元测试",
-            19.99,
-            50,
-            "测试分类",
-            "TEST1234567890",
-            "件",
-            "这是一个用于单元测试的商品描述",
-            "测试品牌",
-            "测试供应商",
-            "规格信息",
-            10,
-            15.00
-        );
     }
 
     @BeforeEach
     @DisplayName("准备测试环境")
-    public void setUp() {
-        // 不需要清理数据，因为测试按顺序执行，依赖前面的测试结果
+    public void setUp() throws SQLException {
+        testProduct = createTestProduct("TEST001", "测试商品-单元测试", "TEST1234567890");
+        DAOFactory.getInstance().getProductDAO().insert(testProduct);
+        insertedProductId = testProduct.id;
     }
 
     @Test
     @Order(1)
     @DisplayName("测试插入商品")
     public void testInsertProduct() throws SQLException {
-        boolean result = DAOFactory.getInstance().getProductDAO().insert(testProduct);
+        Product newProduct = createTestProduct("TEST002", "测试商品-插入", "TEST1234567891");
+        boolean result = DAOFactory.getInstance().getProductDAO().insert(newProduct);
         assertTrue(result);
-        assertNotNull(testProduct.id);
-        assertTrue(testProduct.id > 0);
-        insertedProductId = testProduct.id;
+        assertNotNull(newProduct.id);
+        assertTrue(newProduct.id > 0);
+        DAOFactory.getInstance().getProductDAO().delete(newProduct.id);
     }
 
     @Test
@@ -134,7 +118,7 @@ public class ProductDAOTest extends DatabaseTestBase {
         assertTrue(result);
 
         Product updated = DAOFactory.getInstance().getProductDAO().findById(insertedProductId);
-        assertEquals(110, updated.quantity);
+        assertEquals(60, updated.quantity);
     }
 
     @Test
@@ -208,6 +192,11 @@ public class ProductDAOTest extends DatabaseTestBase {
         for (Product p : products) {
             DAOFactory.getInstance().getProductDAO().delete(p.id);
         }
+    }
+
+    private Product createTestProduct(String productCode, String name, String barcode) {
+        return new Product(0, productCode, name, 19.99, 50, "测试分类", barcode, "件",
+            "这是一个用于单元测试的商品描述", "测试品牌", "测试供应商", "规格信息", 10, 15.00);
     }
 
     @AfterAll

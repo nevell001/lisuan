@@ -5,6 +5,8 @@ import com.zaxxer.hikari.HikariDataSource;
 import java.io.*;
 import java.sql.*;
 import java.util.Properties;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
@@ -433,8 +435,7 @@ public abstract class DatabaseTestBase {
         }
 
         // 从连接池获取连接来清空数据
-        try (Connection conn = testDataSource.getConnection()) {
-            Statement stmt = conn.createStatement();
+        try (Connection conn = testDataSource.getConnection(); Statement stmt = conn.createStatement()) {
             // 按依赖关系倒序删除
             stmt.execute("DELETE FROM transaction_items");
             stmt.execute("DELETE FROM transactions");
@@ -454,7 +455,23 @@ public abstract class DatabaseTestBase {
             stmt.execute("DELETE FROM operation_logs");
             stmt.execute("DELETE FROM recharge_records");
             stmt.execute("DELETE FROM settings");
-            stmt.close();
+            // 清空应用级缓存，防止测试之间的缓存污染
+            try {
+                com.cashier.util.CacheManager.clearCache();
+            } catch (Throwable t) {
+                logger.warn("清理缓存时发生异常: {}", t.getMessage());
+            }
         }
+    }
+
+    @BeforeEach
+    protected void prepareTestDatabase() throws SQLException {
+        initTestDatabase();
+        clearTestData();
+    }
+
+    @AfterEach
+    protected void cleanupAfterEach() throws SQLException {
+        clearTestData();
     }
 }

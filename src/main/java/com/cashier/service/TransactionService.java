@@ -278,9 +278,13 @@ public class TransactionService {
      * 生成订单号
      * @return 订单号
      */
+    private static final java.util.concurrent.atomic.AtomicLong orderSequence =
+        new java.util.concurrent.atomic.AtomicLong(0);
+
     public static String generateOrderNumber() {
         SimpleDateFormat sdf = new SimpleDateFormat("yyyyMMddHHmmssSSS");
-        return "ORD" + sdf.format(new Date());
+        return "ORD" + sdf.format(new Date()) + String.format("%04d",
+            orderSequence.getAndIncrement() % 10000);
     }
 
     /**

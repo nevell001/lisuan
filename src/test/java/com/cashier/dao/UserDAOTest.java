@@ -19,42 +19,32 @@ import static org.junit.jupiter.api.Assertions.*;
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 public class UserDAOTest extends DatabaseTestBase {
 
-    private static User testUser;
-    private static int insertedUserId;
+    private User testUser;
+    private int insertedUserId;
 
     @BeforeAll
     @DisplayName("初始化测试环境")
     public static void setUpBeforeClass() throws SQLException {
-        // 初始化测试数据库
         initTestDatabase();
-
-        // 创建测试用户
-        testUser = new User();
-        testUser.username = "testuser_" + System.currentTimeMillis();
-        testUser.password = PasswordUtil.hashPassword("testPassword123");
-        testUser.name = "测试用户";
-        testUser.role = "cashier";
-        testUser.active = true;
-        testUser.forcePasswordChange = false;
-        testUser.createTime = new java.util.Date();
-        testUser.lastLoginTime = new java.util.Date(0);
     }
 
     @BeforeEach
     @DisplayName("准备测试环境")
-    public void setUp() {
-        // 不需要清理数据，因为测试按顺序执行，依赖前面的测试结果
+    public void setUp() throws Exception {
+        testUser = createUser("testuser", "测试用户", "cashier");
+        UserDAO.insert(testUser);
+        insertedUserId = testUser.id;
     }
 
     @Test
     @Order(1)
     @DisplayName("测试插入用户")
     public void testInsertUser() throws Exception {
-        boolean result = UserDAO.insert(testUser);
+        User user = createUser("insert_test", "测试用户", "cashier");
+        boolean result = UserDAO.insert(user);
         assertTrue(result);
-        assertNotNull(testUser.id);
-        assertTrue(testUser.id > 0);
-        insertedUserId = testUser.id;
+        assertNotNull(user.id);
+        assertTrue(user.id > 0);
     }
 
     @Test
@@ -237,7 +227,7 @@ public class UserDAOTest extends DatabaseTestBase {
     private User createUser(String username, String name, String role) {
         User user = new User();
         user.username = username + "_" + System.currentTimeMillis();
-        user.password = PasswordUtil.hashPassword("password123");
+        user.password = PasswordUtil.hashPassword("testPassword123");
         user.name = name;
         user.role = role;
         user.active = true;
