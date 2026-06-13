@@ -86,15 +86,15 @@
                             <padding>
                                 <Insets top="6" right="8" bottom="6" left="8"/>
                             </padding>
-                            <Label text="🛒" style="-fx-font-size: 14px;"/>
+                            <Label text="" styleClass="icon"/>
                             <Label text="%nav.group.pos" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
                         </HBox>
                         <VBox spacing="1" styleClass="nav-group-content">
                             <Button fx:id="cartBtn" text="%nav.cart" onAction="#handleCart" styleClass="nav-button, nav-button-active">
-                                <graphic><Label text="🛒" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                             <Button fx:id="shiftBtn" text="%nav.shift" onAction="#handleShift" styleClass="nav-button">
-                                <graphic><Label text="🔄" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                         </VBox>
                     </VBox>
@@ -107,15 +107,15 @@
                             <padding>
                                 <Insets top="6" right="8" bottom="6" left="8"/>
                             </padding>
-                            <Label text="📦" style="-fx-font-size: 14px;"/>
+                            <Label text="" styleClass="icon"/>
                             <Label text="%nav.group.product" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
                         </HBox>
                         <VBox spacing="1" styleClass="nav-group-content">
                             <Button fx:id="inventoryBtn" text="%nav.inventory" onAction="#handleInventory" styleClass="nav-button">
-                                <graphic><Label text="📦" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                             <Button fx:id="inventoryCheckBtn" text="%nav.inventory_check" onAction="#handleInventoryCheck" styleClass="nav-button">
-                                <graphic><Label text="🔍" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                         </VBox>
                     </VBox>
@@ -128,15 +128,15 @@
                             <padding>
                                 <Insets top="6" right="8" bottom="6" left="8"/>
                             </padding>
-                            <Label text="👥" style="-fx-font-size: 14px;"/>
+                            <Label text="" styleClass="icon"/>
                             <Label text="%nav.group.customer" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
                         </HBox>
                         <VBox spacing="1" styleClass="nav-group-content">
                             <Button fx:id="membersBtn" text="%nav.members" onAction="#handleMembers" styleClass="nav-button">
-                                <graphic><Label text="👥" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                             <Button fx:id="returnOrderBtn" text="%nav.return_order" onAction="#handleReturnOrder" styleClass="nav-button">
-                                <graphic><Label text="↩" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                         </VBox>
                     </VBox>
@@ -149,21 +149,21 @@
                             <padding>
                                 <Insets top="6" right="8" bottom="6" left="8"/>
                             </padding>
-                            <Label text="🏭" style="-fx-font-size: 14px;"/>
+                            <Label text="" styleClass="icon"/>
                             <Label text="%nav.group.purchase" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
                         </HBox>
                         <VBox spacing="1" styleClass="nav-group-content">
                             <Button fx:id="supplierBtn" text="%nav.supplier" onAction="#handleSupplier" styleClass="nav-button">
-                                <graphic><Label text="🏭" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                             <Button fx:id="purchaseOrderBtn" text="%nav.purchase_order" onAction="#handlePurchaseOrder" styleClass="nav-button">
-                                <graphic><Label text="📝" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                             <Button fx:id="purchaseApprovalBtn" text="%nav.purchase_approval" onAction="#handlePurchaseApproval" styleClass="nav-button">
-                                <graphic><Label text="✅" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                             <Button fx:id="purchaseInboundBtn" text="%nav.purchase_inbound" onAction="#handlePurchaseInbound" styleClass="nav-button">
-                                <graphic><Label text="📥" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                         </VBox>
                     </VBox>
@@ -176,18 +176,18 @@
                             <padding>
                                 <Insets top="6" right="8" bottom="6" left="8"/>
                             </padding>
-                            <Label text="📊" style="-fx-font-size: 14px;"/>
+                            <Label text="" styleClass="icon"/>
                             <Label text="%nav.group.statistics" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
                         </HBox>
                         <VBox spacing="1" styleClass="nav-group-content">
                             <Button fx:id="transactionsBtn" text="%nav.transactions" onAction="#handleTransactions" styleClass="nav-button">
-                                <graphic><Label text="📊" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                             <Button fx:id="statisticsBtn" text="%nav.statistics" onAction="#handleStatistics" styleClass="nav-button">
-                                <graphic><Label text="📈" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                             <Button fx:id="promotionsBtn" text="%nav.promotions" onAction="#handlePromotions" styleClass="nav-button">
-                                <graphic><Label text="🎉" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                         </VBox>
                     </VBox>
@@ -200,21 +200,21 @@
                             <padding>
                                 <Insets top="6" right="8" bottom="6" left="8"/>
                             </padding>
-                            <Label text="📑" style="-fx-font-size: 14px;"/>
+                            <Label text="" styleClass="icon"/>
                             <Label text="%nav.group.reports" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
                         </HBox>
                         <VBox spacing="1" styleClass="nav-group-content">
                             <Button fx:id="purchaseReportBtn" text="%nav.purchase_report" onAction="#handlePurchaseReport" styleClass="nav-button">
-                                <graphic><Label text="📊" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                             <Button fx:id="inventoryReportBtn" text="%nav.inventory_report" onAction="#handleInventoryReport" styleClass="nav-button">
-                                <graphic><Label text="📉" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                             <Button fx:id="profitReportBtn" text="%nav.profit_report" onAction="#handleProfitReport" styleClass="nav-button">
-                                <graphic><Label text="💰" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                             <Button fx:id="returnReportBtn" text="%nav.return_report" onAction="#handleReturnReport" styleClass="nav-button">
-                                <graphic><Label text="📈" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                         </VBox>
                     </VBox>
@@ -227,18 +227,18 @@
                             <padding>
                                 <Insets top="6" right="8" bottom="6" left="8"/>
                             </padding>
-                            <Label text="⚙" style="-fx-font-size: 14px;"/>
+                            <Label text="" styleClass="icon"/>
                             <Label text="%nav.group.system" style="-fx-font-size: 13px; -fx-font-weight: bold; -fx-text-fill: #666666;"/>
                         </HBox>
                         <VBox spacing="1" styleClass="nav-group-content">
                             <Button fx:id="userManagementBtn" text="%nav.user_management" onAction="#handleUserManagement" styleClass="nav-button">
-                                <graphic><Label text="👤" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                             <Button fx:id="returnApprovalBtn" text="%nav.return_approval" onAction="#handleReturnApproval" styleClass="nav-button">
-                                <graphic><Label text="✓" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                             <Button fx:id="settingsBtn" text="%nav.settings" onAction="#handleSettings" styleClass="nav-button">
-                                <graphic><Label text="⚙" style="-fx-font-size: 14px;"/></graphic>
+                                <graphic><Label text="" styleClass="icon"/></graphic>
                             </Button>
                         </VBox>
                     </VBox>

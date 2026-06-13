@@ -16,6 +16,7 @@
     -fx-text-fill-disabled: #A0A0A0;
     -fx-font-family: "Noto Sans CJK JP", "Noto Sans CJK JP Bold", "Noto Sans SC", "Noto Sans CJK SC",
                      "Microsoft YaHei", "SimHei", "UKIJ CJK",
+                     "Apple Color Emoji", "Segoe UI Emoji", "Noto Color Emoji",
                      "DejaVu Sans", "Liberation Sans", "Ubuntu", "Arial", sans-serif;
 }
 

@@ -3,6 +3,39 @@
  * 定义通用的 CSS 样式规则
  */
 
+/* ========== FontAwesome 图标字体 ========== */
+@font-face {
+    src: url("../fonts/fontawesome-webfont.ttf");
+}
+
+/* 图标通用样式 */
+.icon {
+    -fx-font-family: "FontAwesome";
+    -fx-font-size: 14px;
+}
+
+.icon-small {
+    -fx-font-family: "FontAwesome";
+    -fx-font-size: 12px;
+}
+
+.icon-large {
+    -fx-font-family: "FontAwesome";
+    -fx-font-size: 18px;
+}
+
+/* 分组标题图标 - 淡色、较小 */
+.nav-group-header .icon {
+    -fx-font-size: 12px;
+    -fx-opacity: 0.6;
+}
+
+/* 按钮图标 - 正常大小 */
+.nav-button .icon {
+    -fx-font-size: 14px;
+    -fx-opacity: 1.0;
+}
+
 /* ========== 全局样式 ========== */
 .root {
     -fx-font-family: "Noto Sans CJK JP", "Noto Sans CJK JP Bold", "Noto Sans SC", "Noto Sans CJK SC",
