@@ -1,6 +1,7 @@
 package com.cashier.model;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 
 /**
  * 发票商品明细
@@ -58,7 +59,7 @@ public class InvoiceItem {
         // 价格不含税计算（假设价格是含税价）
         BigDecimal taxRate = new BigDecimal("0.13");
         BigDecimal taxDivisor = BigDecimal.ONE.add(taxRate);
-        item.unitPrice = product.price.divide(taxDivisor, 2, BigDecimal.ROUND_HALF_UP);
+        item.unitPrice = product.price.divide(taxDivisor, 2, RoundingMode.HALF_UP);
         
         item.calculateAmount(taxRate);
         

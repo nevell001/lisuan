@@ -1,7 +1,7 @@
 package com.cashier.service;
 
 import com.cashier.dao.PromotionDAO;
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
 import com.cashier.util.DatabaseTestBase;
 import com.cashier.model.CartItem;
 import com.cashier.model.Product;
@@ -327,8 +327,8 @@ class PromotionServiceTest extends DatabaseTestBase {
         product.cost = BigDecimal.valueOf(price).multiply(new BigDecimal("0.7"));
         product.version = 0;
 
-        ProductDAO.insert(product);
-        return ProductDAO.findByName(name);
+        DAOFactory.getInstance().getProductDAO().insert(product);
+        return DAOFactory.getInstance().getProductDAO().findByName(name);
     }
 
 }

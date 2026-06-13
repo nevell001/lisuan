@@ -3,7 +3,6 @@ package com.cashier.dao;
 import com.cashier.util.DatabaseManager;
 
 import java.sql.*;
-import java.util.Map;
 
 /**
  * 系统设置数据访问对象

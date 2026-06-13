@@ -2,8 +2,6 @@ package com.cashier.dao;
 
 import com.cashier.model.PurchaseOrder;
 import com.cashier.util.DatabaseManager;
-import org.slf4j.Logger;
-import com.cashier.util.LoggerFactoryUtil;
 
 import java.sql.*;
 import java.math.BigDecimal;
@@ -15,7 +13,6 @@ import java.util.List;
  * 负责采购订单相关的数据库操作
  */
 public class PurchaseOrderDAO {
-    private static final Logger logger = LoggerFactoryUtil.getLogger(PurchaseOrderDAO.class);
 
     /**
      * 根据ID查找采购订单

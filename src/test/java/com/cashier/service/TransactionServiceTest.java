@@ -1,7 +1,7 @@
 package com.cashier.service;
 
 import com.cashier.dao.MemberDAO;
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
 import com.cashier.dao.PromotionDAO;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.util.DatabaseTestBase;
@@ -121,8 +121,8 @@ class TransactionServiceTest extends DatabaseTestBase {
     @DisplayName("测试交易扣减库存")
     void testTransactionDeductInventory() throws Exception {
         // 获取初始库存
-        Product initialProduct1 = ProductDAO.findByName("商品1");
-        Product initialProduct2 = ProductDAO.findByName("商品2");
+        Product initialProduct1 = DAOFactory.getInstance().getProductDAO().findByName("商品1");
+        Product initialProduct2 = DAOFactory.getInstance().getProductDAO().findByName("商品2");
 
         // 执行交易
         TransactionService.TransactionResult result = TransactionService.executeTransaction(
@@ -137,8 +137,8 @@ class TransactionServiceTest extends DatabaseTestBase {
         assertTrue(result.isSuccess());
 
         // 验证库存已扣减
-        Product updatedProduct1 = ProductDAO.findByName("商品1");
-        Product updatedProduct2 = ProductDAO.findByName("商品2");
+        Product updatedProduct1 = DAOFactory.getInstance().getProductDAO().findByName("商品1");
+        Product updatedProduct2 = DAOFactory.getInstance().getProductDAO().findByName("商品2");
 
         assertEquals(initialProduct1.quantity - 2, updatedProduct1.quantity);
         assertEquals(initialProduct2.quantity - 1, updatedProduct2.quantity);
@@ -267,8 +267,8 @@ class TransactionServiceTest extends DatabaseTestBase {
     @Order(10)
     @DisplayName("测试促销次数更新失败时交易与库存一起回滚")
     void testExecutePreparedTransactionRollbackOnPromotionUpdateFailure() throws Exception {
-        int initialProduct1Quantity = ProductDAO.findById(testProducts.get(0).id).quantity;
-        int initialProduct2Quantity = ProductDAO.findById(testProducts.get(1).id).quantity;
+        int initialProduct1Quantity = DAOFactory.getInstance().getProductDAO().findById(testProducts.get(0).id).quantity;
+        int initialProduct2Quantity = DAOFactory.getInstance().getProductDAO().findById(testProducts.get(1).id).quantity;
 
         Promotion invalidPromotion = new Promotion();
         invalidPromotion.id = Integer.MAX_VALUE;
@@ -286,8 +286,8 @@ class TransactionServiceTest extends DatabaseTestBase {
         assertFalse(result.isSuccess());
         assertNull(result.getTransaction());
         assertTrue(result.getMessage().contains("更新促销使用次数失败"));
-        assertEquals(initialProduct1Quantity, ProductDAO.findById(testProducts.get(0).id).quantity);
-        assertEquals(initialProduct2Quantity, ProductDAO.findById(testProducts.get(1).id).quantity);
+        assertEquals(initialProduct1Quantity, DAOFactory.getInstance().getProductDAO().findById(testProducts.get(0).id).quantity);
+        assertEquals(initialProduct2Quantity, DAOFactory.getInstance().getProductDAO().findById(testProducts.get(1).id).quantity);
         assertTrue(TransactionDAO.findAll().isEmpty());
     }
 
@@ -333,8 +333,8 @@ class TransactionServiceTest extends DatabaseTestBase {
         product.cost = BigDecimal.valueOf(price).multiply(new BigDecimal("0.7"));
         product.version = 0;
 
-        ProductDAO.insert(product);
-        return ProductDAO.findByName(name);
+        DAOFactory.getInstance().getProductDAO().insert(product);
+        return DAOFactory.getInstance().getProductDAO().findByName(name);
     }
 
     private Transaction createPreparedTransaction(String transactionId, String paymentMethod, BigDecimal finalAmount, Member member) {

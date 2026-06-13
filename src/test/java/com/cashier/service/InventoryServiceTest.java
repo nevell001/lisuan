@@ -1,6 +1,6 @@
 package com.cashier.service;
 
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
 import com.cashier.util.DatabaseTestBase;
 import com.cashier.model.Product;
 import org.junit.jupiter.api.*;
@@ -50,7 +50,7 @@ class InventoryServiceTest extends DatabaseTestBase {
         assertTrue(count > 0);
 
         // 验证库存已扣减
-        Product updatedProduct = ProductDAO.findById(testProduct.id);
+        Product updatedProduct = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
         assertEquals(initialQuantity - deductQuantity, updatedProduct.quantity);
     }
 
@@ -68,7 +68,7 @@ class InventoryServiceTest extends DatabaseTestBase {
         assertEquals(0, count);
 
         // 验证库存未变化
-        Product updatedProduct = ProductDAO.findById(testProduct.id);
+        Product updatedProduct = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
         assertEquals(testProduct.quantity, updatedProduct.quantity);
     }
 
@@ -87,7 +87,7 @@ class InventoryServiceTest extends DatabaseTestBase {
         assertTrue(count > 0);
 
         // 验证库存已增加
-        Product updatedProduct = ProductDAO.findById(testProduct.id);
+        Product updatedProduct = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
         assertEquals(initialQuantity + increaseQuantity, updatedProduct.quantity);
     }
 
@@ -105,8 +105,8 @@ class InventoryServiceTest extends DatabaseTestBase {
 
         assertEquals(0, count);
 
-        Product firstUpdatedProduct = ProductDAO.findById(testProduct.id);
-        Product secondUpdatedProduct = ProductDAO.findById(secondProduct.id);
+        Product firstUpdatedProduct = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
+        Product secondUpdatedProduct = DAOFactory.getInstance().getProductDAO().findById(secondProduct.id);
         assertEquals(testProduct.quantity, firstUpdatedProduct.quantity);
         assertEquals(secondProduct.quantity, secondUpdatedProduct.quantity);
     }
@@ -141,8 +141,8 @@ class InventoryServiceTest extends DatabaseTestBase {
         product.cost = BigDecimal.valueOf(price).multiply(new BigDecimal("0.7"));
         product.version = 0;
 
-        ProductDAO.insert(product);
-        return ProductDAO.findByName(name);
+        DAOFactory.getInstance().getProductDAO().insert(product);
+        return DAOFactory.getInstance().getProductDAO().findByName(name);
     }
 
     }

@@ -9,6 +9,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -205,7 +206,7 @@ public class InvoicePrintService {
      */
     private static String formatAmount(BigDecimal amount) {
         if (amount == null) return "0.00";
-        return amount.setScale(2, BigDecimal.ROUND_HALF_UP).toString();
+        return amount.setScale(2, RoundingMode.HALF_UP).toString();
     }
     
     /**
@@ -225,7 +226,7 @@ public class InvoicePrintService {
         String[] digits = {"零", "壹", "贰", "叁", "肆", "伍", "陆", "柒", "捌", "玖"};
         String[] units = {"", "拾", "佰", "仟", "万", "拾", "佰", "仟", "亿"};
         
-        long value = amount.setScale(0, BigDecimal.ROUND_HALF_UP).longValue();
+        long value = amount.setScale(0, RoundingMode.HALF_UP).longValue();
         
         if (value == 0) return "零元整";
         

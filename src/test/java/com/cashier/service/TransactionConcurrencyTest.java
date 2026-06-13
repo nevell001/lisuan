@@ -1,7 +1,7 @@
 package com.cashier.service;
 
 import com.cashier.dao.MemberDAO;
-import com.cashier.dao.ProductDAO;
+import com.cashier.dao.DAOFactory;
 import com.cashier.dao.TransactionDAO;
 import com.cashier.util.DatabaseTestBase;
 import com.cashier.model.CartItem;
@@ -67,7 +67,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
     @DisplayName("测试乐观锁 - 正常情况")
     void testOptimisticLockingNormal() throws Exception {
         // 获取初始版本号
-        Product initialProduct = ProductDAO.findById(testProduct.id);
+        Product initialProduct = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
         int initialVersion = initialProduct.version;
 
         // 执行交易
@@ -83,7 +83,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         assertTrue(result.isSuccess());
 
         // 验证版本号已更新
-        Product updatedProduct = ProductDAO.findById(testProduct.id);
+        Product updatedProduct = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
         assertEquals(initialVersion + 1, updatedProduct.version);
     }
 
@@ -92,7 +92,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
     @DisplayName("测试乐观锁 - 版本冲突")
     void testOptimisticLockingConflict() throws Exception {
         // 获取初始版本号
-        Product initialProduct = ProductDAO.findById(testProduct.id);
+        Product initialProduct = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
         int initialVersion = initialProduct.version;
 
         // 第一次执行交易
@@ -111,12 +111,12 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         assertTrue(result1.isSuccess());
 
         // 验证版本号已更新
-        Product productAfterFirstTx = ProductDAO.findById(testProduct.id);
+        Product productAfterFirstTx = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
         assertEquals(initialVersion + 1, productAfterFirstTx.version);
 
         // 模拟并发场景：使用旧版本号尝试第二次交易
         // 这里我们模拟手动修改version来测试冲突检测
-        Product oldVersionProduct = ProductDAO.findById(testProduct.id);
+        Product oldVersionProduct = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
         oldVersionProduct.version = initialVersion; // 使用旧版本号
 
         // 注意：在实际的并发场景中，这会在数据库层面失败
@@ -138,7 +138,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         assertTrue(result2.isSuccess());
 
         // 验证版本号再次更新
-        Product productAfterSecondTx = ProductDAO.findById(testProduct.id);
+        Product productAfterSecondTx = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
         assertEquals(initialVersion + 2, productAfterSecondTx.version);
     }
 
@@ -147,7 +147,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
     @DisplayName("测试库存不足")
     void testInsufficientStock() throws Exception {
         // 获取初始库存
-        Product initialProduct = ProductDAO.findById(testProduct.id);
+        Product initialProduct = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
         int initialQuantity = initialProduct.quantity;
 
         // 尝试购买超过库存的商品
@@ -169,7 +169,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         assertTrue(result.getMessage().contains("库存不足") || result.getMessage().contains("不够"));
 
         // 验证库存没有变化
-        Product updatedProduct = ProductDAO.findById(testProduct.id);
+        Product updatedProduct = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
         assertEquals(initialQuantity, updatedProduct.quantity);
     }
 
@@ -247,7 +247,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         assertEquals("现金", result1.getTransaction().paymentMethod);
 
         // 刷新库存用于下一次测试
-        Product refreshedProduct = ProductDAO.findById(testProduct.id);
+        Product refreshedProduct = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
         inventory.put(refreshedProduct.name, refreshedProduct);
 
         // 测试微信支付
@@ -265,7 +265,7 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         assertEquals("微信", result2.getTransaction().paymentMethod);
 
         // 刷新库存用于下一次测试
-        Product refreshedProduct2 = ProductDAO.findById(testProduct.id);
+        Product refreshedProduct2 = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
         inventory.put(refreshedProduct2.name, refreshedProduct2);
 
         // 测试支付宝支付
@@ -389,8 +389,8 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         assertAmountEquals(expectedTotal, result.getTransaction().totalAmount);
 
         // 验证两个商品的库存都已扣减
-        Product updatedProduct1 = ProductDAO.findById(testProduct.id);
-        Product updatedProduct2 = ProductDAO.findById(product2.id);
+        Product updatedProduct1 = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
+        Product updatedProduct2 = DAOFactory.getInstance().getProductDAO().findById(product2.id);
         assertEquals(100 - 3, updatedProduct1.quantity);
         assertEquals(50 - 2, updatedProduct2.quantity);
     }
@@ -419,8 +419,8 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         assertTrue(result.isSuccess());
 
         // 验证两个商品的库存都已正确扣减
-        Product updatedProduct1 = ProductDAO.findById(testProduct.id);
-        Product updatedProduct2 = ProductDAO.findById(product2.id);
+        Product updatedProduct1 = DAOFactory.getInstance().getProductDAO().findById(testProduct.id);
+        Product updatedProduct2 = DAOFactory.getInstance().getProductDAO().findById(product2.id);
         assertEquals(40, updatedProduct1.quantity); // 100 - 60
         assertEquals(25, updatedProduct2.quantity); // 50 - 25
     }
@@ -441,8 +441,8 @@ class TransactionConcurrencyTest extends DatabaseTestBase {
         product.cost = BigDecimal.valueOf(price).multiply(new BigDecimal("0.7"));
         product.version = 0;
 
-        ProductDAO.insert(product);
-        return ProductDAO.findByName(name);
+        DAOFactory.getInstance().getProductDAO().insert(product);
+        return DAOFactory.getInstance().getProductDAO().findByName(name);
     }
 
     private void assertAmountEquals(double expected, BigDecimal actual) {

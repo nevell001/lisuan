@@ -9,7 +9,6 @@ import org.apache.pdfbox.pdmodel.common.PDRectangle;
 import org.apache.pdfbox.pdmodel.font.PDFont;
 import org.apache.pdfbox.pdmodel.font.PDType0Font;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.awt.Color;
 import java.io.File;
@@ -302,7 +301,6 @@ public class ExportUtil {
             yPosition -= rowHeight * 1.5f;
 
             // 绘制表格
-            float tableTop = yPosition;
             
             // 绘制表头
             drawTableHeader(contentStream, font, headerFontSize, margin, yPosition, rowHeight, tableWidth, headers, columnWidths);
@@ -310,7 +308,6 @@ public class ExportUtil {
 
             // 绘制数据行
             contentStream.setFont(font, dataFontSize);
-            float dataStartY = yPosition; // 记录数据区域起始位置
             
             for (int rowIndex = 0; rowIndex < data.size(); rowIndex++) {
                 String[] rowData = data.get(rowIndex);
@@ -343,8 +340,6 @@ public class ExportUtil {
                     page = new PDPage(newLandscape);
                     document.addPage(page);
                     yPosition = pageHeight - margin;
-                    tableTop = yPosition;
-                    dataStartY = yPosition;
                     contentStream = new PDPageContentStream(document, page, PDPageContentStream.AppendMode.APPEND, true);
                     contentStream.setFont(font, dataFontSize);
                     // 绘制表头
@@ -636,24 +631,6 @@ public class ExportUtil {
     /**
      * 绘制数据行边框（不包括表头）
      */
-    private static void drawDataBorder(PDPageContentStream contentStream, float x, float y, 
-                                         float width, float height, float[] columnWidths) throws IOException {
-        // 绘制外边框
-        contentStream.setStrokingColor(Color.BLACK);
-        contentStream.setLineWidth(1);
-        contentStream.addRect(x, y, width, height);
-        contentStream.stroke();
-        
-        // 绘制垂直分隔线
-        float xPos = x;
-        for (int i = 0; i < columnWidths.length - 1; i++) {
-            xPos += columnWidths[i];
-            contentStream.moveTo(xPos, y);
-            contentStream.lineTo(xPos, y + height);
-            contentStream.stroke();
-        }
-    }
-
     /**
      * 计算文本需要的行数（逐个字符测试宽度）
      */

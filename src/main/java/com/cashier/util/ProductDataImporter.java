@@ -8,7 +8,6 @@ import com.cashier.model.Category;
 import com.cashier.model.Product;
 import com.cashier.model.Unit;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.BufferedReader;
 import java.math.BigDecimal;

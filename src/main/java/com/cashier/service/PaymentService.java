@@ -9,6 +9,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.HashMap;
@@ -189,7 +190,7 @@ public class PaymentService {
         sb.append("https://qr.alipay.com/bax00");
         sb.append(order.merchantOrderNo);
         sb.append("_");
-        sb.append(order.amount.setScale(2, BigDecimal.ROUND_HALF_UP).toString().replace(".", ""));
+        sb.append(order.amount.setScale(2, RoundingMode.HALF_UP).toString().replace(".", ""));
         
         return sb.toString();
     }

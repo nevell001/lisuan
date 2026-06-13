@@ -167,7 +167,7 @@ class ReturnServiceTest extends DatabaseTestBase {
         assertNotNull(updatedOrder.approvalDate);
 
         // 验证库存已增加（退货数量 = 30/10 = 3）
-        Product updatedProduct = ProductDAO.findById(testProduct1.id);
+        Product updatedProduct = DAOFactory.getInstance().getProductDAO().findById(testProduct1.id);
         assertEquals(initialQuantity + 3, updatedProduct.quantity);
     }
 
@@ -197,7 +197,7 @@ class ReturnServiceTest extends DatabaseTestBase {
         assertEquals("测试审批员", updatedOrder.approverName);
 
         // 验证库存没有变化（拒绝的退货不恢复库存）
-        Product updatedProduct = ProductDAO.findById(testProduct1.id);
+        Product updatedProduct = DAOFactory.getInstance().getProductDAO().findById(testProduct1.id);
         assertEquals(initialQuantity, updatedProduct.quantity);
     }
 
@@ -403,7 +403,7 @@ class ReturnServiceTest extends DatabaseTestBase {
     @DisplayName("测试审批退货失败时状态、库存与日志一起回滚")
     void testApproveReturnOrderRollbackOnOperationLogFailure() throws Exception {
         ReturnOrder returnOrder = createTestReturnOrder(30.0);
-        int initialQuantity = ProductDAO.findById(testProduct1.id).quantity;
+        int initialQuantity = DAOFactory.getInstance().getProductDAO().findById(testProduct1.id).quantity;
 
         boolean success = ReturnService.approveReturnOrder(returnOrder.returnOrderId, null, "同意退货", true);
 
@@ -413,7 +413,7 @@ class ReturnServiceTest extends DatabaseTestBase {
         assertNotNull(updatedOrder);
         assertEquals("PENDING", updatedOrder.status);
         assertNull(updatedOrder.approvalDate);
-        assertEquals(initialQuantity, ProductDAO.findById(testProduct1.id).quantity);
+        assertEquals(initialQuantity, DAOFactory.getInstance().getProductDAO().findById(testProduct1.id).quantity);
         assertTrue(OperationLogDAO.findAll().isEmpty());
     }
 
@@ -541,8 +541,8 @@ class ReturnServiceTest extends DatabaseTestBase {
         product.cost = BigDecimal.valueOf(price).multiply(new BigDecimal("0.7"));
         product.version = 0;
 
-        ProductDAO.insert(product);
-        return ProductDAO.findByName(name);
+        DAOFactory.getInstance().getProductDAO().insert(product);
+        return DAOFactory.getInstance().getProductDAO().findByName(name);
     }
 
     private void assertAmountEquals(double expected, BigDecimal actual) {

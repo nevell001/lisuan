@@ -57,7 +57,7 @@ public class ProductDAOTest extends DatabaseTestBase {
     @Order(1)
     @DisplayName("测试插入商品")
     public void testInsertProduct() throws SQLException {
-        boolean result = ProductDAO.insert(testProduct);
+        boolean result = DAOFactory.getInstance().getProductDAO().insert(testProduct);
         assertTrue(result);
         assertNotNull(testProduct.id);
         assertTrue(testProduct.id > 0);
@@ -68,7 +68,7 @@ public class ProductDAOTest extends DatabaseTestBase {
     @Order(2)
     @DisplayName("测试根据ID查找商品")
     public void testFindById() throws SQLException {
-        Product found = ProductDAO.findById(insertedProductId);
+        Product found = DAOFactory.getInstance().getProductDAO().findById(insertedProductId);
         assertNotNull(found);
         assertEquals(insertedProductId, found.id);
         assertEquals("测试商品-单元测试", found.name);
@@ -79,7 +79,7 @@ public class ProductDAOTest extends DatabaseTestBase {
     @Order(3)
     @DisplayName("测试根据商品编号查找商品")
     public void testFindByProductCode() throws SQLException {
-        Product found = ProductDAO.findByProductCode("TEST001");
+        Product found = DAOFactory.getInstance().getProductDAO().findByProductCode("TEST001");
         assertNotNull(found);
         assertEquals("TEST001", found.productCode);
         assertEquals("测试商品-单元测试", found.name);
@@ -89,7 +89,7 @@ public class ProductDAOTest extends DatabaseTestBase {
     @Order(4)
     @DisplayName("测试根据条形码查找商品")
     public void testFindByBarcode() throws SQLException {
-        Product found = ProductDAO.findByBarcode("TEST1234567890");
+        Product found = DAOFactory.getInstance().getProductDAO().findByBarcode("TEST1234567890");
         assertNotNull(found);
         assertEquals("TEST1234567890", found.barcode);
         assertEquals("测试商品-单元测试", found.name);
@@ -99,7 +99,7 @@ public class ProductDAOTest extends DatabaseTestBase {
     @Order(5)
     @DisplayName("测试查询所有商品")
     public void testFindAll() throws SQLException {
-        List<Product> products = ProductDAO.findAll();
+        List<Product> products = DAOFactory.getInstance().getProductDAO().findAll();
         assertNotNull(products);
         assertTrue(products.size() > 0);
 
@@ -117,10 +117,10 @@ public class ProductDAOTest extends DatabaseTestBase {
         testProduct.quantity = 100;
         testProduct.description = "更新后的商品描述";
 
-        boolean result = ProductDAO.update(testProduct);
+        boolean result = DAOFactory.getInstance().getProductDAO().update(testProduct);
         assertTrue(result);
 
-        Product updated = ProductDAO.findById(insertedProductId);
+        Product updated = DAOFactory.getInstance().getProductDAO().findById(insertedProductId);
         assertEquals(25.99, updated.price.doubleValue(), 0.01);
         assertEquals(100, updated.quantity);
         assertEquals("更新后的商品描述", updated.description);
@@ -130,10 +130,10 @@ public class ProductDAOTest extends DatabaseTestBase {
     @Order(7)
     @DisplayName("测试更新商品库存")
     public void testUpdateQuantity() throws SQLException {
-        boolean result = ProductDAO.updateQuantity(insertedProductId, 10);
+        boolean result = DAOFactory.getInstance().getProductDAO().updateQuantity(insertedProductId, 10);
         assertTrue(result);
 
-        Product updated = ProductDAO.findById(insertedProductId);
+        Product updated = DAOFactory.getInstance().getProductDAO().findById(insertedProductId);
         assertEquals(110, updated.quantity);
     }
 
@@ -141,7 +141,7 @@ public class ProductDAOTest extends DatabaseTestBase {
     @Order(8)
     @DisplayName("测试搜索商品")
     public void testSearchProduct() throws SQLException {
-        List<Product> results = ProductDAO.search("测试");
+        List<Product> results = DAOFactory.getInstance().getProductDAO().search("测试");
         assertNotNull(results);
         assertTrue(results.size() > 0);
 
@@ -154,7 +154,7 @@ public class ProductDAOTest extends DatabaseTestBase {
     @Order(9)
     @DisplayName("测试根据分类查询商品")
     public void testFindByCategory() throws SQLException {
-        List<Product> results = ProductDAO.findByCategory("测试分类");
+        List<Product> results = DAOFactory.getInstance().getProductDAO().findByCategory("测试分类");
         assertNotNull(results);
         assertTrue(results.size() > 0);
 
@@ -167,23 +167,23 @@ public class ProductDAOTest extends DatabaseTestBase {
     @Order(10)
     @DisplayName("测试删除商品")
     public void testDeleteProduct() throws SQLException {
-        boolean result = ProductDAO.delete(insertedProductId);
+        boolean result = DAOFactory.getInstance().getProductDAO().delete(insertedProductId);
         assertTrue(result);
 
-        Product deleted = ProductDAO.findById(insertedProductId);
+        Product deleted = DAOFactory.getInstance().getProductDAO().findById(insertedProductId);
         assertNull(deleted);
     }
 
     @Test
     @DisplayName("测试查找不存在的商品")
     public void testFindNonExistentProduct() throws SQLException {
-        Product found = ProductDAO.findById(999999);
+        Product found = DAOFactory.getInstance().getProductDAO().findById(999999);
         assertNull(found);
 
-        found = ProductDAO.findByProductCode("NONEXISTENT");
+        found = DAOFactory.getInstance().getProductDAO().findByProductCode("NONEXISTENT");
         assertNull(found);
 
-        found = ProductDAO.findByBarcode("9999999999999");
+        found = DAOFactory.getInstance().getProductDAO().findByBarcode("9999999999999");
         assertNull(found);
     }
 
@@ -196,7 +196,7 @@ public class ProductDAOTest extends DatabaseTestBase {
             new Product(0, "BATCH003", "批量测试商品3", 30.00, 40, "批量测试", "BATCH3", "件", "描述3", "品牌3", "供应商3", "规格3", 15, 25.00)
         );
 
-        ProductDAO.batchInsert(products);
+        DAOFactory.getInstance().getProductDAO().batchInsert(products);
 
         // 验证插入成功
         for (Product p : products) {
@@ -206,7 +206,7 @@ public class ProductDAOTest extends DatabaseTestBase {
 
         // 清理测试数据
         for (Product p : products) {
-            ProductDAO.delete(p.id);
+            DAOFactory.getInstance().getProductDAO().delete(p.id);
         }
     }
 

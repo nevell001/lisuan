@@ -4,7 +4,6 @@ import javafx.scene.control.*;
 import javafx.scene.control.TextFormatter;
 import javafx.scene.layout.Region;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.util.function.Predicate;
 import java.util.regex.Pattern;
