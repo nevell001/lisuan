@@ -326,6 +326,14 @@ public abstract class DatabaseTestBase {
             )
             """);
 
+        // 创建 settings 表（系统设置）
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS settings (
+                `key` VARCHAR(100) PRIMARY KEY,
+                `value` VARCHAR(1000)
+            )
+            """);
+
         // 创建 return_orders 表（退货订单）
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS return_orders (
@@ -445,6 +453,7 @@ public abstract class DatabaseTestBase {
             stmt.execute("DELETE FROM return_orders");
             stmt.execute("DELETE FROM operation_logs");
             stmt.execute("DELETE FROM recharge_records");
+            stmt.execute("DELETE FROM settings");
             stmt.close();
         }
     }

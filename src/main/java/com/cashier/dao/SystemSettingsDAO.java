@@ -144,7 +144,7 @@ public class SystemSettingsDAO {
      */
     public static java.util.Map<String, String> getAllSettings() throws SQLException {
         java.util.Map<String, String> settings = new java.util.HashMap<>();
-        String sql = "SELECT `key`, value FROM settings";
+        String sql = "SELECT `key`, `value` FROM settings";
 
         try (Connection conn = DatabaseManager.getConnection();
              Statement stmt = conn.createStatement();
