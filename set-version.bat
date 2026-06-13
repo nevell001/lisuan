@@ -60,7 +60,7 @@ for %%F in (run-app.ps1 package-simple.ps1) do (
     )
 )
 
-echo [6/7] Updating version in shell scripts...
+echo [6/8] Updating version in shell scripts...
 if exist "start.sh" (
     powershell -Command "(Get-Content 'start.sh') -replace 'APP_VERSION=\"[\d\.]+\"', 'APP_VERSION=\"%NEW_VERSION%\"' | Set-Content 'start.sh'"
 )
@@ -71,7 +71,21 @@ if exist ".env.example" (
     powershell -Command "(Get-Content '.env.example') -replace 'APP_VERSION=[\d\.]+', 'APP_VERSION=%NEW_VERSION%' | Set-Content '.env.example'"
 )
 
-echo [7/7] Verifying updates...
+echo [7/8] Updating version in i18n files...
+for %%F in (
+    "src\main\resources\com\cashier\i18n\messages.properties"
+    "src\main\resources\com\cashier\i18n\messages_en.properties"
+    "src\main\resources\com\cashier\i18n\messages_zh_CN.properties"
+    "src\main\resources\com\cashier\i18n\messages_zh_TW.properties"
+    "src\main\resources\com\cashier\i18n\messages_ja.properties"
+    "src\main\resources\com\cashier\i18n\messages_ko.properties"
+) do (
+    if exist "%%F" (
+        powershell -Command "(Get-Content '%%F') -replace 'v[\d\.]+', 'v%NEW_VERSION%' | Set-Content '%%F'"
+    )
+)
+
+echo [8/8] Verifying updates...
 echo.
 
 echo ========================================
