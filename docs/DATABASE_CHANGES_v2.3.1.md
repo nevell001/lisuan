@@ -1,5 +1,9 @@
 # 数据库变更记录 v2.3.1
 
+> 注意：文档中曾提及的旧静态类 `ProductDAO` 已于最近移除并由 `ProductDAORefactored` 替代。
+> 如果需要回退，旧实现已备份：`backups/ProductDAO.java.bak`。
+
+
 ## 版本信息
 - **版本**: v2.3.1
 - **更新日期**: 2026-02-13

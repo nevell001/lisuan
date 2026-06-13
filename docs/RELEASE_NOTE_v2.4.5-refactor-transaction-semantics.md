@@ -50,6 +50,7 @@
 - `UserDAOTest` 12/12
 - `BaseDAOTest` 3/3
 - `ProductDAOTest` 12/12
+- 说明：历史上的静态 `ProductDAO` 实现已在后续迁移中被删除并由 `ProductDAORefactored` 替代。旧实现备份于 `backups/ProductDAO.java.bak`。
 - `ProductDAORefactoredTest` 5/5
 - `TransactionConcurrencyTest` 11/11
 - `PromotionServiceTest` 14/14

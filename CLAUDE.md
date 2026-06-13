@@ -218,10 +218,10 @@ List<Product> products = productDAO.findAll();
 productDAO.update(product);
 ```
 
-**Legacy Pattern (Being Phased Out):**
-- Old `ProductDAO` uses static methods
-- Still exists in some files but should not be used for new code
-- Example files still using legacy pattern: `DataService.java`, `TransactionService.java`, `ReturnService.java`
+**Legacy Pattern (Status Updated):**
+- The old static `ProductDAO` implementation has been removed from `src/main/java/com/cashier/dao/` and replaced by the instance-based `ProductDAORefactored` accessible via `DAOFactory.getInstance().getProductDAO()`.
+- A backup of the removed legacy file was saved at `backups/ProductDAO.java.bak` in case rollback is needed.
+- If you have external scripts, CI jobs or docs that reference `ProductDAO`, update them to use `DAOFactory.getInstance().getProductDAO()` or `ProductDAORefactored` instance methods.
 
 **BaseDAO** (`dao/BaseDAO.java`)
 - Abstract base class for all new DAOs
