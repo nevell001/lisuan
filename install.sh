@@ -93,7 +93,7 @@ echo ""
 
 # 创建必要目录
 echo "[3/8] Creating necessary directories..."
-mkdir -p config data logs docker/mysql-init docker/mysql-backup
+mkdir -p config data logs temp docker/mysql-init docker/mysql-backup
 echo "[Done] Directories created"
 echo ""
 

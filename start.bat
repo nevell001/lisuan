@@ -41,6 +41,7 @@ echo ----------------------------------------
 if not exist "config" mkdir config
 if not exist "data" mkdir data
 if not exist "logs" mkdir logs
+if not exist "temp" mkdir temp
 
 echo [OK] Directory check passed
 echo.

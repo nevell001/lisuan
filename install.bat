@@ -96,6 +96,7 @@ echo ----------------------------------------
 if not exist "config" mkdir config
 if not exist "data" mkdir data
 if not exist "logs" mkdir logs
+if not exist "temp" mkdir temp
 
 if not exist "config\database.properties" (
     copy /Y "config\database.properties.example" "config\database.properties" >nul 2>&1

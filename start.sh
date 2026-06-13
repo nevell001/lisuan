@@ -61,7 +61,7 @@ echo ""
 
 # 检查必要目录
 echo "[2/6] Checking necessary directories..."
-mkdir -p config data logs
+mkdir -p config data logs temp
 echo "[Done] Directory check passed"
 echo ""
 
