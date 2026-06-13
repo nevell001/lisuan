@@ -102,6 +102,64 @@
             <classifier>win</classifier>
         </dependency>
 
+        <!-- JavaFX macOS 平台特定库 -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>mac-aarch64</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>mac-aarch64</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>mac-aarch64</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-base</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>mac-aarch64</classifier>
+        </dependency>
+
+        <!-- JavaFX Linux 平台特定库 -->
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-controls</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>linux</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-fxml</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>linux</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-graphics</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>linux</classifier>
+        </dependency>
+
+        <dependency>
+            <groupId>org.openjfx</groupId>
+            <artifactId>javafx-base</artifactId>
+            <version>${javafx.version}</version>
+            <classifier>linux</classifier>
+        </dependency>
+
         <!-- JavaFX Media - 音频视频支持 -->
         <dependency>
             <groupId>org.openjfx</groupId>
@@ -288,32 +346,50 @@
                 </configuration>
             </plugin>
 
-            <!-- Maven Assembly 插件 - 打包为可执行 JAR -->
+            <!-- Maven Shade 插件 - 打包为可执行 JAR -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-assembly-plugin</artifactId>
-                <version>3.6.0</version>
+                <artifactId>maven-shade-plugin</artifactId>
+                <version>3.5.1</version>
                 <configuration>
-                    <archive>
-                        <manifest>
+                    <shadedArtifactAttached>false</shadedArtifactAttached>
+                    <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
+                    <transformers>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
                             <mainClass>com.cashier.CashierSystemFXApplication</mainClass>
-                        </manifest>
-                        <manifestEntries>
-                            <JavaFX-Preloader-Class>com.cashier.SplashScreen</JavaFX-Preloader-Class>
-                            <Add-Opens>java.base/java.lang=ALL-UNNAMED java.base/java.util=ALL-UNNAMED java.base/java.lang.reflect=ALL-UNNAMED java.desktop/java.awt=ALL-UNNAMED</Add-Opens>
-                            <Add-Exports>java.base/sun.util.logging=ALL-UNNAMED java.base/sun.reflect=ALL-UNNAMED</Add-Exports>
-                        </manifestEntries>
-                    </archive>
-                    <descriptorRefs>
-                        <descriptorRef>jar-with-dependencies</descriptorRef>
-                    </descriptorRefs>
+                            <manifestEntries>
+                                <JavaFX-Preloader-Class>com.cashier.SplashScreen</JavaFX-Preloader-Class>
+                                <Add-Opens>java.base/java.lang=ALL-UNNAMED java.base/java.util=ALL-UNNAMED java.base/java.lang.reflect=ALL-UNNAMED java.desktop/java.awt=ALL-UNNAMED</Add-Opens>
+                                <Add-Exports>java.base/sun.util.logging=ALL-UNNAMED java.base/sun.reflect=ALL-UNNAMED</Add-Exports>
+                            </manifestEntries>
+                        </transformer>
+                        <transformer implementation="org.apache.maven.plugins.shade.resource.ServicesResourceTransformer"/>
+                    </transformers>
+                    <filters>
+                        <filter>
+                            <artifact>*:*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                        <!-- 保留 JavaFX 的 module-info，但排除冲突的 -->
+                        <filter>
+                            <artifact>*:javafx-*</artifact>
+                            <excludes>
+                                <exclude>META-INF/*.SF</exclude>
+                                <exclude>META-INF/*.DSA</exclude>
+                                <exclude>META-INF/*.RSA</exclude>
+                            </excludes>
+                        </filter>
+                    </filters>
                 </configuration>
                 <executions>
                     <execution>
-                        <id>make-assembly</id>
                         <phase>package</phase>
                         <goals>
-                            <goal>single</goal>
+                            <goal>shade</goal>
                         </goals>
                     </execution>
                 </executions>

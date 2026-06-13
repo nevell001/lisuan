@@ -82,7 +82,12 @@ echo ""
 
 # 检查依赖文件
 echo "[4/6] Checking dependency files..."
-JAR_FILE="target/lisuan-fx-${APP_VERSION}-jar-with-dependencies.jar"
+JAR_FILE="target/lisuan-fx-${APP_VERSION}.jar"
+
+# 如果 shaded JAR 不存在，尝试旧版本的命名
+if [ ! -f "$JAR_FILE" ]; then
+    JAR_FILE="target/lisuan-fx-${APP_VERSION}-jar-with-dependencies.jar"
+fi
 
 if [ ! -f "$JAR_FILE" ]; then
     echo "[Warning] Compiled JAR file not found"
@@ -132,7 +137,13 @@ JFX_VERSION="17.0.12"
 if [[ "$OSTYPE" == "linux-gnu"* ]] || [[ "$OSTYPE" == "linux"* ]]; then
     JFX_PLATFORM="linux"
 elif [[ "$OSTYPE" == "darwin"* ]]; then
-    JFX_PLATFORM="mac"
+    # 检测 macOS 架构
+    ARCH=$(uname -m)
+    if [[ "$ARCH" == "arm64" ]] || [[ "$ARCH" == "aarch64" ]]; then
+        JFX_PLATFORM="mac-aarch64"
+    else
+        JFX_PLATFORM="mac"
+    fi
 else
     JFX_PLATFORM="win"
 fi
@@ -140,12 +151,22 @@ fi
 JFX_PATH="$JFX_BASE/javafx-base/$JFX_VERSION/javafx-base-$JFX_VERSION-$JFX_PLATFORM.jar:$JFX_BASE/javafx-controls/$JFX_VERSION/javafx-controls-$JFX_VERSION-$JFX_PLATFORM.jar:$JFX_BASE/javafx-fxml/$JFX_VERSION/javafx-fxml-$JFX_VERSION-$JFX_PLATFORM.jar:$JFX_BASE/javafx-graphics/$JFX_VERSION/javafx-graphics-$JFX_VERSION-$JFX_PLATFORM.jar"
 
 JFX_MODULES=""
-if [ -f "$JFX_BASE/javafx-base/$JFX_VERSION/javafx-base-$JFX_VERSION-$JFX_PLATFORM.jar" ]; then
-    JFX_MODULES="--module-path $JFX_PATH --add-modules javafx.controls,javafx.fxml,javafx.graphics"
-    echo "[OK] JavaFX modules found ($JFX_PLATFORM)"
+# 检查 JAR 中是否包含 JavaFX（fat JAR）
+if jar tf "$JAR_FILE" 2>/dev/null | grep -q "javafx/scene/control/Control.class"; then
+    echo "[OK] JavaFX bundled in JAR"
+    # 使用外部 JavaFX 模块路径（即使 JAR 中包含 JavaFX，launch() 仍需要模块路径）
+    if [ -f "$JFX_BASE/javafx-base/$JFX_VERSION/javafx-base-$JFX_VERSION-$JFX_PLATFORM.jar" ]; then
+        JFX_MODULES="--module-path $JFX_PATH --add-modules javafx.controls,javafx.fxml,javafx.graphics"
+        echo "[Info] Using external JavaFX modules for runtime"
+    fi
 else
-    echo "[Warning] JavaFX not found in Maven repository"
-    echo "[Info] Will use standard classpath"
+    # 如果 JAR 中没有 JavaFX，使用外部 module-path
+    if [ -f "$JFX_BASE/javafx-base/$JFX_VERSION/javafx-base-$JFX_VERSION-$JFX_PLATFORM.jar" ]; then
+        JFX_MODULES="--module-path $JFX_PATH --add-modules javafx.controls,javafx.fxml,javafx.graphics"
+        echo "[OK] Using external JavaFX modules ($JFX_PLATFORM)"
+    else
+        echo "[Warning] JavaFX not found"
+    fi
 fi
 
 # 启动应用
@@ -158,8 +179,8 @@ echo ""
 echo "Starting, please wait..."
 echo ""
 
-# 使用 JAR 直接运行
-java $JFX_MODULES $JVM_OPTS -jar "$JAR_FILE"
+# 使用 JAR 运行，带上必要的模块参数
+java $JVM_OPTS --add-opens java.base/java.lang=ALL-UNNAMED --add-opens java.base/java.util=ALL-UNNAMED --add-opens java.base/java.lang.reflect=ALL-UNNAMED --add-opens java.desktop/java.awt=ALL-UNNAMED $JFX_MODULES -jar "$JAR_FILE"
 
 # 检查退出码
 EXIT_CODE=$?
