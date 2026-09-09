@@ -592,21 +592,34 @@ public class UserController {
                     return;
                 }
 
-                selected.password = PasswordUtil.hashPassword(newPassword);
-                try {
-                    if (DAOFactory.getInstance().getUserDAO().update(selected)) {
-                        // 密码重置后作废该用户已签发的全部 API token
-                        ApiServer.getInstance().invalidateUserTokens(selected.id);
-                        audit("USER_PASSWORD_RESET", selected.username);
-                        loadUsers();
-                        updateStatus(I18nManager.getInstance().get("user.password_reset"));
-                    } else {
-                        showError(I18nManager.getInstance().get("runtime.password_reset_failed"));
+                final String plainPassword = newPassword;
+                // BCrypt(cost 12) 与 DB 更新放到后台线程，避免对话框回调冻结 UI
+                Thread worker = new Thread(() -> {
+                    try {
+                        selected.password = PasswordUtil.hashPassword(plainPassword);
+                        boolean updated = DAOFactory.getInstance().getUserDAO().update(selected);
+                        if (updated) {
+                            // 密码重置后作废该用户已签发的全部 API token
+                            ApiServer.getInstance().invalidateUserTokens(selected.id);
+                            audit("USER_PASSWORD_RESET", selected.username);
+                        }
+                        final boolean success = updated;
+                        javafx.application.Platform.runLater(() -> {
+                            if (success) {
+                                loadUsers();
+                                updateStatus(I18nManager.getInstance().get("user.password_reset"));
+                            } else {
+                                showError(I18nManager.getInstance().get("runtime.password_reset_failed"));
+                            }
+                        });
+                    } catch (SQLException e) {
+                        logger.error("重置密码失败", e);
+                        javafx.application.Platform.runLater(() ->
+                            showError(I18nManager.getInstance().get("runtime.operation_failed")));
                     }
-                } catch (SQLException e) {
-                    logger.error("重置密码失败", e);
-                    showError(I18nManager.getInstance().get("runtime.operation_failed"));
-                }
+                }, "user-password-reset");
+                worker.setDaemon(true);
+                worker.start();
             });
         }
     }

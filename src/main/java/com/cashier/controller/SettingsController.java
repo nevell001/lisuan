@@ -1094,17 +1094,32 @@ public class SettingsController {
                 confirmAlert.setContentText(I18nManager.getInstance().get("runtime.restore_confirm", backupFileName));
                 
                 if (confirmAlert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-                    // 恢复前必须验证管理员密码，防止未授权覆盖数据
-                    if (!confirmAdminPassword()) {
+                    // 恢复前必须验证管理员密码，防止未授权覆盖数据。
+                    // 弹窗只负责收集输入（快）；BCrypt 验证放到恢复 worker 后台执行，避免冻结 UI。
+                    Optional<String> entered = askRestoreAdminPassword();
+                    if (entered.isEmpty()) {
                         com.cashier.util.StatusBarManager.updateWarning(
                             I18nManager.getInstance().get(I18nKeys.Status.CANCELLED));
                         return;
                     }
+                    final String password = entered.get();
                     final String restoreFilePath = backupFile.getAbsolutePath();
                     com.cashier.util.StatusBarManager.updateWarning("正在恢复数据…请稍候，完成后会有提示");
                     // 整库恢复可能耗时较长，放到 daemon 线程执行，避免冻结 UI
                     Thread worker = new Thread(() -> {
                         try {
+                            User admin = DAOFactory.getInstance().getUserDAO().findByUsername("admin");
+                            if (admin == null || admin.password == null || admin.password.isBlank()) {
+                                javafx.application.Platform.runLater(() ->
+                                    showError(I18nManager.getInstance().get("runtime.restore_admin_not_configured")));
+                                return;
+                            }
+                            if (!PasswordUtil.verifyPassword(password, admin.password)) {
+                                javafx.application.Platform.runLater(() ->
+                                    showError(I18nManager.getInstance().get("runtime.password_incorrect")));
+                                return;
+                            }
+
                             DataService.restoreData(restoreFilePath);
                             javafx.application.Platform.runLater(() -> {
                                 showSuccess(com.cashier.i18n.I18nManager.getInstance().get("runtime.restore_success"));
@@ -1130,10 +1145,10 @@ public class SettingsController {
     }
 
     /**
-     * 恢复备份前的管理员密码确认。
-     * 校验 admin 账号密码，通过返回 true；取消或密码错误返回 false。
+     * 弹出管理员密码输入框，仅负责收集输入（BCrypt 校验由调用方在后台线程执行）。
+     * @return 确定时返回输入的密码（可能为空串）；取消时返回 empty
      */
-    private boolean confirmAdminPassword() {
+    private Optional<String> askRestoreAdminPassword() {
         javafx.scene.control.Dialog<String> dialog = new javafx.scene.control.Dialog<>();
         dialog.setTitle(I18nManager.getInstance().get("runtime.confirm_restore"));
         dialog.setHeaderText(I18nManager.getInstance().get("runtime.restore_admin_password_hint"));
@@ -1151,27 +1166,7 @@ public class SettingsController {
         dialog.getDialogPane().getButtonTypes().addAll(okType, cancelType);
         dialog.setResultConverter(btn -> btn == okType ? passwordField.getText() : null);
 
-        Optional<String> password = dialog.showAndWait();
-        if (password.isEmpty()) {
-            return false;
-        }
-
-        try {
-            User admin = DAOFactory.getInstance().getUserDAO().findByUsername("admin");
-            if (admin == null || admin.password == null || admin.password.isBlank()) {
-                showError(I18nManager.getInstance().get("runtime.restore_admin_not_configured"));
-                return false;
-            }
-            if (!PasswordUtil.verifyPassword(password.get(), admin.password)) {
-                showError(I18nManager.getInstance().get("runtime.password_incorrect"));
-                return false;
-            }
-            return true;
-        } catch (SQLException e) {
-            logger.error("验证管理员密码失败", e);
-            showError(I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED));
-            return false;
-        }
+        return dialog.showAndWait();
     }
 
     /**
