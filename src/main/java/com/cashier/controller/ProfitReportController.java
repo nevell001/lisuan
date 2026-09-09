@@ -144,6 +144,8 @@ public class ProfitReportController {
     private Map<String, Double> productActualCostMap; // 商品实际成本（加权平均）
     private Map<String, Product> productNameMap; // 商品名称到商品的映射
     private Set<String> allCategories;
+    /** 防止重复触发查询（后台查询执行中忽略新查询） */
+    private boolean profitQueryInProgress;
     private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
 
     /**
@@ -262,15 +264,12 @@ public class ProfitReportController {
     }
 
     /**
-     * 加载数据
+     * 加载分类下拉（快）。交易/成本等重数据统一由 handleQuery 后台加载，
+     * 避免打开页面时 loadData+handleQuery 各跑一遍整段区间查询。
      */
     private void loadData() {
         try {
-            allTransactions = findTransactionsByDateRange(startDatePicker.getValue(), endDatePicker.getValue());
-            productActualCostMap = new HashMap<>();
-            productNameMap = loadProductNameMap(allTransactions);
             allCategories = loadAllCategoryNames();
-            loadProductActualCosts();
 
             // 加载分类列表到下拉框
             javafx.collections.ObservableList<String> categoryList = javafx.collections.FXCollections.observableArrayList();
@@ -280,15 +279,9 @@ public class ProfitReportController {
             com.cashier.util.I18nUiUtils.configureComboBox(categoryComboBox, value ->
                 "全部分类".equals(value) ? I18nManager.getInstance().get(I18nKeys.Filter.ALL_CATEGORIES) : value);
             categoryComboBox.getSelectionModel().select(0);
-
-            logger.info("成功加载 {} 个交易相关商品，{} 条交易记录，{} 个商品实际成本",
-                productNameMap.size(), allTransactions.size(), productActualCostMap.size());
         } catch (SQLException e) {
-            logger.error("加载数据失败", e);
+            logger.error("加载分类数据失败", e);
             showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            allTransactions = new ArrayList<>();
-            productActualCostMap = new HashMap<>();
-            productNameMap = new HashMap<>();
             allCategories = new TreeSet<>();
         }
     }
@@ -381,7 +374,7 @@ public class ProfitReportController {
     }
 
     /**
-     * 处理查询
+     * 处理查询（交易/商品/成本等重查询放到 daemon 线程，聚合与 UI 更新经 runLater 回 FX）
      */
     @FXML
     public void handleQuery() {
@@ -398,24 +391,41 @@ public class ProfitReportController {
             return;
         }
 
-        String selectedCategory = categoryComboBox.getSelectionModel().getSelectedItem();
-
-        try {
-            allTransactions = findTransactionsByDateRange(startDate, endDate);
-            productNameMap = loadProductNameMap(allTransactions);
-            productActualCostMap = new HashMap<>();
-            loadProductActualCosts();
-        } catch (SQLException e) {
-            logger.error("加载利润报表交易记录失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            allTransactions = new ArrayList<>();
-            productNameMap = new HashMap<>();
-            productActualCostMap = new HashMap<>();
+        if (profitQueryInProgress) {
             return;
         }
+        profitQueryInProgress = true;
 
-        // 计算统计数据
-        calculateStatistics(startDate, endDate, selectedCategory);
+        final String selectedCategory = categoryComboBox.getSelectionModel().getSelectedItem();
+
+        Thread worker = new Thread(() -> {
+            try {
+                // 后台加载：区间交易、交易涉及商品、加权平均成本
+                allTransactions = findTransactionsByDateRange(startDate, endDate);
+                productNameMap = loadProductNameMap(allTransactions);
+                productActualCostMap = new HashMap<>();
+                loadProductActualCosts();
+
+                logger.info("利润报表加载完成: {} 条交易, {} 个商品, {} 个实际成本",
+                    allTransactions.size(), productNameMap.size(), productActualCostMap.size());
+                javafx.application.Platform.runLater(() -> {
+                    profitQueryInProgress = false;
+                    // 计算统计数据（内存聚合 + UI 更新）
+                    calculateStatistics(startDate, endDate, selectedCategory);
+                });
+            } catch (SQLException e) {
+                logger.error("加载利润报表交易记录失败", e);
+                javafx.application.Platform.runLater(() -> {
+                    profitQueryInProgress = false;
+                    showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
+                    allTransactions = new ArrayList<>();
+                    productNameMap = new HashMap<>();
+                    productActualCostMap = new HashMap<>();
+                });
+            }
+        }, "profit-report-query");
+        worker.setDaemon(true);
+        worker.start();
     }
 
     private List<Transaction> findTransactionsByDateRange(LocalDate startDate, LocalDate endDate) throws SQLException {
