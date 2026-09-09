@@ -1,6 +1,7 @@
 package com.cashier.api.controller;
 
 import com.cashier.api.ApiServer;
+import com.cashier.api.LoginRateLimiter;
 import com.cashier.dao.DAOFactory;
 import com.cashier.model.User;
 import com.cashier.util.PasswordUtil;
@@ -16,8 +17,11 @@ import java.util.Map;
  */
 public class AuthController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(AuthController.class);
-    private static final int MAX_LOGIN_ATTEMPTS = 5;
-    private static final long LOCKOUT_DURATION_MINUTES = 5;
+
+    // 桌面端持久化锁定（login_attempts 表）阈值与时长仅由桌面端使用。
+    // API 侧失败限流使用内存版 LoginRateLimiter（按 IP，不写库），
+    // 防止未认证攻击者通过公开登录口锁死真实账号或撑大 login_attempts 表。
+    private static final String DUMMY_PASSWORD_HASH = PasswordUtil.hashPassword("login-timing-equalizer-dummy");
 
     /**
      * 登录
@@ -38,8 +42,22 @@ public class AuthController {
                 return;
             }
 
-            // 检查账户锁定（与桌面端登录保持一致策略，持久化到数据库）
+            String clientIp = ctx.ip();
+
+            // 内存按 IP 限流：防止同一来源（脚本/单机）暴力尝试。
+            // 不写库 → 攻击者无法借 API 锁死真实账号（与桌面端解耦）。
+            if (LoginRateLimiter.getInstance().isBlocked(clientIp)) {
+                long remainingSeconds = LoginRateLimiter.getInstance().remainingLockMillis(clientIp) / 1000;
+                ctx.status(HttpStatus.TOO_MANY_REQUESTS)
+                   .json(Map.of("success", false, "message",
+                       "尝试次数过多，请 " + Math.max(1, remainingSeconds) + " 秒后重试"));
+                return;
+            }
+
+            // 用户名规范化
             request.username = request.username.trim();
+
+            // 桌面端持久化的真实锁定（如管理员本地重置后遗留）仍然生效
             if (DAOFactory.getInstance().getLoginAttemptDAO().isLocked(request.username)) {
                 long remainingSeconds = DAOFactory.getInstance().getLoginAttemptDAO().getRemainingLockoutSeconds(request.username);
                 ctx.status(HttpStatus.TOO_MANY_REQUESTS)
@@ -49,10 +67,20 @@ public class AuthController {
             
             User user = DAOFactory.getInstance().getUserDAO().findByUsername(request.username);
 
-            if (user == null || !PasswordUtil.verifyPassword(request.password, user.password)) {
-                int attempts = DAOFactory.getInstance().getLoginAttemptDAO().recordFailedAttempt(request.username, MAX_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MINUTES * 60 * 1000);
+            if (user == null) {
+                // 用户名不存在也执行一次 BCrypt 校验，抹平耗时差异，防止计时枚举有效账号；
+                // 失败计数只在内存按 IP 记录，不落库。
+                PasswordUtil.verifyPassword(request.password, DUMMY_PASSWORD_HASH);
+                LoginRateLimiter.getInstance().recordFailure(clientIp);
                 ctx.status(HttpStatus.UNAUTHORIZED)
-                   .json(Map.of("success", false, "message", "用户名或密码错误，剩余尝试次数: " + (MAX_LOGIN_ATTEMPTS - attempts)));
+                   .json(Map.of("success", false, "message", "用户名或密码错误"));
+                return;
+            }
+
+            if (!PasswordUtil.verifyPassword(request.password, user.password)) {
+                LoginRateLimiter.getInstance().recordFailure(clientIp);
+                ctx.status(HttpStatus.UNAUTHORIZED)
+                   .json(Map.of("success", false, "message", "用户名或密码错误"));
                 return;
             }
 
@@ -62,7 +90,8 @@ public class AuthController {
                 return;
             }
 
-            // 登录成功，重置失败次数
+            // 登录成功，重置内存限流；并清理该用户名遗留的持久化失败记录（桌面端路径可能残留）
+            LoginRateLimiter.getInstance().reset(clientIp);
             DAOFactory.getInstance().getLoginAttemptDAO().resetAttempts(request.username);
             
             // 生成 Token

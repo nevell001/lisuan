@@ -47,6 +47,8 @@ public class ApiServer {
     private final ConcurrentHashMap<String, RateLimitEntry> rateLimitMap = new ConcurrentHashMap<>();
     private static final int RATE_LIMIT_PER_MINUTE = 60;
     private static final long RATE_LIMIT_WINDOW_MS = 60_000;
+    // 防止无界增长：超过该数量时清理早已过期的条目（来源 IP 的一次性请求不再长期占用内存）
+    private static final int MAX_RATE_LIMIT_TRACKED_IPS = 10_000;
     
     private ApiServer() {}
     
@@ -407,11 +409,26 @@ public class ApiServer {
         }
         
         try {
-            return DAOFactory.getInstance().getUserDAO().findById(info.userId);
+            User user = DAOFactory.getInstance().getUserDAO().findById(info.userId);
+            if (user == null || !user.active) {
+                // 用户已被删除或禁用：立即作废其 token，避免旧 token 继续生效或通过 refresh 续期
+                tokens.remove(token);
+                return null;
+            }
+            return user;
         } catch (Exception e) {
             logger.error("获取用户失败: {}", info.userId, e);
             return null;
         }
+    }
+    
+    /**
+     * 注销指定用户的全部 Token
+     * 在禁用账号、重置密码或删除用户后调用，使该用户已签发（可能泄露）的 token 立即失效
+     * @param userId 用户 ID
+     */
+    public void invalidateUserTokens(int userId) {
+        tokens.entrySet().removeIf(entry -> entry.getValue().userId == userId);
     }
     
     /**
@@ -450,6 +467,8 @@ public class ApiServer {
      * 检查速率限制
      */
     private void checkRateLimit(Context ctx) {
+        pruneRateLimitEntriesIfNeeded();
+
         String clientIp = ctx.ip();
         long now = System.currentTimeMillis();
 
@@ -472,5 +491,17 @@ public class ApiServer {
             ctx.header("X-RateLimit-Limit", String.valueOf(RATE_LIMIT_PER_MINUTE));
             ctx.header("X-RateLimit-Remaining", String.valueOf(Math.max(0, RATE_LIMIT_PER_MINUTE - currentCount)));
         }
+    }
+
+    /**
+     * 清理速率限制表中的过期条目，防止不同来源 IP 无限堆积导致内存无界增长。
+     * 仅当条目数量超过上限时执行，开销摊薄到后续请求。
+     */
+    private void pruneRateLimitEntriesIfNeeded() {
+        if (rateLimitMap.size() < MAX_RATE_LIMIT_TRACKED_IPS) {
+            return;
+        }
+        long cutoff = System.currentTimeMillis() - RATE_LIMIT_WINDOW_MS * 2;
+        rateLimitMap.entrySet().removeIf(entry -> entry.getValue().windowStart < cutoff);
     }
 }

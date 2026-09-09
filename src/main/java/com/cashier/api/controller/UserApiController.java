@@ -1,5 +1,6 @@
 package com.cashier.api.controller;
 
+import com.cashier.api.ApiServer;
 import com.cashier.dao.DAOFactory;
 import com.cashier.model.PageResult;
 import com.cashier.model.User;
@@ -157,14 +158,22 @@ public class UserApiController {
             }
             
             if (request.name != null) user.name = request.name;
-            if (request.password != null && !request.password.isEmpty()) {
+            boolean passwordChanged = request.password != null && !request.password.isEmpty();
+            if (passwordChanged) {
                 user.password = PasswordUtil.hashPassword(request.password);
             }
-            if (request.role != null) user.role = request.role;
+            boolean roleChanged = request.role != null && !request.role.equals(user.role);
+            if (roleChanged) user.role = request.role;
             if (request.email != null) user.email = request.email;
+            boolean deactivated = Boolean.FALSE.equals(request.active);
             if (request.active != null) user.active = request.active;
             
             DAOFactory.getInstance().getUserDAO().update(user);
+
+            // 密码/角色/禁用发生变化后，作废该用户已签发的全部 token（含可能泄露的旧 token）
+            if (passwordChanged || roleChanged || deactivated) {
+                ApiServer.getInstance().invalidateUserTokens(user.id);
+            }
             
             user.password = null;
             logger.info("更新用户: {}", user.username);
@@ -202,6 +211,9 @@ public class UserApiController {
             }
             
             DAOFactory.getInstance().getUserDAO().delete(id);
+            
+            // 删除用户后作废其已签发的全部 token
+            ApiServer.getInstance().invalidateUserTokens(id);
             
             logger.info("删除用户: {}", user.username);
             ctx.json(Map.of(KEY_SUCCESS, true, KEY_MESSAGE, "用户删除成功"));

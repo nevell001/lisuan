@@ -1,5 +1,6 @@
 package com.cashier.controller;
 
+import com.cashier.api.ApiServer;
 import com.cashier.i18n.I18nKeys;
 
 import com.cashier.dao.DAOFactory;
@@ -146,10 +147,12 @@ public class UserController {
             new SimpleStringProperty(localizeRole(cellData.getValue().role)));
         
         java.time.format.DateTimeFormatter sdf = com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME_MINUTE;
+        java.util.function.Function<java.util.Date, String> formatDate = date ->
+            date == null ? "-" : java.time.LocalDateTime.ofInstant(date.toInstant(), ZoneId.systemDefault()).format(sdf);
         createTimeColumn.setCellValueFactory(cellData ->
-            new SimpleStringProperty(java.time.LocalDateTime.ofInstant(cellData.getValue().createTime.toInstant(), ZoneId.systemDefault()).format(sdf)));
+            new SimpleStringProperty(formatDate.apply(cellData.getValue().createTime)));
         lastLoginColumn.setCellValueFactory(cellData ->
-            new SimpleStringProperty(java.time.LocalDateTime.ofInstant(cellData.getValue().lastLoginTime.toInstant(), ZoneId.systemDefault()).format(sdf)));
+            new SimpleStringProperty(formatDate.apply(cellData.getValue().lastLoginTime)));
         statusColumn.setCellValueFactory(cellData ->
             new SimpleStringProperty(I18nManager.getInstance().get(
                 cellData.getValue().active ? "user.enabled" : "user.disabled")));
@@ -422,7 +425,16 @@ public class UserController {
     }
 
     private void updateExistingUser(User result) throws SQLException {
+        // 记录变更前的状态，用于判断是否需要作废该用户的 API token
+        User before = DAOFactory.getInstance().getUserDAO().findById(result.id);
         if (DAOFactory.getInstance().getUserDAO().update(result)) {
+            if (before != null
+                && (result.active != before.active
+                    || !java.util.Objects.equals(result.role, before.role)
+                    || !java.util.Objects.equals(result.password, before.password))) {
+                // 禁用/改密/角色变更后作废该用户已签发的全部 API token
+                ApiServer.getInstance().invalidateUserTokens(result.id);
+            }
             audit("USER_UPDATED", result.username);
             users.put(result.username, result);
             loadUsers();
@@ -583,6 +595,8 @@ public class UserController {
                 selected.password = PasswordUtil.hashPassword(newPassword);
                 try {
                     if (DAOFactory.getInstance().getUserDAO().update(selected)) {
+                        // 密码重置后作废该用户已签发的全部 API token
+                        ApiServer.getInstance().invalidateUserTokens(selected.id);
                         audit("USER_PASSWORD_RESET", selected.username);
                         loadUsers();
                         updateStatus(I18nManager.getInstance().get("user.password_reset"));
@@ -670,6 +684,8 @@ public class UserController {
                 selected.active = false;
                 try {
                 if (DAOFactory.getInstance().getUserDAO().update(selected)) {
+                    // 禁用后立即作废该用户已签发的全部 API token（辞退/停用场景）
+                    ApiServer.getInstance().invalidateUserTokens(selected.id);
                     audit("USER_DEACTIVATED", selected.username);
                         loadUsers();
                         updateStatus(I18nManager.getInstance().get("user.deactivated"));
