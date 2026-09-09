@@ -89,6 +89,14 @@ import java.util.concurrent.atomic.AtomicBoolean;
  */
 public class TouchCartController implements CartViewHost {
     private static final Logger logger = LoggerFactoryUtil.getLogger(TouchCartController.class);
+
+    /** 小票打印串行执行器（daemon）：网络打印可能阻塞数秒，且多笔交易打印不得交叠 */
+    private static final java.util.concurrent.ExecutorService RECEIPT_PRINTER =
+        java.util.concurrent.Executors.newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "tpos-receipt-printer");
+            thread.setDaemon(true);
+            return thread;
+        });
     private static final I18nManager i18n = I18nManager.getInstance();
     private static final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
     private static final HoldOrderDAORefactored holdOrderDAO = DAOFactory.getInstance().getHoldOrderDAO();
@@ -1834,38 +1842,114 @@ public class TouchCartController implements CartViewHost {
 
     private void completeTransaction(Transaction transaction, String paymentMethod,
                                      BigDecimal receivedAmount, BigDecimal changeAmount) {
-        try {
-            // 兜底:保证购物车所有商品都在 inventoryMap,避免 executeTransaction 内 inventory.get(name) 返回 null
-            for (CartItem ci : cartItems) {
-                inventoryMap.computeIfAbsent(ci.product.name, n -> {
-                    try {
-                        return productDAO.findById(ci.product.id);
-                    } catch (SQLException ex) {
-                        logger.warn("结账前补查库存失败: {}", ci.product.name, ex);
-                        return null;
-                    }
+        // 交易事务（乐观锁往返+会员/明细落库+同步广播）与回执打印可能耗时数秒，
+        // 放到 daemon 线程执行；期间 paymentInProgress 阻止购物车/商品操作与重复结账。
+        if (paymentInProgress) {
+            return;
+        }
+        paymentInProgress = true;
+
+        Thread worker = new Thread(() -> {
+            try {
+                // 兜底:保证购物车所有商品都在 inventoryMap,避免 executeTransaction 内 inventory.get(name) 返回 null
+                for (CartItem ci : cartItems) {
+                    inventoryMap.computeIfAbsent(ci.product.name, n -> {
+                        try {
+                            return productDAO.findById(ci.product.id);
+                        } catch (SQLException ex) {
+                            logger.warn("结账前补查库存失败: {}", ci.product.name, ex);
+                            return null;
+                        }
+                    });
+                }
+
+                TransactionService.TransactionResult result = TransactionService.executeTransaction(
+                    cartItems, currentMember, transaction, inventoryMap, null);
+
+                if (!result.isSuccess() || result.getTransaction() == null) {
+                    final String message = result.getMessage();
+                    javafx.application.Platform.runLater(() -> {
+                        paymentInProgress = false;
+                        warn(message != null ? message : i18n.get("runtime.transaction_failed"));
+                    });
+                    return;
+                }
+
+                final Transaction settled = result.getTransaction();
+                logger.info("触屏版交易成功,交易ID: {}", settled.transactionId);
+
+                // 在购物车被清空前，先在后台准备好小票快照（settings/明细读取都在 worker 内完成）
+                final ReceiptData receipt = createReceiptData(settled, paymentMethod, receivedAmount, changeAmount);
+
+                javafx.application.Platform.runLater(() -> {
+                    paymentInProgress = false;
+                    showPaymentSuccess(paymentMethod, changeAmount);
+                    resetAfterPayment();
+                });
+
+                // 小票打印放到独立串行线程，不阻塞 FX，也不影响下一笔交易的收银
+                if (receipt != null) {
+                    RECEIPT_PRINTER.submit(() -> printReceiptInBackground(settled, receipt));
+                }
+            } catch (Exception e) {
+                logger.error("交易失败", e);
+                javafx.application.Platform.runLater(() -> {
+                    paymentInProgress = false;
+                    warn(i18n.get("runtime.transaction_failed") + ": " + e.getMessage());
                 });
             }
+        }, "touch-cart-settle");
+        worker.setDaemon(true);
+        worker.start();
+    }
 
-            TransactionService.TransactionResult result = TransactionService.executeTransaction(
-                cartItems, currentMember, transaction, inventoryMap, null);
+    /** 小票打印所需数据（在结算 worker 内、购物车被清空前一次性快照） */
+    private static final class ReceiptData {
+        final String storeName;
+        final String cashierName;
+        final String itemsText;
+        final int totalQuantity;
+        final double totalAmount;
+        final double discountAmount;
+        final double finalAmount;
+        final double paidAmount;
+        final double changeAmount;
+        final String paymentMethod;
+        final String memberInfo;
+        final boolean printLogo;
+        final String printerName;
+        final String paperSize;
 
-            if (!result.isSuccess() || result.getTransaction() == null) {
-                warn(result.getMessage() != null ? result.getMessage() : i18n.get("runtime.transaction_failed"));
-                return;
-            }
-
-            logger.info("触屏版交易成功,交易ID: {}", result.getTransaction().transactionId);
-            printReceipt(result.getTransaction(), paymentMethod, receivedAmount, changeAmount);
-            showPaymentSuccess(paymentMethod, changeAmount);
-            resetAfterPayment();
-        } catch (Exception e) {
-            logger.error("交易失败", e);
-            warn(i18n.get("runtime.transaction_failed") + ": " + e.getMessage());
+        ReceiptData(String storeName, String cashierName, String itemsText, int totalQuantity,
+                    double totalAmount, double discountAmount, double finalAmount, double paidAmount,
+                    double changeAmount, String paymentMethod, String memberInfo, boolean printLogo,
+                    String printerName, String paperSize) {
+            this.storeName = storeName;
+            this.cashierName = cashierName;
+            this.itemsText = itemsText;
+            this.totalQuantity = totalQuantity;
+            this.totalAmount = totalAmount;
+            this.discountAmount = discountAmount;
+            this.finalAmount = finalAmount;
+            this.paidAmount = paidAmount;
+            this.changeAmount = changeAmount;
+            this.paymentMethod = paymentMethod;
+            this.memberInfo = memberInfo;
+            this.printLogo = printLogo;
+            this.printerName = printerName;
+            this.paperSize = paperSize;
         }
     }
 
-    private void printReceipt(Transaction tx, String paymentMethod, BigDecimal received, BigDecimal change) {
+    /** 在结算 worker 内构建打印快照；打印功能未启用时返回 null */
+    private ReceiptData createReceiptData(Transaction tx, String paymentMethod,
+                                          BigDecimal received, BigDecimal change) {
+        Map<String, String> settings = com.cashier.service.DataService.loadSettings();
+        if (!Boolean.parseBoolean(settings.getOrDefault("enablePrint", "false"))) {
+            logger.info("打印功能未启用（enablePrint=false），跳过小票打印");
+            return null;
+        }
+
         StringBuilder items = new StringBuilder();
         int totalQty = 0;
         for (CartItem ci : cartItems) {
@@ -1875,32 +1959,49 @@ public class TouchCartController implements CartViewHost {
                 .append("\n");
             totalQty += ci.quantity;
         }
-        Map<String, String> settings = com.cashier.service.DataService.loadSettings();
-        if (!Boolean.parseBoolean(settings.getOrDefault("enablePrint", "false"))) {
-            logger.info("打印功能未启用（enablePrint=false），跳过小票打印");
-            return;
-        }
-        String printerName = settings.getOrDefault("printerName", "").trim();
-        if (!printerName.isEmpty()) {
-            boolean selected = PrinterManager.getInstance().setDefaultPrinterByName(printerName);
-            if (!selected) {
-                logger.warn("设置中的打印机名称未匹配到已注册设备: {}", printerName);
-            }
-        }
-        PrinterManager.getInstance().applyPaperSize(settings.getOrDefault("paperSize", ""));
-        boolean printLogo = Boolean.parseBoolean(settings.getOrDefault("printLogo", "true"));
-        String storeName = settings.getOrDefault("storeName", "狸算收银");
-        String cashierName = currentUser != null ? currentUser.name : "";
-        String memberInfo = currentMember != null
-            ? (currentMember.name + "(" + currentMember.phone + ") " + currentMember.level) : null;
         BigDecimal total = TransactionService.calculateTotalAmount(cartItems);
         BigDecimal discount = total.subtract(tx.finalAmount);
-        boolean ok = PrintUtil.printReceipt(
-            tx.transactionId, storeName, cashierName, items.toString(), totalQty,
-            total.doubleValue(), discount.doubleValue(), tx.finalAmount.doubleValue(),
-            received.doubleValue(), change.doubleValue(), paymentMethod, memberInfo, printLogo);
-        if (!ok) {
-            logger.info("小票打印未完成(可能未连接打印机),交易仍已成功");
+        String memberInfo = currentMember != null
+            ? (currentMember.name + "(" + currentMember.phone + ") " + currentMember.level) : null;
+        String cashierName = currentUser != null ? currentUser.name : "";
+
+        return new ReceiptData(
+            settings.getOrDefault("storeName", "狸算收银"),
+            cashierName,
+            items.toString(),
+            totalQty,
+            total.doubleValue(),
+            discount.doubleValue(),
+            tx.finalAmount.doubleValue(),
+            received.doubleValue(),
+            change.doubleValue(),
+            paymentMethod,
+            memberInfo,
+            Boolean.parseBoolean(settings.getOrDefault("printLogo", "true")),
+            settings.getOrDefault("printerName", "").trim(),
+            settings.getOrDefault("paperSize", ""));
+    }
+
+    /** 在串行打印线程执行实际打印（含网络打印机连接/IO 超时，不占用 FX 线程） */
+    private void printReceiptInBackground(Transaction tx, ReceiptData data) {
+        try {
+            if (!data.printerName.isEmpty()) {
+                boolean selected = PrinterManager.getInstance().setDefaultPrinterByName(data.printerName);
+                if (!selected) {
+                    logger.warn("设置中的打印机名称未匹配到已注册设备: {}", data.printerName);
+                }
+            }
+            PrinterManager.getInstance().applyPaperSize(data.paperSize);
+            boolean ok = PrintUtil.printReceipt(
+                tx.transactionId, data.storeName, data.cashierName, data.itemsText, data.totalQuantity,
+                data.totalAmount, data.discountAmount, data.finalAmount, data.paidAmount,
+                data.changeAmount, data.paymentMethod, data.memberInfo, data.printLogo);
+            if (!ok) {
+                logger.info("小票打印未完成(可能未连接打印机),交易仍已成功: {}", tx.transactionId);
+            }
+        } catch (Exception e) {
+            // 打印失败不应影响已成功的交易
+            logger.error("后台小票打印失败: {}", tx.transactionId, e);
         }
     }
 

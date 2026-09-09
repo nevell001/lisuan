@@ -1039,27 +1039,51 @@ public class CartController implements CartViewHost {
 
     private void completeTransaction(Transaction transaction, String paymentMethod,
                                      BigDecimal receivedAmount, BigDecimal changeAmount) {
-        try {
-            TransactionService.TransactionResult result = TransactionService.executeTransaction(
-                cartList,
-                currentMember,
-                transaction,
-                inventoryMap,
-                appliedPromotion
-            );
-
-            if (!result.isSuccess() || result.getTransaction() == null) {
-                showError(result.getMessage() != null ? result.getMessage() : com.cashier.i18n.I18nManager.getInstance().get("runtime.transaction_failed"));
-                return;
-            }
-
-            logger.info("交易成功完成，交易ID: {}", result.getTransaction().transactionId);
-            showSuccess(paymentMethod, result.getTransaction(), receivedAmount.doubleValue(), changeAmount.doubleValue());
-            clear();
-        } catch (Exception e) {
-            logger.error("交易失败: " + e.getMessage(), e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED) + ": " + e.getMessage());
+        // 交易事务含逐商品乐观锁往返+会员扣减+明细落库+同步广播，放到 daemon 线程执行；
+        // 期间用 paymentInProgress 锁住购物车/搜索/支付按钮，防止并发篡改与重复结账。
+        if (paymentInProgress) {
+            return;
         }
+        setPaymentInProgress(true);
+
+        Thread worker = new Thread(() -> {
+            try {
+                TransactionService.TransactionResult result = TransactionService.executeTransaction(
+                    cartList,
+                    currentMember,
+                    transaction,
+                    inventoryMap,
+                    appliedPromotion
+                );
+
+                if (!result.isSuccess() || result.getTransaction() == null) {
+                    final String message = result.getMessage();
+                    javafx.application.Platform.runLater(() -> {
+                        setPaymentInProgress(false);
+                        showError(message != null
+                            ? message
+                            : com.cashier.i18n.I18nManager.getInstance().get("runtime.transaction_failed"));
+                    });
+                    return;
+                }
+
+                final com.cashier.model.Transaction settled = result.getTransaction();
+                logger.info("交易成功完成，交易ID: {}", settled.transactionId);
+                javafx.application.Platform.runLater(() -> {
+                    setPaymentInProgress(false);
+                    showSuccess(paymentMethod, settled, receivedAmount.doubleValue(), changeAmount.doubleValue());
+                    clear();
+                });
+            } catch (Exception e) {
+                logger.error("交易失败: " + e.getMessage(), e);
+                javafx.application.Platform.runLater(() -> {
+                    setPaymentInProgress(false);
+                    showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED) + ": " + e.getMessage());
+                });
+            }
+        }, "cart-settle");
+        worker.setDaemon(true);
+        worker.start();
     }
 
     private void startElectronicPayment(PaymentOrder.PaymentChannel channel, String paymentMethod) {

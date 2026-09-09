@@ -1405,12 +1405,29 @@ public class SettingsController {
         content.append(EscPosUtils.createSeparator(width, '-')).append("\n");
         content.append("\n\n");
 
-        boolean success = manager.print(PrintTask.createTestTask(content.toString()));
-        if (success) {
-            showSuccess(I18nManager.getInstance().get("runtime.print_success"));
-        } else {
-            showError(I18nManager.getInstance().get("runtime.print_failed"));
-        }
+        // 网络打印机连接/IO 可能阻塞数秒（每台 5s 超时），放到 daemon 线程执行，避免冻结设置页
+        final PrintTask task = PrintTask.createTestTask(content.toString());
+        testPrintButton.setDisable(true);
+        Thread worker = new Thread(() -> {
+            boolean ok;
+            try {
+                ok = manager.print(task);
+            } catch (Exception e) {
+                logger.error("测试打印异常", e);
+                ok = false;
+            }
+            final boolean success = ok;
+            javafx.application.Platform.runLater(() -> {
+                testPrintButton.setDisable(false);
+                if (success) {
+                    showSuccess(I18nManager.getInstance().get("runtime.print_success"));
+                } else {
+                    showError(I18nManager.getInstance().get("runtime.print_failed"));
+                }
+            });
+        }, "settings-test-print");
+        worker.setDaemon(true);
+        worker.start();
     }
 
     /**
