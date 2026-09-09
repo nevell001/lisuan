@@ -51,6 +51,9 @@ public class SettingsController {
 
     private com.cashier.model.User currentUser;
 
+    // 防止重复点击"立即备份"造成并发 dump
+    private volatile boolean backupInProgress;
+
     @FXML
     private TabPane settingsTabPane;
 
@@ -974,29 +977,58 @@ public class SettingsController {
      */
     @FXML
     public void handleBackupNow() {
+        if (backupInProgress) {
+            showError("备份正在进行中，请稍候…");
+            return;
+        }
         try {
             // 获取用户选择的备份路径，如果为空则使用默认 SQL 备份目录
-            String backupBasePath = DataService.resolveSqlBackupPath(backupPathField.getText());
+            final String backupBasePath = DataService.resolveSqlBackupPath(backupPathField.getText());
             
-            // 确保备份路径存在
+            // 确保备份路径存在（快速文件操作留在 FX 线程）
             File backupDir = new File(backupBasePath);
             if (!backupDir.exists() && !backupDir.mkdirs()) {
                 showError(I18nManager.getInstance().get("runtime.backup_path_create_failed", backupBasePath));
                 return;
             }
             
-            // 备份数据库（会在备份目录中创建带时间戳的 .sql 文件）
-            DataService.backupData(backupBasePath);
-            
-            // 获取最新的备份文件名
-            File[] sqlFiles = backupDir.listFiles((dir, name) -> isCurrentDatabaseBackupFile(name));
-            if (sqlFiles != null && sqlFiles.length > 0) {
-                java.util.Arrays.sort(sqlFiles, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
-                showSuccess(I18nManager.getInstance().get("runtime.backup_file_success", sqlFiles[0].getName()));
-            } else {
-                showSuccess(com.cashier.i18n.I18nManager.getInstance().get("runtime.backup_success"));
-            }
+            backupInProgress = true;
+            com.cashier.util.StatusBarManager.updateWarning("正在备份…请稍候，完成后会有提示");
+            // 整库 dump 可能耗时较长，放到 daemon 线程执行，避免冻结 UI
+            Thread worker = new Thread(() -> {
+                try {
+                    DataService.backupData(backupBasePath);
+
+                    // 获取最新的备份文件名
+                    File[] sqlFiles = new File(backupBasePath)
+                        .listFiles((dir, name) -> isCurrentDatabaseBackupFile(name));
+                    String newestName = null;
+                    if (sqlFiles != null && sqlFiles.length > 0) {
+                        java.util.Arrays.sort(sqlFiles, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
+                        newestName = sqlFiles[0].getName();
+                    }
+                    final String backupFileName = newestName;
+
+                    javafx.application.Platform.runLater(() -> {
+                        backupInProgress = false;
+                        if (backupFileName != null) {
+                            showSuccess(I18nManager.getInstance().get("runtime.backup_file_success", backupFileName));
+                        } else {
+                            showSuccess(com.cashier.i18n.I18nManager.getInstance().get("runtime.backup_success"));
+                        }
+                    });
+                } catch (Exception e) {
+                    logger.error("立即备份失败", e);
+                    javafx.application.Platform.runLater(() -> {
+                        backupInProgress = false;
+                        showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED));
+                    });
+                }
+            }, "settings-backup");
+            worker.setDaemon(true);
+            worker.start();
         } catch (Exception e) {
+            backupInProgress = false;
             showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED));
         }
     }
@@ -1068,11 +1100,25 @@ public class SettingsController {
                             I18nManager.getInstance().get(I18nKeys.Status.CANCELLED));
                         return;
                     }
-                    DataService.restoreData(backupFile.getAbsolutePath());
-                    showSuccess(com.cashier.i18n.I18nManager.getInstance().get("runtime.restore_success"));
-                    
-                    // 重新加载数据
-                    loadSettings();
+                    final String restoreFilePath = backupFile.getAbsolutePath();
+                    com.cashier.util.StatusBarManager.updateWarning("正在恢复数据…请稍候，完成后会有提示");
+                    // 整库恢复可能耗时较长，放到 daemon 线程执行，避免冻结 UI
+                    Thread worker = new Thread(() -> {
+                        try {
+                            DataService.restoreData(restoreFilePath);
+                            javafx.application.Platform.runLater(() -> {
+                                showSuccess(com.cashier.i18n.I18nManager.getInstance().get("runtime.restore_success"));
+                                // 重新加载数据
+                                loadSettings();
+                            });
+                        } catch (Exception e) {
+                            logger.error("恢复数据失败", e);
+                            javafx.application.Platform.runLater(() ->
+                                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED)));
+                        }
+                    }, "settings-restore");
+                    worker.setDaemon(true);
+                    worker.start();
                 } else {
                     com.cashier.util.StatusBarManager.updateWarning(
                         I18nManager.getInstance().get(I18nKeys.Status.CANCELLED));

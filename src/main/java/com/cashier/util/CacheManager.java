@@ -148,6 +148,11 @@ public class CacheManager {
             if (product.barcode != null && !product.barcode.isEmpty()) {
                 productBarcodeCache.put(product.barcode, product);
             }
+            // 缓存被清空/过期后（cacheCreatedTime=0），单条添加也要重新武装缓存时钟，
+            // 否则该路径填出的缓存会因 isCacheValid() 恒 false 而永远回源数据库。
+            if (cacheCreatedTime == 0) {
+                cacheCreatedTime = System.currentTimeMillis();
+            }
             logger.debug("商品已添加到缓存: {}", product.name);
         } finally {
             lock.writeLock().unlock();

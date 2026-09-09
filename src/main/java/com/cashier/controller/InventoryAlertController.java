@@ -269,10 +269,18 @@ public class InventoryAlertController {
         updateTimer.scheduleAtFixedRate(new TimerTask() {
             @Override
             public void run() {
-                javafx.application.Platform.runLater(() -> {
-                    updateServiceStatus();
-                    loadAlertItems();
-                });
+                try {
+                    // DB 查询在 Timer（daemon）线程执行，避免每 5 秒在 FX 线程做全表预警查询；
+                    // 仅 UI 更新通过 runLater 回到 FX 线程。
+                    final List<Product> alertProducts = productDAO.findProductsRequiringStockAlert();
+                    javafx.application.Platform.runLater(() -> {
+                        updateServiceStatus();
+                        renderAlertList(alertProducts);
+                    });
+                } catch (Exception e) {
+                    // 轮询失败不打断界面，仅记录日志
+                    logger.error("定时刷新库存预警失败", e);
+                }
             }
         }, 0, 5000); // 每5秒更新一次
     }
@@ -318,52 +326,64 @@ public class InventoryAlertController {
     }
 
     /**
-     * 加载预警商品
+     * 加载预警商品（打开窗口/手动刷新时调用；DB 查询放到后台线程，UI 更新回 FX）
      */
     private void loadAlertItems() {
-        try {
-            List<Product> alertProducts = productDAO.findProductsRequiringStockAlert();
-
-            List<AlertItem> alertItems = new ArrayList<>();
-            int criticalCount = 0;
-            int warningCount = 0;
-            int infoCount = 0;
-
-            for (Product product : alertProducts) {
-                AlertItem alertItem = new AlertItem(product);
-                alertItems.add(alertItem);
-
-                switch (alertItem.getLevel()) {
-                    case CRITICAL:
-                        criticalCount++;
-                        break;
-                    case WARNING:
-                        warningCount++;
-                        break;
-                    case INFO:
-                        infoCount++;
-                        break;
-                    default:
-                        logger.warn("未知库存预警级别: {}", alertItem.getLevel());
-                        break;
-                }
+        Thread worker = new Thread(() -> {
+            try {
+                List<Product> alertProducts = productDAO.findProductsRequiringStockAlert();
+                javafx.application.Platform.runLater(() -> renderAlertList(alertProducts));
+            } catch (SQLException e) {
+                logger.error("从数据库加载商品失败", e);
+            } catch (Exception e) {
+                logger.error("加载预警商品失败", e);
             }
+        }, "inventory-alert-load");
+        worker.setDaemon(true);
+        worker.start();
+    }
 
-            // 更新列表
-            alertList.clear();
-            alertList.addAll(alertItems);
-
-            // 更新统计信息
-            alertCountLabel.setText(String.valueOf(alertItems.size()));
-            criticalCountLabel.setText(String.valueOf(criticalCount));
-            warningCountLabel.setText(String.valueOf(warningCount));
-            infoCountLabel.setText(String.valueOf(infoCount));
-
-        } catch (SQLException e) {
-            logger.error("从数据库加载商品失败", e);
-        } catch (Exception e) {
-            logger.error("加载预警商品失败", e);
+    /**
+     * 把预警商品列表渲染到表格与统计标签（必须在 FX 线程调用）
+     */
+    private void renderAlertList(List<Product> alertProducts) {
+        if (alertList == null) {
+            return;
         }
+        List<AlertItem> alertItems = new ArrayList<>();
+        int criticalCount = 0;
+        int warningCount = 0;
+        int infoCount = 0;
+
+        for (Product product : alertProducts) {
+            AlertItem alertItem = new AlertItem(product);
+            alertItems.add(alertItem);
+
+            switch (alertItem.getLevel()) {
+                case CRITICAL:
+                    criticalCount++;
+                    break;
+                case WARNING:
+                    warningCount++;
+                    break;
+                case INFO:
+                    infoCount++;
+                    break;
+                default:
+                    logger.warn("未知库存预警级别: {}", alertItem.getLevel());
+                    break;
+            }
+        }
+
+        // 更新列表
+        alertList.clear();
+        alertList.addAll(alertItems);
+
+        // 更新统计信息
+        alertCountLabel.setText(String.valueOf(alertItems.size()));
+        criticalCountLabel.setText(String.valueOf(criticalCount));
+        warningCountLabel.setText(String.valueOf(warningCount));
+        infoCountLabel.setText(String.valueOf(infoCount));
     }
 
     /**

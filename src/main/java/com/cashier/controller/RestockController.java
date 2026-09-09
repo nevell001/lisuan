@@ -171,9 +171,11 @@ public class RestockController {
     public void handleConfirm() {
         if (isInputValid()) {
             int quantity = FormValidator.parseInt(quantityField.getText().trim());
+            int previousQuantity = product.quantity;
 
-            // 更新库存
-            product.quantity += quantity;
+            // 先计算目标数量并写入对象用于 DB 更新；保存失败时须还原内存对象，
+            // 避免重试时在已污染的数量上二次累加（product 通常是共享引用）。
+            product.quantity = previousQuantity + quantity;
 
             // 保存到数据库
             try {
@@ -181,9 +183,11 @@ public class RestockController {
                     okClicked = true;
                     dialogStage.close();
                 } else {
+                    product.quantity = previousQuantity;
                     errorLabel.setText(com.cashier.i18n.I18nManager.getInstance().get("runtime.restock_failed"));
                 }
             } catch (SQLException e) {
+                product.quantity = previousQuantity;
                 logger.error("入库失败", e);
                 errorLabel.setText(I18nManager.getInstance().get("runtime.restock_failed_detail", e.getMessage()));
             }

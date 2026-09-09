@@ -292,19 +292,24 @@ public class ReturnReportController {
         Date start = startDate != null ? Date.from(startDate.atStartOfDay(ZoneId.systemDefault()).toInstant()) : null;
         Date end = endDate != null ? Date.from(endDate.atTime(23, 59, 59).atZone(ZoneId.systemDefault()).toInstant()) : null;
 
-        if (start == null || end == null) {
-            showAlert(Alert.AlertType.WARNING, com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.InventoryAlert.INFO), com.cashier.i18n.I18nManager.getInstance().get("runtime.select_date_range_plain"));
-            return;
-        }
-
-        if (start.after(end)) {
+        // "全部报表" = 不按日期过滤（start/end 均为 null）
+        boolean unbounded = start == null || end == null;
+        if (!unbounded && start.after(end)) {
             showAlert(Alert.AlertType.WARNING, com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.InventoryAlert.INFO), com.cashier.i18n.I18nManager.getInstance().get("runtime.invalid_date_range_plain"));
             return;
         }
 
         try {
             // 获取退货统计
-            ReturnService.ReturnStatistics stats = ReturnService.calculateReturnStatistics(start, end);
+            ReturnService.ReturnStatistics stats;
+            List<ReturnOrder> orders;
+            if (unbounded) {
+                orders = DAOFactory.getInstance().getReturnOrderDAO().findAll();
+                stats = deriveStatistics(orders);
+            } else {
+                stats = ReturnService.calculateReturnStatistics(start, end);
+                orders = DAOFactory.getInstance().getReturnOrderDAO().findByDateRange(start, end);
+            }
 
             // 更新统计标签
             totalReturnOrdersLabel.setText(String.valueOf(stats.totalReturnOrders));
@@ -320,7 +325,6 @@ public class ReturnReportController {
 
             // 加载退货订单列表
             returnOrderList.clear();
-            List<ReturnOrder> orders = DAOFactory.getInstance().getReturnOrderDAO().findByDateRange(start, end);
             returnOrderList.addAll(orders);
 
             // 更新图表
@@ -334,6 +338,29 @@ public class ReturnReportController {
             showAlert(Alert.AlertType.ERROR, com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Label.ERROR),
                     com.cashier.i18n.I18nManager.getInstance().get("runtime.report_generate_failed", e.getMessage()));
         }
+    }
+
+    /**
+     * 由全量退货单计算统计（"全部报表"无日期过滤时使用）
+     */
+    private ReturnService.ReturnStatistics deriveStatistics(List<ReturnOrder> orders) {
+        ReturnService.ReturnStatistics stats = new ReturnService.ReturnStatistics();
+        java.math.BigDecimal total = java.math.BigDecimal.ZERO;
+        for (ReturnOrder order : orders) {
+            if (order.getTotalAmount() != null) {
+                total = total.add(order.getTotalAmount());
+            }
+            if ("APPROVED".equals(order.status)) {
+                stats.approvedOrders++;
+            } else if ("REJECTED".equals(order.status)) {
+                stats.rejectedOrders++;
+            } else if ("COMPLETED".equals(order.status)) {
+                stats.completedOrders++;
+            }
+        }
+        stats.totalReturnOrders = orders.size();
+        stats.totalReturnAmount = total;
+        return stats;
     }
 
     private void updateStatusPieChart(ReturnService.ReturnStatistics stats) {
@@ -360,13 +387,15 @@ public class ReturnReportController {
         Map<String, Double> dailyReturns = new LinkedHashMap<>();
         java.time.format.DateTimeFormatter formatter = com.cashier.util.DateTimeFormats.DATE;
 
-        // 初始化所有日期的数据
+        // 初始化所有日期的数据（"全部报表"无日期范围时跳过，仅汇总实际存在的日期）
         LocalDate start = startDatePicker.getValue();
         LocalDate end = endDatePicker.getValue();
-        LocalDate date = start;
-        while (!date.isAfter(end)) {
-            dailyReturns.put(date.format(com.cashier.util.DateTimeFormats.DATE), 0.0);
-            date = date.plusDays(1);
+        if (start != null && end != null) {
+            LocalDate date = start;
+            while (!date.isAfter(end)) {
+                dailyReturns.put(date.format(com.cashier.util.DateTimeFormats.DATE), 0.0);
+                date = date.plusDays(1);
+            }
         }
 
         // 汇总每日退货金额

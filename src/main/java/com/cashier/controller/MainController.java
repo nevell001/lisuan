@@ -153,6 +153,8 @@ private Button shiftBtn;
     private CashierSystemFXApplication application;
     private User currentUser;
     private Timeline timeTimeline;
+    private java.util.concurrent.ScheduledExecutorService shiftScheduler; // 班次信息后台轮询（daemon）
+    private javafx.beans.value.ChangeListener<StatusBarManager.StatusLevel> statusLevelListener;
     private Button activeButton;
     private Map<String, Tab> openTabs = new HashMap<>(); // 管理打开的标签页
     private StackPane loadingOverlay;
@@ -165,17 +167,17 @@ private Button shiftBtn;
         // 保存实例引用
         instance = this;
 
-        // 启动时间更新
+        // 启动时间更新（时钟走 FX Timeline；班次轮询在后台线程，见 startShiftMonitor）
         startTimeUpdate();
+        startShiftMonitor();
 
         // 设置初始激活按钮
         activeButton = inventoryBtn;
 
-        // 绑定状态栏到 StatusBarManager
+        // 绑定状态栏到 StatusBarManager（cleanup 时需解除，防止静态单例强引用整棵旧主界面）
         statusLabel.textProperty().bind(StatusBarManager.statusProperty());
-        StatusBarManager.statusLevelProperty().addListener((obs, oldLevel, newLevel) ->
-            applyStatusLevelStyle(newLevel)
-        );
+        statusLevelListener = (obs, oldLevel, newLevel) -> applyStatusLevelStyle(newLevel);
+        StatusBarManager.statusLevelProperty().addListener(statusLevelListener);
         applyStatusLevelStyle(StatusBarManager.getStatusLevel());
 
         // 更新状态
@@ -420,7 +422,7 @@ private Button shiftBtn;
         return false;
     }
     /**
-     * 启动时间更新
+     * 启动时间更新（仅更新时钟文本，不访问数据库）
      */
     private void startTimeUpdate() {
         timeTimeline = new Timeline(new KeyFrame(
@@ -432,13 +434,25 @@ private Button shiftBtn;
     }
 
     /**
+     * 启动班次信息后台轮询：每秒在 daemon 线程查询活跃班次，
+     * 结果经 Platform.runLater 回填，避免把 JDBC 放在 FX Application Thread。
+     */
+    private void startShiftMonitor() {
+        shiftScheduler = java.util.concurrent.Executors.newSingleThreadScheduledExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "main-shift-monitor");
+            thread.setDaemon(true);
+            return thread;
+        });
+        shiftScheduler.scheduleWithFixedDelay(this::pollShiftInfoInBackground,
+            1, 1, java.util.concurrent.TimeUnit.SECONDS);
+    }
+
+    /**
      * 更新时间
      */
     private void updateTime() {
         currentTimeLabel.setText(LocalDateTime.now(ZoneId.systemDefault())
             .format(com.cashier.util.DateTimeFormats.TIME));
-        // 同时更新班次信息
-        updateShiftInfo();
     }
 
     /**
@@ -450,24 +464,46 @@ private Button shiftBtn;
     }
 
     /**
-     * 更新班次信息
+     * 后台轮询活跃班次
+     */
+    private void pollShiftInfoInBackground() {
+        try {
+            Shift activeShift = DAOFactory.getInstance().getShiftDAO().findActiveShift();
+            javafx.application.Platform.runLater(() -> renderShiftInfo(activeShift));
+        } catch (Exception e) {
+            // 周期轮询失败不打扰用户；仅记录调试日志，避免数据库抖动时每秒刷错误日志
+            logger.debug("周期刷新班次信息失败", e);
+        }
+    }
+
+    /**
+     * 更新班次信息（事件驱动调用：初始化/交班后等；单次同步查询）
      */
     private void updateShiftInfo() {
         try {
-            Shift activeShift = DAOFactory.getInstance().getShiftDAO().findActiveShift();
-            if (activeShift != null) {
-                // 有活跃班次
-                String startTime = LocalDateTime.ofInstant(activeShift.startTime, ZoneId.systemDefault())
-                    .format(com.cashier.util.DateTimeFormats.TIME_HOUR_MINUTE);
-                currentShiftLabel.setText(I18nManager.getInstance().get("runtime.shift_summary",
-                        activeShift.shiftId, activeShift.operatorName, startTime));
-            } else {
-                // 无活跃班次
-                currentShiftLabel.setText(com.cashier.i18n.I18nManager.getInstance().get("status.shift_not_started"));
-            }
+            renderShiftInfo(DAOFactory.getInstance().getShiftDAO().findActiveShift());
         } catch (Exception e) {
             logger.error("更新班次信息失败", e);
             currentShiftLabel.setText(I18nManager.getInstance().get("runtime.shift_unknown"));
+        }
+    }
+
+    /**
+     * 把查询到的活跃班次渲染到状态栏标签（必须在 FX 线程调用）
+     */
+    private void renderShiftInfo(Shift activeShift) {
+        if (currentShiftLabel == null) {
+            return;
+        }
+        if (activeShift != null) {
+            // 有活跃班次
+            String startTime = LocalDateTime.ofInstant(activeShift.startTime, ZoneId.systemDefault())
+                .format(com.cashier.util.DateTimeFormats.TIME_HOUR_MINUTE);
+            currentShiftLabel.setText(I18nManager.getInstance().get("runtime.shift_summary",
+                    activeShift.shiftId, activeShift.operatorName, startTime));
+        } else {
+            // 无活跃班次
+            currentShiftLabel.setText(com.cashier.i18n.I18nManager.getInstance().get("status.shift_not_started"));
         }
     }
 
@@ -574,19 +610,26 @@ private Button shiftBtn;
     public void handleDataBackup() {
         if (!requirePermission(User.PERMISSION_BACKUP_RESTORE)) return;
         updateStatus("数据备份");
-        
-        try {
-            // 创建备份目录
-            String timestamp = LocalDateTime.now(ZoneId.systemDefault()).format(com.cashier.util.DateTimeFormats.BACKUP_TIMESTAMP);
-            String backupPath = "backup_" + timestamp;
-            
-            // 执行备份
-            DataService.backupData(backupPath);
-            
-            FXUtils.showInfoAlert("备份成功", "数据备份成功！\n备份位置: " + backupPath);
-        } catch (Exception e) {
-            FXUtils.showErrorAlert("备份失败", "数据备份失败: " + e.getMessage());
-        }
+
+        // 创建备份目录（快速文件操作留在 FX 线程）
+        String timestamp = LocalDateTime.now(ZoneId.systemDefault()).format(com.cashier.util.DateTimeFormats.BACKUP_TIMESTAMP);
+        final String backupPath = "backup_" + timestamp;
+
+        StatusBarManager.updateWarning("正在备份数据…请稍候，完成后会有提示");
+        // 整库 dump 可能耗时较长，放到 daemon 线程执行，避免冻结 UI
+        Thread worker = new Thread(() -> {
+            try {
+                DataService.backupData(backupPath);
+                javafx.application.Platform.runLater(() ->
+                    FXUtils.showInfoAlert("备份成功", "数据备份成功！\n备份位置: " + backupPath));
+            } catch (Exception e) {
+                logger.error("数据备份失败", e);
+                javafx.application.Platform.runLater(() ->
+                    FXUtils.showErrorAlert("备份失败", "数据备份失败: " + e.getMessage()));
+            }
+        }, "data-backup");
+        worker.setDaemon(true);
+        worker.start();
     }
     
     @FXML
@@ -636,8 +679,23 @@ private Button shiftBtn;
                 confirmAlert.setContentText(I18nManager.getInstance().get("runtime.restore_confirm_short", backupDirName));
                 
                 if (confirmAlert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
-                    DataService.restoreData(backupDirName);
-                    FXUtils.showInfoAlert(I18nManager.getInstance().get("runtime.restore_success_title"), I18nManager.getInstance().get("runtime.restore_success"));
+                    final String restoreDir = backupDirName;
+                    StatusBarManager.updateWarning("正在恢复数据…请稍候");
+                    // 整库恢复可能耗时较长，放到 daemon 线程执行，避免冻结 UI
+                    Thread worker = new Thread(() -> {
+                        try {
+                            DataService.restoreData(restoreDir);
+                            javafx.application.Platform.runLater(() -> FXUtils.showInfoAlert(
+                                I18nManager.getInstance().get("runtime.restore_success_title"),
+                                I18nManager.getInstance().get("runtime.restore_success")));
+                        } catch (Exception e) {
+                            logger.error("数据恢复失败", e);
+                            javafx.application.Platform.runLater(() ->
+                                FXUtils.showErrorAlert("恢复失败", "数据恢复失败: " + e.getMessage()));
+                        }
+                    }, "data-restore");
+                    worker.setDaemon(true);
+                    worker.start();
                 }
             } catch (Exception e) {
                 FXUtils.showErrorAlert("恢复失败", "数据恢复失败: " + e.getMessage());
@@ -1308,6 +1366,7 @@ private Button shiftBtn;
             VBox root = loader.load();
 
             ReturnApprovalController controller = loader.getController();
+            controller.setCurrentUser(currentUser);
 
             createContentTab(I18nManager.getInstance().get("nav.return_approval"), root);
 
@@ -1484,54 +1543,68 @@ private Button shiftBtn;
      */
     private void refreshCurrentTab() {
         Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
-        if (selectedTab == null || selectedTab.getText().equals("欢迎")) {
+        if (selectedTab == null) {
             updateStatus("无需刷新");
             return;
         }
 
-        String title = selectedTab.getText();
+        // 内容页统一 tab.setText("")，标题以 graphic 展示；刷新必须按 openTabs 反查，
+        // 不能读取 tab 文本（否则 F5 永远命中"无法刷新"）。
+        String title = null;
+        for (java.util.Map.Entry<String, Tab> entry : openTabs.entrySet()) {
+            if (entry.getValue() == selectedTab) {
+                title = entry.getKey();
+                break;
+            }
+        }
+        if (title == null) {
+            // 欢迎页等未注册内容页无需刷新
+            updateStatus("无需刷新");
+            return;
+        }
 
         // 关闭当前标签页
-        if (openTabs.containsKey(title)) {
-            tabPane.getTabs().remove(openTabs.get(title));
-            openTabs.remove(title);
-        }
+        tabPane.getTabs().remove(selectedTab);
+        openTabs.remove(title);
 
-        // 根据标题重新打开对应的界面
-        switch (title) {
-            case "商品管理":
-                handleInventory();
-                break;
-            case "pos/结账":
-                handleCheckout();
-                break;
-            case "交易记录":
-                handleTransactions();
-                break;
-            case "会员管理":
-                handleMembers();
-                break;
-            case "数据统计":
-                handleStatistics();
-                break;
-            case "促销管理":
-                handlePromotions();
-                break;
-            case "交班管理":
-                handleShift();
-                break;
-            case "系统设置":
-                handleSettings();
-                break;
-            case "用户管理":
-                handleUserManagement();
-                break;
-            default:
-                updateStatus("无法刷新: " + title);
-                return;
+        // 按标题重新打开对应界面（标题 = 当前语言的 nav 文案，与建页时使用的 key 一致）
+        Runnable action = resolveRefreshAction(title);
+        if (action == null) {
+            updateStatus("无法刷新: " + title);
+            return;
         }
+        action.run();
 
         updateStatus("已刷新: " + title);
+    }
+
+    /**
+     * 将标签页标题映射到其重新打开的动作，支持当前语言与历史中文字面量。
+     */
+    private Runnable resolveRefreshAction(String title) {
+        I18nManager i18n = I18nManager.getInstance();
+        java.util.Map<String, Runnable> actions = new java.util.HashMap<>();
+        actions.put(i18n.get(I18nKeys.Nav.USER_MANAGEMENT), this::handleUserManagement);
+        actions.put(i18n.get(I18nKeys.Nav.INVENTORY), this::handleInventory);
+        actions.put(i18n.get(I18nKeys.Nav.CART), this::handleCheckout);
+        actions.put(i18n.get(I18nKeys.Nav.TRANSACTIONS), this::handleTransactions);
+        actions.put(i18n.get(I18nKeys.Nav.MEMBERS), this::handleMembers);
+        actions.put(i18n.get(I18nKeys.Nav.STATISTICS), this::handleStatistics);
+        actions.put(i18n.get(I18nKeys.Nav.PROMOTIONS), this::handlePromotions);
+        actions.put(i18n.get(I18nKeys.Nav.SHIFT), this::handleShift);
+        actions.put(i18n.get(I18nKeys.Nav.SETTINGS), this::handleSettings);
+        // 兼容历史中文字面量
+        actions.put("商品管理", this::handleInventory);
+        actions.put("pos/结账", this::handleCheckout);
+        actions.put("结账", this::handleCheckout);
+        actions.put("交易记录", this::handleTransactions);
+        actions.put("会员管理", this::handleMembers);
+        actions.put("数据统计", this::handleStatistics);
+        actions.put("促销管理", this::handlePromotions);
+        actions.put("交班管理", this::handleShift);
+        actions.put("系统设置", this::handleSettings);
+        actions.put("用户管理", this::handleUserManagement);
+        return actions.get(title);
     }
     
         /**
@@ -1853,6 +1926,27 @@ private Button shiftBtn;
         if (timeTimeline != null) {
             timeTimeline.stop();
             timeTimeline = null;
+        }
+
+        // 停止班次信息后台轮询（daemon 线程，避免停止后仍引用本控制器）
+        if (shiftScheduler != null) {
+            shiftScheduler.shutdownNow();
+            shiftScheduler = null;
+        }
+
+        // 解除对 StatusBarManager 静态单例的绑定与监听，
+        // 否则登出后静态属性仍强引用旧主界面（含 openTabs 全部标签页），无法回收
+        if (statusLabel != null) {
+            statusLabel.textProperty().unbind();
+        }
+        if (statusLevelListener != null) {
+            StatusBarManager.statusLevelProperty().removeListener(statusLevelListener);
+            statusLevelListener = null;
+        }
+
+        // 解除静态实例引用，供下次登录创建的新 MainController 重新赋值
+        if (instance == this) {
+            instance = null;
         }
     }
 }

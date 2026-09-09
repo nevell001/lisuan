@@ -394,7 +394,8 @@ public class ReturnApprovalController {
     }
 
     private String getApproverName() {
-        return currentUser != null ? currentUser.name : "admin";
+        // 宿主 MainController 必须注入当前用户；禁止静默回退 "admin"，避免审批审计失真。
+        return currentUser != null ? currentUser.name : "system";
     }
 
     private void showAlert(Alert.AlertType type, String title, String message) {
