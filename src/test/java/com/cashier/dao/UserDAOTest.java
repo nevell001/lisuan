@@ -2,7 +2,6 @@ package com.cashier.dao;
 
 import com.cashier.model.User;
 import com.cashier.model.PageResult;
-import com.cashier.util.DatabaseManager;
 import com.cashier.util.DatabaseTestBase;
 import com.cashier.util.PasswordUtil;
 import org.junit.jupiter.api.*;
@@ -259,7 +258,9 @@ public class UserDAOTest extends DatabaseTestBase {
     @AfterAll
     @DisplayName("清理测试环境")
     public static void tearDownAfterClass() throws SQLException {
+        // 只清理本类数据，不要关闭共享的 JVM 级 H2 连接池：
+        // 全测试套件约 49 个类共用同一静态数据源，中途关闭会让后续测试的
+        // 初始化状态取决于类执行顺序（flaky/顺序敏感）。
         DatabaseTestBase.clearTestData();
-        DatabaseManager.clearTestConnection();
     }
 }
