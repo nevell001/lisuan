@@ -145,6 +145,8 @@ public class TouchCartController implements CartViewHost {
     private BigDecimal cashReceivedAmount = BigDecimal.ZERO;
     /** 扫码/输入停顿后检查“未找到商品”的延迟任务 */
     private PauseTransition notFoundHint;
+    /** 搜索输入防抖：停止连续输入 300ms 后才执行精确匹配/查询，避免逐键 3+1 次 DB */
+    private PauseTransition searchDebounce;
 
     @FXML
     private void initialize() {
@@ -156,26 +158,43 @@ public class TouchCartController implements CartViewHost {
         updateSummary();
         setupShortcuts();
         updateShiftInfo();
-        // 输入时实时精确匹配：完整条码/名称/编号命中唯一商品立即自动加购（无需回车）
+        // 输入时实时精确匹配：完整条码/名称/编号命中唯一商品立即自动加购（无需回车）。
+        // 增加防抖：连续键入/扫码期间只调度一次，停顿 300ms 后执行，避免每键 3+1 次 DB 查询
         searchField.textProperty().addListener((obs, oldVal, newVal) -> {
-            if (newVal == null || newVal.isBlank()) {
-                currentKeyword = null;
-                loadProducts(currentCategoryName);
+            String keyword = newVal == null ? null : newVal.trim();
+            scheduleSearchAction(keyword);
+        });
+    }
+
+    /** 搜索防抖调度：停止输入 300ms 后执行一次查询/加购动作 */
+    private void scheduleSearchAction(String keyword) {
+        if (searchDebounce != null) {
+            searchDebounce.stop();
+        }
+        searchDebounce = new PauseTransition(Duration.millis(300));
+        searchDebounce.setOnFinished(event -> performSearch(keyword));
+        searchDebounce.play();
+    }
+
+    /** 执行搜索：命中唯一商品立即加购；否则按关键字刷新商品列表 */
+    private void performSearch(String keyword) {
+        if (keyword == null || keyword.isBlank()) {
+            currentKeyword = null;
+            loadProducts(currentCategoryName);
+            return;
+        }
+        try {
+            Product exact = findExactProduct(keyword);
+            if (exact != null) {
+                addToCart(exact); // 成功后自动清空搜索栏
                 return;
             }
-            try {
-                Product exact = findExactProduct(newVal.trim());
-                if (exact != null) {
-                    addToCart(exact); // 成功后自动清空搜索栏
-                    return;
-                }
-            } catch (SQLException e) {
-                logger.error("实时精确匹配商品失败", e);
-            }
-            scheduleNotFoundHint(newVal.trim());
-            currentKeyword = newVal;
-            loadProducts(currentCategoryName);
-        });
+        } catch (SQLException e) {
+            logger.error("实时精确匹配商品失败", e);
+        }
+        scheduleNotFoundHint(keyword);
+        currentKeyword = keyword;
+        loadProducts(currentCategoryName);
     }
 
     // ===== 时钟更新 =====
@@ -187,11 +206,15 @@ public class TouchCartController implements CartViewHost {
         updateDateTime(); // 立即更新一次
     }
 
-    /** 清理资源（登出/切换视图时调用），停止时钟动画防止 Timeline 泄漏 */
+    /** 清理资源（登出/切换视图时调用），停止时钟动画与搜索防抖，防止泄漏 */
     public void cleanup() {
         if (clockTimeline != null) {
             clockTimeline.stop();
             clockTimeline = null;
+        }
+        if (searchDebounce != null) {
+            searchDebounce.stop();
+            searchDebounce = null;
         }
     }
 
