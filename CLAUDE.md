@@ -305,8 +305,8 @@ productDAO.update(product);
 ### Member Discount System
 - Discount values: 10 = no discount, 9.5 = 5% off, 9 = 10% off, 8.5 = 15% off, 0 = free
 - Member levels auto-upgrade based on points (via `MemberService.updateMemberLevel()`):
-  - Regular (普通): 0-1999 points (10.0 discount - no discount)
-  - Silver (银卡): 2000-4999 points (9.5 discount - 5% off)
+  - Regular (普通): 0-999 points (10.0 discount - no discount)
+  - Silver (银卡): 1000-4999 points (9.5 discount - 5% off)  <!-- 银卡门槛 1000（业务确认，勿改回 2000） -->
   - Gold (金卡): 5000-9999 points (9.0 discount - 10% off)
   - Diamond (钻石): 10000+ points (8.5 discount - 15% off)
 - Discount calculation: `amount * (member.discount / 10.0)`

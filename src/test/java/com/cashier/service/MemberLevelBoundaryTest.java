@@ -21,6 +21,14 @@ class MemberLevelBoundaryTest {
     }
 
     @Test
+    @DisplayName("银卡门槛边界：999 普通，1000 升级银卡（业务确认门槛=1000）")
+    void silverBoundary() {
+        assertEquals("普通", MemberService.calculateLevel(BigDecimal.valueOf(999)));
+        assertEquals("银卡", MemberService.calculateLevel(BigDecimal.valueOf(1000)));
+        assertEquals("银卡", MemberService.calculateLevel(BigDecimal.valueOf(4999)));
+    }
+
+    @Test
     @DisplayName("钻石门槛边界：10000 升级，9999 保持金卡")
     void diamondBoundary() {
         assertEquals("钻石", MemberService.calculateLevel(BigDecimal.valueOf(10000)));
@@ -43,5 +51,8 @@ class MemberLevelBoundaryTest {
         assertEquals(0, BigDecimal.valueOf(8.5).compareTo(MemberService.getDiscountByLevelDecimal("钻石")));
         // 未知等级兜底为不打折
         assertEquals(0, BigDecimal.TEN.compareTo(MemberService.getDiscountByLevelDecimal("不存在等级")));
+        // 历史脏数据（带"会员"后缀）也不得享受折扣，须等数据清洗/重算
+        assertEquals(0, BigDecimal.TEN.compareTo(MemberService.getDiscountByLevelDecimal("银卡会员")));
+        assertEquals(0, BigDecimal.TEN.compareTo(MemberService.getDiscountByLevelDecimal("金卡会员")));
     }
 }

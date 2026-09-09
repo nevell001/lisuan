@@ -258,8 +258,8 @@ mvn -q -DskipTests spotbugs:check
 
 | Tier | Points Range | Discount |
 |------|--------------|----------|
-| Regular Member | 0-1999 | No discount, calculated as 10.0 |
-| Silver Member | 2000-4999 | 5% off (9.5) |
+| Regular Member | 0-999 | No discount, calculated as 10.0 |
+| Silver Member | 1000-4999 | 5% off (9.5) |
 | Gold Member | 5000-9999 | 10% off (9.0) |
 | Diamond Member | 10000+ | 15% off (8.5) |
 

@@ -3,6 +3,7 @@ package com.cashier.api.controller;
 import com.cashier.dao.DAOFactory;
 import com.cashier.dao.ProductDAORefactored;
 import com.cashier.model.*;
+import com.cashier.service.MemberService;
 import com.cashier.util.DatabaseManager;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
@@ -262,10 +263,15 @@ public class TransactionApiController {
         double pointsToDeduct = transaction.finalAmount.divide(BigDecimal.valueOf(100), 2, RoundingMode.DOWN).doubleValue();
         DAOFactory.getInstance().getMemberDAO().updatePointsWithConnection(conn, transaction.memberId, -pointsToDeduct);
 
-        // 重新计算会员等级
+        // 重新计算会员等级与折扣
+        // 等级阈值/文案与折扣映射统一以 MemberService 为唯一来源，
+        // 避免 API 侧写入带“会员”后缀的非规范等级文案导致折扣查询失效。
         Member member = DAOFactory.getInstance().getMemberDAO().findByIdWithConnection(conn, transaction.memberId);
         if (member != null) {
-            member.level = calculateMemberLevel(member.points);
+            String canonicalLevel = MemberService.calculateLevel(member.points);
+            member.level = canonicalLevel;
+            member.discount = MemberService.getDiscountByLevelDecimal(canonicalLevel);
+            member.discountRate = member.discount;
             DAOFactory.getInstance().getMemberDAO().updateWithConnection(conn, member);
         }
     }
@@ -297,18 +303,6 @@ public class TransactionApiController {
         if (paymentMethod.contains("支付宝")) return "ALIPAY";
         if (paymentMethod.contains("银行卡") || paymentMethod.contains("刷卡")) return "CARD";
         return "CASH";
-    }
-    
-    /**
-     * 根据积分计算会员等级
-     */
-    private static String calculateMemberLevel(BigDecimal points) {
-        if (points == null) points = BigDecimal.ZERO;
-        double p = points.doubleValue();
-        if (p >= 10000) return "钻石会员";
-        if (p >= 5000) return "金卡会员";
-        if (p >= 2000) return "银卡会员";
-        return "普通会员";
     }
     
     /**
