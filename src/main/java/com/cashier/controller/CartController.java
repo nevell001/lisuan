@@ -156,6 +156,11 @@ public class CartController implements CartViewHost {
     private final ScannerManager scannerManager = ScannerManager.getInstance();
     private final FocusTarget scannerFocusTarget = createScannerFocusTarget();
     private boolean scannerFocusRegistered;
+
+    // 记录挂到主 Scene 上的键盘过滤器引用，dispose 时必须移除，
+    // 否则每次重开收银台都会叠加一个强引用旧控制器的永久过滤器（快捷键错乱 + 内存泄漏）
+    private javafx.scene.Scene shortcutScene;
+    private javafx.event.EventHandler<javafx.scene.input.KeyEvent> sceneKeyFilter;
     private String lastSuccessfulScanText;
     private long lastSuccessfulScanAt;
     private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
@@ -258,7 +263,12 @@ public class CartController implements CartViewHost {
      * @param scene 场景
      */
     private void setupSceneShortcuts(javafx.scene.Scene scene) {
-        scene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, event -> {
+        // 同一控制器重复挂载同一场景时跳过，避免叠加重复过滤器
+        if (sceneKeyFilter != null && shortcutScene == scene) {
+            return;
+        }
+        shortcutScene = scene;
+        sceneKeyFilter = event -> {
             handleCartCommandShortcut(event);
             if (!event.isConsumed()) {
                 handleCartFieldShortcut(event);
@@ -266,7 +276,8 @@ public class CartController implements CartViewHost {
             if (!event.isConsumed()) {
                 handleCartQuantityShortcut(event);
             }
-        });
+        };
+        scene.addEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, sceneKeyFilter);
     }
 
     private void handleCartCommandShortcut(javafx.scene.input.KeyEvent event) {
@@ -1676,6 +1687,14 @@ public class CartController implements CartViewHost {
             scannerFocusRegistered = false;
             logger.debug("已注销收银台扫码焦点目标");
         }
+
+        // 从主场景移除键盘过滤器，避免旧控制器残留并继续 consume 快捷键
+        if (shortcutScene != null && sceneKeyFilter != null) {
+            shortcutScene.removeEventFilter(javafx.scene.input.KeyEvent.KEY_PRESSED, sceneKeyFilter);
+            logger.debug("已移除收银台场景键盘过滤器");
+        }
+        shortcutScene = null;
+        sceneKeyFilter = null;
     }
 
     private FocusTarget createScannerFocusTarget() {

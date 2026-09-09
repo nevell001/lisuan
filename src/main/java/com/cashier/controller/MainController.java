@@ -323,11 +323,22 @@ private Button shiftBtn;
     private void closeCurrentTabIfPossible(KeyEvent event) {
         Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
         String welcomeTab = I18nManager.getInstance().get("main.welcome");
-        if (selectedTab != null && !selectedTab.getText().equals(welcomeTab)) {
-            tabPane.getTabs().remove(selectedTab);
-            openTabs.remove(selectedTab.getText());
-            event.consume();
+        if (selectedTab == null || selectedTab.getText().equals(welcomeTab)) {
+            return;
         }
+
+        // 先统一执行资源清理（收银台 dispose 会移除场景键盘过滤器/扫码目标），再移除标签页
+        disposeTabContent(selectedTab);
+        tabPane.getTabs().remove(selectedTab);
+
+        // 内容页 tab 文本为空，按 openTabs 反查标题后清理映射
+        for (java.util.Map.Entry<String, Tab> entry : openTabs.entrySet()) {
+            if (entry.getValue() == selectedTab) {
+                openTabs.remove(entry.getKey());
+                break;
+            }
+        }
+        event.consume();
     }
 
     private void consumeShortcut(KeyEvent event, Runnable action) {
@@ -1563,7 +1574,8 @@ private Button shiftBtn;
             return;
         }
 
-        // 关闭当前标签页
+        // 关闭当前标签页（先清理旧控制器资源：移除场景键盘过滤器/扫码目标等）
+        disposeTabContent(selectedTab);
         tabPane.getTabs().remove(selectedTab);
         openTabs.remove(title);
 
