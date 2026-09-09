@@ -111,6 +111,9 @@ public class StatisticsController {
 
     private List<Transaction> allTransactions;
 
+    /** 防止重复触发查询（后台线程仍在执行时忽略新查询） */
+    private boolean statisticsQueryInProgress;
+
     /**
      * 初始化方法
      */
@@ -170,21 +173,6 @@ public class StatisticsController {
             new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().amount)));
     }
 
-    private void loadTransactions(LocalDate startDate, LocalDate endDate) {
-        logger.info("StatisticsController: 开始加载交易数据...");
-        try {
-            allTransactions = DAOFactory.getInstance().getTransactionDAO().findByDateRange(
-                startDate.atStartOfDay().format(DateTimeFormats.STANDARD_DATE_TIME),
-                endDate.plusDays(1).atStartOfDay().minusSeconds(1).format(DateTimeFormats.STANDARD_DATE_TIME)
-            );
-        } catch (SQLException e) {
-            logger.error("加载交易数据失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            allTransactions = new java.util.ArrayList<>();
-        }
-        logger.info("StatisticsController: 加载了 {} 条交易记录", allTransactions.size());
-    }
-
     /**
      * 处理时间范围变化
      */
@@ -233,7 +221,7 @@ public class StatisticsController {
     }
 
     /**
-     * 处理查询
+     * 处理查询（DB 加载放到后台线程，聚合与 UI 更新经 runLater 回 FX，避免整段区间查询冻结界面）
      */
     @FXML
     public void handleQuery() {
@@ -250,10 +238,37 @@ public class StatisticsController {
             return;
         }
 
-        loadTransactions(startDate, endDate);
+        if (statisticsQueryInProgress) {
+            return;
+        }
+        statisticsQueryInProgress = true;
 
-        // 计算统计数据
-        calculateStatistics(allTransactions);
+        final String start = startDate.atStartOfDay().format(DateTimeFormats.STANDARD_DATE_TIME);
+        final String end = endDate.plusDays(1).atStartOfDay().minusSeconds(1).format(DateTimeFormats.STANDARD_DATE_TIME);
+
+        logger.info("StatisticsController: 后台加载交易数据开始...");
+        Thread worker = new Thread(() -> {
+            try {
+                final List<Transaction> transactions = DAOFactory.getInstance().getTransactionDAO().findByDateRange(start, end);
+                javafx.application.Platform.runLater(() -> {
+                    statisticsQueryInProgress = false;
+                    allTransactions = transactions;
+                    logger.info("StatisticsController: 加载了 {} 条交易记录", allTransactions.size());
+                    // 计算统计数据（内存聚合，量级小，放 FX 更新 UI 安全）
+                    calculateStatistics(allTransactions);
+                });
+            } catch (SQLException e) {
+                logger.error("加载交易数据失败", e);
+                javafx.application.Platform.runLater(() -> {
+                    statisticsQueryInProgress = false;
+                    showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
+                    allTransactions = new java.util.ArrayList<>();
+                    calculateStatistics(allTransactions);
+                });
+            }
+        }, "statistics-query");
+        worker.setDaemon(true);
+        worker.start();
     }
 
     /**

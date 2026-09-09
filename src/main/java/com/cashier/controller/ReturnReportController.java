@@ -56,6 +56,8 @@ public class ReturnReportController {
     @FXML private TableColumn<ReturnOrder, String> operatorNameColumn;
 
     private ObservableList<ReturnOrder> returnOrderList = FXCollections.observableArrayList();
+    /** 防止重复触发报表查询（后台生成期间忽略新的触发） */
+    private boolean reportInProgress;
 
     @FXML
     public void initialize() {
@@ -285,6 +287,9 @@ public class ReturnReportController {
         }
     }
 
+    /**
+     * 生成报表（统计/订单列表/分类图数据在后台线程加载，UI 更新经 runLater 回 FX）
+     */
     private void generateReport() {
         LocalDate startDate = startDatePicker.getValue();
         LocalDate endDate = endDatePicker.getValue();
@@ -298,46 +303,94 @@ public class ReturnReportController {
             showAlert(Alert.AlertType.WARNING, com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.InventoryAlert.INFO), com.cashier.i18n.I18nManager.getInstance().get("runtime.invalid_date_range_plain"));
             return;
         }
-
-        try {
-            // 获取退货统计
-            ReturnService.ReturnStatistics stats;
-            List<ReturnOrder> orders;
-            if (unbounded) {
-                orders = DAOFactory.getInstance().getReturnOrderDAO().findAll();
-                stats = deriveStatistics(orders);
-            } else {
-                stats = ReturnService.calculateReturnStatistics(start, end);
-                orders = DAOFactory.getInstance().getReturnOrderDAO().findByDateRange(start, end);
-            }
-
-            // 更新统计标签
-            totalReturnOrdersLabel.setText(String.valueOf(stats.totalReturnOrders));
-            totalReturnAmountLabel.setText(CurrencyUtil.format(stats.totalReturnAmount));
-            approvedOrdersLabel.setText(String.valueOf(stats.approvedOrders));
-            rejectedOrdersLabel.setText(String.valueOf(stats.rejectedOrders));
-            completedOrdersLabel.setText(String.valueOf(stats.completedOrders));
-            pendingOrdersLabel.setText(String.valueOf(stats.totalReturnOrders - stats.approvedOrders - stats.rejectedOrders - stats.completedOrders));
-            avgReturnAmountLabel.setText(CurrencyUtil.format(
-                stats.totalReturnOrders > 0
-                    ? stats.totalReturnAmount.divide(java.math.BigDecimal.valueOf(stats.totalReturnOrders), 2, java.math.RoundingMode.HALF_UP)
-                    : java.math.BigDecimal.ZERO));
-
-            // 加载退货订单列表
-            returnOrderList.clear();
-            returnOrderList.addAll(orders);
-
-            // 更新图表
-            updateStatusPieChart(stats);
-            updateReturnTrendChart(orders);
-            updateCategoryReturnChart(orders);
-
-            logger.info("退货报表生成成功，统计期: {} 至 {}", startDate, endDate);
-        } catch (Exception e) {
-            logger.error("生成退货报表失败", e);
-            showAlert(Alert.AlertType.ERROR, com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Label.ERROR),
-                    com.cashier.i18n.I18nManager.getInstance().get("runtime.report_generate_failed", e.getMessage()));
+        if (reportInProgress) {
+            return;
         }
+        reportInProgress = true;
+
+        final Date fStart = start;
+        final Date fEnd = end;
+        final boolean all = unbounded;
+        final LocalDate fStartDate = startDate;
+        final LocalDate fEndDate = endDate;
+
+        Thread worker = new Thread(() -> {
+            try {
+                ReturnService.ReturnStatistics stats;
+                List<ReturnOrder> orders;
+                if (all) {
+                    orders = DAOFactory.getInstance().getReturnOrderDAO().findAll();
+                    stats = deriveStatistics(orders);
+                } else {
+                    stats = ReturnService.calculateReturnStatistics(fStart, fEnd);
+                    orders = DAOFactory.getInstance().getReturnOrderDAO().findByDateRange(fStart, fEnd);
+                }
+                // 分类图明细在后台批量拉取，避免在 FX 线程做逐单 N+1 查询
+                Map<String, Double> categoryReturns = computeCategoryReturns(orders);
+
+                final ReturnService.ReturnStatistics finalStats = stats;
+                final List<ReturnOrder> finalOrders = orders;
+                javafx.application.Platform.runLater(() -> {
+                    reportInProgress = false;
+                    applyReportToUi(finalStats, finalOrders, categoryReturns, fStartDate, fEndDate);
+                });
+            } catch (Exception e) {
+                logger.error("生成退货报表失败", e);
+                javafx.application.Platform.runLater(() -> {
+                    reportInProgress = false;
+                    showAlert(Alert.AlertType.ERROR, com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Label.ERROR),
+                        com.cashier.i18n.I18nManager.getInstance().get("runtime.report_generate_failed", e.getMessage()));
+                });
+            }
+        }, "return-report-generate");
+        worker.setDaemon(true);
+        worker.start();
+    }
+
+    /**
+     * 在后台线程逐单拉取明细并汇总分类退货金额（替代原先 FX 上的 N+1）
+     */
+    private Map<String, Double> computeCategoryReturns(List<ReturnOrder> orders) {
+        Map<String, Double> categoryReturns = new HashMap<>();
+        for (ReturnOrder order : orders) {
+            List<ReturnOrderItem> items = DAOFactory.getInstance().getReturnOrderItemDAO()
+                .findByReturnOrderId(order.returnOrderId);
+            for (ReturnOrderItem item : items) {
+                String category = item.category != null && !item.category.isEmpty()
+                    ? item.category : I18nManager.getInstance().get(I18nKeys.Report.UNCATEGORIZED);
+                categoryReturns.put(category, categoryReturns.getOrDefault(category, 0.0)
+                    + item.getReturnAmount().doubleValue());
+            }
+        }
+        return categoryReturns;
+    }
+
+    /** 在 FX 线程把后台计算结果渲染到界面 */
+    private void applyReportToUi(ReturnService.ReturnStatistics stats, List<ReturnOrder> orders,
+                                 Map<String, Double> categoryReturns,
+                                 LocalDate startDate, LocalDate endDate) {
+        // 更新统计标签
+        totalReturnOrdersLabel.setText(String.valueOf(stats.totalReturnOrders));
+        totalReturnAmountLabel.setText(CurrencyUtil.format(stats.totalReturnAmount));
+        approvedOrdersLabel.setText(String.valueOf(stats.approvedOrders));
+        rejectedOrdersLabel.setText(String.valueOf(stats.rejectedOrders));
+        completedOrdersLabel.setText(String.valueOf(stats.completedOrders));
+        pendingOrdersLabel.setText(String.valueOf(stats.totalReturnOrders - stats.approvedOrders - stats.rejectedOrders - stats.completedOrders));
+        avgReturnAmountLabel.setText(CurrencyUtil.format(
+            stats.totalReturnOrders > 0
+                ? stats.totalReturnAmount.divide(java.math.BigDecimal.valueOf(stats.totalReturnOrders), 2, java.math.RoundingMode.HALF_UP)
+                : java.math.BigDecimal.ZERO));
+
+        // 加载退货订单列表
+        returnOrderList.clear();
+        returnOrderList.addAll(orders);
+
+        // 更新图表
+        updateStatusPieChart(stats);
+        updateReturnTrendChart(orders);
+        updateCategoryReturnChart(categoryReturns);
+
+        logger.info("退货报表生成成功，统计期: {} 至 {}", startDate, endDate);
     }
 
     /**
@@ -417,20 +470,8 @@ public class ReturnReportController {
         returnTrendBarChart.getData().add(series);
     }
 
-    private void updateCategoryReturnChart(List<ReturnOrder> orders) {
-        Map<String, Double> categoryReturns = new HashMap<>();
-
-        // 汇总分类退货金额
-        for (ReturnOrder order : orders) {
-            List<ReturnOrderItem> items = DAOFactory.getInstance().getReturnOrderItemDAO().findByReturnOrderId(order.returnOrderId);
-            for (ReturnOrderItem item : items) {
-                String category = item.category != null && !item.category.isEmpty()
-                    ? item.category : I18nManager.getInstance().get(I18nKeys.Report.UNCATEGORIZED);
-                categoryReturns.put(category, categoryReturns.getOrDefault(category, 0.0) + item.getReturnAmount().doubleValue());
-            }
-        }
-
-        // 创建柱状图数据
+    private void updateCategoryReturnChart(Map<String, Double> categoryReturns) {
+        // 创建柱状图数据（分类汇总已在后台 computeCategoryReturns 完成，这里只做渲染）
         XYChart.Series<String, Number> series = new XYChart.Series<>();
         for (Map.Entry<String, Double> entry : categoryReturns.entrySet()) {
             series.getData().add(new XYChart.Data<>(entry.getKey(), entry.getValue()));
