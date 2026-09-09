@@ -142,20 +142,38 @@ public class MemberDAORefactored extends BaseDAO {
         if (member.memberCode == null || member.memberCode.trim().isEmpty()) {
             member.memberCode = generateMemberCode();
         }
-        if (member.id > 0) {
-            return executeUpdate(
-                "INSERT INTO members (id, member_code, phone, name, points, level, discount, balance, birthday, version) " +
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-                member.id, member.memberCode, member.phone, member.name, member.points,
-                member.level, member.discount, member.balance, member.birthday, 0) > 0;
+        // MAX+1 取号在多进程并发下可能撞 member_code 唯一键；
+        // 确认是该编号冲突时重新取号重试（最多 3 次），避免并发创建会员直接失败。
+        final int maxAttempts = 3;
+        for (int attempt = 1; ; attempt++) {
+            try {
+                if (member.id > 0) {
+                    return executeUpdate(
+                        "INSERT INTO members (id, member_code, phone, name, points, level, discount, balance, birthday, version) " +
+                            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+                        member.id, member.memberCode, member.phone, member.name, member.points,
+                        member.level, member.discount, member.balance, member.birthday, 0) > 0;
+                }
+                long id = executeInsertReturnId(
+                    "INSERT INTO members (member_code, phone, name, points, level, discount, balance, birthday) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+                    member.memberCode, member.phone, member.name, member.points,
+                    member.level, member.discount, member.balance, member.birthday);
+                member.id = (int) id;
+                return id > 0;
+            } catch (SQLException e) {
+                // 仅当确实是 member_code 撞号时重试；其他异常（电话重复、连接异常等）原样抛出
+                if (attempt >= maxAttempts || !isMemberCodeTaken(member.memberCode)) {
+                    throw e;
+                }
+                logger.warn("会员编号撞号，重新取号重试: attempt={}, code={}", attempt, member.memberCode);
+                member.memberCode = generateMemberCode();
+            }
         }
-        long id = executeInsertReturnId(
-            "INSERT INTO members (member_code, phone, name, points, level, discount, balance, birthday) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            member.memberCode, member.phone, member.name, member.points,
-            member.level, member.discount, member.balance, member.birthday);
-        member.id = (int) id;
-        return id > 0;
+    }
+
+    private boolean isMemberCodeTaken(String memberCode) throws SQLException {
+        return queryInt("SELECT COUNT(*) FROM members WHERE member_code = ?", memberCode) > 0;
     }
 
     private String generateMemberCode() throws SQLException {

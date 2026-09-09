@@ -107,6 +107,46 @@ public class ReturnOrderDAORefactored extends BaseDAO {
         }
     }
 
+    /**
+     * 原子审批/驳回：仅当退货单当前状态为 PENDING 时迁移到 newStatus 并记录审批信息。
+     * 并发下第二次操作影响行数为 0，防止重复审批导致的重复恢复库存。
+     *
+     * @param newStatus 目标状态（APPROVED 或 REJECTED）
+     * @return 是否成功迁移；0 行受影响（状态已非 PENDING）返回 false
+     */
+    public boolean markApprovalWithConnection(Connection conn, String returnOrderId,
+                                              String newStatus, String approverName,
+                                              String approvalComment) throws SQLException {
+        String sql = "UPDATE return_orders SET status = ?, approver_name = ?, approval_date = ?, " +
+            "approval_comment = ?, update_time = ? WHERE return_order_id = ? AND status = 'PENDING'";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, newStatus);
+            stmt.setString(2, approverName);
+            stmt.setTimestamp(3, Timestamp.from(java.time.Instant.now()));
+            stmt.setString(4, approvalComment);
+            stmt.setTimestamp(5, Timestamp.from(java.time.Instant.now()));
+            stmt.setString(6, returnOrderId);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * 原子完成：仅当退货单当前状态为 APPROVED 时迁移到 COMPLETED 并记录完成时间。
+     * 并发下第二次操作影响行数为 0，防止重复完成导致的重复退款/重复写流水。
+     *
+     * @return 是否成功迁移；0 行受影响（状态非 APPROVED）返回 false
+     */
+    public boolean markCompletedWithConnection(Connection conn, String returnOrderId) throws SQLException {
+        String sql = "UPDATE return_orders SET status = 'COMPLETED', completed_date = ?, update_time = ? " +
+            "WHERE return_order_id = ? AND status = 'APPROVED'";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setTimestamp(1, Timestamp.from(java.time.Instant.now()));
+            stmt.setTimestamp(2, Timestamp.from(java.time.Instant.now()));
+            stmt.setString(3, returnOrderId);
+            return stmt.executeUpdate() > 0;
+        }
+    }
+
     public boolean delete(int id) {
         try (Connection conn = getConnection();
              PreparedStatement stmt = conn.prepareStatement("DELETE FROM return_orders WHERE id = ?")) {

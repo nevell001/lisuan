@@ -22,9 +22,18 @@ public class SyncManager {
     private static final int MAX_SYNC_PAGE_SIZE = 500;
     
     private static final SyncManager INSTANCE = new SyncManager();
-    
+
+    // 客户端上行消息防护：单条大小上限与每连接速率上限，防止伪造事件/超大消息/洪泛占用服务端
+    private static final int MAX_WS_MESSAGE_LENGTH = 16 * 1024;
+    private static final int MAX_WS_MESSAGES_PER_WINDOW = 30;
+    private static final long WS_WINDOW_MILLIS = 10_000;
+
     // 终端连接映射: sessionId -> TerminalConnection
     private final ConcurrentHashMap<String, TerminalConnection> connections = new ConcurrentHashMap<>();
+
+    // 每会话消息到达时间（用于速率限制）
+    private final ConcurrentHashMap<String, java.util.ArrayDeque<Long>> sessionMessageTimes =
+        new ConcurrentHashMap<>();
     
     // 用户终端映射: userId -> Set of sessionId
     private final ConcurrentHashMap<Integer, ConcurrentHashMap<String, Boolean>> userTerminals = new ConcurrentHashMap<>();
@@ -88,7 +97,10 @@ public class SyncManager {
                     userTerminals.remove(conn.userId);
                 }
             }
-            
+
+            // 清理该会话的速率记录
+            sessionMessageTimes.remove(sessionId);
+
             logger.info("终端断开: {} - {}", conn.username, conn.terminalName);
             
             // 广播终端下线事件
@@ -178,37 +190,31 @@ public class SyncManager {
      */
     public void handleMessage(WsContext ctx, String message) {
         try {
-            SyncMessage msg = mapper.readValue(message, SyncMessage.class);
             String sessionId = getSessionId(ctx);
             TerminalConnection conn = connections.get(sessionId);
-            
+
             if (conn == null) return;
-            
+
+            // 单条消息大小上限：拒绝超大消息，避免解析/转发放大
+            if (message == null || message.length() > MAX_WS_MESSAGE_LENGTH) {
+                logger.warn("丢弃超长 WebSocket 消息: length={}, from={}",
+                    message == null ? 0 : message.length(), conn.terminalName);
+                return;
+            }
+
+            // 每连接速率限制：超过窗口内阈值直接丢弃，防止洪泛占用服务端
+            if (!allowSessionMessage(sessionId)) {
+                logger.warn("终端消息超频，已丢弃: from={}", conn.terminalName);
+                return;
+            }
+
+            SyncMessage msg = mapper.readValue(message, SyncMessage.class);
+
             logger.debug("收到消息: {} from {}", msg.type, conn.terminalName);
             
             switch (msg.type) {
                 case "PING":
                     ctx.send(toJson(new SyncMessage("PONG", System.currentTimeMillis(), Map.of("sessionId", sessionId))));
-                    break;
-                    
-                case "TRANSACTION_CREATED":
-                    // 广播新交易到所有终端
-                    broadcastSyncEvent(SyncEventType.TRANSACTION_CREATED, msg.data);
-                    break;
-                    
-                case "PRODUCT_UPDATED":
-                    // 广播商品更新
-                    broadcastSyncEvent(SyncEventType.PRODUCT_UPDATED, msg.data);
-                    break;
-                    
-                case "MEMBER_UPDATED":
-                    // 广播会员更新
-                    broadcastSyncEvent(SyncEventType.MEMBER_UPDATED, msg.data);
-                    break;
-                    
-                case "INVENTORY_CHANGED":
-                    // 广播库存变化
-                    broadcastSyncEvent(SyncEventType.INVENTORY_CHANGED, msg.data);
                     break;
                     
                 case "REQUEST_SYNC":
@@ -217,10 +223,42 @@ public class SyncManager {
                     break;
                     
                 default:
-                    logger.warn("未知消息类型: {}", msg.type);
+                    // 客户端上行仅允许控制类消息（心跳/同步请求）。
+                    // 业务事件（交易/商品/会员/库存等）一律拒绝：合法事件只由服务端业务代码
+                    // （服务层/API 控制器）通过 broadcastSyncEvent 广播，防止伪造事件污染其他
+                    // 终端或造成 1→N 广播放大。
+                    logger.warn(isBusinessEventType(msg.type)
+                        ? "拒绝客户端上行的业务广播事件（仅服务端可广播）: type={}, from={}"
+                        : "未知消息类型: {}", msg.type, conn.terminalName);
             }
         } catch (Exception e) {
             logger.error("处理消息失败: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 判断消息类型是否为服务端专有的业务广播事件
+     */
+    private static boolean isBusinessEventType(String type) {
+        return SyncEventType.fromName(type) != null && !"PING".equals(type) && !"PONG".equals(type);
+    }
+
+    /**
+     * 每连接滑动窗口限流：窗口内消息数超过阈值返回 false（调用方丢弃该消息）
+     */
+    private boolean allowSessionMessage(String sessionId) {
+        long now = System.currentTimeMillis();
+        java.util.ArrayDeque<Long> times = sessionMessageTimes.computeIfAbsent(
+            sessionId, k -> new java.util.ArrayDeque<>());
+        synchronized (times) {
+            while (!times.isEmpty() && now - times.peekFirst() > WS_WINDOW_MILLIS) {
+                times.pollFirst();
+            }
+            if (times.size() >= MAX_WS_MESSAGES_PER_WINDOW) {
+                return false;
+            }
+            times.addLast(now);
+            return true;
         }
     }
     

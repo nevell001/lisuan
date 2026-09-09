@@ -329,15 +329,21 @@ public class TransactionService {
     }
 
     /**
-     * 生成订单号
-     * @return 订单号
+     * 生成交易单号（ORD + 时间戳 + 序号 + 进程随机段）
+     *
+     * <p>序号是 JVM 内 AtomicLong（进程重启后归零）；若多个进程/实例在同一毫秒生成单号
+     * （各自序号都从 0 开始）会撞 transactions 主键。追加 32 位 SecureRandom 随机段后，
+     * 跨进程同毫秒冲突概率可忽略。</p>
      */
     private static final java.util.concurrent.atomic.AtomicLong orderSequence =
         new java.util.concurrent.atomic.AtomicLong(0);
+    private static final java.security.SecureRandom SECURE_RANDOM = new java.security.SecureRandom();
 
     public static String generateOrderNumber() {
         String ts = com.cashier.util.DateTimeFormats.COMPACT_DATE_TIME_MILLIS.format(LocalDateTime.now());
-        return "ORD" + ts + String.format("%04d", orderSequence.getAndIncrement() % 10000);
+        String seq = String.format("%04d", orderSequence.getAndIncrement() % 10000);
+        String randomSuffix = String.format("%08x", SECURE_RANDOM.nextInt());
+        return "ORD" + ts + seq + randomSuffix;
     }
 
     /**

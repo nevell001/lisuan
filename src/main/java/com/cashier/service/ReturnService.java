@@ -22,43 +22,58 @@ public class ReturnService {
 
     /**
      * 创建退货订单（事务）
+     *
+     * <p>退货单号由 MAX+1 生成，多进程并发创建时可能撞唯一键；失败时整体重试一次
+     * （事务只做纯插入，失败已回滚，重放安全），提升并发场景成功率。</p>
      */
     public static boolean createReturnOrder(ReturnOrder returnOrder, List<ReturnOrderItem> items) {
-        try {
-            boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
-                returnOrder.returnOrderId = DAOFactory.getInstance().getReturnOrderDAO().generateNextReturnOrderId(conn);
-                returnOrder.status = "PENDING";
+        final int maxAttempts = 2;
+        for (int attempt = 1; attempt <= maxAttempts; attempt++) {
+            try {
+                boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
+                    returnOrder.returnOrderId = DAOFactory.getInstance().getReturnOrderDAO().generateNextReturnOrderId(conn);
+                    returnOrder.status = "PENDING";
 
-                if (items != null && !items.isEmpty()) {
-                    for (ReturnOrderItem item : items) {
-                        item.returnOrderId = returnOrder.returnOrderId;
+                    if (items != null && !items.isEmpty()) {
+                        for (ReturnOrderItem item : items) {
+                            item.returnOrderId = returnOrder.returnOrderId;
+                        }
                     }
+
+                    if (!DAOFactory.getInstance().getReturnOrderDAO().insertWithConnection(conn, returnOrder)) {
+                        return false;
+                    }
+
+                    return items == null || items.isEmpty()
+                        || DAOFactory.getInstance().getReturnOrderItemDAO().batchInsertWithConnection(conn, items);
+                });
+
+                if (success) {
+                    logger.info("退货订单创建成功: {}", returnOrder.returnOrderId);
+                    // 广播退货单创建事件
+                    com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
+                        com.cashier.api.sync.SyncEventType.RETURN_ORDER_CREATED,
+                        java.util.Map.of(
+                            "returnOrderId", returnOrder.returnOrderId,
+                            "totalAmount", returnOrder.totalAmount.toString()
+                        )
+                    );
+                    return true;
                 }
 
-                if (!DAOFactory.getInstance().getReturnOrderDAO().insertWithConnection(conn, returnOrder)) {
+                if (attempt < maxAttempts) {
+                    logger.warn("退货订单创建失败（第 {} 次），将重试一次", attempt);
+                }
+            } catch (SQLException e) {
+                if (attempt >= maxAttempts) {
+                    logger.error("创建退货订单失败", e);
                     return false;
                 }
-
-                return items == null || items.isEmpty() || DAOFactory.getInstance().getReturnOrderItemDAO().batchInsertWithConnection(conn, items);
-            });
-
-            if (success) {
-                logger.info("退货订单创建成功: {}", returnOrder.returnOrderId);
-                
-                // 广播退货单创建事件
-                com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(
-                    com.cashier.api.sync.SyncEventType.RETURN_ORDER_CREATED,
-                    java.util.Map.of(
-                        "returnOrderId", returnOrder.returnOrderId,
-                        "totalAmount", returnOrder.totalAmount.toString()
-                    )
-                );
+                logger.warn("创建退货订单异常（第 {} 次），将重试一次: {}", attempt, e.getMessage());
             }
-            return success;
-        } catch (SQLException e) {
-            logger.error("创建退货订单失败", e);
-            return false;
         }
+        logger.error("创建退货订单失败，已达最大重试次数: {}", maxAttempts);
+        return false;
     }
 
     /**
@@ -73,12 +88,12 @@ public class ReturnService {
                     return false;
                 }
 
-                returnOrder.status = approved ? "APPROVED" : "REJECTED";
-                returnOrder.approverName = approverName;
-                returnOrder.approvalDate = java.time.Instant.now();
-                returnOrder.approvalComment = approvalComment;
-
-                if (!DAOFactory.getInstance().getReturnOrderDAO().updateWithConnection(conn, returnOrder)) {
+                // 原子状态迁移（PENDING -> APPROVED/REJECTED），防止并发重复审批重复恢复库存；
+                // 0 行受影响说明该单已被他人处理，直接失败回滚。
+                String newStatus = approved ? "APPROVED" : "REJECTED";
+                if (!DAOFactory.getInstance().getReturnOrderDAO().markApprovalWithConnection(
+                        conn, returnOrderId, newStatus, approverName, approvalComment)) {
+                    logger.warn("退货单状态已变更，审批冲突: {}", returnOrderId);
                     return false;
                 }
 
@@ -138,10 +153,10 @@ public class ReturnService {
                     return false;
                 }
 
-                returnOrder.status = "COMPLETED";
-                returnOrder.completedDate = java.time.Instant.now();
-
-                if (!DAOFactory.getInstance().getReturnOrderDAO().updateWithConnection(conn, returnOrder)) {
+                // 原子状态迁移（APPROVED -> COMPLETED），防止并发重复完成导致重复退款/重复写流水；
+                // 0 行受影响说明该单已被他人完成，直接失败回滚。
+                if (!DAOFactory.getInstance().getReturnOrderDAO().markCompletedWithConnection(conn, returnOrderId)) {
+                    logger.warn("退货单已被处理，完成冲突: {}", returnOrderId);
                     return false;
                 }
 
