@@ -52,7 +52,8 @@ public abstract class DatabaseTestBase {
                 }
             }
 
-            String url = props.getProperty("db.url", "jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1");
+            String url = props.getProperty("db.url",
+                "jdbc:h2:mem:testdb;MODE=MySQL;DB_CLOSE_DELAY=-1;LOCK_TIMEOUT=10000");
             String username = props.getProperty("db.username", "sa");
             String password = props.getProperty("db.password", "");
 
@@ -215,6 +216,7 @@ public abstract class DatabaseTestBase {
                 operator_name VARCHAR(100),
                 member_phone VARCHAR(20),
                 transaction_type VARCHAR(20) DEFAULT 'sale',
+                status VARCHAR(20) DEFAULT 'NORMAL',
                 voided TINYINT(1) DEFAULT 0,
                 voided_by VARCHAR(50),
                 voided_at BIGINT

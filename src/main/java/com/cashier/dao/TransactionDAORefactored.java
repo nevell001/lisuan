@@ -70,7 +70,7 @@ public class TransactionDAORefactored extends BaseDAO {
 
     public Transaction findById(String transactionId) throws SQLException {
         String sql = "SELECT t.transaction_id, t.timestamp, t.total_amount, t.tax, t.final_amount, t.payment_method, " +
-            "t.member_phone, t.operator_username, " +
+            "t.member_phone, t.operator_username, t.status, " +
             "COALESCE(t.operator_name, u.name, t.operator_username) AS operator_name " +
             "FROM transactions t LEFT JOIN users u ON t.operator_username = u.username WHERE t.transaction_id = ?";
         try (Connection conn = getConnection();
@@ -113,7 +113,7 @@ public class TransactionDAORefactored extends BaseDAO {
 
     private static final String JOIN_SELECT =
         "SELECT t.transaction_id, t.timestamp, t.total_amount, t.tax, t.final_amount, t.payment_method, " +
-        "t.member_phone, t.operator_username, " +
+        "t.member_phone, t.operator_username, t.status, " +
         "COALESCE(t.operator_name, u.name, t.operator_username) AS operator_name, " +
         "ti.id as item_id, ti.product_id, ti.product_code, ti.barcode, ti.product_name, ti.price, ti.quantity, ti.subtotal, " +
         "p.category AS category ";
@@ -132,7 +132,7 @@ public class TransactionDAORefactored extends BaseDAO {
         }
         String sql = JOIN_SELECT +
             "FROM (SELECT transaction_id, timestamp, total_amount, tax, final_amount, payment_method, " +
-            "member_phone, operator_username, operator_name FROM transactions ORDER BY timestamp DESC LIMIT ?) t " +
+            "member_phone, operator_username, operator_name, status FROM transactions ORDER BY timestamp DESC LIMIT ?) t " +
             "LEFT JOIN users u ON t.operator_username = u.username " +
             "LEFT JOIN transaction_items ti ON t.transaction_id = ti.transaction_id " +
             "LEFT JOIN products p ON ti.product_id = p.id ORDER BY t.timestamp DESC";
@@ -354,6 +354,7 @@ public class TransactionDAORefactored extends BaseDAO {
         transaction.memberPhone = rs.getString("member_phone");
         transaction.operatorUsername = rs.getString("operator_username");
         transaction.operatorName = rs.getString("operator_name");
+        transaction.status = rs.getString("status");
         transaction.items = new ArrayList<>();
         return transaction;
     }

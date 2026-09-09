@@ -172,6 +172,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     operator_name VARCHAR(100),
     member_phone VARCHAR(20),
     transaction_type VARCHAR(20) DEFAULT 'sale',
+    status VARCHAR(20) DEFAULT 'NORMAL' COMMENT '交易状态（NORMAL-正常，REFUNDED-已退款）',
     voided TINYINT(1) DEFAULT 0,
     voided_by VARCHAR(50),
     voided_at BIGINT,
@@ -256,22 +257,22 @@ CREATE TABLE IF NOT EXISTS categories (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 
-#### 9. recharges - 充值记录表
+#### 9. recharge_records - 充值记录表
+
+列结构与 `RechargeRecordDAORefactored` 保持一致（v2.6.x 起替代废弃的旧表 `recharges`）。
 
 ```sql
-CREATE TABLE IF NOT EXISTS recharges (
+CREATE TABLE IF NOT EXISTS recharge_records (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    record_id VARCHAR(50) UNIQUE NOT NULL COMMENT '充值记录编号',
     member_phone VARCHAR(20) NOT NULL,
-    member_name VARCHAR(100) NOT NULL,
+    member_name VARCHAR(100),
     amount DECIMAL(10,2) NOT NULL,
-    payment_method VARCHAR(20) NOT NULL,
-    operator_username VARCHAR(50) NOT NULL,
-    operator_name VARCHAR(100) NOT NULL,
-    timestamp BIGINT,
+    payment_method VARCHAR(20),
+    operator VARCHAR(50),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     INDEX idx_member_phone (member_phone),
-    INDEX idx_timestamp (timestamp),
-    FOREIGN KEY (member_phone) REFERENCES members(phone) ON DELETE CASCADE,
-    FOREIGN KEY (operator_username) REFERENCES users(username) ON DELETE SET NULL
+    INDEX idx_timestamp (timestamp)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 ```
 

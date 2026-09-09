@@ -115,6 +115,7 @@ CREATE TABLE IF NOT EXISTS transactions (
     operator_name VARCHAR(100),
     member_phone VARCHAR(20),
     transaction_type VARCHAR(20) DEFAULT 'sale',
+    status VARCHAR(20) DEFAULT 'NORMAL' COMMENT '交易状态（NORMAL-正常，REFUNDED-已退款）',
     voided TINYINT(1) DEFAULT 0,
     voided_by VARCHAR(50),
     voided_at BIGINT,
@@ -201,20 +202,20 @@ CREATE TABLE IF NOT EXISTS units (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 创建充值记录表
-CREATE TABLE IF NOT EXISTS recharges (
+-- 列结构与 RechargeRecordDAORefactored / 测试库 DatabaseTestBase 保持一致。
+-- 注意：v2.5 之前的旧表 recharges 已废弃（无任何生产读写方），老库中的历史行如需
+-- 保留请人工迁移到本表后再删除旧表。
+CREATE TABLE IF NOT EXISTS recharge_records (
     id INT AUTO_INCREMENT PRIMARY KEY,
+    record_id VARCHAR(50) UNIQUE NOT NULL COMMENT '充值记录编号',
     member_phone VARCHAR(20) NOT NULL,
+    member_name VARCHAR(100),
     amount DECIMAL(10,2) NOT NULL,
-    payment_method VARCHAR(20) NOT NULL,
-    operator_username VARCHAR(50),
-    operator_name VARCHAR(100),
-    timestamp BIGINT NOT NULL,
-    balance_before DECIMAL(10,2),
-    balance_after DECIMAL(10,2),
-    notes TEXT,
-    INDEX idx_member (member_phone),
-    INDEX idx_timestamp (timestamp),
-    FOREIGN KEY (member_phone) REFERENCES members(phone) ON DELETE CASCADE
+    payment_method VARCHAR(20),
+    operator VARCHAR(50),
+    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_member_phone (member_phone),
+    INDEX idx_timestamp (timestamp)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 创建操作日志表

@@ -310,7 +310,7 @@ public class DatabaseManager {
             createTablePromotions(stmt);
             createTableCategories(stmt);
             createTableUnits(stmt);
-            createTableRecharges(stmt);
+            createTableRechargeRecords(stmt);
             createTableOperationLogs(stmt);
             createTableSettings(stmt);
             createTableThemePreferences(stmt);
@@ -482,6 +482,7 @@ public class DatabaseManager {
                     operator_name VARCHAR(100),
                     member_phone VARCHAR(20),
                     transaction_type VARCHAR(20) DEFAULT 'sale',
+                    status VARCHAR(20) DEFAULT 'NORMAL' COMMENT '交易状态（NORMAL-正常，REFUNDED-已退款）',
                     voided TINYINT(1) DEFAULT 0,
                     voided_by VARCHAR(50),
                     voided_at BIGINT,
@@ -591,22 +592,23 @@ public class DatabaseManager {
 
     }
 
-    private static void createTableRecharges(Statement stmt) throws SQLException {
+    private static void createTableRechargeRecords(Statement stmt) throws SQLException {
             // 创建充值记录表
+            // 列结构与 RechargeRecordDAORefactored / 测试库 DatabaseTestBase 保持一致。
+            // 注意：v2.5 之前的旧表 recharges 已废弃（无任何生产读写方），老库中的历史行如需
+            // 保留请人工迁移到本表后再删除旧表。
             stmt.execute("""
-                CREATE TABLE IF NOT EXISTS recharges (
+                CREATE TABLE IF NOT EXISTS recharge_records (
                     id INT AUTO_INCREMENT PRIMARY KEY,
+                    record_id VARCHAR(50) UNIQUE NOT NULL COMMENT '充值记录编号',
                     member_phone VARCHAR(20) NOT NULL,
-                    member_name VARCHAR(100) NOT NULL,
+                    member_name VARCHAR(100),
                     amount DECIMAL(10,2) NOT NULL,
-                    payment_method VARCHAR(20) NOT NULL,
-                    operator_username VARCHAR(50),
-                    operator_name VARCHAR(100) NOT NULL,
-                    timestamp BIGINT,
+                    payment_method VARCHAR(20),
+                    operator VARCHAR(50),
+                    timestamp TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     INDEX idx_member_phone (member_phone),
-                    INDEX idx_timestamp (timestamp),
-                    FOREIGN KEY (member_phone) REFERENCES members(phone) ON DELETE CASCADE,
-                    FOREIGN KEY (operator_username) REFERENCES users(username) ON DELETE SET NULL
+                    INDEX idx_timestamp (timestamp)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);
 
@@ -1099,6 +1101,10 @@ public class DatabaseManager {
             logger.info("正在为 users 表添加 force_password_change 字段...");
             stmt.execute("ALTER TABLE users ADD COLUMN force_password_change TINYINT(1) DEFAULT 0 AFTER active");
         }
+
+        // 为 transactions 表添加 status 字段（REST 退款终态/幂等保护，如果不存在）
+        ensureColumn(stmt, "transactions", "status",
+            "VARCHAR(20) DEFAULT 'NORMAL' COMMENT '交易状态（NORMAL-正常，REFUNDED-已退款）'");
 
         ensureColumn(stmt, OPERATION_LOGS_TABLE, "ip_address", "VARCHAR(50) DEFAULT NULL");
         ensureColumn(stmt, OPERATION_LOGS_TABLE, "log_level", "VARCHAR(20) NOT NULL DEFAULT 'INFO'");
