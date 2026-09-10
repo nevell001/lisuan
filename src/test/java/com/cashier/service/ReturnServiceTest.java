@@ -32,6 +32,27 @@ class ReturnServiceTest extends DatabaseTestBase {
     private Product testProduct2;
     private Transaction testTransaction;
 
+    @Test
+    @DisplayName("退款单价按整单实付比例折算：9.5 折成交的 100 元只能退 95 元")
+    void refundUnitPriceUsesPaidRatio() {
+        // 原价合计 100.00、实付 95.00 -> 单价 10.00 折算为 9.50
+        assertAmountEquals(new BigDecimal("9.50"), ReturnService.refundUnitPrice(
+            new BigDecimal("10.00"), new BigDecimal("95.00"), new BigDecimal("100.00")));
+
+        // 未打折时单价不变
+        assertAmountEquals(new BigDecimal("10.00"), ReturnService.refundUnitPrice(
+            new BigDecimal("10.00"), new BigDecimal("100.00"), new BigDecimal("100.00")));
+    }
+
+    @Test
+    @DisplayName("折算比例边界：原价无效不折算，实付高于原价时封顶为 1")
+    void refundRatioBoundaries() {
+        assertAmountEquals(BigDecimal.ONE, ReturnService.refundRatio(new BigDecimal("95.00"), BigDecimal.ZERO));
+        assertAmountEquals(BigDecimal.ONE, ReturnService.refundRatio(new BigDecimal("95.00"), null));
+        assertAmountEquals(BigDecimal.ONE, ReturnService.refundRatio(new BigDecimal("120.00"), new BigDecimal("100.00")));
+        assertAmountEquals(BigDecimal.ZERO, ReturnService.refundRatio(BigDecimal.ZERO, new BigDecimal("100.00")));
+    }
+
     @BeforeEach
     void setUp() throws Exception {
         // 确保使用测试数据库
@@ -459,6 +480,60 @@ class ReturnServiceTest extends DatabaseTestBase {
         assertNull(updatedOrder.completedDate);
         assertAmountEquals(initialBalance, memberDAO.findByPhone(testMember.phone).balance);
         assertEquals(1, rechargeRecordDAO.findAll().size());
+    }
+
+    @Test
+    @DisplayName("现金单退现金：不冲会员余额，但按退货金额冲减原单积分")
+    void cashRefundDoesNotCreditBalanceButReversesPoints() throws Exception {
+        testMember.points = new BigDecimal("300");   // 原单实付 30 元 -> 300 积分
+        memberDAO.update(testMember);
+        BigDecimal initialBalance = memberDAO.findByPhone(testMember.phone).balance;
+
+        ReturnOrder returnOrder = createAndApproveReturnOrder(30.0, "现金");
+        assertTrue(ReturnService.completeReturnOrder(returnOrder.returnOrderId));
+
+        Member updated = memberDAO.findByPhone(testMember.phone);
+        assertAmountEquals(initialBalance, updated.balance);
+        assertAmountEquals(BigDecimal.ZERO, updated.points);
+    }
+
+    @Test
+    @DisplayName("非现金单退回会员余额并写充值流水，同时冲减积分")
+    void nonCashRefundCreditsBalanceAndReversesPoints() throws Exception {
+        testMember.points = new BigDecimal("300");
+        memberDAO.update(testMember);
+        BigDecimal initialBalance = memberDAO.findByPhone(testMember.phone).balance;
+
+        ReturnOrder returnOrder = createAndApproveReturnOrder(30.0, "微信");
+        assertTrue(ReturnService.completeReturnOrder(returnOrder.returnOrderId));
+
+        Member updated = memberDAO.findByPhone(testMember.phone);
+        assertAmountEquals(initialBalance.add(new BigDecimal("30.00")), updated.balance);
+        assertAmountEquals(BigDecimal.ZERO, updated.points);
+    }
+
+    @Test
+    @DisplayName("部分退货按退货金额比例冲减积分")
+    void partialReturnReversesPointsProportionally() {
+        // 原单实付 100 元 -> 1000 积分；退 25 元 -> 冲减 250 积分
+        assertAmountEquals(new BigDecimal("250"),
+            ReturnService.pointsToReverse(new BigDecimal("25.00"), new BigDecimal("100.00")));
+        // 整单退货恰好冲掉全部积分
+        assertAmountEquals(new BigDecimal("1000"),
+            ReturnService.pointsToReverse(new BigDecimal("100.00"), new BigDecimal("100.00")));
+        // 参数非法返回 0
+        assertAmountEquals(BigDecimal.ZERO, ReturnService.pointsToReverse(BigDecimal.ZERO, new BigDecimal("100.00")));
+        assertAmountEquals(BigDecimal.ZERO, ReturnService.pointsToReverse(new BigDecimal("10.00"), null));
+    }
+
+    @Test
+    @DisplayName("现金退款方式识别兼容中文与代码")
+    void cashPaymentMethodDetection() {
+        assertTrue(ReturnService.isCashPaymentMethod("现金"));
+        assertTrue(ReturnService.isCashPaymentMethod("CASH"));
+        assertFalse(ReturnService.isCashPaymentMethod("微信"));
+        assertFalse(ReturnService.isCashPaymentMethod("WECHAT"));
+        assertFalse(ReturnService.isCashPaymentMethod(null));
     }
 
     /**

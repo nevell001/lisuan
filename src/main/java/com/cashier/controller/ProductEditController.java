@@ -31,6 +31,8 @@ import java.util.List;
 public class ProductEditController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(ProductEditController.class);
     private static final int PRODUCT_SUPPLIER_LIMIT = 500;
+    /** 自动生成商品编号撞号时的最大重试次数 */
+    private static final int PRODUCT_CODE_RETRY_LIMIT = 3;
 
     @FXML
     private Label titleLabel;
@@ -251,17 +253,17 @@ public class ProductEditController {
         // 获取当前日期字符串
         String dateStr = java.time.LocalDate.now().toString().replace("-", ""); // 如：20260213
 
-        // 查询当天生成的商品数量
+        // 取当天已用的最大序号（不能用"当天数量 +1"：删过商品后数量会回退，会重新生成已存在的编号）
         String prefix = "P" + dateStr;
-        long count = 0;
+        long maxSequence = 0;
         try {
-            count = productDAO.countByProductCodePrefix(prefix);
+            maxSequence = productDAO.findMaxProductCodeSequence(prefix);
         } catch (SQLException e) {
-            logger.error("查询商品数量失败", e);
+            logger.error("查询商品编号序号失败", e);
         }
 
         // 生成4位序号，从0001开始
-        String sequence = String.format("%04d", count + 1);
+        String sequence = String.format("%04d", maxSequence + 1);
         return prefix + sequence;
     }
 
@@ -302,9 +304,23 @@ public class ProductEditController {
             return false;
         }
 
-        if (!productDAO.insert(product)) {
-            errorLabel.setText(I18nManager.getInstance().get("runtime.product_add_retry"));
-            return false;
+        // 自动编号在两端同时建品时可能撞号（各自取到同一序号），撞了就重新取号重试；
+        // 非编号冲突的错误在重试用尽后照常抛出。
+        boolean autoCode = autoCodeCheckBox.isSelected();
+        for (int attempt = 1; ; attempt++) {
+            try {
+                if (!productDAO.insert(product)) {
+                    errorLabel.setText(I18nManager.getInstance().get("runtime.product_add_retry"));
+                    return false;
+                }
+                break;
+            } catch (SQLException e) {
+                if (!autoCode || attempt >= PRODUCT_CODE_RETRY_LIMIT) {
+                    throw e;
+                }
+                logger.warn("商品保存失败，重新生成编号后重试（第 {} 次）: {}", attempt, product.productCode);
+                product.productCode = generateProductCode();
+            }
         }
 
         StatusBarManager.updateSuccess("商品添加成功: " + product.name);

@@ -13,6 +13,7 @@ import com.cashier.model.Transaction;
 import org.junit.jupiter.api.*;
 
 import java.math.BigDecimal;
+import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
@@ -339,6 +340,154 @@ class TransactionServiceTest extends DatabaseTestBase {
         assertAmountEquals(9.5, updatedMember.discount);
         assertEquals("银卡", testMember.level);
         assertAmountEquals(9.5, testMember.discount);
+    }
+
+    @Test
+    @DisplayName("税率按小数解析：0.13 表示 13%，不再除以 100")
+    void taxRateIsFractionNotPercentage() throws Exception {
+        Map<String, String> settings = new HashMap<>();
+        settings.put("taxRate", "0.13");
+        DataService.saveSettings(settings);
+
+        // 40.00 * 0.13 = 5.20（若误按百分比再除以 100 会得到 0.05）
+        assertAmountEquals(5.20, TransactionService.calculateTax(new BigDecimal("40.00")));
+
+        TransactionService.TransactionResult result = TransactionService.executeTransaction(
+            testCartItems, null, "现金", 0.0, 0.0, inventory);
+
+        assertTrue(result.isSuccess());
+        assertAmountEquals(5.20, result.getTransaction().tax);
+    }
+
+    @Test
+    @DisplayName("税率配置非法时按 0 计税，不抛出异常")
+    void invalidTaxRateFallsBackToZero() throws Exception {
+        Map<String, String> settings = new HashMap<>();
+        settings.put("taxRate", "not-a-number");
+        DataService.saveSettings(settings);
+
+        assertAmountEquals(BigDecimal.ZERO, TransactionService.calculateTax(new BigDecimal("40.00")));
+    }
+
+    @Test
+    @DisplayName("最终金额 = 会员折后金额 - 促销优惠（促销按原价总额计算）")
+    void promotionDiscountAppliesAfterMemberDiscount() {
+        // 会员 9 折
+        testMember.discount = BigDecimal.valueOf(9.0);
+
+        // 原价总额 40.00，满 30 减 5
+        Promotion promotion = activePromotion("满30减5", "满减",
+            new BigDecimal("30"), new BigDecimal("5"));
+
+        // 40 * 0.9 = 36.00，再减 5 = 31.00
+        assertAmountEquals(new BigDecimal("31.00"),
+            TransactionService.calculateFinalAmount(testCartItems, testMember, promotion));
+        // 无促销时仍只有会员折扣
+        assertAmountEquals(new BigDecimal("36.00"),
+            TransactionService.calculateFinalAmount(testCartItems, testMember, null));
+    }
+
+    @Test
+    @DisplayName("促销优惠大于应付金额时应付金额下限为 0")
+    void promotionNeverProducesNegativeAmount() {
+        Promotion promotion = activePromotion("满0减1000", "满减",
+            BigDecimal.ZERO, new BigDecimal("1000"));
+
+        assertAmountEquals(BigDecimal.ZERO,
+            TransactionService.calculateFinalAmount(testCartItems, null, promotion));
+    }
+
+    @Test
+    @DisplayName("selectBestPromotion 返回优惠金额最大的促销")
+    void selectBestPromotionPicksLargestDiscount() throws Exception {
+        promotionDAO.insert(activePromotion("满30减5", "满减", new BigDecimal("30"), new BigDecimal("5")));
+        promotionDAO.insert(activePromotion("满30减8", "满减", new BigDecimal("30"), new BigDecimal("8")));
+        promotionDAO.insert(activePromotion("满100减20", "满减", new BigDecimal("100"), new BigDecimal("20")));
+
+        Promotion best = TransactionService.selectBestPromotion(new BigDecimal("40.00"));
+
+        assertNotNull(best);
+        assertEquals("满30减8", best.name);
+    }
+
+    @Test
+    @DisplayName("没有满足门槛的促销时 selectBestPromotion 返回 null")
+    void selectBestPromotionReturnsNullWhenNoneApplies() throws Exception {
+        promotionDAO.insert(activePromotion("满500减50", "满减", new BigDecimal("500"), new BigDecimal("50")));
+
+        assertNull(TransactionService.selectBestPromotion(new BigDecimal("40.00")));
+    }
+
+    @Test
+    @DisplayName("交易失败回滚后内存库存不受影响")
+    void failedTransactionLeavesInMemoryInventoryUntouched() throws Exception {
+        Product product = testProducts.get(0);
+        int originalQuantity = product.quantity;
+
+        // 第 1 行正常、第 2 行超库存 -> 整单回滚
+        List<CartItem> oversized = new ArrayList<>();
+        oversized.add(new CartItem(product, 1));
+        oversized.add(new CartItem(product, originalQuantity + 1));
+
+        TransactionService.TransactionResult result = TransactionService.executeTransaction(
+            oversized, null, "现金", 0.0, 0.0, inventory);
+
+        assertFalse(result.isSuccess());
+        assertEquals(originalQuantity, inventory.get(product.name).quantity,
+            "回滚后内存中的库存不应被扣减");
+        assertEquals(originalQuantity,
+            DAOFactory.getInstance().getProductDAO().findByName(product.name).quantity,
+            "回滚后数据库库存应保持原值");
+    }
+
+    @Test
+    @DisplayName("扣减库存不会用内存里的旧字段覆盖别处刚改的价格")
+    void deductionDoesNotOverwriteConcurrentlyEditedFields() throws Exception {
+        Product stale = testProducts.get(0);   // 收银台内存快照，价格仍是 10.00
+
+        // 另一端把价格改成 99.00 并提交
+        Product edited = DAOFactory.getInstance().getProductDAO().findByName(stale.name);
+        edited.price = new BigDecimal("99.00");
+        assertTrue(DAOFactory.getInstance().getProductDAO().update(edited));
+
+        // 用仍持旧价格快照的购物车结账
+        TransactionService.TransactionResult result = TransactionService.executeTransaction(
+            List.of(new CartItem(stale, 1)), null, "现金", 0.0, 0.0, inventory);
+        assertTrue(result.isSuccess());
+
+        Product after = DAOFactory.getInstance().getProductDAO().findByName(stale.name);
+        assertAmountEquals(new BigDecimal("99.00"), after.price);
+    }
+
+    @Test
+    @DisplayName("应付金额统一四舍五入到 2 位小数")
+    void finalAmountIsRoundedToTwoDecimals() {
+        Product product = testProducts.get(0);
+        product.price = new BigDecimal("1.90");
+        testMember.discount = BigDecimal.valueOf(9.5);   // 9.5 折
+
+        BigDecimal finalAmount =
+            TransactionService.calculateFinalAmount(List.of(new CartItem(product, 1)), testMember);
+
+        // 1.90 * 0.95 = 1.805 -> HALF_UP -> 1.81（未四舍五入会得到 1.8050，按显示金额付款被判金额不足）
+        assertEquals(2, finalAmount.scale());
+        assertAmountEquals(new BigDecimal("1.81"), finalAmount);
+    }
+
+    private Promotion activePromotion(String name, String type, BigDecimal threshold, BigDecimal discount) {
+        Promotion promotion = new Promotion();
+        promotion.promotionCode = "PROMO_" + name.hashCode() + "_" + System.nanoTime();
+        promotion.name = name;
+        promotion.type = type;
+        promotion.threshold = threshold;
+        promotion.discount = discount;
+        promotion.description = "测试促销：" + name;
+        promotion.enabled = true;
+        promotion.startDate = LocalDateTime.now().minusDays(1);
+        promotion.endDate = LocalDateTime.now().plusDays(30);
+        promotion.usageCount = 0;
+        promotion.maxUsage = -1;
+        return promotion;
     }
 
     /**

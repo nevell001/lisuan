@@ -54,6 +54,13 @@ public class CreateReturnOrderDialogController {
 
     private ObservableList<ReturnItem> returnItems = FXCollections.observableArrayList();
     private Transaction originalTransaction;
+
+    /**
+     * 整单原价合计与实付金额：退款单价按两者比例折算。
+     * 会员折扣与促销都作用在整单上、明细只存原价，不折算会把优惠一并退给顾客。
+     */
+    private BigDecimal grossAmount = BigDecimal.ZERO;
+    private BigDecimal paidAmount = BigDecimal.ZERO;
     private Stage dialogStage;
     private boolean submitted = false;
     private User currentUser;
@@ -280,8 +287,26 @@ public class CreateReturnOrderDialogController {
         // 设置退款方式
         refundMethodComboBox.setValue(transaction.paymentMethod);
 
+        // 打折/促销成交的订单，退款单价需按整单实付比例折算
+        computeRefundRatio(items);
+
         // 加载退货商品
         loadReturnItems(items);
+    }
+
+    /**
+     * 计算整单原价合计与实付金额，供退款单价折算使用。
+     */
+    private void computeRefundRatio(List<Product> items) {
+        BigDecimal gross = BigDecimal.ZERO;
+        for (Product product : items) {
+            gross = gross.add(product.getPrice().multiply(BigDecimal.valueOf(product.quantity)));
+        }
+        grossAmount = gross;
+        paidAmount = originalTransaction.finalAmount != null ? originalTransaction.finalAmount : gross;
+        if (ReturnService.refundRatio(paidAmount, grossAmount).compareTo(BigDecimal.ONE) < 0) {
+            logger.info("退货按整单实付比例折算: 原价合计={}, 实付={}", gross, paidAmount);
+        }
     }
 
     /**
@@ -297,7 +322,10 @@ public class CreateReturnOrderDialogController {
             returnItem.productName = product.name;
             returnItem.originalQuantity = product.quantity;
             returnItem.returnQuantity = product.quantity;
-            returnItem.unitPrice = product.getPrice().doubleValue();
+            // 退款单价按整单实付比例折算（ReturnService 统一口径）
+            returnItem.unitPrice = ReturnService
+                .refundUnitPrice(product.getPrice(), paidAmount, grossAmount)
+                .doubleValue();
             returnItems.add(returnItem);
         }
 

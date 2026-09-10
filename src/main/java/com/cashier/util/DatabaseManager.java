@@ -367,7 +367,7 @@ public class DatabaseManager {
                 CREATE TABLE IF NOT EXISTS products (
                     id INT AUTO_INCREMENT PRIMARY KEY,
                     product_code VARCHAR(50) UNIQUE COMMENT '商品编号',
-                    name VARCHAR(200) NOT NULL,
+                    name VARCHAR(200) NOT NULL COMMENT '商品名称（唯一）',
                     price DECIMAL(10,2) NOT NULL,
                     quantity INT DEFAULT 0,
                     category VARCHAR(50),
@@ -383,6 +383,7 @@ public class DatabaseManager {
                     is_hot TINYINT DEFAULT 0 COMMENT '是否热销',
                     created_at BIGINT,
                     updated_at BIGINT,
+                    UNIQUE KEY uk_product_name (name),
                     INDEX idx_product_code (product_code),
                     INDEX idx_name (name),
                     INDEX idx_barcode (barcode),
@@ -390,6 +391,9 @@ public class DatabaseManager {
                     FULLTEXT idx_ft_name (name)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);
+
+            // 老库补 products.name 唯一约束（重名会让"按名称取商品"的链路取错行）
+            ensureProductNameUnique(stmt);
 
             // 确保 products.is_hot 列存在（旧库可能没有；CREATE TABLE IF NOT EXISTS 对已存在的表不会补列）
             try {
@@ -406,6 +410,40 @@ public class DatabaseManager {
                 logger.warn("创建挂单表失败", e);
             }
 
+    }
+
+    /**
+     * 为老库补 products.name 唯一约束。
+     *
+     * <p>{@code CREATE TABLE IF NOT EXISTS} 对已存在的表不会补约束，因此老库需要显式补。
+     * 安装脚本建表时用的是列内 {@code UNIQUE}（索引名 {@code name}），这里两种形态都认；
+     * 若库中已存在重名商品则跳过（并告警），避免 ALTER 失败导致应用无法启动。</p>
+     */
+    private static void ensureProductNameUnique(Statement stmt) {
+        try {
+            try (ResultSet rs = stmt.executeQuery(
+                    "SELECT COUNT(*) FROM information_schema.STATISTICS "
+                        + "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'products' "
+                        + "AND COLUMN_NAME = 'name' AND NON_UNIQUE = 0")) {
+                if (rs.next() && rs.getInt(1) > 0) {
+                    return; // 已有 name 唯一索引
+                }
+            }
+
+            boolean hasDuplicates;
+            try (ResultSet rs = stmt.executeQuery(
+                    "SELECT COUNT(*) FROM (SELECT name FROM products GROUP BY name HAVING COUNT(*) > 1) dup")) {
+                hasDuplicates = rs.next() && rs.getInt(1) > 0;
+            }
+            if (hasDuplicates) {
+                logger.warn("products 存在重名商品，uk_product_name 唯一约束未创建；请先清理重复名称");
+            } else {
+                stmt.execute("ALTER TABLE products ADD CONSTRAINT uk_product_name UNIQUE (name)");
+            }
+        } catch (SQLException e) {
+            // 约束已存在属正常情况
+            logger.debug("products 名称唯一约束已存在或创建失败: {}", e.getMessage());
+        }
     }
 
     private static void createTableMembers(Statement stmt) throws SQLException {

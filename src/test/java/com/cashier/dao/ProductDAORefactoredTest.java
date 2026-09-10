@@ -274,6 +274,71 @@ public class ProductDAORefactoredTest extends DatabaseTestBase {
         productDAO.delete(secondProduct.id);
     }
 
+    @Test
+    @DisplayName("商品编号序号按已用最大值生成，删过商品也不会撞号")
+    void nextProductCodeSequenceUsesMaxNotCount() throws SQLException {
+        String prefix = "SEQ20260101";
+        for (int i = 1; i <= 3; i++) {
+            assertTrue(productDAO.insert(newProduct(prefix + String.format("%04d", i), "序列商品" + i)));
+        }
+        assertEquals(3, productDAO.findMaxProductCodeSequence(prefix));
+
+        // 删掉中间一个：按“当天数量 +1”会重新生成 0003（已存在），按最大序号才是 0004
+        Product middle = productDAO.findByName("序列商品2");
+        assertTrue(productDAO.delete(middle.id));
+
+        assertEquals(3, productDAO.findMaxProductCodeSequence(prefix));
+        assertEquals(prefix + "0004",
+            prefix + String.format("%04d", productDAO.findMaxProductCodeSequence(prefix) + 1));
+
+        for (int i = 1; i <= 3; i++) {
+            if (i == 2) {
+                continue;
+            }
+            Product product = productDAO.findByName("序列商品" + i);
+            productDAO.delete(product.id);
+        }
+    }
+
+    @Test
+    @DisplayName("商品名称重复时拒绝新增与改名（v2.4.3 唯一约束）")
+    void duplicateProductNameIsRejected() throws SQLException {
+        Product first = newProduct("DUPNAME001", "重名测试商品");
+        assertTrue(productDAO.insert(first));
+
+        SQLException onInsert = assertThrows(SQLException.class,
+            () -> productDAO.insert(newProduct("DUPNAME002", "重名测试商品")));
+        assertTrue(onInsert.getMessage().contains("商品名称已存在"),
+            "重复名称应给出友好提示，实际: " + onInsert.getMessage());
+
+        Product other = newProduct("DUPNAME003", "另一个测试商品");
+        assertTrue(productDAO.insert(other));
+
+        other.name = "重名测试商品";
+        assertThrows(SQLException.class, () -> productDAO.update(other),
+            "改名为已存在的名称应被拒绝");
+
+        // 保持自身名称的更新不受影响
+        first.price = BigDecimal.valueOf(12.34);
+        assertTrue(productDAO.update(first));
+
+        productDAO.delete(first.id);
+        productDAO.delete(other.id);
+    }
+
+    private Product newProduct(String code, String name) {
+        Product product = new Product();
+        product.productCode = code;
+        product.name = name;
+        product.price = BigDecimal.TEN;
+        product.quantity = 1;
+        product.category = "测试分类";
+        product.unit = "个";
+        product.minStock = 0;
+        product.cost = BigDecimal.ONE;
+        return product;
+    }
+
     @AfterAll
     static void tearDown() throws SQLException {
         // 清理测试数据

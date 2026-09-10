@@ -348,8 +348,37 @@ public class ProductDAORefactored extends BaseDAO {
         return queryLong("SELECT COUNT(*) FROM products WHERE quantity <= min_stock");
     }
 
-    public long countByProductCodePrefix(String prefix) throws SQLException {
-        return queryLong("SELECT COUNT(*) FROM products WHERE product_code LIKE ?", prefix + "%");
+    /**
+     * 查询指定编号前缀下已使用的最大序号（商品编号 = 前缀 + 序号）。
+     *
+     * <p>按"已用最大序号"而非"当天记录数 +1"生成下一个编号：删除过商品后记录数会回退，
+     * 用记录数会重新生成一个已存在的编号，导致保存失败。</p>
+     *
+     * @param prefix 编号前缀（如 P20260213）
+     * @return 已用最大序号；无匹配时返回 0
+     * @throws SQLException 数据库操作异常
+     */
+    public long findMaxProductCodeSequence(String prefix) throws SQLException {
+        String sql = "SELECT product_code FROM products WHERE product_code LIKE ?";
+        long maxSequence = 0;
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, prefix + "%");
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String code = rs.getString(1);
+                    if (code == null || code.length() <= prefix.length()) {
+                        continue;
+                    }
+                    try {
+                        maxSequence = Math.max(maxSequence, Long.parseLong(code.substring(prefix.length())));
+                    } catch (NumberFormatException e) {
+                        // 不符合本规则的历史编号，忽略
+                    }
+                }
+            }
+        }
+        return maxSequence;
     }
 
     public Map<String, Long> getInventorySummary() throws SQLException {
@@ -476,6 +505,11 @@ public class ProductDAORefactored extends BaseDAO {
             throw new SQLException("商品编号 '" + product.productCode + "' 已存在");
         }
 
+        // 检查商品名称是否已存在（v2.4.3 唯一约束）
+        if (existsByName(conn, product.name, 0)) {
+            throw new SQLException("商品名称已存在，请使用其他名称");
+        }
+
         String sql = "INSERT INTO products (product_code, name, price, quantity, category, barcode, unit, " +
                      "description, brand, supplier, spec, min_stock, cost) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
@@ -501,7 +535,14 @@ public class ProductDAORefactored extends BaseDAO {
      * @throws SQLException 数据库操作异常
      */
     public boolean update(Product product) throws SQLException {
-        return executeInTransaction(conn -> updateWithConnection(conn, product));
+        return executeInTransaction(conn -> {
+            // 名称唯一性在对外入口校验（v2.4.3）；底层 updateWithConnection 被结账扣减等
+            // 热路径复用，不能对每件商品都做一次名称查询。
+            if (existsByName(conn, product.name, product.id)) {
+                throw new SQLException("商品名称已存在，请使用其他名称");
+            }
+            return updateWithConnection(conn, product);
+        });
     }
 
     /**
@@ -686,6 +727,22 @@ public class ProductDAORefactored extends BaseDAO {
             pstmt.setString(1, productCode);
             ResultSet rs = pstmt.executeQuery();
             return rs.next() && rs.getInt(1) > 0;
+        }
+    }
+
+    /**
+     * 名称是否已被其它商品占用。
+     *
+     * @param excludeId 排除的商品 id（更新时传自身 id，新增时传 0）
+     */
+    private boolean existsByName(Connection conn, String name, int excludeId) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM products WHERE name = ? AND id <> ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, name);
+            pstmt.setInt(2, excludeId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
         }
     }
 
