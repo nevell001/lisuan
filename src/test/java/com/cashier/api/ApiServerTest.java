@@ -73,6 +73,31 @@ class ApiServerTest {
     }
 
     @Test
+    @DisplayName("签发新 Token 时清理已过期 Token")
+    void expiredTokensArePurgedOnIssue() throws Exception {
+        Field expireField = ApiConfig.class.getDeclaredField("tokenExpireHours");
+        expireField.setAccessible(true);
+        int original = expireField.getInt(null);
+
+        ApiServer apiServer = ApiServer.getInstance();
+        User user = new User();
+        user.id = 42;
+        // 先清掉其它用例可能留下的过期条目，保证计数可预期
+        apiServer.purgeExpiredTokens();
+        try {
+            expireField.setInt(null, -1);   // 签发即过期
+            apiServer.generateToken(user);  // 过期条目 1
+            apiServer.generateToken(user);  // 签发前已清理条目 1，只剩这一个
+        } finally {
+            expireField.setInt(null, original);
+        }
+
+        assertEquals(1, apiServer.purgeExpiredTokens(),
+            "签发新 Token 时应已清理更早的过期 Token，否则过期条目会常驻内存");
+        assertEquals(0, apiServer.purgeExpiredTokens(), "清理后不应再有残留");
+    }
+
+    @Test
     @DisplayName("只有基础健康检查和登录接口公开")
     void publicRouteBoundaryIsMinimal() {
         assertTrue(ApiServer.isPublicApiPath("/api/health"));

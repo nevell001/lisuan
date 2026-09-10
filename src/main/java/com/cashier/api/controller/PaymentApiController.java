@@ -2,6 +2,7 @@ package com.cashier.api.controller;
 
 import com.cashier.model.PaymentOrder;
 import com.cashier.model.RefundRecord;
+import com.cashier.model.User;
 import com.cashier.dao.DAOFactory;
 import com.cashier.service.PaymentService;
 import com.cashier.util.LoggerFactoryUtil;
@@ -172,7 +173,8 @@ public class PaymentApiController {
             Map<String, List<String>> formParams = ctx.formParamMap();
             formParams.forEach((key, values) ->
                 notifyData.put(key, values == null || values.isEmpty() ? "" : values.get(0)));
-            notifyData.put("transaction_id", notifyData.getOrDefault("trade_no", ""));
+            // 注意：不要在这里往 notifyData 里塞支付宝没有参与签名的合成字段（如 transaction_id），
+            // 否则 buildAlipaySignContent 会把该字段算进待验签内容，真实回调永远验签失败。
             if (channel == PaymentOrder.PaymentChannel.WECHAT) {
                 notifyData.put("raw_body", ctx.body());
                 notifyData.put("Wechatpay-Timestamp", ctx.header("Wechatpay-Timestamp"));
@@ -228,7 +230,8 @@ public class PaymentApiController {
     /**
      * 申请退款
      * POST /api/payment/:paymentId/refund
-     * Body: { "amount": 50.00, "reason": "商品质量问题", "operator": "张三" }
+     * Body: { "amount": 50.00, "reason": "商品质量问题" }
+     * 操作员取认证用户，不从请求体读取。
      */
     public static void applyRefund(Context ctx) {
         String paymentId = ctx.pathParam(PAYMENT_ID_FIELD);
@@ -245,9 +248,11 @@ public class PaymentApiController {
             
             BigDecimal refundAmount = getBigDecimal(body, "amount");
             String reason = getString(body, "reason", "用户申请退款");
-            String operator = getString(body, "operator", "system");
-            
-            RefundRecord refund = PaymentService.applyRefund(paymentId, refundAmount, reason, operator);
+            // 操作员取认证用户，忽略请求体中的自报身份：退款审计与流水归属必须可信
+            User operator = ctx.attribute("currentUser");
+            String operatorName = operator != null ? operator.name : "system";
+
+            RefundRecord refund = PaymentService.applyRefund(paymentId, refundAmount, reason, operatorName);
             
             ctx.json(Map.of(
                 "success", true,

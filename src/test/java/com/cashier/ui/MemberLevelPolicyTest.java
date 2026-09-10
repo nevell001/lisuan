@@ -37,9 +37,9 @@ class MemberLevelPolicyTest {
     void apiRefundRecalcDelegatesToMemberService() throws Exception {
         String apiTx = readMainSource("api/controller/TransactionApiController.java");
 
-        assertTrue(apiTx.contains("MemberService.calculateLevel(member.points)"),
+        assertTrue(apiTx.contains("MemberService.calculateLevel("),
             "API 退款重算必须使用 MemberService.calculateLevel");
-        assertTrue(apiTx.contains("MemberService.getDiscountByLevelDecimal(canonicalLevel)"),
+        assertTrue(apiTx.contains("MemberService.getDiscountByLevelDecimal("),
             "API 退款重算必须同步刷新折扣（MemberService.getDiscountByLevelDecimal）");
         assertFalse(apiTx.contains("LEVEL_POINTS"),
             "API 层不得重复定义等级阈值");

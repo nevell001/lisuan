@@ -86,6 +86,24 @@ class AlipayPrecreatePaymentProviderTest {
     }
 
     @Test
+    @DisplayName("验签后追加未签名参数会失败（控制器不得注入合成字段）")
+    void extraUnsignedParamBreaksVerification() {
+        Map<String, String> notify = new HashMap<>();
+        notify.put("out_trade_no", "A202608230004");
+        notify.put("trade_status", "TRADE_SUCCESS");
+        notify.put("total_amount", "88.50");
+        notify.put("trade_no", "2026082322000000000000000002");
+
+        Map<String, String> signed = alipayNotify(notify);
+        // 控制器曾经在验签前把 trade_no 复制成 transaction_id，等价于在签名后多塞一个参数：
+        // 支付宝的待验签内容由全部非空参数拼成，多出来的键会让真实回调永远验签失败。
+        signed.put("transaction_id", signed.get("trade_no"));
+
+        assertFalse(provider.verifyNotification(signed),
+            "待验签参数必须与支付宝签名时的参数完全一致");
+    }
+
+    @Test
     @DisplayName("缺少签名或签名为空被拒绝")
     void missingOrBlankSignRejected() {
         Map<String, String> notify = new HashMap<>();

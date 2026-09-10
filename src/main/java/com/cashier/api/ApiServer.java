@@ -364,9 +364,25 @@ public class ApiServer {
      * 生成 Token
      */
     public String generateToken(User user) {
+        purgeExpiredTokens();
         String token = createSecureToken();
         tokens.put(token, new TokenInfo(user.id, System.currentTimeMillis() + getTokenExpireMs()));
         return token;
+    }
+
+    /**
+     * 清理已过期的 Token。
+     *
+     * <p>此前只有被再次使用到的过期 token 才会被移除，反复登录会让过期条目常驻内存（每个约 200 字节）。
+     * 在签发新 token 时顺带清理，成本与登录频率同阶。</p>
+     *
+     * @return 本次清理的条目数
+     */
+    int purgeExpiredTokens() {
+        long now = System.currentTimeMillis();
+        int before = tokens.size();
+        tokens.entrySet().removeIf(entry -> entry.getValue().expireTime < now);
+        return before - tokens.size();
     }
 
     private String createSecureToken() {

@@ -183,6 +183,20 @@ public final class PaymentService {
         return order;
     }
 
+    /**
+     * 取渠道交易号：支付宝回调用 {@code trade_no}，微信 v3 用 {@code transaction_id}。
+     *
+     * <p>不能在回调入口把 {@code trade_no} 复制成 {@code transaction_id}：支付宝的验签内容
+     * 由回调的全部非空参数拼成，多出的合成字段会让真实回调验签失败。</p>
+     */
+    private static String channelTransactionId(Map<String, String> notifyData) {
+        String transactionId = notifyData.get("transaction_id");
+        if (transactionId != null && !transactionId.isBlank()) {
+            return transactionId;
+        }
+        return notifyData.get("trade_no");
+    }
+
     public static boolean handlePaymentNotify(PaymentOrder.PaymentChannel channel,
                                                Map<String, String> notifyData) throws SQLException {
         PaymentChannelProvider provider = requireProvider(channel);
@@ -224,7 +238,7 @@ public final class PaymentService {
         // 两次 DB 更新包裹在同一事务中，确保原子性
         DatabaseManager.executeBooleanTransaction(conn -> {
             DAOFactory.getInstance().getPaymentDAO().updateNotifyInfoWithConnection(conn, order.paymentId, notifyData.toString());
-            DAOFactory.getInstance().getPaymentDAO().updatePaymentSuccessWithConnection(conn, order.paymentId, notifyData.get("transaction_id"),
+            DAOFactory.getInstance().getPaymentDAO().updatePaymentSuccessWithConnection(conn, order.paymentId, channelTransactionId(notifyData),
                 notifyData.get("buyer_id"), paidAmount, BigDecimal.ZERO);
             return true;
         });

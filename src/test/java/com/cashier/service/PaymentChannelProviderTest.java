@@ -89,6 +89,8 @@ class PaymentChannelProviderTest {
             PaymentOrder.PaymentChannel.WECHAT, "test-secret");
 
         assertFalse(provider.verifyNotification(Map.of("mock_signature", "wrong")));
+        assertFalse(provider.verifyNotification(Map.of()));
+        assertFalse(provider.verifyNotification(Map.of("mock_signature", "test-secret-longer")));
         assertTrue(provider.verifyNotification(Map.of("mock_signature", "test-secret")));
     }
 

@@ -38,8 +38,17 @@ public final class MockPaymentChannelProvider implements PaymentChannelProvider 
 
     @Override
     public boolean verifyNotification(Map<String, String> notification) {
-        return callbackSecret != null && !callbackSecret.isBlank()
-            && callbackSecret.equals(notification.get("mock_signature"));
+        if (callbackSecret == null || callbackSecret.isBlank()) {
+            return false;
+        }
+        String signature = notification.get("mock_signature");
+        if (signature == null) {
+            return false;
+        }
+        // 定长比较，避免用 String.equals 逐字符短路泄漏密钥前缀
+        return java.security.MessageDigest.isEqual(
+            callbackSecret.getBytes(java.nio.charset.StandardCharsets.UTF_8),
+            signature.getBytes(java.nio.charset.StandardCharsets.UTF_8));
     }
 
     @Override

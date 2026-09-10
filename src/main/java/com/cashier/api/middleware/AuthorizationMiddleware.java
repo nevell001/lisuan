@@ -49,6 +49,8 @@ public final class AuthorizationMiddleware {
             || path.startsWith("/api/settings")
             || path.startsWith("/api/backup")
             || path.equals("/api/payment/config")
+            // 开票方名称/税号/银行账号会写进之后所有发票，属全局配置，仅管理员可改
+            || (path.equals("/api/invoices/seller-info") && isMutating(method))
             || (path.startsWith("/api/products") && isMutating(method))
             || (path.startsWith("/api/inventory") && isMutating(method))
             || (path.startsWith("/api/printers/") && isMutating(method)
@@ -62,6 +64,8 @@ public final class AuthorizationMiddleware {
             || path.equals("/api/invoices/manual")
             || path.matches("/api/members/[^/]+/recharge")
             || (path.matches("/api/members/[^/]+") && isMutating(method))
+            // 资金统计属财务口径，收银员无需查看
+            || path.startsWith("/api/payment/stats")
             || (path.startsWith("/api/reports/") && "GET".equals(method));
     }
 

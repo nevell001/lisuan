@@ -39,11 +39,13 @@ public class PrintApiController {
     private static final int MAX_DISCOVERY_HOST_LIMIT = 254;
     private static final int DEFAULT_DISCOVERY_TIMEOUT_MS = 150;
     private static final int MAX_DISCOVERY_TIMEOUT_MS = 1000;
-    private static final Pattern IPV4_SUBNET_PATTERN = Pattern.compile(
-        "^(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\." +
-        "(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)\\." +
-        "(25[0-5]|2[0-4]\\d|1\\d\\d|[1-9]?\\d)$"
-    );
+    private static final int DEFAULT_DISCOVERY_PORT = 9100;
+    /** 标准网络打印端口：RAW 9100、LPD 515、IPP 631 */
+    private static final Set<Integer> STANDARD_PRINTER_PORTS = Set.of(9100, 515, 631);
+    /** 小票内容上限，避免用一单请求把打印机缓冲区灌满 */
+    private static final int MAX_RECEIPT_CONTENT_LENGTH = 8192;
+    /** 小票内容允许的字符：可打印文本 + 换行/回车/制表符；其余控制字符（含 ESC/POS 的 0x1B）一律拒绝 */
+    private static final Pattern UNSAFE_RECEIPT_CHARS = Pattern.compile("[\\x00-\\x08\\x0B\\x0C\\x0E-\\x1F\\x7F]");
     
     /**
      * 获取所有打印机列表
@@ -466,6 +468,9 @@ public class PrintApiController {
      * 打印小票
      * POST /api/printers/:id/receipt
      * Body: { "content": "...", "printLogo": true, "openCashDrawer": true }
+     *
+     * <p>{@code content} 只接受纯文本：长度上限 8KB，且不允许控制字符（含 ESC/POS 指令），
+     * 避免任意登录用户把任意字节推给网络打印机。</p>
      */
     public static void printReceipt(Context ctx) {
         String deviceId = ctx.pathParam("id");
@@ -487,6 +492,21 @@ public class PrintApiController {
                 ctx.status(400).json(Map.of(
                     "success", false,
                     "error", "缺少打印内容"
+                ));
+                return;
+            }
+            // 只接受纯文本小票：限制长度并拒绝控制字符，避免把任意字节（含 ESC/POS 指令）推给打印机
+            if (content.length() > MAX_RECEIPT_CONTENT_LENGTH) {
+                ctx.status(400).json(Map.of(
+                    "success", false,
+                    "error", "打印内容过长"
+                ));
+                return;
+            }
+            if (UNSAFE_RECEIPT_CHARS.matcher(content).find()) {
+                ctx.status(400).json(Map.of(
+                    "success", false,
+                    "error", "打印内容不能包含控制字符"
                 ));
                 return;
             }
@@ -708,33 +728,25 @@ public class PrintApiController {
     }
     
     /**
-     * 发现网络打印机（扫描局域网）
-     * GET /api/printers/discover?subnet=192.168.1&port=9100&limit=64&timeoutMs=150
+     * 发现网络打印机（扫描局域网）。
+     *
+     * <p>GET /api/printers/discover?port=9100&amp;limit=64&amp;timeoutMs=150</p>
+     *
+     * <p>只扫描<b>本机所在子网</b>，且端口限定在标准打印端口：此前允许调用方指定任意 IPv4 /24
+     * 与 1-65535 端口，等于给任意登录用户一个内网端口扫描器。</p>
      */
     public static void discoverPrinters(Context ctx) {
-        String subnet = ctx.queryParam("subnet");
-        Integer requestedPort = ctx.queryParamAsClass("port", Integer.class).getOrDefault(9100);
-        int port = Math.max(1, Math.min(requestedPort, 65535));
+        Integer requestedPort = ctx.queryParamAsClass("port", Integer.class).getOrDefault(DEFAULT_DISCOVERY_PORT);
+        int port = STANDARD_PRINTER_PORTS.contains(requestedPort) ? requestedPort : DEFAULT_DISCOVERY_PORT;
         int requestedLimit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(DEFAULT_DISCOVERY_HOST_LIMIT);
         int hostLimit = Math.max(1, Math.min(requestedLimit, MAX_DISCOVERY_HOST_LIMIT));
         int requestedTimeout = ctx.queryParamAsClass("timeoutMs", Integer.class).getOrDefault(DEFAULT_DISCOVERY_TIMEOUT_MS);
         int timeoutMs = Math.max(50, Math.min(requestedTimeout, MAX_DISCOVERY_TIMEOUT_MS));
-        
-        if (subnet == null) {
-            // 自动获取本机所在子网
-            subnet = getDefaultSubnet();
-        }
-        if (!IPV4_SUBNET_PATTERN.matcher(subnet).matches()) {
-            ctx.status(400).json(Map.of(
-                "success", false,
-                "message", "子网格式无效，应为类似 192.168.1 的 IPv4 前三段"
-            ));
-            return;
-        }
-        
+
+        String subnet = getDefaultSubnet();
         List<Map<String, Object>> discovered = new ArrayList<>();
         
-        // 扫描子网中的打印机端口
+        // 扫描本机子网中的打印机端口
         for (int i = 1; i <= hostLimit; i++) {
             String host = subnet + "." + i;
             

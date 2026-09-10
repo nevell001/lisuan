@@ -45,11 +45,6 @@ public class UserDAORefactored extends BaseDAO {
             " FROM users WHERE username = ?", USER_MAPPER, username);
     }
 
-    @Deprecated
-    public User authenticate(String username, String password) throws SQLException {
-        return findByUsername(username);
-    }
-
     public List<User> findAll() throws SQLException {
         return queryList("SELECT " + SELECT_COLUMNS +
             " FROM users ORDER BY username", USER_MAPPER);

@@ -116,9 +116,19 @@ public class Invoice {
     }
     
     /**
-     * 生成发票编号
+     * 生成发票编号：时间戳 + 进程内序号 + 随机段。
+     *
+     * <p>此前是 {@code "INV" + System.currentTimeMillis()}：既容易被猜测/枚举，同一毫秒内并发开票
+     * 还会撞主键。序号保证同毫秒不撞，随机段保证跨进程/重启后不可预测。</p>
      */
     public static String generateInvoiceId() {
-        return "INV" + System.currentTimeMillis();
+        String timestamp = com.cashier.util.DateTimeFormats.COMPACT_DATE_TIME_MILLIS.format(
+            java.time.LocalDateTime.now(java.time.ZoneId.systemDefault()));
+        return "INV" + timestamp + String.format("%03d", invoiceSequence.incrementAndGet() % 1000)
+            + String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     }
+
+    private static final java.util.concurrent.atomic.AtomicLong invoiceSequence =
+        new java.util.concurrent.atomic.AtomicLong(0);
+    private static final java.security.SecureRandom SECURE_RANDOM = new java.security.SecureRandom();
 }
