@@ -84,27 +84,43 @@ public class I18nManager {
      * 设置当前语言（字符串格式）
      */
     public void setLocale(String languageTag) {
-        Locale locale = Locale.forLanguageTag(languageTag);
-
-        // 通过语言标签直接匹配，避免 Locale 对象比较的问题
-        String normalizedTag = locale.toLanguageTag();
-        boolean supported = false;
-        for (Locale supportedLocale : AVAILABLE_LOCALES) {
-            if (supportedLocale.toLanguageTag().equals(normalizedTag)) {
-                locale = supportedLocale; // 使用预定义的 Locale 常量
-                supported = true;
-                break;
-            }
-        }
+        boolean supported = isSupported(languageTag);
+        Locale locale = supported ? parseSupportedLocale(languageTag) : CHINESE_SIMPLIFIED;
 
         if (!supported) {
-            logger.warn("语言标签 {} ({}) 不在可用列表中，使用默认简体中文", languageTag, normalizedTag);
-            locale = CHINESE_SIMPLIFIED;
+            logger.warn("语言标签 {} 不在可用列表中，使用默认简体中文", languageTag);
         }
 
         logger.info("设置语言: {} -> Locale: {} (language={}, country={})",
             languageTag, locale, locale.getLanguage(), locale.getCountry());
         setLocale(locale);
+    }
+
+    /**
+     * 语言标签是否在支持列表中。
+     */
+    public static boolean isSupported(String languageTag) {
+        if (languageTag == null || languageTag.isBlank()) {
+            return false;
+        }
+        String normalizedTag = Locale.forLanguageTag(languageTag).toLanguageTag();
+        return AVAILABLE_LOCALES.stream().anyMatch(locale -> locale.toLanguageTag().equals(normalizedTag));
+    }
+
+    /**
+     * 把语言标签解析为受支持的 {@link Locale} 常量；不支持或为空时返回默认简体中文。
+     */
+    public static Locale parseSupportedLocale(String languageTag) {
+        if (languageTag == null || languageTag.isBlank()) {
+            return CHINESE_SIMPLIFIED;
+        }
+        String normalizedTag = Locale.forLanguageTag(languageTag).toLanguageTag();
+        for (Locale locale : AVAILABLE_LOCALES) {
+            if (locale.toLanguageTag().equals(normalizedTag)) {
+                return locale;
+            }
+        }
+        return CHINESE_SIMPLIFIED;
     }
     
     /**
@@ -143,18 +159,33 @@ public class I18nManager {
     }
     
     /**
-     * 获取翻译文本
+     * 获取翻译文本（当前语言）
      */
     public String get(String key) {
+        return get(currentLocale, key);
+    }
+
+    /**
+     * 按指定语言获取翻译文本，<b>不改变当前语言</b>。
+     *
+     * <p>供 REST API 按请求语言渲染响应使用：某个客户端切语言只影响它自己，
+     * 不会把桌面端和其它终端的语言一起改掉。</p>
+     *
+     * @param locale 目标语言；为 null 时使用当前语言
+     * @param key 资源键
+     * @return 翻译文本；缺失时返回兜底文案或 key 本身
+     */
+    public String get(Locale locale, String key) {
+        ResourceBundle target = locale == null ? bundle : getBundle(locale);
         try {
-            return bundle.getString(key);
+            return target.getString(key);
         } catch (MissingResourceException e) {
             String fallbackText = FALLBACK_TEXTS.get(key);
             if (fallbackText != null) {
                 return fallbackText;
             }
-            logger.warn("找不到翻译: {}", key);
-            return key; // 返回 key 作为默认值
+            logger.warn("找不到翻译: {} ({})", key, locale);
+            return key;
         }
     }
     
@@ -182,6 +213,16 @@ public class I18nManager {
      * 获取所有可用的语言
      */
     public List<LocaleInfo> getAvailableLocales() {
+        return getAvailableLocales(currentLocale);
+    }
+
+    /**
+     * 获取所有可用的语言，并把指定语言标记为 current。
+     *
+     * @param currentLocale 用于标记 current 与渲染本地名称的语言；为 null 时用当前语言
+     */
+    public List<LocaleInfo> getAvailableLocales(Locale currentLocale) {
+        Locale effective = currentLocale != null ? currentLocale : this.currentLocale;
         List<LocaleInfo> list = new ArrayList<>();
         
         for (Locale locale : AVAILABLE_LOCALES) {
@@ -189,8 +230,8 @@ public class I18nManager {
             info.locale = locale;
             info.languageTag = locale.toLanguageTag();
             info.displayName = locale.getDisplayLanguage(locale);
-            info.displayNameLocal = locale.getDisplayLanguage(currentLocale);
-            info.current = locale.equals(currentLocale);
+            info.displayNameLocal = locale.getDisplayLanguage(effective);
+            info.current = locale.equals(effective);
             list.add(info);
         }
         

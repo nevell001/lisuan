@@ -16,6 +16,7 @@ import com.cashier.util.FXUtils;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.animation.PauseTransition;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -25,6 +26,7 @@ import javafx.scene.control.ButtonType;
 import javafx.scene.image.Image;
 import javafx.scene.text.Font;
 import javafx.stage.Stage;
+import javafx.util.Duration;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -42,6 +44,8 @@ public class CashierSystemFXApplication extends Application {
     private static final String APP_TITLE = "狸算(LiSuan)收银系统";
     private static final double WINDOW_WIDTH = 1300;
     private static final double WINDOW_HEIGHT = 800;
+    /** 启动窗口显示后，延后这么多毫秒再跑重量级初始化，确保窗口已经绘制出来 */
+    private static final double SPLASH_FIRST_FRAME_DELAY_MS = 60;
 
     private static CashierSystemFXApplication instance;
 
@@ -56,8 +60,6 @@ public class CashierSystemFXApplication extends Application {
 
     @Override
     public void init() throws Exception {
-        notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.1));
-
         // 加载自定义中文字体（在单例检查之前，确保字体可用）
         loadCustomFonts();
 
@@ -84,19 +86,42 @@ public class CashierSystemFXApplication extends Application {
             throw new Exception("Application already running");
         }
 
-        notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.2));
         logger.info("应用初始化完成，已获取单实例锁");
     }
 
     @Override
-    public void start(Stage primaryStage) throws Exception {
+    public void start(Stage primaryStage) {
         this.primaryStage = primaryStage;
         instance = this;
 
         // 尽早注册全局弹窗主题化钩子；主场景就绪后，所有新弹窗自动继承主题
         com.cashier.util.ThemeUtils.installGlobalDialogTheming();
 
-        notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.3));
+        // 先显示轻量启动窗口，再执行重量级初始化（连库、建表、加载 FXML）。
+        // 必须延后一帧再跑初始化：同步初始化会占满 FX 线程，窗口根本来不及绘制。
+        final SplashWindow splash = new SplashWindow();
+        splash.show();
+
+        PauseTransition defer = new PauseTransition(Duration.millis(SPLASH_FIRST_FRAME_DELAY_MS));
+        defer.setOnFinished(event -> {
+            try {
+                initializeApplication(splash);
+            } catch (Exception e) {
+                logger.error("应用初始化失败", e);
+                splash.close();
+                showStartupFailure(e);
+                return;
+            }
+            splash.close();
+        });
+        defer.play();
+    }
+
+    /**
+     * 重量级初始化：数据库、支付渠道、语言偏好、登录界面与主窗口。
+     */
+    private void initializeApplication(SplashWindow splash) throws Exception {
+        splash.updateProgress(0.3);
 
         // 检查数据库配置
         checkDatabaseConfiguration();
@@ -112,7 +137,7 @@ public class CashierSystemFXApplication extends Application {
         com.cashier.i18n.I18nManager.getInstance().setLocale(savedLanguage);
         logger.info("应用启动 - 已加载语言偏好: {}, I18nManager 当前语言: {}", savedLanguage, com.cashier.i18n.I18nManager.getInstance().getCurrentLanguageTag());
 
-        notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.5));
+        splash.updateProgress(0.5);
 
         // 加载登录界面（同步）
         loadLoginScene();
@@ -120,14 +145,30 @@ public class CashierSystemFXApplication extends Application {
         // 配置主窗口（同步）
         configurePrimaryStage();
 
-        notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.7));
+        splash.updateProgress(0.7);
 
         // 立即显示窗口 - 不等待后台初始化
         primaryStage.show();
 
-        notifyPreloader(new javafx.application.Preloader.ProgressNotification(0.9));
+        splash.updateProgress(0.9);
 
         // 异步初始化后台服务 - 启动后立即执行
+        startBackgroundServices();
+    }
+
+    /**
+     * 初始化失败时给出可见反馈并退出，避免只留一个空启动窗口。
+     */
+    private void showStartupFailure(Exception e) {
+        Alert alert = new Alert(Alert.AlertType.ERROR);
+        alert.setTitle("启动失败");
+        alert.setHeaderText(null);
+        alert.setContentText("应用初始化失败：" + e.getMessage());
+        alert.showAndWait();
+        Platform.exit();
+    }
+
+    private void startBackgroundServices() {
         CompletableFuture.runAsync(() -> {
             try {
                 logger.debug("开始异步初始化后台服务...");
@@ -141,10 +182,6 @@ public class CashierSystemFXApplication extends Application {
 
                 // 预热缓存（可能耗时较长）
                 com.cashier.util.CacheManager.warmupCache();
-
-                // 启动完成
-                notifyPreloader(new javafx.application.Preloader.StateChangeNotification(
-                    javafx.application.Preloader.StateChangeNotification.Type.BEFORE_START));
 
                 long elapsed = System.currentTimeMillis() - startTime;
                 logger.info("后台服务初始化完成，耗时: {}ms", elapsed);
