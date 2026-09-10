@@ -14,7 +14,7 @@
 ## 1. 数据库与配置
 
 - [ ] MySQL 版本与字符集：utf8mb4 / utf8mb4_unicode_ci，时区 Asia/Shanghai
-- [ ] `config/database.properties` 从 example 复制并填写真实密码；生产用 `CASHIER_DB_PASSWORD`（兼容旧名 `CASHER_DB_PASSWORD`）环境变量覆盖，禁止明文入库
+- [ ] `config/database.properties` 从 example 复制；**`db.password` 留空**（所有安装/配置通道都不会写入密码），密码由 `CASHIER_DB_PASSWORD` 提供：生产用环境变量/`.env`，`release.sh`/`release.bat` 会拒绝含非空 `db.password` 的配置文件
 - [ ] `.env` 从 `.env.example` 复制：`MYSQL_ROOT_PASSWORD` 等真实密钥；`docker compose up -d mysql` 可启动
 - [ ] 首次启动自动建表/升级（`DatabaseManager.initializeDatabase`）验证：全新库可启动、旧库升级无报错
 - [ ] 数据库备份脚本验证：备份文件可生成、大小合理、无敏感密钥明文

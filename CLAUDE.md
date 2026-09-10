@@ -70,7 +70,8 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 
 This is a **POS (Point of Sale) cashier system** built with JavaFX 17. It's a desktop application for retail operations including cash register functionality, inventory management, member management, purchasing, returns, and reporting.
 
-**Current Version:** v2.6.0 | **Main Entry:** `com.cashier.CashierSystemFXApplication`
+**Current Version:** v2.6.0 | **Main Entry:** `com.cashier.Launcher`（转发到 `com.cashier.CashierSystemFXApplication`；
+可执行 JAR 的 Main-Class 必须是不继承 `Application` 的类，否则 `java -jar` 会报“缺少 JavaFX 运行时组件”）
 
 **Tech Stack:**
 - JavaFX 17.0.12 for UI
@@ -143,7 +144,9 @@ ApiController (15 classes) → Service Layer → DAO Layer
 **DatabaseManager** (`util/DatabaseManager.java`)
 - Uses HikariCP connection pooling (pool size, connection timeout, idle timeout, max lifetime configurable)
 - Reads from `config/database.properties`
-- Password is injected at runtime via `CASHIER_DB_PASSWORD` (legacy `CASHER_DB_PASSWORD` still accepted) from `.env`/environment; config files must not store plaintext passwords
+- Password is injected at runtime via `CASHIER_DB_PASSWORD` (legacy `CASHER_DB_PASSWORD` still accepted)；
+  取值顺序是**进程环境变量 → 工作目录 `.env`**（`com.cashier.util.DotEnv`，应用自己也会读，
+  所以 `java -jar` 与 `start.bat` 用同一份配置）；`config/*.properties` 里不得存明文密码
 - Initializes all database tables on startup
 - Supports UTF-8/utf8mb4 encoding
 - Important: Product names have UNIQUE constraint (v2.4.3)
@@ -701,6 +704,80 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   已成功订单重复通知幂等确认）；新增 `PaymentServiceNotifyTest`（验签/金额/幂等/终态）与
   `AlipayPrecreatePaymentProviderTest`（支付宝回调验签正反）
 - 打印机降级：`PrinterManagerTest` 补"无可用打印机时任务失败且不中断"覆盖
+- 结账口径一致性：`CheckoutConsistencyPolicyTest` 断言税额只在 `TransactionService.calculateTax`
+  计算（税率是小数 0.0-1.0，不得再除以 100）、触屏收银台必须计算并落库促销、支付方式筛选
+  必须归一化后再比较；`TransactionServiceTest` 覆盖税率小数语义、促销按原价总额计算、
+  `selectBestPromotion` 选优；`I18nUiUtilsTest` 覆盖中文/代码支付方式归一化
+- 启动入口：可执行 JAR 的 Main-Class 为 `com.cashier.Launcher`（不继承 `Application`），
+  使 `java -jar lisuan-fx-*-jar-with-dependencies.jar` 无需 module-path 即可启动
+
+**退货/库存正确性（v2.6.0 补强）**
+
+- 退货按整单实付比例折算退款单价：`ReturnService.refundRatio/refundUnitPrice`，
+  9.5 折成交的 100 元只能退 95 元（此前按原价退款，把优惠一起退给顾客）
+- 商品编号按"已用最大序号 +1"生成（`ProductDAORefactored.findMaxProductCodeSequence`），
+  并带 3 次撞号重试；删除商品后不再重复生成已存在的编号
+- 商品名唯一性落到 `ProductDAORefactored.insertWithConnection/update` 与
+  `DatabaseManager.ensureProductNameUnique`（含老库补约束、有重名时告警跳过）
+- 扣减库存直接使用事务内重读的最新行（不再改动调用方共享的内存/缓存对象，
+  也不再用缓存里的旧价格覆盖别处刚提交的修改）；失败回滚后内存库存保持不变
+- 应付金额统一走 `TransactionService.calculateFinalAmount`（含 2 位小数四舍五入），
+  标准收银台与触屏收银台口径一致，按显示金额付款不再被判"金额不足"
+
+**REST API 加固（v2.6.0 补强）**
+
+- `POST /api/transactions` 只信任明细的商品 ID 与数量：单价/小计/合计/税额服务端重算，
+  并复用 `TransactionService.executeTransaction` 完成库存扣减、会员积分与乐观锁
+- `POST /api/transactions/:id/refund` 退回会员余额、按"每元 10 分"冲减积分、还原库存，
+  退款单价同样按整单实付比例折算
+- 操作员身份一律取 `ctx.attribute("currentUser")`（下单与退款均忽略请求体自报身份）
+- 支付宝回调不再注入合成参数：`trade_no` 在验签后按渠道取值
+  （`PaymentService.channelTransactionId`），真实回调验签不再必然失败
+- `/api/invoices/seller-info`（PUT）收紧为管理员专属；开票方信息属于全局配置
+
+**退货退款口径与安全审计 L 级项（v2.6.0 补强）**
+
+- 桌面退货 `ReturnService.completeReturnOrder` 区分退款方式：**现金单退现金**
+  （不冲会员余额，只写 `RETURN_REFUND_CASH` 操作日志留痕），非现金单退回余额并写充值流水；
+  两种情况都按 `ReturnService.pointsToReverse`（退货金额占原单实付的比例）冲减原单积分并重算等级。
+  无会员的退货不再被提前 return，同步广播不再漏发
+- Token 过期清理：`ApiServer.generateToken` 签发前调用 `purgeExpiredTokens()`，
+  过期条目不再常驻内存（`ApiServerTest.expiredTokensArePurgedOnIssue`）
+- 权限收紧：`/api/payment/stats*` 归入财务/管理员（`AuthorizationMiddlewareTest`）
+- 打印机发现只扫**本机子网**且端口限定 `STANDARD_PRINTER_PORTS`(9100/515/631)，
+  不再接受调用方指定子网与任意端口（`PerformancePolicyTest.printerDiscoveryIsBounded`）
+- `POST /api/printers/:id/receipt` 只接受纯文本小票：≤8KB 且拒绝控制字符（含 ESC/POS），
+  `PrintApiControllerTest` 覆盖控制字符/超长/正常文本三条路径
+- 模拟支付回调密钥改用 `MessageDigest.isEqual` 定长比较
+- 发票编号改为 `INV + 时间戳 + 进程内序号 + 6 位随机段`，同毫秒并发不撞号且不可预测
+  （`InvoiceTest`）
+- 删除 `UserDAORefactored.authenticate`（忽略密码参数的死方法，易被误用成免密登录）
+
+**i18n 与启动画面（v2.6.0 补强）**
+
+- REST API 语言**按请求隔离**：新增 `ApiLocaleResolver`（`?locale=` → `Accept-Language` →
+  当前用户偏好 → 系统语言），`I18nManager.get(Locale, key)` / `getAvailableLocales(Locale)`
+  支持按指定语言取值而不改状态；`PUT /api/i18n/locale` 只写**当前用户**的语言偏好，
+  不再调用 `I18nManager.setLocale`（此前任一登录用户切语言会把桌面端与所有终端一起改掉），
+  不支持的语言返回 400。测试见 `I18nApiControllerTest`
+- 启动画面改为轻量窗口 `SplashWindow`（普通 `Stage`）：不再依赖 JavaFX `Preloader`——
+  Preloader 要求主类必须是 `Application` 子类，与可执行 JAR 的 `Launcher` 入口冲突，
+  恢复它需改用内部 API `LauncherImpl` 并给启动脚本加 `--add-exports`。原 `SplashScreen`
+  与全部 `notifyPreloader` 调用、manifest 的 `JavaFX-Preloader-Class` 已移除；
+  `CashierSystemFXApplication.start()` 先显示 `SplashWindow`，延后 60ms 再跑重量级初始化
+  （`initializeApplication`），失败时弹窗提示并退出
+- 技术债登记在 `docs/TECH_DEBT.md`：TD-001 发票文件路径白名单校验（阻塞于「发票预览/下载」需求）
+
+**数据库密码来源（v2.6.0 补强）**
+
+- 新增 `com.cashier.util.DotEnv`：读取/维护工作目录 `.env`（忽略注释、去引号、重复键取首条、
+  写入时保留其它键并把权限收到 `rw-------`）。`DatabaseManager.resolveDatabasePassword` 与
+  `DatabaseConnectionHelper.loadConnectionConfig` 改为"环境变量 → `.env` → 配置文件"
+- `DatabaseConfigDialog` 与 `Installer.createConfigFiles` **不再把密码写进
+  `config/database.properties`**（任何模式都留空，开发模式改写 `.env`），
+  既满足 `release.bat`/`release.sh` 的 `db.password` 门禁，也让 dev/prod 不再分叉；
+  回归门禁见 `PerformancePolicyTest.installersNeverPersistPasswordIntoConfig`
+- 本机约定：密码放根目录 `.env`（已 gitignore），`config/database.properties` 的 `db.password` 留空
 
 **REST API 启用步骤（本地冒烟/生产）**
 

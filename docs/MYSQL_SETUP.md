@@ -189,7 +189,7 @@ db.pool.size=10
 |-----|------|--------|
 | db.url | 数据库连接地址 | jdbc:mysql://localhost:3306/lisuan_system |
 | db.username | 数据库用户名 | cashier |
-| db.password | 数据库密码 | YourPassword123 |
+| db.password | 数据库密码 | **留空**（由 `CASHIER_DB_PASSWORD` 环境变量或根目录 `.env` 提供；写入明文会被发布门禁拒绝） |
 | db.pool.size | 连接池大小 | 10 (2-3台收银机) |
 
 ---

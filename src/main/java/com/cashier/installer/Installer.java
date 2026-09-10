@@ -1,6 +1,7 @@
 package com.cashier.installer;
 
 import com.cashier.constant.SystemPropertyKeys;
+import com.cashier.util.DotEnv;
 
 import javax.swing.*;
 import java.awt.*;
@@ -468,28 +469,44 @@ public class Installer {
         String dbUrl = String.format("jdbc:mysql://%s:%s/%s?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8",
             dbHost, dbPort, DB_NAME);
         
+        // 密码一律不写进 config/（发布门禁禁止 config/database.properties 出现 db.password），
+        // 走环境变量 / .env；开发模式由下方写入 .env，生产模式由运维注入。
         String dbConfig = String.format(
             "# Database Configuration\n" +
             "# Production deployments should provide the password through CASHIER_DB_PASSWORD.\n" +
             "db.url=%s\n" +
             "db.username=%s\n" +
-            "db.password=%s\n" +
+            "db.password=\n" +
             "db.pool.size=10\n" +
             "db.connection.timeout=30000\n" +
             "db.idle.timeout=600000\n" +
             "db.max.lifetime=1800000\n",
-            dbUrl, dbUsername, passwordValueForConfig());
+            dbUrl, dbUsername);
         
         Files.write(Paths.get("config/database.properties"), dbConfig.getBytes(StandardCharsets.UTF_8));
         
         log("  已创建 config/database.properties");
-        if (isProductionEnvironment()) {
-            log("  生产环境未写入数据库密码，请通过 CASHIER_DB_PASSWORD 环境变量提供");
-        }
+        storePasswordOutsideConfig();
     }
 
-    private String passwordValueForConfig() {
-        return isProductionEnvironment() ? "" : dbPassword;
+    /**
+     * 开发模式把密码写进 {@code .env}（已 gitignore，启动脚本与应用都会读取）；
+     * 生产模式保持不落盘，由运维通过环境变量注入。
+     */
+    private void storePasswordOutsideConfig() {
+        if (isProductionEnvironment()) {
+            log("  生产环境未写入数据库密码，请通过 CASHIER_DB_PASSWORD 环境变量提供");
+            return;
+        }
+        if (dbPassword == null || dbPassword.isEmpty()) {
+            return;
+        }
+        try {
+            DotEnv.upsert(DotEnv.DB_PASSWORD_KEY, dbPassword);
+            log("  开发环境数据库密码已写入 " + DotEnv.FILE_NAME + "（未写入 config/）");
+        } catch (IOException e) {
+            log("  [WARN] 写入 " + DotEnv.FILE_NAME + " 失败: " + e.getMessage());
+        }
     }
 
     private boolean isProductionEnvironment() {

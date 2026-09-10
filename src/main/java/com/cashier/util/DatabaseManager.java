@@ -194,17 +194,19 @@ public class DatabaseManager {
     }
 
     private static String resolveDatabasePassword(Properties props) {
-        String envPassword = System.getenv("CASHIER_DB_PASSWORD");
-        if (envPassword == null || envPassword.isEmpty()) {
+        // 环境变量优先，其次工作目录的 .env（两者都是"配置文件之外"的来源，
+        // 保证 config/database.properties 里不必存明文口令）
+        String password = DotEnv.get(DotEnv.DB_PASSWORD_KEY);
+        if (password == null || password.isEmpty()) {
             // L-2: 向后兼容旧拼写 CASHER_DB_PASSWORD
-            envPassword = System.getenv("CASHER_DB_PASSWORD");
-            if (envPassword != null && !envPassword.isEmpty()) {
-                logger.warn("检测到旧环境变量 CASHER_DB_PASSWORD，建议迁移到 CASHIER_DB_PASSWORD");
+            password = DotEnv.get("CASHER_DB_PASSWORD");
+            if (password != null && !password.isEmpty()) {
+                logger.warn("检测到旧变量 CASHER_DB_PASSWORD，建议迁移到 {}", DotEnv.DB_PASSWORD_KEY);
             }
         }
-        if (envPassword != null && !envPassword.isEmpty()) {
-            logger.info("已从环境变量读取数据库密码");
-            return envPassword;
+        if (password != null && !password.isEmpty()) {
+            logger.info("已从环境变量或 .env 读取数据库密码");
+            return password;
         }
         return props.getProperty(DatabaseConfigKeys.PASSWORD);
     }

@@ -118,14 +118,15 @@ public class DatabaseConnectionHelper {
             props.load(isr);
         }
 
-        // L-2: 优先使用 CASHIER_DB_PASSWORD，向后兼容旧拼写 CASHER_DB_PASSWORD
-        String envPassword = System.getenv("CASHIER_DB_PASSWORD");
-        if (envPassword == null || envPassword.isEmpty()) {
-            envPassword = System.getenv("CASHER_DB_PASSWORD");
+        // L-2: 优先使用 CASHIER_DB_PASSWORD，向后兼容旧拼写 CASHER_DB_PASSWORD；
+        // 两个变量都是"环境变量 → .env"的取值顺序
+        String password = DotEnv.get(DotEnv.DB_PASSWORD_KEY);
+        if (password == null || password.isEmpty()) {
+            password = DotEnv.get("CASHER_DB_PASSWORD");
         }
-        String password = envPassword != null && !envPassword.isEmpty()
-            ? envPassword
-            : props.getProperty(DatabaseConfigKeys.PASSWORD);
+        if (password == null || password.isEmpty()) {
+            password = props.getProperty(DatabaseConfigKeys.PASSWORD);
+        }
         return new DbConnectionConfig(props.getProperty(DatabaseConfigKeys.URL), props.getProperty(DatabaseConfigKeys.USERNAME), password);
     }
 

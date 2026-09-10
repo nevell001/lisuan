@@ -4,11 +4,11 @@
 
 LiSuan Cashier System is a desktop POS (Point of Sale) cashier system built with JavaFX 17. It is designed for daily retail operations, covering checkout, products, members, purchasing, inventory, returns, reports, user permissions, data backup, and hardware integration.
 
-**Current Version**: v2.6.0 | **Latest Update**: 2026-08-29 | **Test Coverage**: 520 test cases
+**Current Version**: v2.6.0 | **Latest Update**: 2026-08-29 | **Test Coverage**: 589 test cases
 
-> Test scope: `mvn -q clean verify` runs 520 test cases by default (including SpotBugs and JaCoCo gates);
+> Test scope: `mvn -q clean verify` runs 589 test cases by default (including SpotBugs and JaCoCo gates);
 > `LoginControllerUITest` (17 cases) requires a real display environment and is run explicitly with
-> `mvn -Pui-tests -Dtest=LoginControllerUITest test`, for a total of 537 cases.
+> `mvn -Pui-tests -Dtest=LoginControllerUITest test`, for a total of 606 cases.
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.12-blue)
@@ -122,15 +122,17 @@ LiSuan Cashier System is a desktop POS (Point of Sale) cashier system built with
 docker compose up -d mysql
 ```
 
-The database initialization script is located at `docker/mysql-init/00-init-complete.sql`. The default configuration file is `config/database.properties`. For production environments, it is recommended to pass the password via environment variables:
+The database initialization script is located at `docker/mysql-init/00-init-complete.sql`. The configuration file is `config/database.properties`, whose `db.password` is **always left empty** — the password comes from the runtime environment. The application and every launch script resolve it the same way: **process environment variable → root `.env` → config file**:
 
 ```bash
 export CASHIER_DB_PASSWORD=your_password
+# or put it in the root .env (already ignored by .gitignore):
+# CASHIER_DB_PASSWORD=your_password
 ```
 
 ### Environment Config (.env)
 
-The project supports managing installation and startup configuration centrally via a root-level `.env` file, avoiding hard-coded passwords and secrets in config files or scripts.
+The project supports managing installation and startup configuration centrally via a root-level `.env` file, avoiding hard-coded passwords and secrets in config files or scripts. At runtime (including a plain `java -jar` start) the application reads `CASHIER_DB_PASSWORD` from that file as well.
 
 ```bash
 cp .env.example .env
@@ -155,9 +157,10 @@ cp .env.example .env
 Usage notes:
 
 - `install.sh` / `install.bat` load the whole `.env` for database initialization, config generation, and packaging; undefined variables fall back to interactive prompts.
-- When `.env` is detected (or `ENVIRONMENT=production`), `install.sh` does not write the password into `config/database.properties`; the runtime password is provided solely by `CASHIER_DB_PASSWORD`.
+- Every install/config path (`install.sh`, `install.bat`, `DataConfig.bat`, `docker/docker-init.sh`) **never** writes the password into `config/database.properties` — its `db.password` stays empty in all environments. Development mode writes the password to the root `.env` (permissions tightened to `rw-------` on Linux/macOS); production injects it through environment variables. `release.sh` / `release.bat` enforce this: a non-empty `db.password` in the config file fails the release gate.
 - `start.sh` only selectively reads the two password variables `CASHIER_DB_PASSWORD` / `CASHER_DB_PASSWORD` to override the DB password; it does not bring placeholder configs such as `TOKEN_SECRET`, `CORS_ALLOWED_ORIGINS` into the runtime environment (those are still passed to the API via system environment variables).
-- `DataConfig.bat` also reads `.env` to generate the database config.
+- `DataConfig.bat` also reads `.env` to generate the database config, and in development mode writes the password back to `.env` rather than the config file.
+- When starting with a plain `java -jar` (bypassing `start.bat`/`start.sh`), the application itself also reads the working-directory `.env`, so all three launch paths share one password source.
 - **Security note**: On first use, replace `MYSQL_ROOT_PASSWORD`, `CASHIER_DB_PASSWORD`, and `TOKEN_SECRET` with independent strong random values, and restrict `CORS_ALLOWED_ORIGINS`. The legacy `MYSQL_PASSWORD` key in `.env` has been unified into `CASHIER_DB_PASSWORD` (scripts still read the old variable for backward compatibility).
 
 ### Development Run
@@ -382,7 +385,7 @@ src/main/resources/
 - **Security Headers**: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
 
 ### Code Quality
-- **Unit Tests**: 520 test cases (`mvn -q clean verify`) covering DAOs, services, utilities, concurrency safety, and the API (537 in total including display-dependent UI tests)
+- **Unit Tests**: 589 test cases (`mvn -q clean verify`) covering DAOs, services, utilities, concurrency safety, and the API (606 in total including display-dependent UI tests)
 - **Static Analysis**: SpotBugs high-risk defect gate
 - **Coverage Gate**: JaCoCo line coverage ≥10%
 - **i18n Gate**: Enforces identical keys across the three language bundles, complete `I18nKeys` constants, and complete keys for source i18n calls
@@ -508,12 +511,12 @@ src/main/resources/
 **Application Fails to Start**
 - Verify JDK is version 17 or higher.
 - Ensure MySQL is running.
-- Check database settings in `config/database.properties`.
+- Check `config/database.properties` (the password is not stored there; provide it via an environment variable or the root `.env`).
 - Check log files inside the `logs/` directory.
 
 **Database Connection Error**
 - Double-check host, port, database name, username, and password.
-- If using environment variables, ensure `CASHIER_DB_PASSWORD` is properly exported.
+- Make sure `CASHIER_DB_PASSWORD` is set: the process environment variable wins, otherwise the working-directory `.env` is used (a plain `java -jar` start reads `.env` too).
 - If managing configuration via `.env`, ensure `cp .env.example .env` was run and that `DB_HOST`/`DB_PORT`/`MYSQL_*` match your local setup.
 - For Docker, verify container state with `docker compose up -d mysql`.
 

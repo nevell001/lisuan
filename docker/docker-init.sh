@@ -122,19 +122,31 @@ if [ ! -f "config/database.properties" ]; then
     mkdir -p config
 fi
 
-# 更新配置文件
+# 更新配置文件（不写入明文密码：密码放 .env，应用与启动脚本都会读取；
+# config/database.properties 里出现非空 db.password 会被 release.sh 的门禁拒绝）
 cat > config/database.properties << EOF
 # Database Configuration
+# Production deployments should provide the password through CASHIER_DB_PASSWORD.
 db.url=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
 db.username=${MYSQL_USER}
-db.password=${CASHIER_DB_PASSWORD}
+db.password=
 db.pool.size=10
 db.connection.timeout=30000
 db.idle.timeout=600000
 db.max.lifetime=1800000
 EOF
 
-echo -e "${GREEN}✓ 应用配置文件已更新${NC}"
+if [ -f ".env" ] && grep -qE '^CASHIER_DB_PASSWORD=' .env; then
+    awk -v pw="${CASHIER_DB_PASSWORD}" '
+        /^CASHIER_DB_PASSWORD=/ { if (!done) { print "CASHIER_DB_PASSWORD=" pw; done=1 } ; next }
+        { print }
+    ' .env > .env.tmp && mv .env.tmp .env
+else
+    printf '\n# 数据库密码（docker-init.sh 写入）\nCASHIER_DB_PASSWORD=%s\n' "${CASHIER_DB_PASSWORD}" >> .env
+fi
+chmod 600 .env 2>/dev/null || true
+
+echo -e "${GREEN}✓ 应用配置文件已更新（密码写入 .env，未写入 config/）${NC}"
 echo ""
 echo "配置信息："
 echo "  - 数据库主机: ${MYSQL_HOST}:${MYSQL_PORT}"

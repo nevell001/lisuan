@@ -4,11 +4,11 @@
 
 狸算(LiSuan)收银系统是一个基于 JavaFX 17 的桌面 POS 收银系统，面向零售门店的收银、商品、会员、采购、库存、退货、报表、用户权限、数据备份和硬件接入等日常经营场景。
 
-**当前版本**: v2.6.0 | **最新更新**: 2026-08-29 | **测试覆盖**: 520 个测试用例
+**当前版本**: v2.6.0 | **最新更新**: 2026-08-29 | **测试覆盖**: 589 个测试用例
 
-> 测试口径：`mvn -q clean verify` 默认运行 520 个用例（含测试 + SpotBugs + JaCoCo 门禁）；
+> 测试口径：`mvn -q clean verify` 默认运行 589 个用例（含测试 + SpotBugs + JaCoCo 门禁）；
 > `LoginControllerUITest`（17 个用例）需要真实显示环境，在桌面环境用
-> `mvn -Pui-tests -Dtest=LoginControllerUITest test` 显式运行，全量共 537 个。
+> `mvn -Pui-tests -Dtest=LoginControllerUITest test` 显式运行，全量共 606 个。
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.12-blue)
@@ -118,15 +118,17 @@
 docker compose up -d mysql
 ```
 
-数据库初始化脚本位于 `docker/mysql-init/00-init-complete.sql`。默认配置文件为 `config/database.properties`，生产环境建议通过环境变量保存密码：
+数据库初始化脚本位于 `docker/mysql-init/00-init-complete.sql`。配置文件为 `config/database.properties`，其中 `db.password` **始终留空**——密码由运行环境提供。应用与各启动脚本的取值顺序一致：**进程环境变量 → 工作目录 `.env` → 配置文件**：
 
 ```bash
 export CASHIER_DB_PASSWORD=your_password
+# 也可以写进根目录 .env（已被 .gitignore 忽略）：
+# CASHIER_DB_PASSWORD=your_password
 ```
 
 ### 环境变量配置（.env）
 
-项目支持用根目录的 `.env` 文件集中管理安装与启动配置，避免把密码、密钥写进配置文件或脚本。
+项目支持用根目录的 `.env` 文件集中管理安装与启动配置，避免把密码、密钥写进配置文件或脚本。应用运行时（含直接 `java -jar`）也会读取该文件中的 `CASHIER_DB_PASSWORD`。
 
 ```bash
 cp .env.example .env
@@ -151,9 +153,10 @@ cp .env.example .env
 使用说明：
 
 - `install.sh` / `install.bat` 会整体加载 `.env` 用于数据库初始化、配置生成和打包；未定义的变量会走交互式引导。
-- 检测到 `.env`（或 `ENVIRONMENT=production`）时，`install.sh` 不会把密码写入 `config/database.properties`，运行密码统一由 `CASHIER_DB_PASSWORD` 提供。
+- 所有安装/配置通道（`install.sh`、`install.bat`、`DataConfig.bat`、`docker/docker-init.sh`）都**不会**把密码写进 `config/database.properties`——该文件的 `db.password` 在任何环境下都留空。开发模式把密码写入根目录 `.env`（Linux/macOS 下权限收到 `rw-------`），生产模式由环境变量注入。`release.sh` / `release.bat` 有对应门禁：配置文件出现非空 `db.password` 即拒绝发布。
 - `start.sh` 只定向读取 `CASHIER_DB_PASSWORD` / `CASHER_DB_PASSWORD` 两个密码变量覆盖数据库密码，不把 `TOKEN_SECRET`、`CORS_ALLOWED_ORIGINS` 等占位配置带入运行环境（API 侧仍通过系统环境变量传递）。
-- `DataConfig.bat` 同样读取 `.env` 生成数据库配置。
+- `DataConfig.bat` 同样读取 `.env` 生成数据库配置，开发模式下把密码写回 `.env` 而不是配置文件。
+- 直接 `java -jar` 启动（不经过 `start.bat`/`start.sh`）时，应用自身也会读取工作目录的 `.env`，因此三种启动方式共用同一份密码来源。
 - **安全提示**：首次使用务必替换 `MYSQL_ROOT_PASSWORD`、`CASHIER_DB_PASSWORD`、`TOKEN_SECRET` 为各自独立的强随机值，并限制 `CORS_ALLOWED_ORIGINS`。旧版 `.env` 中的 `MYSQL_PASSWORD` 已统一为 `CASHIER_DB_PASSWORD`（脚本仍向后兼容读取旧变量）。
 
 ### 开发运行
@@ -367,7 +370,7 @@ src/main/resources/
 - **安全响应头**: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
 
 ### 代码质量
-- **单元测试**: 520 个测试用例（`mvn -q clean verify`），覆盖 DAO、Service、工具类、并发安全与 API（全量 537，含需显示环境的 UI 测试）
+- **单元测试**: 589 个测试用例（`mvn -q clean verify`），覆盖 DAO、Service、工具类、并发安全与 API（全量 606，含需显示环境的 UI 测试）
 - **静态检查**: SpotBugs 高风险缺陷门禁
 - **覆盖率门禁**: JaCoCo 行覆盖率 ≥10%
 - **i18n 门禁**: 强制三套语言包 key 一致、`I18nKeys` 常量齐全、源码 i18n 调用 key 齐全
@@ -487,12 +490,12 @@ src/main/resources/
 **应用无法启动**
 - 检查 JDK 是否为 17 或更高版本
 - 检查 MySQL 是否正在运行
-- 检查 `config/database.properties`
+- 检查 `config/database.properties`（密码不在该文件里，需通过环境变量或根目录 `.env` 提供）
 - 查看 `logs/` 目录下的日志文件
 
 **数据库连接失败**
 - 确认数据库地址、端口、库名、用户名和密码
-- 如果使用环境变量密码，确认 `CASHIER_DB_PASSWORD` 已设置
+- 确认 `CASHIER_DB_PASSWORD` 有值：进程环境变量优先，其次工作目录 `.env`（直接 `java -jar` 启动也会读 `.env`）
 - 若用 `.env` 管理配置，确认已运行 `cp .env.example .env` 且 `DB_HOST`/`DB_PORT`/`MYSQL_*` 与本地一致
 - Docker 环境可先执行 `docker compose up -d mysql`
 

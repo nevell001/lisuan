@@ -295,13 +295,13 @@ docker exec -i lisuan-mysql mysql -uroot -pYOUR_ROOT_PASSWORD lisuan_system < ba
 docker/mysql-init/
 ├── 00-grant-root-permissions.sql          # Root 权限配置（Docker 初始化用）
 ├── 00-init-complete.sql                   # 完整初始化脚本（推荐用于全新安装）
-├── 04-v2.3.1-updates.sql                  # v2.3.1 升级脚本
-├── 05-v2.4.0-updates.sql                  # v2.4.0 升级脚本
-├── 06-v2.4.1-updates.sql                  # v2.4.1 升级脚本
 ├── 07-fix-transaction-items.sql           # 诊断修复脚本
 ├── 08-v2.4.3-product-name-unique.sql      # 商品名称唯一性约束升级脚本
 ├── 09-v2.4.3-fix-promotions.sql           # 促销表修复脚本（v2.4.3 重要）
+├── 10-v2.4.4-specification-management.sql # 商品规格管理表（v2.4.4）
 ├── 11-v2.5.2-currency-preference.sql      # v2.5.2 货币独立配置支持
+├── 99-v2.5.5-font-size-preference.sql     # v2.5.5 字号偏好表
+├── 99-v2.6.0-hot-products.sql             # v2.6.0 products.is_hot 列
 └── DATABASE_VERSIONS.md                    # 本文档
 ```
 
@@ -309,3 +309,6 @@ docker/mysql-init/
 - ❌ `01-create-user.sql`
 - ❌ `02-alter-tables.sql`
 - ❌ `03-sample-data.sql`
+- ❌ `04-v2.3.1-updates.sql`
+- ❌ `05-v2.4.0-updates.sql`
+- ❌ `06-v2.4.1-updates.sql`

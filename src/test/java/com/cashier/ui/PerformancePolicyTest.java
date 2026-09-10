@@ -291,9 +291,11 @@ class PerformancePolicyTest {
         assertTrue(printApi.contains("MAX_DISCOVERY_HOST_LIMIT = 254"));
         assertTrue(printApi.contains("DEFAULT_DISCOVERY_TIMEOUT_MS = 150"));
         assertTrue(printApi.contains("MAX_DISCOVERY_TIMEOUT_MS = 1000"));
-        assertTrue(printApi.contains("IPV4_SUBNET_PATTERN"));
-        assertTrue(printApi.contains("Math.max(1, Math.min(requestedPort, 65535))"));
-        assertTrue(printApi.contains("ctx.status(400).json"));
+        // 只扫本机子网、只探标准打印端口：不接受调用方指定子网与任意端口，避免变成内网端口扫描器
+        assertTrue(printApi.contains("String subnet = getDefaultSubnet()"));
+        assertTrue(printApi.contains("STANDARD_PRINTER_PORTS"));
+        assertFalse(printApi.contains("ctx.queryParam(\"subnet\")"));
+        assertFalse(printApi.contains("Math.min(requestedPort, 65535)"));
         assertTrue(printApi.contains("for (int i = 1; i <= hostLimit; i++)"));
         assertTrue(printApi.contains("checkPrinterPort(host, port, timeoutMs)"));
         assertFalse(printApi.contains("for (int i = 1; i < 255; i++)"));
@@ -540,8 +542,8 @@ class PerformancePolicyTest {
     }
 
     @Test
-    @DisplayName("生产环境安装配置不得落盘数据库密码")
-    void productionInstallersDoNotPersistDatabasePassword() throws Exception {
+    @DisplayName("安装/配置工具不得把数据库密码落盘到 config/")
+    void installersNeverPersistPasswordIntoConfig() throws Exception {
         String installer = Files.readString(Path.of(
             "src/main/java/com/cashier/installer/Installer.java"
         ));
@@ -550,14 +552,40 @@ class PerformancePolicyTest {
         ));
 
         assertTrue(installer.contains("Production deployments should provide the password through CASHIER_DB_PASSWORD."));
-        assertTrue(installer.contains("passwordValueForConfig()"));
-        assertTrue(installer.contains("isProductionEnvironment() ? \"\" : dbPassword"));
+        assertTrue(installer.contains("\"db.password=\\n\""));
+        assertTrue(installer.contains("DotEnv.upsert(DotEnv.DB_PASSWORD_KEY, dbPassword)"));
         assertTrue(installer.contains("\"production\".equalsIgnoreCase(System.getenv(\"ENVIRONMENT\"))"));
 
         assertTrue(databaseDialog.contains("Production deployments should provide the password through CASHIER_DB_PASSWORD."));
-        assertTrue(databaseDialog.contains("passwordValueForConfig(input.pass())"));
-        assertTrue(databaseDialog.contains("isProductionEnvironment() ? \"\" : password"));
+        assertTrue(databaseDialog.contains("\"db.password=\\n\""));
+        assertTrue(databaseDialog.contains("DotEnv.upsert(DotEnv.DB_PASSWORD_KEY, password)"));
         assertTrue(databaseDialog.contains("\"production\".equalsIgnoreCase(System.getenv(\"ENVIRONMENT\"))"));
+
+        // 任何模式（含开发模式）都不得把密码拼进 config/database.properties：
+        // 开发模式写 .env，生产模式由运维通过环境变量注入
+        assertFalse(installer.contains("passwordValueForConfig"));
+        assertFalse(databaseDialog.contains("passwordValueForConfig"));
+        assertFalse(installer.contains("db.password=%s"));
+        assertFalse(databaseDialog.contains("db.password=%s"));
+    }
+
+    @Test
+    @DisplayName("没有任何安装通道把数据库密码写进 config/database.properties")
+    void noInstallerWritesPlaintextPasswordIntoConfig() throws Exception {
+        // 覆盖全部会生成该文件的通道：Java 安装器/配置对话框 + shell/docker 安装脚本。
+        // 只要有一条通道写明文，release 门禁就会在装了库的机器上失败。
+        assertNoPasswordInConfigTemplate("src/main/java/com/cashier/installer/Installer.java");
+        assertNoPasswordInConfigTemplate("src/main/java/com/cashier/installer/DatabaseConfigDialog.java");
+        assertNoPasswordInConfigTemplate("install.sh");
+        assertNoPasswordInConfigTemplate("docker/docker-init.sh");
+    }
+
+    private static void assertNoPasswordInConfigTemplate(String path) throws Exception {
+        String source = Files.readString(Path.of(path));
+        assertFalse(source.contains("db.password=${"),
+            path + " 不得把密码变量直接拼进 db.password（应写入 .env）");
+        assertFalse(source.contains("db.password=%s"),
+            path + " 不得把密码参数直接拼进 db.password（应写入 .env）");
     }
 
     @Test
@@ -667,8 +695,8 @@ class PerformancePolicyTest {
         assertTrue(productEditController.contains("PRODUCT_SUPPLIER_LIMIT = 500"));
         assertTrue(productEditController.contains("getSupplierDAO().findByStatus(true, PRODUCT_SUPPLIER_LIMIT)"));
         assertFalse(productEditController.contains("SupplierDAO.findAll()"));
-        assertTrue(productEditController.contains("productDAO.countByProductCodePrefix(prefix)"));
-        assertTrue(productDao.contains("countByProductCodePrefix(String prefix)"));
+        assertTrue(productEditController.contains("productDAO.findMaxProductCodeSequence(prefix)"));
+        assertTrue(productDao.contains("findMaxProductCodeSequence(String prefix)"));
     }
 
     @Test
