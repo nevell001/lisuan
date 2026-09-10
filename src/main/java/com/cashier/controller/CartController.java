@@ -1332,12 +1332,8 @@ public class CartController implements CartViewHost {
         transaction.items.addAll(productMap.values());
         
         transaction.totalAmount = getFinalAmount();  // 使用最终金额（包含会员折扣和促销优惠）
-        // 实现税费计算：从系统设置中读取税率
-        Map<String, String> settings = DataService.loadSettings();
-        double taxRate = FormValidator.parseDouble(settings.getOrDefault("taxRate", "0.0"));
-        transaction.tax = transaction.totalAmount
-            .multiply(BigDecimal.valueOf(taxRate))
-            .divide(BigDecimal.valueOf(100));
+        // 实现税费计算：税率以小数形式配置（设置界面校验区间 0.0-1.0）
+        transaction.tax = TransactionService.calculateTax(transaction.totalAmount);
         transaction.finalAmount = getFinalAmount();
         transaction.paymentMethod = paymentMethod;
         
@@ -1367,12 +1363,10 @@ public class CartController implements CartViewHost {
      */
     private void updateStatistics() {
         CartTotals totals = calculateCartTotals();
-        BigDecimal discountRate = getCurrentMemberDiscountRate();
         PromotionSelection promotionSelection = selectBestPromotion(totals.totalAmount());
         appliedPromotion = promotionSelection.promotion();
 
-        BigDecimal amountAfterMemberDiscount = totals.totalAmount().multiply(discountRate);
-        BigDecimal finalAmount = amountAfterMemberDiscount.subtract(promotionSelection.discount()).max(BigDecimal.ZERO);
+        BigDecimal finalAmount = getFinalAmount();
         BigDecimal discountAmount = totals.totalAmount().subtract(finalAmount);
 
         updateStatisticsLabels(totals, discountAmount, finalAmount, promotionSelection);
@@ -1388,12 +1382,6 @@ public class CartController implements CartViewHost {
             totalAmount = totalAmount.add(item.subtotal);
         }
         return new CartTotals(totalQuantity, totalAmount);
-    }
-
-    private BigDecimal getCurrentMemberDiscountRate() {
-        return currentMember != null
-            ? currentMember.getDiscountRate().divide(BigDecimal.TEN)
-            : BigDecimal.ONE;
     }
 
     private PromotionSelection selectBestPromotion(BigDecimal totalAmount) {
@@ -1537,41 +1525,16 @@ public class CartController implements CartViewHost {
     }
 
     /**
-     * 获取总金额
-     * @return 总金额
-     */
-    private BigDecimal getTotalAmount() {
-        BigDecimal total = BigDecimal.ZERO;
-        for (CartItem item : cartList) {
-            total = total.add(item.subtotal);
-        }
-        return total;
-    }
-
-    /**
-     * 获取最终金额
-     * @return 最终金额（包含会员折扣和促销优惠）
+     * 获取最终金额（会员折扣 + 促销优惠），保留 2 位小数。
+     *
+     * <p>与触屏收银台共用 {@link TransactionService} 的口径。此前这里自己算且不做四舍五入，
+     * 而界面标签按 2 位小数显示，会出现"标签显示 ¥1.80、实际应付 1.8050，收银员按显示金额
+     * 收款却被判为金额不足"的问题。</p>
+     *
+     * @return 最终应付金额
      */
     private BigDecimal getFinalAmount() {
-        BigDecimal totalAmount = getTotalAmount();
-        
-        BigDecimal discountRate = currentMember != null ? currentMember.getDiscountRate().divide(BigDecimal.TEN) : BigDecimal.ONE;
-        BigDecimal amountAfterMemberDiscount = totalAmount.multiply(discountRate);
-        
-        BigDecimal promotionDiscount = BigDecimal.ZERO;
-        try {
-            List<Promotion> promotions = DAOFactory.getInstance().getPromotionDAO().findActive();
-            for (Promotion promotion : promotions) {
-                BigDecimal discount = promotion.calculateDiscount(totalAmount);
-                if (discount.compareTo(promotionDiscount) > 0) {
-                    promotionDiscount = discount;
-                }
-            }
-        } catch (Exception e) {
-            logger.error("加载促销数据失败", e);
-        }
-        
-        return amountAfterMemberDiscount.subtract(promotionDiscount).max(BigDecimal.ZERO);
+        return TransactionService.calculateFinalAmount(cartList, currentMember, appliedPromotion);
     }
 
     /**

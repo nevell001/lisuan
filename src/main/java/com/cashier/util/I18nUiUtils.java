@@ -47,13 +47,33 @@ public final class I18nUiUtils {
         return key == null ? value : I18nManager.getInstance().get(key);
     }
 
+    /**
+     * 归一化支付方式：历史数据存中文（现金/微信/支付宝/银行卡），筛选下拉框用代码
+     * （CASH/WECHAT/ALIPAY/CARD）。两侧统一到代码后再比较，避免永远匹配不上。
+     * @param value 中文名称或代码
+     * @return 稳定代码；无法识别时原样返回
+     */
+    public static String canonicalPaymentMethod(String value) {
+        if (value == null) {
+            return null;
+        }
+        return switch (value) {
+            case "现金", "CASH" -> "CASH";
+            case "微信", "WECHAT" -> "WECHAT";
+            case "支付宝", "ALIPAY" -> "ALIPAY";
+            case "银行卡", "CARD" -> "CARD";
+            default -> value;
+        };
+    }
+
     public static String paymentMethod(String value) {
-        String key = switch (value) {
+        String canonical = canonicalPaymentMethod(value);
+        String key = switch (canonical == null ? "" : canonical) {
             case "全部" -> I18nKeys.Filter.ALL;
-            case "现金", "CASH" -> I18nKeys.Runtime.PAYMENT_CASH;
-            case "微信", "WECHAT" -> I18nKeys.Runtime.PAYMENT_WECHAT;
-            case "支付宝", "ALIPAY" -> I18nKeys.Runtime.PAYMENT_ALIPAY;
-            case "银行卡", "CARD" -> I18nKeys.Runtime.PAYMENT_CARD;
+            case "CASH" -> I18nKeys.Runtime.PAYMENT_CASH;
+            case "WECHAT" -> I18nKeys.Runtime.PAYMENT_WECHAT;
+            case "ALIPAY" -> I18nKeys.Runtime.PAYMENT_ALIPAY;
+            case "CARD" -> I18nKeys.Runtime.PAYMENT_CARD;
             default -> null;
         };
         return key == null ? value : I18nManager.getInstance().get(key);

@@ -342,11 +342,8 @@
                     <archive>
                         <manifest>
                             <addClasspath>true</addClasspath>
-                            <mainClass>com.cashier.CashierSystemFXApplication</mainClass>
+                            <mainClass>com.cashier.Launcher</mainClass>
                         </manifest>
-                        <manifestEntries>
-                            <JavaFX-Preloader-Class>com.cashier.SplashScreen</JavaFX-Preloader-Class>
-                        </manifestEntries>
                     </archive>
                 </configuration>
             </plugin>
@@ -380,9 +377,8 @@
                     <shadedClassifierName>jar-with-dependencies</shadedClassifierName>
                     <transformers>
                         <transformer implementation="org.apache.maven.plugins.shade.resource.ManifestResourceTransformer">
-                            <mainClass>com.cashier.CashierSystemFXApplication</mainClass>
+                            <mainClass>com.cashier.Launcher</mainClass>
                             <manifestEntries>
-                                <JavaFX-Preloader-Class>com.cashier.SplashScreen</JavaFX-Preloader-Class>
                                 <Add-Opens>java.base/java.lang=ALL-UNNAMED java.base/java.util=ALL-UNNAMED java.base/java.lang.reflect=ALL-UNNAMED java.desktop/java.awt=ALL-UNNAMED</Add-Opens>
                                 <Add-Exports>java.base/sun.util.logging=ALL-UNNAMED java.base/sun.reflect=ALL-UNNAMED</Add-Exports>
                             </manifestEntries>

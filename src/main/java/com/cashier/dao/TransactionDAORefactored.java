@@ -232,7 +232,8 @@ public class TransactionDAORefactored extends BaseDAO {
 
     public TransactionStatistics getStatistics(String startDate, String endDate) throws SQLException {
         String sql = "SELECT COUNT(*) AS total_transactions, COALESCE(SUM(final_amount), 0) AS total_amount, " +
-            "SUM(CASE WHEN payment_method = 'CASH' THEN 1 ELSE 0 END) AS cash_count, " +
+            // 收银端写入的是中文支付方式，兼容旧数据/接口写入的代码形式
+            "SUM(CASE WHEN payment_method IN ('现金', 'CASH') THEN 1 ELSE 0 END) AS cash_count, " +
             "SUM(CASE WHEN member_phone IS NOT NULL THEN 1 ELSE 0 END) AS member_count " +
             "FROM transactions WHERE timestamp BETWEEN ? AND ?";
         try (Connection conn = getConnection();

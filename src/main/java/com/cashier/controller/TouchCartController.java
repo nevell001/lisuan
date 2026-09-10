@@ -8,6 +8,7 @@ import com.cashier.model.CartItem;
 import com.cashier.model.Category;
 import com.cashier.model.Member;
 import com.cashier.model.Product;
+import com.cashier.model.Promotion;
 import com.cashier.model.Transaction;
 import com.cashier.model.User;
 import com.cashier.printer.PrintUtil;
@@ -50,7 +51,6 @@ import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
 
 import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -143,6 +143,8 @@ public class TouchCartController implements CartViewHost {
     /** 库存快照,key = Product.name({@code TransactionService.executeTransaction} 契约要求) */
     private final Map<String, Product> inventoryMap = new HashMap<>();
     private Member currentMember;
+    /** 当前选中的最优促销,与标准收银台口径一致 */
+    private Promotion appliedPromotion;
     /** 当前选中的分类名,null 表示"全部" */
     private String currentCategoryName = null;
     /** 当前搜索关键字,null 或空表示无搜索 */
@@ -888,7 +890,7 @@ public class TouchCartController implements CartViewHost {
         int count = cartItems.size();
         int qty = cartItems.stream().mapToInt(i -> i.quantity).sum();
         BigDecimal total = TransactionService.calculateTotalAmount(cartItems);
-        BigDecimal finalAmt = TransactionService.calculateFinalAmount(cartItems, currentMember);
+        BigDecimal finalAmt = getPayableAmount();
         BigDecimal discount = total.subtract(finalAmt);
 
         // 更新购物车数量
@@ -901,6 +903,16 @@ public class TouchCartController implements CartViewHost {
             ? "-" + CurrencyUtil.format(discount.doubleValue())
             : CurrencyUtil.format(BigDecimal.ZERO.doubleValue()));
         finalAmountLabel.setText(CurrencyUtil.format(finalAmt.doubleValue()));
+    }
+
+    /**
+     * 计算当前应付金额（会员折扣 + 最优促销优惠）。
+     * 每次调用都重新选取促销（阈值/优惠按商品原价总额计算），使界面显示、挂单与结账落库口径一致。
+     */
+    private BigDecimal getPayableAmount() {
+        appliedPromotion = TransactionService.selectBestPromotion(
+            TransactionService.calculateTotalAmount(cartItems));
+        return TransactionService.calculateFinalAmount(cartItems, currentMember, appliedPromotion);
     }
 
     // ===== 搜索 / 清空 / 会员 =====
@@ -952,7 +964,7 @@ public class TouchCartController implements CartViewHost {
                 holdOrder.memberPhone = currentMember.phone;
             }
             BigDecimal total = TransactionService.calculateTotalAmount(cartItems);
-            BigDecimal finalAmt = TransactionService.calculateFinalAmount(cartItems, currentMember);
+            BigDecimal finalAmt = getPayableAmount();
             holdOrder.totalAmount = total;
             holdOrder.discountAmount = total.subtract(finalAmt);
             holdOrder.finalAmount = finalAmt;
@@ -1366,7 +1378,7 @@ public class TouchCartController implements CartViewHost {
         if (!preCheck()) {
             return;
         }
-        final BigDecimal finalAmount = TransactionService.calculateFinalAmount(cartItems, currentMember);
+        final BigDecimal finalAmount = getPayableAmount();
         final BigDecimal remainingAmount = finalAmount.subtract(cashReceivedAmount);
 
         Dialog<BigDecimal> dialog = new Dialog<>();
@@ -1609,7 +1621,7 @@ public class TouchCartController implements CartViewHost {
             warn(i18n.get("tpos.cash_partial_cash_only"));
             return;
         }
-        BigDecimal finalAmount = TransactionService.calculateFinalAmount(cartItems, currentMember);
+        BigDecimal finalAmount = getPayableAmount();
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setHeaderText(null);
         alert.setContentText(i18n.get("runtime.payment_confirm",
@@ -1819,16 +1831,8 @@ public class TouchCartController implements CartViewHost {
         tx.items.addAll(productMap.values());
 
         tx.totalAmount = TransactionService.calculateTotalAmount(cartItems);
-        Map<String, String> settings = com.cashier.service.DataService.loadSettings();
-        double taxRate = 0.0;
-        try {
-            taxRate = Double.parseDouble(settings.getOrDefault("taxRate", "0.0"));
-        } catch (NumberFormatException e) {
-            logger.debug("解析税率失败", e);
-        }
-        tx.tax = tx.totalAmount.multiply(BigDecimal.valueOf(taxRate))
-            .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-        tx.finalAmount = TransactionService.calculateFinalAmount(cartItems, currentMember);
+        tx.tax = TransactionService.calculateTax(tx.totalAmount);
+        tx.finalAmount = getPayableAmount();
         tx.paymentMethod = paymentMethod;
         if (currentMember != null) {
             tx.memberPhone = currentMember.phone;
@@ -1848,6 +1852,8 @@ public class TouchCartController implements CartViewHost {
             return;
         }
         paymentInProgress = true;
+        // 在切换到工作线程前快照，保证结账落库与界面显示用的是同一个促销
+        final Promotion promotionToApply = appliedPromotion;
 
         Thread worker = new Thread(() -> {
             try {
@@ -1864,7 +1870,7 @@ public class TouchCartController implements CartViewHost {
                 }
 
                 TransactionService.TransactionResult result = TransactionService.executeTransaction(
-                    cartItems, currentMember, transaction, inventoryMap, null);
+                    cartItems, currentMember, transaction, inventoryMap, promotionToApply);
 
                 if (!result.isSuccess() || result.getTransaction() == null) {
                     final String message = result.getMessage();

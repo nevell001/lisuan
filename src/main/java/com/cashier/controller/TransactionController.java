@@ -440,9 +440,12 @@ public class TransactionController {
                     }
                 }
 
-                // 支付方式筛选
-                if (!"全部".equals(paymentMethod) && !paymentMethod.equals(t.paymentMethod)) {
-                    return false;
+                // 支付方式筛选：下拉框是代码（CASH/WECHAT/...），历史数据存中文，需归一化后比较
+                if (!"全部".equals(paymentMethod)) {
+                    String selectedMethod = com.cashier.util.I18nUiUtils.canonicalPaymentMethod(paymentMethod);
+                    if (!selectedMethod.equals(com.cashier.util.I18nUiUtils.canonicalPaymentMethod(t.paymentMethod))) {
+                        return false;
+                    }
                 }
 
                 // 搜索文本筛选（订单号或会员手机号）

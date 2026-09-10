@@ -185,14 +185,15 @@ public class TransactionService {
                     item.product.name, latestProduct.quantity, item.quantity));
             }
 
-            product.quantity = latestProduct.quantity - item.quantity;
-            product.version = latestProduct.version;
+            // 直接扣减事务内重读的那一行：既不把调用方共享的内存/缓存对象提前改掉
+            // （回滚时无需复原），也不会用缓存里的旧价格/旧名称覆盖别处刚提交的修改。
+            latestProduct.quantity = latestProduct.quantity - item.quantity;
 
-            if (!productDAO.updateWithVersionWithConnection(conn, product)) {
+            if (!productDAO.updateWithVersionWithConnection(conn, latestProduct)) {
                 throw new SQLException(I18nManager.getInstance().get("service.product_update_failed", item.product.name));
             }
 
-            updatedProducts.add(product);
+            updatedProducts.add(latestProduct);
         }
     }
 
@@ -280,14 +281,7 @@ public class TransactionService {
         }
 
         transaction.totalAmount = calculateTotalAmount(cartItems);
-
-        // 计算税费 — 直接从 String 构造 BigDecimal，避免 double 中转精度丢失
-        Map<String, String> settings = DataService.loadSettings();
-        BigDecimal taxRate = new BigDecimal(settings.getOrDefault("taxRate", "0.0"));
-        transaction.tax = transaction.getTotalAmount()
-                .multiply(taxRate)
-                .divide(BigDecimal.valueOf(100), 2, RoundingMode.HALF_UP);
-
+        transaction.tax = calculateTax(transaction.getTotalAmount());
         transaction.finalAmount = calculateFinalAmount(cartItems, member);
         transaction.paymentMethod = paymentMethod;
 
@@ -326,6 +320,69 @@ public class TransactionService {
         }
         // 规整到 2 位小数，避免下游比较/显示出错
         return total.setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 按系统设置中的税率计算税额。
+     *
+     * <p>税率以小数形式存储：设置界面校验区间为 0.0-1.0，例如 {@code 0.13} 表示 13%，
+     * 因此不再除以 100。税率缺失或无法解析时按 0 处理。</p>
+     *
+     * @param amount 计税基数
+     * @return 税额，保留 2 位小数
+     */
+    public static BigDecimal calculateTax(BigDecimal amount) {
+        String configured = DataService.loadSettings().getOrDefault("taxRate", "0.0");
+        BigDecimal taxRate;
+        try {
+            taxRate = new BigDecimal(configured.trim());
+        } catch (NumberFormatException e) {
+            logger.warn("税率配置无法解析，按 0 处理: {}", configured);
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        return amount.multiply(taxRate).setScale(2, RoundingMode.HALF_UP);
+    }
+
+    /**
+     * 选择最优促销（优惠金额最大者）。
+     * 口径与标准收银台一致：促销门槛与优惠金额均按商品原价总额计算。
+     *
+     * @param totalAmount 商品原价总额
+     * @return 最优促销；无可用促销时返回 null
+     */
+    public static Promotion selectBestPromotion(BigDecimal totalAmount) {
+        Promotion bestPromotion = null;
+        BigDecimal bestDiscount = BigDecimal.ZERO;
+        try {
+            for (Promotion promotion : DAOFactory.getInstance().getPromotionDAO().findActive()) {
+                BigDecimal discount = promotion.calculateDiscount(totalAmount);
+                if (discount.compareTo(bestDiscount) > 0) {
+                    bestDiscount = discount;
+                    bestPromotion = promotion;
+                }
+            }
+        } catch (Exception e) {
+            logger.error("加载促销数据失败", e);
+        }
+        return bestPromotion;
+    }
+
+    /**
+     * 计算最终金额（会员折扣 + 促销优惠）。
+     * 促销优惠按商品原价总额计算，再从会员折后金额中扣除，与标准收银台口径一致。
+     *
+     * @param cartItems 购物车商品列表
+     * @param member 会员（可为 null）
+     * @param promotion 已应用的促销（可为 null）
+     * @return 最终应付金额，保留 2 位小数
+     */
+    public static BigDecimal calculateFinalAmount(List<CartItem> cartItems, Member member, Promotion promotion) {
+        BigDecimal amount = calculateFinalAmount(cartItems, member);
+        if (promotion != null) {
+            BigDecimal discount = promotion.calculateDiscount(calculateTotalAmount(cartItems));
+            amount = amount.subtract(discount).max(BigDecimal.ZERO);
+        }
+        return amount.setScale(2, RoundingMode.HALF_UP);
     }
 
     /**
