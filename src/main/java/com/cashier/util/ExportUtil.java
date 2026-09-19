@@ -260,10 +260,11 @@ public class ExportUtil {
             }
         }
 
-        // 2. 尝试从文件系统加载
+        // 2. 尝试从文件系统加载（.ttf 优先：内置的 .ttf 是 TrueType，可用于 PDF 嵌入；
+        //    同名 .ttc 是 OTF/CFF，只能给界面用，解析它还慢）
         String[] fsPaths = {
-            "src/main/resources/fonts/NotoSansSC-Regular.ttc",
-            "src/main/resources/fonts/NotoSansSC-Regular.ttf"
+            "src/main/resources/fonts/NotoSansSC-Regular.ttf",
+            "src/main/resources/fonts/NotoSansSC-Regular.ttc"
         };
 
         for (String fsPath : fsPaths) {
@@ -283,13 +284,13 @@ public class ExportUtil {
             }
         }
 
-        // 3. 尝试从项目资源加载（同时支持 TTF/OTF 与 TTC）
+        // 3. 尝试从项目资源加载（.ttf 优先，理由同上）
         String[] resourcePaths = {
-            "/fonts/NotoSansSC-Regular.ttc",
             "/fonts/NotoSansSC-Regular.ttf",
+            "/fonts/NotoSansSC-Regular.ttc",
             "/fonts/NotoSansSC-Regular.otf",
-            "/com/cashier/fonts/NotoSansSC-Regular.ttc",
             "/com/cashier/fonts/NotoSansSC-Regular.ttf",
+            "/com/cashier/fonts/NotoSansSC-Regular.ttc",
             "/com/cashier/fonts/NotoSansSC-Regular.otf"
         };
 

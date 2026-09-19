@@ -2,53 +2,58 @@
 
 ## Noto Sans SC
 
-**文件名**: NotoSansSC-Regular.ttc、NotoSansSC-Bold.ttc
-**来源**: Google Fonts (https://github.com/googlefonts/noto-fonts)  
-**许可证**: SIL Open Font License 1.1 (OFL-1.1)
+**来源**: Google Fonts — https://github.com/google/fonts/tree/main/ofl/notosanssc
+**许可证**: SIL Open Font License 1.1 (OFL-1.1)，全文见同目录 `OFL-NotoSansSC.txt`
 
-### 许可证摘要
+OFL-1.1 允许商业使用、修改、分发与**嵌入到应用程序中**。
 
-Noto Sans SC 是一个开源字体，采用 SIL Open Font License 1.1 许可证发布。该许可证允许：
+### 文件清单与用途
 
-- ✅ 商业使用
-- ✅ 修改字体
-- ✅ 分发字体
-- ✅ 嵌入字体到应用程序中
-- ✅ 私人使用
+| 文件 | 类型 | 用途 |
+|---|---|---|
+| `NotoSansSC-Regular.ttf` | TrueType（`glyf` 轮廓） | **PDF 导出必须使用它**（JavaFX 界面亦可） |
+| `NotoSansSC-Bold.ttc` / `NotoSansSC-Regular.ttc` | OTF/CFF 字体集合 | **仅供 JavaFX 界面**；PDFBox 无法嵌入（见下） |
+| `fontawesome-webfont.ttf` | TrueType 图标字体 | 界面图标 |
 
-### 为什么使用这个字体？
+### 为什么宁可多内置一个 10MB 的 `.ttf`
 
-本系统使用 Noto Sans SC 作为 PDF 导出的默认中文字体，原因如下：
+PDFBox 只能嵌入 **TrueType(glyf)** 字体。仓库里原有的 `NotoSansSC-Regular.ttc` 实际是
+**Noto Sans CJK 的 OTF/CFF 版本**（子字体名形如 `NotoSansCJKsc-Regular`），没有 `glyf` 表：
 
-1. **跨平台兼容性**: Noto Sans SC 在所有主流操作系统上都能正常显示
-2. **开源免费**: 采用宽松的开源许可证，可以免费用于商业项目
-3. **完整支持**: 支持所有中文字符，包括简体中文、繁体中文和特殊符号
-4. **字重完整**: 内置 Regular 和 Bold 字体合集，界面无需依赖操作系统字体
+- 用 `embedSubset=false` 整体嵌入 → `IOException: Full embedding of TrueType font collections not supported`
+- 用 `embedSubset=true` 子集化 → `PDDocument.save()` 时 `UnsupportedOperationException: OTF fonts do not have a glyf table`
 
-### 字体用途
+因此它**不能用于 PDF 导出**。macOS / Windows 过去是靠系统里的 TrueType 中文字体
+（如 `Arial Unicode.ttf`）蒙混过去；Linux（含 CI 的 Ubuntu runner）默认没有中文字体，
+就会报 `无法加载中文字体`。内置 `NotoSansSC-Regular.ttf` 后，PDF 导出不再依赖系统字体。
 
-这些字体文件用于：
-- JavaFX 界面中的简体中文显示
-- PDF 报表导出时的中文字体候选
-- 确保不同操作系统上的中文视觉效果一致
+### `NotoSansSC-Regular.ttf` 的来历（可复现）
 
-### 字体嵌入
+Google Fonts 只提供**变量字体** `NotoSansSC[wght].ttf`，其 `fvar` 轴 `wght`
+**默认值是 100（Thin）**，直接内置会得到细体报表。因此先固化成静态 Regular：
 
-字体文件已嵌入到应用程序的资源目录中，在编译时会被复制到 `target/classes/fonts/` 目录。
+```bash
+# 1) 取变量字体（约 17MB）
+curl -L -o NotoSansSC[wght].ttf \
+  "https://raw.githubusercontent.com/google/fonts/main/ofl/notosanssc/NotoSansSC%5Bwght%5D.ttf"
 
-### 字体信息
+# 2) 用 fontTools 生成 wght=400 的静态实例（约 10MB，gvar/fvar 被移除）
+pip install fonttools
+fonttools varLib.instancer "NotoSansSC[wght].ttf" wght=400 -o NotoSansSC-Regular.ttf
+```
 
-- **字体名称**: Noto Sans CJK SC
-- **字体样式**: Regular（常规）、Bold（粗体）
-- **字符集**: 简体中文
-- **字体类型**: TrueType Collection (.ttc)
-- **文件大小**: 每个字体合集约 19 MB
+（另将 name 表的 family/subfamily/PostScript 名改为 `Noto Sans SC` / `Regular` /
+`NotoSansSC-Regular`，避免元数据仍写 Thin；OFL 的 Reserved Font Name 是 `Source`，未被使用。）
 
-### 许可证全文
+### 代码侧的约定
 
-完整的许可证文本请访问：
-https://scripts.sil.org/OFL
+- `ExportUtil.loadChineseFont()` 的候选顺序是：系统字体 → 文件系统 → 项目资源，
+  其中 `.ttf` 排在 `.ttc` **之前**，避免白白解析 19MB 的 CFF 集合。
+- `isEmbeddable()` 会跳过没有 `glyf` 表的候选；`canRender()` 会跳过缺少数字/中文覆盖的候选
+  （例如 `Droid Sans Fallback` 只有 CJK 字形、渲染数字会抛 `No glyph for U+0031`）。
+- 若替换该字体，请同步更新 `OFL-NotoSansSC.txt` 并在本节记录来源与生成方式。
 
 ---
 
-**注意**: 如果您需要使用其他字体，请确保该字体具有合适的许可证，并替换此文件。
+**注意**: 若需替换字体，请确认其许可证允许嵌入与再分发，并保证是 **TrueType(glyf)** 且覆盖
+数字与中文，否则 PDF 导出会在保存阶段失败。

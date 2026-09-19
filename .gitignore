@@ -78,3 +78,7 @@ logos/*
 fonts/*.ttc
 src/main/resources/fonts/*.otf
 src/main/resources/fonts/*.ttf
+# 例外：PDF 导出必须内置可嵌入的 TrueType 中文字体（见 src/main/resources/fonts/README.md）
+!src/main/resources/fonts/NotoSansSC-Regular.ttf
+# 例外：该字体的 OFL 许可证必须随字体一起分发（全局 `*.txt` 规则会忽略它）
+!src/main/resources/fonts/OFL-NotoSansSC.txt
