@@ -39,10 +39,10 @@ jobs:
           # 强制重置到 Gitee 的 main 分支
           git reset --hard gitee/main
           
-          # 恢复 GitHub 的 workflows
-          rm -rf .github/workflows
+          # 恢复 GitHub 独有的 workflows：只覆盖同名文件，不删除 Gitee 带来的 workflow
+          # （此前是 rm -rf + restore，会把只在 Gitee 侧新增的 build.yaml 一起删掉并强推）
           mkdir -p .github/workflows
-          cp /tmp/workflows-backup/* .github/workflows/ 2>/dev/null || true
+          cp -f /tmp/workflows-backup/* .github/workflows/ 2>/dev/null || true
           
           # 提交并强制推送
           git add .
