@@ -924,6 +924,10 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   既满足 `release.bat`/`release.sh` 的 `db.password` 门禁，也让 dev/prod 不再分叉；
   回归门禁见 `PerformancePolicyTest.installersNeverPersistPasswordIntoConfig`
 - 本机约定：密码放根目录 `.env`（已 gitignore），`config/database.properties` 的 `db.password` 留空
+- 口令变量名只有一个：`CASHIER_DB_PASSWORD`（应用侧 `DotEnv.DB_PASSWORD_KEY`，compose 也读它，
+  `CASHER_DB_PASSWORD` 是应用侧的历史拼写兼容）。**旧 `.env` 里的 `MYSQL_PASSWORD` 不会被任何一方读取**：
+  `docker compose up -d mysql` 会直接报 `required variable CASHIER_DB_PASSWORD is missing`，
+  应用也会因为 `db.password` 为空而连不上——从旧 `.env` 升级时把该行改名即可（`.env.example` 已注明）
 
 **REST API 启用步骤（本地冒烟/生产）**
 
