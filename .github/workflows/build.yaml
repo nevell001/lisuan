@@ -13,11 +13,6 @@ concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
 
-# checkout@v4 / upload-artifact@v4 仍以 Node 20 为目标；官方在被强制升级前
-# 推荐用该变量显式选择 Node 24（sync.yaml 同样设置），以消除弃用告警。
-env:
-  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
-
 jobs:
   verify:
     name: mvn verify (Java 17)
@@ -25,8 +20,10 @@ jobs:
     timeout-minutes: 30
 
     steps:
+      # 全部 action 都选以 Node 24 为目标的大版本，避免 Node 20 弃用告警：
+      # checkout >= v5、setup-java >= v5、upload-artifact >= v6（v5 仍是 node20）。
       - name: Checkout
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Set up JDK 17
         uses: actions/setup-java@v5
@@ -58,7 +55,7 @@ jobs:
 
       - name: Upload surefire reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: surefire-reports
           path: target/surefire-reports/
