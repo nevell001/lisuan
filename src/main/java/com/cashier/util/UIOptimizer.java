@@ -7,6 +7,9 @@ import javafx.scene.control.*;
 import javafx.scene.layout.Pane;
 import org.slf4j.Logger;
 
+import java.util.concurrent.Callable;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.CompletionException;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -100,6 +103,37 @@ public class UIOptimizer {
         
         asyncExecutor.submit(task);
         logger.debug("已提交异步任务");
+    }
+    
+    /**
+     * 在后台线程执行可能阻塞的操作（数据库/文件/网络），完成后回到 JavaFX 应用线程处理结果。
+     *
+     * <p>与 {@link #loadAsync(Task, Consumer, Consumer)} 的区别：直接接受可抛受检异常的
+     * {@link Callable}，无需先构造 {@link Task}，适合收银台里"查库 → 刷新界面"的场景。
+     * 所有界面更新都在 {@code Platform.runLater} 内执行，调用方无需再关心线程。</p>
+     */
+    public static <T> void runInBackground(Callable<T> work, Consumer<T> onSuccess, Consumer<Exception> onError) {
+        CompletableFuture.supplyAsync(() -> {
+            try {
+                return work.call();
+            } catch (Exception e) {
+                throw new CompletionException(e);
+            }
+        }).whenComplete((result, error) -> Platform.runLater(() -> {
+            if (error != null) {
+                Throwable cause = error.getCause() != null ? error.getCause() : error;
+                Exception failure = cause instanceof Exception ? (Exception) cause : new RuntimeException(cause);
+                if (onError != null) {
+                    onError.accept(failure);
+                } else {
+                    logger.error("后台任务执行失败", failure);
+                }
+                return;
+            }
+            if (onSuccess != null) {
+                onSuccess.accept(result);
+            }
+        }));
     }
     
     /**

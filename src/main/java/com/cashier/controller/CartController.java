@@ -36,6 +36,7 @@ import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import com.cashier.util.FormValidator;
 import com.cashier.util.QrCodeImageUtil;
+import com.cashier.util.UIOptimizer;
 
 import java.math.BigDecimal;
 import java.sql.SQLException;
@@ -44,6 +45,7 @@ import java.time.ZoneId;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 购物车控制器
@@ -166,6 +168,9 @@ public class CartController implements CartViewHost {
     private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
     private final HoldOrderDAORefactored holdOrderDAO = DAOFactory.getInstance().getHoldOrderDAO();
     private final I18nManager i18n = I18nManager.getInstance();
+
+    // 商品列表查询（加载/搜索）的序号：只允许最新一次查询的结果刷新列表，丢弃过期响应
+    private final AtomicLong productQuerySequence = new AtomicLong();
 
     /**
      * 初始化方法
@@ -436,24 +441,30 @@ public class CartController implements CartViewHost {
     }
 
     /**
-     * 加载库存数据
+     * 加载库存数据（后台查询，完成后回到 JavaFX 线程刷新列表）。
      */
     private void loadInventory() {
         logger.info("CartController: 开始加载库存数据...");
+        // 先占位，避免异步结果返回前被其它路径读到 null
         inventoryMap = new HashMap<>();
-        try {
-            List<Product> products = productDAO.findAll(FIRST_PAGE, CART_PRODUCT_PAGE_SIZE).getData();
-            for (Product product : products) {
-                inventoryMap.put(product.name, product);
-            }
-        } catch (Exception e) {
-            logger.error("从数据库加载商品失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-        }
-        logger.info("CartController: 加载了 {} 个商品", inventoryMap.size());
-        productList.setAll(inventoryMap.values());
-        updateCountLabel();
-        logger.info("CartController: 库存数据加载完成");
+        long sequence = productQuerySequence.incrementAndGet();
+        UIOptimizer.runInBackground(
+            () -> productDAO.findAll(FIRST_PAGE, CART_PRODUCT_PAGE_SIZE).getData(),
+            products -> {
+                if (sequence != productQuerySequence.get()) {
+                    return; // 已有更新的查询，丢弃过期结果
+                }
+                for (Product product : products) {
+                    inventoryMap.put(product.name, product);
+                }
+                logger.info("CartController: 加载了 {} 个商品", inventoryMap.size());
+                productList.setAll(inventoryMap.values());
+                updateCountLabel();
+            },
+            e -> {
+                logger.error("从数据库加载商品失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
+            });
     }
 
     private List<Product> searchProducts(String searchText) throws SQLException {
@@ -715,24 +726,29 @@ public class CartController implements CartViewHost {
     @FXML
     public void handleSearch() {
         String searchText = searchField.getText().trim();
-
-        if (searchText.isEmpty()) {
-            try {
-                replaceVisibleProducts(searchProducts(searchText));
-            } catch (SQLException e) {
-                logger.error("加载商品失败", e);
+        long sequence = productQuerySequence.incrementAndGet();
+        // 查询放后台：扫描枪/回车触发时，FX 线程不得被数据库往返阻塞
+        UIOptimizer.runInBackground(
+            () -> searchProducts(searchText),
+            matchedProducts -> {
+                if (sequence != productQuerySequence.get()) {
+                    return; // 快速连续扫码时丢弃过期结果，避免旧结果覆盖新结果
+                }
+                applySearchResult(searchText, matchedProducts);
+            },
+            e -> {
+                logger.error("搜索商品失败", e);
                 showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            }
-            return;
-        }
+            });
+    }
 
-        // 搜索匹配的商品（支持名称和条形码）
-        List<Product> matchedProducts;
-        try {
-            matchedProducts = searchProducts(searchText);
-        } catch (SQLException e) {
-            logger.error("搜索商品失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED) + ": " + e.getMessage());
+    /**
+     * 在 JavaFX 线程应用搜索结果：
+     * 空关键字恢复全部商品；唯一匹配直接入车；多匹配展示列表供选择。
+     */
+    private void applySearchResult(String searchText, List<Product> matchedProducts) {
+        if (searchText.isEmpty()) {
+            replaceVisibleProducts(matchedProducts);
             return;
         }
 
@@ -761,12 +777,13 @@ public class CartController implements CartViewHost {
                 searchField.clear();
                 searchField.requestFocus();
             }
-        } else {
-            // 找到多个匹配商品，显示列表让用户选择
-            replaceVisibleProducts(matchedProducts);
-            playScanSuccessSound();
-            showScanMessage(i18n.get("cart.scan.multiple_matches", matchedProducts.size()), ScanMessageLevel.WARNING);
+            return;
         }
+
+        // 找到多个匹配商品，显示列表让用户选择
+        replaceVisibleProducts(matchedProducts);
+        playScanSuccessSound();
+        showScanMessage(i18n.get("cart.scan.multiple_matches", matchedProducts.size()), ScanMessageLevel.WARNING);
     }
 
     /**
@@ -1822,17 +1839,23 @@ public class CartController implements CartViewHost {
      * 检查班次状态并提示
      */
     private void checkShiftStatus() {
-        try {
-            if (!com.cashier.service.DataService.hasActiveShift()) {
-                Alert alert = new Alert(Alert.AlertType.WARNING);
-                alert.setTitle(I18nManager.getInstance().get(I18nKeys.Common.TIP));
-                alert.setHeaderText(null);
-                alert.setContentText(I18nManager.getInstance().get("runtime.start_shift_required"));
-                alert.showAndWait();
-            }
-        } finally {
-            javafx.application.Platform.runLater(this::focusSearchField);
-        }
+        // 班次查询也走后台：它此前在 FX 线程查库后再弹窗
+        UIOptimizer.runInBackground(
+            DataService::hasActiveShift,
+            active -> {
+                if (!active) {
+                    Alert alert = new Alert(Alert.AlertType.WARNING);
+                    alert.setTitle(I18nManager.getInstance().get(I18nKeys.Common.TIP));
+                    alert.setHeaderText(null);
+                    alert.setContentText(I18nManager.getInstance().get("runtime.start_shift_required"));
+                    alert.showAndWait();
+                }
+                focusSearchField();
+            },
+            e -> {
+                logger.error("检查班次状态失败", e);
+                focusSearchField();
+            });
     }
 
     /**

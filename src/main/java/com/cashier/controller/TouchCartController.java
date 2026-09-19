@@ -70,12 +70,14 @@ import javafx.scene.control.ListView;
 import com.cashier.service.PaymentService;
 import com.cashier.util.QrCodeImageUtil;
 import com.cashier.util.ThemeUtils;
+import com.cashier.util.UIOptimizer;
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.scene.image.ImageView;
 import javafx.util.Duration;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicBoolean;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 触屏版收银控制器
@@ -157,13 +159,15 @@ public class TouchCartController implements CartViewHost {
     private PauseTransition notFoundHint;
     /** 搜索输入防抖：停止连续输入 300ms 后才执行精确匹配/查询，避免逐键 3+1 次 DB */
     private PauseTransition searchDebounce;
+    /** 商品列表加载序号：只允许最新一次加载结果刷新网格，避免过期结果覆盖 */
+    private final AtomicLong productQuerySequence = new AtomicLong();
 
     @FXML
     private void initialize() {
         logger.info("触屏版收银视图初始化");
         startClock();
+        // 分类加载完成后默认选中「热销推荐」，由选中事件驱动首次商品加载（见 loadCategories）
         loadCategories();
-        loadProducts(null);
         refreshCartView();
         updateSummary();
         setupShortcuts();
@@ -193,18 +197,23 @@ public class TouchCartController implements CartViewHost {
             loadProducts(currentCategoryName);
             return;
         }
-        try {
-            Product exact = findExactProduct(keyword);
-            if (exact != null) {
-                addToCart(exact); // 成功后自动清空搜索栏
-                return;
-            }
-        } catch (SQLException e) {
-            logger.error("实时精确匹配商品失败", e);
-        }
-        scheduleNotFoundHint(keyword);
-        currentKeyword = keyword;
-        loadProducts(currentCategoryName);
+        // 精确匹配最多 3 次查库，同样放后台，避免键入/扫码时卡住界面
+        UIOptimizer.runInBackground(
+            () -> findExactProduct(keyword),
+            exact -> {
+                if (exact != null) {
+                    addToCart(exact); // 成功后自动清空搜索栏
+                    return;
+                }
+                scheduleNotFoundHint(keyword);
+                currentKeyword = keyword;
+                loadProducts(currentCategoryName);
+            },
+            e -> {
+                logger.error("实时精确匹配商品失败", e);
+                currentKeyword = keyword;
+                loadProducts(currentCategoryName);
+            });
     }
 
     // ===== 时钟更新 =====
@@ -243,20 +252,23 @@ public class TouchCartController implements CartViewHost {
         if (shiftInfoLabel == null) {
             return;
         }
-        try {
-            Shift activeShift = DAOFactory.getInstance().getShiftDAO().findActiveShift();
-            if (activeShift != null) {
-                String startTime = LocalDateTime.ofInstant(activeShift.startTime, ZoneId.systemDefault())
-                    .format(DateTimeFormats.TIME_HOUR_MINUTE);
-                shiftInfoLabel.setText(i18n.get("runtime.shift_summary",
-                    activeShift.shiftId, activeShift.operatorName, startTime));
-            } else {
-                shiftInfoLabel.setText(i18n.get("status.shift_not_started"));
-            }
-        } catch (Exception e) {
-            logger.error("更新班次信息失败", e);
-            shiftInfoLabel.setText(i18n.get("runtime.shift_unknown"));
-        }
+        // 班次查询放后台，避免初始化时在 FX 线程查库
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getShiftDAO().findActiveShift(),
+            activeShift -> {
+                if (activeShift != null) {
+                    String startTime = LocalDateTime.ofInstant(activeShift.startTime, ZoneId.systemDefault())
+                        .format(DateTimeFormats.TIME_HOUR_MINUTE);
+                    shiftInfoLabel.setText(i18n.get("runtime.shift_summary",
+                        activeShift.shiftId, activeShift.operatorName, startTime));
+                } else {
+                    shiftInfoLabel.setText(i18n.get("status.shift_not_started"));
+                }
+            },
+            e -> {
+                logger.error("更新班次信息失败", e);
+                shiftInfoLabel.setText(i18n.get("runtime.shift_unknown"));
+            });
     }
 
     // ===== 按钮事件 =====
@@ -537,38 +549,43 @@ public class TouchCartController implements CartViewHost {
     private static final int SEARCH_LIMIT = 500;
 
     private void loadCategories() {
-        try {
-            List<Category> cats = DAOFactory.getInstance().getCategoryDAO().findAll();
-            logger.info("加载分类完成,共{}个分类", cats.size());
-            categoryBox.getChildren().clear();
-            ToggleGroup group = new ToggleGroup();
+        // 分类查询放后台，完成后在 FX 线程构建按钮并默认选中「热销推荐」
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getCategoryDAO().findAll(),
+            cats -> {
+                logger.info("加载分类完成,共{}个分类", cats.size());
+                categoryBox.getChildren().clear();
+                ToggleGroup group = new ToggleGroup();
 
-            // 热销推荐 - 置顶
-            ToggleButton hotBtn = buildCategoryButton("● " + i18n.get("tpos.hot_products"), HOT_CATEGORY_KEY, group);
-            categoryBox.getChildren().add(hotBtn);
-            logger.info("已添加'热销推荐'分类按钮");
+                // 热销推荐 - 置顶
+                ToggleButton hotBtn = buildCategoryButton("● " + i18n.get("tpos.hot_products"), HOT_CATEGORY_KEY, group);
+                categoryBox.getChildren().add(hotBtn);
+                logger.info("已添加'热销推荐'分类按钮");
 
-            // 全部商品
-            ToggleButton allBtn = buildCategoryButton(i18n.get("tpos.all_categories"), ALL_CATEGORY_KEY, group);
-            categoryBox.getChildren().add(allBtn);
-            logger.info("已添加'全部商品'分类按钮");
+                // 全部商品
+                ToggleButton allBtn = buildCategoryButton(i18n.get("tpos.all_categories"), ALL_CATEGORY_KEY, group);
+                categoryBox.getChildren().add(allBtn);
+                logger.info("已添加'全部商品'分类按钮");
 
-            for (Category c : cats) {
-                categoryBox.getChildren().add(buildCategoryButton(c.name, c.name, group));
-                logger.debug("添加分类按钮: {}", c.name);
-            }
-            group.selectedToggleProperty().addListener((obs, o, n) -> {
-                if (n != null) {
-                    onCategorySelected((String) n.getUserData());
+                for (Category c : cats) {
+                    categoryBox.getChildren().add(buildCategoryButton(c.name, c.name, group));
+                    logger.debug("添加分类按钮: {}", c.name);
                 }
+                group.selectedToggleProperty().addListener((obs, o, n) -> {
+                    if (n != null) {
+                        onCategorySelected((String) n.getUserData());
+                    }
+                });
+                if (!group.getToggles().isEmpty()) {
+                    group.selectToggle(group.getToggles().get(0)); // 默认选中热销
+                }
+            },
+            e -> {
+                logger.error("加载分类失败", e);
+                StatusBarManager.updateError(i18n.get("label.error") + ": " + e.getMessage());
+                // 兜底：分类拿不到时至少展示全部商品，避免商品区空白
+                loadProducts(ALL_CATEGORY_KEY);
             });
-            if (!group.getToggles().isEmpty()) {
-                group.selectToggle(group.getToggles().get(0)); // 默认选中热销
-            }
-        } catch (SQLException e) {
-            logger.error("加载分类失败", e);
-            StatusBarManager.updateError(i18n.get("label.error") + ": " + e.getMessage());
-        }
     }
 
     private ToggleButton buildCategoryButton(String label, String categoryName, ToggleGroup group) {
@@ -592,29 +609,39 @@ public class TouchCartController implements CartViewHost {
     // ===== 商品加载与卡片 =====
 
     private void loadProducts(String categoryName) {
-        try {
-            List<Product> products;
-            if (currentKeyword != null && !currentKeyword.isBlank()) {
-                // SQL 关键词搜索（带 LIMIT），避免全表加载后在内存过滤导致卡顿
-                products = productDAO.search(currentKeyword, 1, SEARCH_LIMIT).getData();
-            } else if (HOT_CATEGORY_KEY.equals(categoryName)) {
-                // 热销推荐：混合模式（手动标记 + 销量统计）
-                products = loadHotProductsHybrid();
-            } else if (ALL_CATEGORY_KEY == categoryName) {
-                products = productDAO.findAll();
-            } else {
-                products = productDAO.findByCategory(categoryName);
-            }
-            // 覆盖更新库存快照(保留不在当前列表中的购物车商品条目)
-            for (Product p : products) {
-                inventoryMap.put(p.name, p);
-            }
-            refreshProductGrid(products);
-        } catch (SQLException e) {
-            logger.error("加载商品失败", e);
-            StatusBarManager.updateError(i18n.get("label.error") + ": " + e.getMessage());
-            refreshProductGrid(new ArrayList<>());
-        }
+        // 关键字在 FX 线程读取后固定下来，避免后台线程读到变化的字段
+        final String keyword = currentKeyword;
+        long sequence = productQuerySequence.incrementAndGet();
+        UIOptimizer.runInBackground(
+            () -> {
+                if (keyword != null && !keyword.isBlank()) {
+                    // SQL 关键词搜索（带 LIMIT），避免全表加载后在内存过滤导致卡顿
+                    return productDAO.search(keyword, 1, SEARCH_LIMIT).getData();
+                }
+                if (HOT_CATEGORY_KEY.equals(categoryName)) {
+                    // 热销推荐：混合模式（手动标记 + 销量统计）
+                    return loadHotProductsHybrid();
+                }
+                if (ALL_CATEGORY_KEY == categoryName) {
+                    return productDAO.findAll();
+                }
+                return productDAO.findByCategory(categoryName);
+            },
+            products -> {
+                if (sequence != productQuerySequence.get()) {
+                    return; // 已有更新的加载请求，丢弃过期结果
+                }
+                // 覆盖更新库存快照(保留不在当前列表中的购物车商品条目)
+                for (Product p : products) {
+                    inventoryMap.put(p.name, p);
+                }
+                refreshProductGrid(products);
+            },
+            e -> {
+                logger.error("加载商品失败", e);
+                StatusBarManager.updateError(i18n.get("label.error") + ": " + e.getMessage());
+                refreshProductGrid(new ArrayList<>());
+            });
     }
 
     /**
@@ -1229,39 +1256,43 @@ public class TouchCartController implements CartViewHost {
     /** ENTER - 搜索框回车处理 */
     private void handleSearchAction() {
         String keyword = searchField.getText();
-        if (keyword != null && !keyword.trim().isEmpty()) {
-            // 条码/名称/编号精确命中：直接加入购物车（成功后自动清空搜索栏，便于连续录入）
-            if (tryAddExactMatch(keyword.trim())) {
-                return;
-            }
-            // 未精确命中：刷新网格供选择
-            currentKeyword = keyword;
-            if (currentCategoryName != null) {
-                loadProducts(currentCategoryName);
-            }
+        if (keyword == null || keyword.trim().isEmpty()) {
+            return;
         }
-    }
-
-    /** 尝试按条码 → 名称 → 商品编号精确匹配并直接加入购物车；未命中返回 false */
-    private boolean tryAddExactMatch(String keyword) {
-        try {
-            Product product = findExactProduct(keyword);
-            if (product == null) {
-                // 精确未命中：若模糊搜索结果恰好唯一，也视为"确定商品"直接加入
-                List<Product> searched = productDAO.search(keyword, 1, SEARCH_LIMIT).getData();
-                if (searched.size() == 1) {
-                    product = searched.get(0);
-                } else {
-                    logger.info("搜索未命中可直加商品: keyword={}, 候选={}", keyword, searched.size());
-                    return false;
+        String trimmed = keyword.trim();
+        // 条码/名称/编号精确命中：直接加入购物车（成功后自动清空搜索栏，便于连续录入）
+        // 匹配与模糊查询都放后台，避免回车时 FX 线程查库
+        UIOptimizer.runInBackground(
+            () -> {
+                Product product = findExactProduct(trimmed);
+                if (product == null) {
+                    // 精确未命中：若模糊搜索结果恰好唯一，也视为"确定商品"直接加入
+                    List<Product> searched = productDAO.search(trimmed, 1, SEARCH_LIMIT).getData();
+                    if (searched.size() == 1) {
+                        return searched.get(0);
+                    }
+                    logger.info("搜索未命中可直加商品: keyword={}, 候选={}", trimmed, searched.size());
                 }
-            }
-            addToCart(product);
-            return true;
-        } catch (SQLException e) {
-            logger.error("精确匹配商品失败", e);
-            return false;
-        }
+                return product;
+            },
+            product -> {
+                if (product != null) {
+                    addToCart(product);
+                    return;
+                }
+                // 未精确命中：刷新网格供选择
+                currentKeyword = keyword;
+                if (currentCategoryName != null) {
+                    loadProducts(currentCategoryName);
+                }
+            },
+            e -> {
+                logger.error("精确匹配商品失败", e);
+                currentKeyword = keyword;
+                if (currentCategoryName != null) {
+                    loadProducts(currentCategoryName);
+                }
+            });
     }
 
     /** 按条码 → 名称 → 商品编号精确匹配商品，未命中返回 null */
@@ -1287,14 +1318,17 @@ public class TouchCartController implements CartViewHost {
             if (current == null || current.isBlank() || !current.trim().equals(keyword)) {
                 return; // 输入已变化或已清空
             }
-            try {
-                if (findExactProduct(current.trim()) == null) {
-                    playScanNotFoundSound();
-                    warn(i18n.get("tpos.scan_not_found", current.trim()));
-                }
-            } catch (SQLException ex) {
-                logger.error("检查未找到商品失败", ex);
-            }
+            String trimmed = current.trim();
+            // 命中检查也放后台，避免输入停顿后 FX 线程查库
+            UIOptimizer.runInBackground(
+                () -> findExactProduct(trimmed),
+                product -> {
+                    if (product == null) {
+                        playScanNotFoundSound();
+                        warn(i18n.get("tpos.scan_not_found", trimmed));
+                    }
+                },
+                ex -> logger.error("检查未找到商品失败", ex));
         });
         notFoundHint.play();
     }
