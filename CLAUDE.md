@@ -827,12 +827,14 @@ When working on files that still use the old `ProductDAO`, consider migrating th
 - macOS / Windows 会先命中系统 TrueType 中文字体（如 `Arial Unicode.ttf`、`msyh.ttc`），
   问题被掩盖；Linux（含 GitHub Actions 的 Ubuntu runner）默认不含中文字体，回退到内置 OTF
   后失败，报 `无法加载中文字体，请安装中文字体或检查字体文件`。
-- 已做的加固：`ExportUtil.loadFromCollection` 改用 `embedSubset=true`（字体集合不支持整体嵌入），
-  并用 `isEmbeddable()` 跳过没有 `glyf` 表的候选，继续尝试下一个字体。
-- **部署到 Linux 时必须保证系统存在 TrueType 中文字体**。CI 见 `.github/workflows/build.yaml`：
-  安装 `fonts-droid-fallback`（`/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf`，
-  Apache-2.0）与 `fonts-arphic-gkai00mp`（`/usr/share/fonts/truetype/arphic-gkai00mp/gkai00mp.ttf`）
-  做冗余，两个路径都在 `ExportUtil` 的 Linux 候选列表中。
+- 已做的加固：`ExportUtil.loadFromCollection` 改用 `embedSubset=true`（字体集合不支持整体嵌入）；
+  `isEmbeddable()` 跳过没有 `glyf` 表的候选；`canRender()` 跳过缺少数字/中文覆盖的候选
+  —— 只校验可嵌入还不够，`Droid Sans Fallback` 这类**只有 CJK 字形、没有数字**的字体能嵌入，
+  但渲染金额/数量时会抛 `IllegalArgumentException: No glyph for U+0031 (1)`。
+- **部署到 Linux 时必须保证系统存在"可嵌入且覆盖数字+中文"的 TrueType 中文字体**。
+  CI 见 `.github/workflows/build.yaml`：安装 `fonts-arphic-uming`
+  （`/usr/share/fonts/truetype/arphic/uming.ttc`，AR PL UMing，TrueType，拉丁+中文全覆盖，
+  已实测可嵌入并 `save()` 成功），该路径在 `ExportUtil` 的 Linux 候选列表中排第一。
 - 若要彻底摆脱对系统字体的依赖，应改为**内置一个 TrueType 中文字体**（尚未做，属产品决策）。
 
 ### JavaFX Class Loading Warning (macOS + Homebrew JDK)
