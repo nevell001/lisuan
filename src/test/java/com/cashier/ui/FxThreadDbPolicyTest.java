@@ -6,6 +6,7 @@ import org.junit.jupiter.api.Test;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
@@ -81,5 +82,41 @@ class FxThreadDbPolicyTest {
             "精确匹配助手不得再于 FX 线程同步查库");
         assertFalse(touch.contains("loadProducts(null);"),
             "初始化不得再额外同步加载一次全部商品（初始列表由默认选中的“热销推荐”驱动）");
+    }
+
+    @Test
+    @DisplayName("恢复挂单时逐条查库必须在后台线程执行")
+    void holdOrderRestoreLoadsOffTheFxThread() throws Exception {
+        String cart = readMainSource("controller/CartController.java");
+        String touch = readMainSource("controller/TouchCartController.java");
+
+        // 解析助手只允许出现在「定义处 + 后台任务里」两处：别处调用就说明又在 FX 线程查库了
+        assertEquals(2, countOccurrences(cart, "parseCartItems("),
+            "CartController 的挂单解析只应在定义处与后台任务中出现");
+        assertEquals(2, countOccurrences(touch, "parseHoldCartItems("),
+            "TouchCartController 的挂单解析只应在定义处与后台任务中出现");
+
+        assertTrue(cart.contains("parseCartItems(order.itemsJson)"),
+            "标准收银台恢复挂单必须在后台解析");
+        assertTrue(touch.contains("parseHoldCartItems(order.itemsJson)"),
+            "触屏收银台恢复挂单必须在后台解析");
+        assertTrue(cart.contains("private record ResumedOrder(") && touch.contains("private record ResumedHoldOrder("),
+            "后台结果应通过不可变结果对象一次性带回 FX 线程");
+
+        // 曾经的同步写法：边解析边直接改 UI 列表
+        assertFalse(cart.contains("deserializeCartItems"),
+            "挂单解析不得再边查库边改 cartList");
+        assertFalse(touch.contains("deserializeHoldCartItems"),
+            "挂单解析不得再边查库边改 cartItems");
+    }
+
+    private static int countOccurrences(String text, String needle) {
+        int count = 0;
+        int idx = text.indexOf(needle);
+        while (idx >= 0) {
+            count++;
+            idx = text.indexOf(needle, idx + needle.length());
+        }
+        return count;
     }
 }

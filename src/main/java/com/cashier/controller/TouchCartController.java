@@ -1068,7 +1068,7 @@ public class TouchCartController implements CartViewHost {
         });
     }
 
-    /** 恢复挂单到购物车 */
+    /** 恢复挂单到购物车（解析与逐条查库放后台，结果回 FX 线程落地） */
     private void resumeHoldOrder(HoldOrder order) {
         // 当前购物车非空时确认是否覆盖
         if (!cartItems.isEmpty()) {
@@ -1079,40 +1079,53 @@ public class TouchCartController implements CartViewHost {
                 return; // 用户取消，挂单保持不变
             }
         }
-        try {
-            cartItems.clear();
-            currentMember = null;
-            cashReceivedAmount = BigDecimal.ZERO;
-            deserializeHoldCartItems(order.itemsJson);
-            if (order.memberId != null) {
-                try {
-                    currentMember = DAOFactory.getInstance().getMemberDAO().findById(order.memberId);
-                    if (currentMember != null) {
-                        if (memberPhoneField != null) {
-                            memberPhoneField.setText(currentMember.phone);
-                        }
-                        if (memberInfoLabel != null) {
-                            String discountStr = currentMember.getDiscount().stripTrailingZeros().toPlainString();
-                            memberInfoLabel.setText(i18n.get("tpos.member_info", currentMember.name, currentMember.level, discountStr));
-                        }
+
+        UIOptimizer.runInBackground(
+            () -> {
+                List<CartItem> items = parseHoldCartItems(order.itemsJson);
+                Member member = null;
+                if (order.memberId != null) {
+                    try {
+                        member = DAOFactory.getInstance().getMemberDAO().findById(order.memberId);
+                    } catch (SQLException e) {
+                        logger.warn("恢复会员信息失败: {}", e.getMessage());
                     }
-                } catch (SQLException e) {
-                    logger.warn("恢复会员信息失败: {}", e.getMessage());
                 }
-            }
-            for (CartItem ci : cartItems) {
-                inventoryMap.putIfAbsent(ci.product.name, ci.product);
-            }
-            holdOrderDAO.updateStatus(order.id, 1);
-            refreshCartView();
-            updateSummary();
-            showInfo(i18n.get("cart.hold.resume_success", order.orderNumber));
-            logger.info("恢复挂单成功: {}", order.orderNumber);
-        } catch (Exception e) {
-            logger.error("恢复挂单失败", e);
-            warn(i18n.get("cart.hold.resume_error") + ": " + e.getMessage());
-        }
+                holdOrderDAO.updateStatus(order.id, 1);
+                return new ResumedHoldOrder(items, member);
+            },
+            resumed -> {
+                cartItems.clear();
+                currentMember = resumed.member();
+                cashReceivedAmount = BigDecimal.ZERO;
+                cartItems.addAll(resumed.items());
+
+                if (currentMember != null) {
+                    if (memberPhoneField != null) {
+                        memberPhoneField.setText(currentMember.phone);
+                    }
+                    if (memberInfoLabel != null) {
+                        String discountStr = currentMember.getDiscount().stripTrailingZeros().toPlainString();
+                        memberInfoLabel.setText(i18n.get("tpos.member_info",
+                            currentMember.name, currentMember.level, discountStr));
+                    }
+                }
+                for (CartItem ci : cartItems) {
+                    inventoryMap.putIfAbsent(ci.product.name, ci.product);
+                }
+                refreshCartView();
+                updateSummary();
+                showInfo(i18n.get("cart.hold.resume_success", order.orderNumber));
+                logger.info("恢复挂单成功: {}", order.orderNumber);
+            },
+            e -> {
+                logger.error("恢复挂单失败", e);
+                warn(i18n.get("cart.hold.resume_error") + ": " + e.getMessage());
+            });
     }
+
+    /** 恢复挂单的结果：后台解析/查库完成后一次性带回 FX 线程。 */
+    private record ResumedHoldOrder(List<CartItem> items, Member member) {}
 
     /** 挂单后清空购物车（保留分类/商品显示） */
     private void clearCartForHold() {
@@ -1143,12 +1156,18 @@ public class TouchCartController implements CartViewHost {
     }
 
     /** 从 JSON 反序列化恢复购物车 */
-    private void deserializeHoldCartItems(String json) {
-        if (json == null || json.isEmpty()) return;
+    /**
+     * 解析挂单明细并逐条查商品。
+     *
+     * <p>纯数据操作，不触碰 UI 状态，可安全在后台线程调用。</p>
+     */
+    private List<CartItem> parseHoldCartItems(String json) {
+        List<CartItem> result = new ArrayList<>();
+        if (json == null || json.isEmpty()) return result;
         json = json.trim();
-        if (!json.startsWith("[") || !json.endsWith("]")) return;
+        if (!json.startsWith("[") || !json.endsWith("]")) return result;
         String body = json.substring(1, json.length() - 1);
-        if (body.isEmpty()) return;
+        if (body.isEmpty()) return result;
         String[] items = body.split("\\},\\{");
         for (String item : items) {
             item = item.replace("{", "").replace("}", "");
@@ -1174,12 +1193,13 @@ public class TouchCartController implements CartViewHost {
             try {
                 Product product = productDAO.findById(productId);
                 if (product != null) {
-                    cartItems.add(new CartItem(product, quantity));
+                    result.add(new CartItem(product, quantity));
                 }
             } catch (SQLException e) {
                 logger.warn("恢复商品失败 (ID:{}): {}", productId, e.getMessage());
             }
         }
+        return result;
     }
 
     /** 信息提示（同步状态栏） */

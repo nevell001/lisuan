@@ -2003,48 +2003,56 @@ public class CartController implements CartViewHost {
     }
 
     /**
-     * 恢复挂单到购物车
+     * 恢复挂单到购物车。
+     *
+     * <p>挂单明细要逐条查库（行数多时是 N 次往返），解析与查库全部放后台，
+     * 结果回 FX 线程落地，避免恢复大额挂单时界面卡死。</p>
      */
     private void resumeOrder(com.cashier.model.HoldOrder order) {
-        try {
-            // 清空当前购物车
-            cartList.clear();
-            cartMap.clear();
-
-            // 反序列化购物车项目
-            deserializeCartItems(order.itemsJson);
-
-            // 恢复会员信息
-            if (order.memberId != null) {
-                try {
-                    currentMember = DAOFactory.getInstance().getMemberDAO().findById(order.memberId);
-                    if (currentMember != null) {
-                        memberPhoneField.setText(currentMember.phone);
-                        // 更新会员信息显示
-                        memberInfoLabel.setText(currentMember.name + " - " +
-                            String.format("%.1f折", currentMember.discount));
+        UIOptimizer.runInBackground(
+            () -> {
+                List<CartItem> items = parseCartItems(order.itemsJson);
+                Member member = null;
+                if (order.memberId != null) {
+                    try {
+                        member = DAOFactory.getInstance().getMemberDAO().findById(order.memberId);
+                    } catch (SQLException e) {
+                        logger.warn("恢复会员信息失败: {}", e.getMessage());
                     }
-                } catch (SQLException e) {
-                    logger.warn("恢复会员信息失败: {}", e.getMessage());
                 }
-            }
+                // 标记挂单已恢复
+                holdOrderDAO.updateStatus(order.id, 1);
+                return new ResumedOrder(items, member);
+            },
+            resumed -> {
+                // 清空当前购物车并填入恢复结果
+                cartList.clear();
+                cartMap.clear();
+                for (CartItem item : resumed.items()) {
+                    cartList.add(item);
+                    cartMap.put(item.product.name, item);
+                }
 
-            // 更新挂单状态
-            holdOrderDAO.updateStatus(order.id, 1);
+                currentMember = resumed.member();
+                if (currentMember != null) {
+                    memberPhoneField.setText(currentMember.phone);
+                    memberInfoLabel.setText(currentMember.name + " - " +
+                        String.format("%.1f折", currentMember.discount));
+                }
 
-            // 更新显示
-            updateStatistics();
-            cartTable.setItems(cartList);
-
-            showInfo(I18nManager.getInstance().get("cart.hold.resume_success", order.orderNumber));
-
-            logger.info("恢复挂单成功: {}", order.orderNumber);
-
-        } catch (Exception e) {
-            logger.error("恢复挂单失败", e);
-            showError(I18nManager.getInstance().get("cart.hold.resume_error") + ": " + e.getMessage());
-        }
+                updateStatistics();
+                cartTable.setItems(cartList);
+                showInfo(I18nManager.getInstance().get("cart.hold.resume_success", order.orderNumber));
+                logger.info("恢复挂单成功: {}", order.orderNumber);
+            },
+            e -> {
+                logger.error("恢复挂单失败", e);
+                showError(I18nManager.getInstance().get("cart.hold.resume_error") + ": " + e.getMessage());
+            });
     }
+
+    /** 恢复挂单的结果：后台解析/查库完成后一次性带回 FX 线程。 */
+    private record ResumedOrder(List<CartItem> items, Member member) {}
 
     /**
      * 序列化购物车项目为JSON字符串
@@ -2064,20 +2072,24 @@ public class CartController implements CartViewHost {
     }
 
     /**
-     * 从JSON字符串反序列化购物车项目
+     * 解析挂单明细并逐条查商品。
+     *
+     * <p>纯数据操作，不触碰任何 UI 状态，可安全在后台线程调用
+     * （调用方负责把结果回填到 FX 线程）。</p>
      */
-    private void deserializeCartItems(String json) {
-        if (json == null || json.isEmpty()) return;
+    private List<CartItem> parseCartItems(String json) {
+        List<CartItem> items = new ArrayList<>();
+        if (json == null || json.isEmpty()) return items;
 
         // 简单的JSON解析（生产环境建议使用Jackson或Gson）
         json = json.trim();
-        if (!json.startsWith("[") || !json.endsWith("]")) return;
+        if (!json.startsWith("[") || !json.endsWith("]")) return items;
 
         String itemsJson = json.substring(1, json.length() - 1);
-        if (itemsJson.isEmpty()) return;
+        if (itemsJson.isEmpty()) return items;
 
-        String[] items = itemsJson.split("\\},\\{");
-        for (String item : items) {
+        String[] parts = itemsJson.split("\\},\\{");
+        for (String item : parts) {
             item = item.replace("{", "").replace("}", "");
             String[] fields = item.split(",");
 
@@ -2098,18 +2110,17 @@ public class CartController implements CartViewHost {
                 }
             }
 
-            // 查找商品并添加到购物车
+            // 查找商品；单个商品失败不影响其余明细
             try {
                 Product product = productDAO.findById(productId);
                 if (product != null) {
-                    CartItem cartItem = new CartItem(product, quantity);
-                    cartList.add(cartItem);
-                    cartMap.put(product.name, cartItem);
+                    items.add(new CartItem(product, quantity));
                 }
             } catch (SQLException e) {
                 logger.warn("恢复商品失败 (ID: {}): {}", productId, e.getMessage());
             }
         }
+        return items;
     }
 
     /**
