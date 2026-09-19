@@ -129,7 +129,7 @@ install.bat            # Windows
 ### Layer Structure
 
 ```
-Controller (31 classes) → Service (7 classes) → DAO (24+ classes) → Database
+Controller (35 classes) → Service (14 classes) → DAO (29 instance DAOs) → Database
         ↓                          ↓              ↓
      FXML Views              Business Logic    Data Access
 
@@ -405,7 +405,7 @@ public class YourControllerUITest extends DatabaseTestBase {
 ## Performance Optimizations (v2.4.0+)
 
 **UI Rendering:**
-- Use `UIOptimizer.asyncLoad()` for background data loading
+- Use `UIOptimizer.runInBackground(...)`（查库→刷新界面）或 `UIOptimizer.loadAsync(Task, ...)` for background data loading
 - Virtualize large lists with `UIOptimizer.virtualize()`
 
 **Query Optimization:**
@@ -685,6 +685,10 @@ When working on files that still use the old `ProductDAO`, consider migrating th
 
 ## Code-Side Release Checks (v2.6)
 
+- CI 构建门禁：`.github/workflows/build.yaml` 在 push / PR 到 `main` 时执行
+  `xvfb-run -a mvn -B -ntp verify`（与本地一致：测试 + SpotBugs + JaCoCo），
+  失败时上传 `target/surefire-reports` 便于定位；`sync.yaml` 同步时会备份并恢复
+  `.github/workflows`，故本文件不会被 Gitee 覆盖
 - 版本号四处同步（`AppConstants`/`pom.xml`/`installer/Installer.java`/`.env.example`）当前均为 `2.6.0`
 - i18n 门禁：`I18nBundleConsistencyTest` 断言三份语言包 key 集合一致、`I18nKeys` 常量齐全、
   源码字面量 i18n 调用 key 齐全（缺 key 时界面会直接显示 key，属 UI 缺陷）
@@ -734,6 +738,17 @@ When working on files that still use the old `ProductDAO`, consider migrating th
 - 支付宝回调不再注入合成参数：`trade_no` 在验签后按渠道取值
   （`PaymentService.channelTransactionId`），真实回调验签不再必然失败
 - `/api/invoices/seller-info`（PUT）收紧为管理员专属；开票方信息属于全局配置
+- `GET /api/transactions` 支付方式筛选改为**归一化后比较**：`?paymentMethod=CASH` 能命中
+  落库为「现金」的记录，反向亦然（此前是裸 `contains`，按代码筛选恒为空）
+- `GET /api/transactions` 带日期筛选时 `limit` 下推到交易主表子查询
+  （`TransactionDAORefactored.findByDateRange(start, end, limit)`），
+  此前忽略 `limit`、可被认证用户用宽区间拉回整段交易
+- 支付宝**出站响应**验签：缺少 `sign` 直接判失败
+  （`AlipayPrecreatePaymentProvider.verifyAlipayResponse`，此前缺签名会放行）
+- 支付退款并发安全（`PaymentService.applyRefund`）：事务内 `SELECT ... FOR UPDATE`
+  锁定支付单行并以 `APPLYING` 预占额度，渠道网络调用移到事务外，终态按"已成功退款合计"
+  判定（申请中只是预占、不算已退）；并发对同一支付发起多笔退款不再可能累计超过实付金额
+  （`PaymentServiceRefundTest.concurrentRefundsCannotExceedPaidAmount`）
 
 **退货退款口径与安全审计 L 级项（v2.6.0 补强）**
 
@@ -751,7 +766,19 @@ When working on files that still use the old `ProductDAO`, consider migrating th
 - 模拟支付回调密钥改用 `MessageDigest.isEqual` 定长比较
 - 发票编号改为 `INV + 时间戳 + 进程内序号 + 6 位随机段`，同毫秒并发不撞号且不可预测
   （`InvoiceTest`）
+- 退款编号同样加固：`PaymentDAORefactored.insertRefund` 的 `refund_id`（此前只有毫秒时间戳，
+  同毫秒两笔退款必撞主键）与 `RefundRecord.generateRefundNo` 改为
+  `时间戳 + 进程内序号 + 6 位随机段`（`PaymentDAOTest.refundIdsAreUniqueWithinSameMillisecond`）
 - 删除 `UserDAORefactored.authenticate`（忽略密码参数的死方法，易被误用成免密登录）
+
+**收银台 FX 线程纪律（v2.6.0 补强）**
+
+- 标准收银台与触屏收银台的**库存加载、商品搜索、分类加载、班次查询**统一走
+  `UIOptimizer.runInBackground`（后台查库 + `Platform.runLater` 回 UI 线程），
+  并以 `productQuerySequence` 丢弃过期结果，避免打开收银台/连续扫码时整屏卡死；
+  门禁见 `FxThreadDbPolicyTest`（断言查询必须作为后台任务提交，且旧的同步写法不得回归）
+- 触屏收银台初始商品列表由默认选中的「热销推荐」驱动（`initialize()` 不再额外同步
+  `loadProducts(null)`），分类加载失败时兜底展示全部商品
 
 **i18n 与启动画面（v2.6.0 补强）**
 

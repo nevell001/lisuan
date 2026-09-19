@@ -450,7 +450,7 @@
                                             <counter>LINE</counter>
                                             <value>COVEREDRATIO</value>
                                             <!-- 当前测试套件以 DAO/Service/工具层为主，控制器与 API 层尚未覆盖，
-                                                 实测总行覆盖率约 12%；门槛反映现状并保留提升空间，
+                                                 实测总行覆盖率约 20%；门槛反映现状并保留提升空间，
                                                  随控制器/API 测试补充逐步上调。 -->
                                             <minimum>0.10</minimum>
                                         </limit>
