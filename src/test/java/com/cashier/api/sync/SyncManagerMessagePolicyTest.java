@@ -8,12 +8,14 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.mockito.ArgumentMatchers.anyString;
 import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
+import static org.mockito.Mockito.when;
 
 /**
  * WebSocket 客户端上行消息策略测试
@@ -24,7 +26,9 @@ import static org.mockito.Mockito.mock;
 class SyncManagerMessagePolicyTest {
 
     private final SyncManager syncManager = SyncManager.getInstance();
+    private static final AtomicInteger SESSION_SEQ = new AtomicInteger();
     private WsContext currentCtx;
+    private String currentSessionId;
 
     @AfterEach
     void cleanup() {
@@ -40,6 +44,9 @@ class SyncManagerMessagePolicyTest {
     private List<String> registerMockTerminal() {
         WsContext ctx = mock(WsContext.class);
         currentCtx = ctx;
+        // 每个会话一个稳定 id：模拟 Javalin 的 ctx.sessionId()
+        currentSessionId = "ws-session-" + SESSION_SEQ.incrementAndGet();
+        when(ctx.sessionId()).thenReturn(currentSessionId);
         List<String> sent = new ArrayList<>();
         doAnswer(invocation -> {
             sent.add(invocation.getArgument(0));
@@ -76,6 +83,26 @@ class SyncManagerMessagePolicyTest {
         syncManager.handleMessage(currentCtx, "{\"type\":\"PING\"}");
 
         assertEquals(1, sent.size(), "PING 应恰好收到一次 PONG 应答");
+        assertTrue(sent.get(0).contains("PONG"), "应答应包含 PONG: " + sent.get(0));
+    }
+
+    @Test
+    @DisplayName("同一会话的新回调上下文仍能识别连接（Javalin 每次回调新建 WsContext）")
+    void sessionKeyIsStableAcrossCallbackContexts() {
+        registerMockTerminal();
+
+        // 模拟 Javalin onMessage：新建的 WsContext 对象，sessionId 与连接时相同
+        WsContext messageCtx = mock(WsContext.class);
+        when(messageCtx.sessionId()).thenReturn(currentSessionId);
+        List<String> sent = new ArrayList<>();
+        doAnswer(invocation -> {
+            sent.add(invocation.getArgument(0));
+            return null;
+        }).when(messageCtx).send(anyString());
+
+        syncManager.handleMessage(messageCtx, "{\"type\":\"PING\"}");
+
+        assertEquals(1, sent.size(), "同一会话的不同上下文对象仍应收到 PONG 应答");
         assertTrue(sent.get(0).contains("PONG"), "应答应包含 PONG: " + sent.get(0));
     }
 

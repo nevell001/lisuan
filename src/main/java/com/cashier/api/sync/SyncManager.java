@@ -358,11 +358,15 @@ public class SyncManager {
     }
     
     /**
-     * 获取会话ID（兼容不同版本）
+     * 获取会话ID。
+     *
+     * <p>必须用 Javalin 提供的稳定 {@code sessionId()}：Javalin 在
+     * onConnect/onMessage/onClose 每次回调都会新建 WsContext 对象，
+     * 用 {@code System.identityHashCode(ctx)} 会导致上行消息查不到连接、
+     * 断连时也删不掉条目。</p>
      */
     private String getSessionId(WsContext ctx) {
-        // Javalin 5.x 使用 hashCode 作为 sessionId
-        return "WS_" + System.identityHashCode(ctx);
+        return ctx.sessionId();
     }
     
     /**
