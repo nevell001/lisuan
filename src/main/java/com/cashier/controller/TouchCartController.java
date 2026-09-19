@@ -765,12 +765,26 @@ public class TouchCartController implements CartViewHost {
         if (product == null) {
             return;
         }
-        // 刷新最新库存，避免使用陈旧快照（切分类/多终端变动后前端校验误导）
-        try {
-            Product fresh = productDAO.findById(product.id);
-            inventoryMap.put(product.name, fresh != null ? fresh : product);
-        } catch (java.sql.SQLException ex) {
-            logger.warn("刷新商品库存失败 (ID:{}): {}", product.id, ex.getMessage());
+        // 刷新最新库存是数据库往返，放后台；回到 FX 线程后再校验入车
+        // （避免使用陈旧快照：切分类/多终端变动后前端校验会误导）
+        UIOptimizer.runInBackground(
+            () -> {
+                try {
+                    return productDAO.findById(product.id);
+                } catch (java.sql.SQLException ex) {
+                    logger.warn("刷新商品库存失败 (ID:{}): {}", product.id, ex.getMessage());
+                    return null;
+                }
+            },
+            fresh -> applyAddToCart(product, fresh),
+            ex -> logger.warn("刷新商品库存失败 (ID:{}): {}", product.id, ex.getMessage()));
+    }
+
+    /** 在 JavaFX 线程用最新库存校验后写入购物车。 */
+    private void applyAddToCart(Product product, Product fresh) {
+        if (fresh != null) {
+            inventoryMap.put(product.name, fresh);
+        } else {
             inventoryMap.putIfAbsent(product.name, product);
         }
         int stock = currentStock(product);
@@ -1390,22 +1404,29 @@ public class TouchCartController implements CartViewHost {
             updateSummary();
             return;
         }
-        try {
-            Member m = DAOFactory.getInstance().getMemberDAO().findByPhone(phone.trim());
-            if (m == null) {
-                currentMember = null;
-                memberInfoLabel.setText(i18n.get("tpos.member_not_found"));
-                warn(i18n.get("tpos.member_not_found"));
-            } else {
-                currentMember = m;
-                String discountStr = m.getDiscount().stripTrailingZeros().toPlainString();
-                memberInfoLabel.setText(i18n.get("tpos.member_info", m.name, m.level, discountStr));
-            }
-            updateSummary();
-        } catch (SQLException e) {
-            logger.error("查询会员失败", e);
-            StatusBarManager.updateError(i18n.get("label.error") + ": " + e.getMessage());
+        // 会员查询放后台，避免回车/按钮触发时阻塞触摸界面
+        String lookupPhone = phone.trim();
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getMemberDAO().findByPhone(lookupPhone),
+            this::applyMemberSearchResult,
+            e -> {
+                logger.error("查询会员失败", e);
+                StatusBarManager.updateError(i18n.get("label.error") + ": " + e.getMessage());
+            });
+    }
+
+    /** 在 JavaFX 线程展示会员查询结果。 */
+    private void applyMemberSearchResult(Member m) {
+        if (m == null) {
+            currentMember = null;
+            memberInfoLabel.setText(i18n.get("tpos.member_not_found"));
+            warn(i18n.get("tpos.member_not_found"));
+        } else {
+            currentMember = m;
+            String discountStr = m.getDiscount().stripTrailingZeros().toPlainString();
+            memberInfoLabel.setText(i18n.get("tpos.member_info", m.name, m.level, discountStr));
         }
+        updateSummary();
     }
 
     // ===== 支付前置校验 =====

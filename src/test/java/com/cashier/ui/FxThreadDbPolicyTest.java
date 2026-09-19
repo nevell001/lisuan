@@ -110,6 +110,67 @@ class FxThreadDbPolicyTest {
             "挂单解析不得再边查库边改 cartItems");
     }
 
+    @Test
+    @DisplayName("单行查库（入车刷新库存、会员查询）必须在后台线程执行")
+    void singleRowLookupsRunOffTheFxThread() throws Exception {
+        String cart = readMainSource("controller/CartController.java");
+        String touch = readMainSource("controller/TouchCartController.java");
+
+        // 入车：班次检查与最新库存查询都必须先提交到后台。
+        // 回归判据：同步写法里查库与界面改动（下同）在同一个方法体内，后台化后二者被拆开
+        String cartAdd = methodBody(cart, "private void addToCart(Product product, int quantity)");
+        assertTrue(cartAdd.contains("UIOptimizer.runInBackground("),
+            "标准收银台入车前的查库必须作为后台任务提交");
+        assertTrue(cartAdd.contains("DataService.hasActiveShift()"),
+            "入车前的班次检查也必须放后台（它同样是一次查库）");
+        assertTrue(cartAdd.contains("productDAO.findById(product.id)"),
+            "最新库存查询必须在后台任务里");
+        assertFalse(cartAdd.contains("cartList.add("),
+            "入车方法不得再在 FX 线程同步查库后直接改购物车");
+
+        String touchAdd = methodBody(touch, "private void addToCart(Product product)");
+        assertTrue(touchAdd.contains("UIOptimizer.runInBackground("),
+            "触屏收银台入车前的库存刷新必须作为后台任务提交");
+        assertTrue(touchAdd.contains("productDAO.findById(product.id)"),
+            "最新库存查询必须在后台任务里");
+        assertFalse(touchAdd.contains("refreshCartView()"),
+            "入车方法不得再在 FX 线程同步查库后直接刷新购物车");
+
+        // 会员查询
+        String cartMember = methodBody(cart, "public void handleSearchMember()");
+        assertTrue(cartMember.contains("UIOptimizer.runInBackground("),
+            "标准收银台会员查询必须作为后台任务提交");
+        assertFalse(cartMember.contains("catch ("),
+            "会员查询不得再在 FX 线程同步查库并就地捕获异常");
+
+        String touchMember = methodBody(touch, "private void handleSearchMember()");
+        assertTrue(touchMember.contains("UIOptimizer.runInBackground("),
+            "触屏收银台会员查询必须作为后台任务提交");
+        assertFalse(touchMember.contains("catch ("),
+            "会员查询不得再在 FX 线程同步查库并就地捕获异常");
+    }
+
+    /** 取出指定方法（按大括号配对）的方法体，便于断言"查库与改界面是否还在同一个方法里"。 */
+    private static String methodBody(String source, String signature) {
+        int start = source.indexOf(signature);
+        assertTrue(start >= 0, "找不到方法签名: " + signature);
+        int open = source.indexOf('{', start + signature.length());
+        assertTrue(open >= 0, "方法没有方法体: " + signature);
+        int depth = 0;
+        for (int i = open; i < source.length(); i++) {
+            char c = source.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return source.substring(open, i + 1);
+                }
+            }
+        }
+        throw new IllegalStateException("方法体未闭合: " + signature);
+    }
+
     private static int countOccurrences(String text, String needle) {
         int count = 0;
         int idx = text.indexOf(needle);

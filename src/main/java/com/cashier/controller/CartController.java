@@ -525,13 +525,35 @@ public class CartController implements CartViewHost {
     }
 
     /**
-     * 添加商品到购物车（内部方法）
+     * 添加商品到购物车（内部方法）。
+     *
+     * <p>班次状态与最新库存各是一次数据库往返，统一放后台取，回到 FX 线程后再校验入车，
+     * 避免扫码/双击/回车时界面被阻塞。</p>
      * @param product 商品
      * @param quantity 数量
      */
     private void addToCart(Product product, int quantity) {
+        UIOptimizer.runInBackground(
+            () -> {
+                // 从数据库获取最新库存数据，确保使用最新库存
+                Product latestProduct = null;
+                try {
+                    latestProduct = productDAO.findById(product.id);
+                } catch (SQLException e) {
+                    logger.error("从数据库获取商品最新库存失败", e);
+                }
+                return new CartAddContext(com.cashier.service.DataService.hasActiveShift(), latestProduct);
+            },
+            context -> applyAddToCart(product, quantity, context),
+            e -> logger.error("添加商品到购物车失败", e));
+    }
+
+    /**
+     * 在 JavaFX 线程校验后写入购物车；校验顺序（班次 → 数量 → 库存）与后台化之前一致。
+     */
+    private void applyAddToCart(Product product, int quantity, CartAddContext context) {
         // 检查是否有活跃班次
-        if (!com.cashier.service.DataService.hasActiveShift()) {
+        if (!context.activeShift()) {
             showError(com.cashier.i18n.I18nManager.getInstance().get("runtime.no_active_shift_transaction"));
             return;
         }
@@ -541,17 +563,10 @@ public class CartController implements CartViewHost {
             return;
         }
 
-        // 从数据库获取最新库存数据，确保使用最新库存
-        Product latestProduct = null;
-        try {
-            latestProduct = productDAO.findById(product.id);
-            if (latestProduct != null) {
-                // 更新内存中的库存数据
-                inventoryMap.put(product.name, latestProduct);
-                product = latestProduct;
-            }
-        } catch (SQLException e) {
-            logger.error("从数据库获取商品最新库存失败", e);
+        if (context.latestProduct() != null) {
+            // 更新内存中的库存数据
+            inventoryMap.put(product.name, context.latestProduct());
+            product = context.latestProduct();
         }
 
         if (quantity > product.quantity) {
@@ -586,6 +601,9 @@ public class CartController implements CartViewHost {
             searchField.clear();
         }
     }
+
+    /** 添加商品到购物车前，后台取回的班次状态与最新库存。 */
+    private record CartAddContext(boolean activeShift, Product latestProduct) {}
 
     private boolean addScannedProductToCart(String scanText) {
         String normalizedScanText = scanText != null ? scanText.trim() : "";
@@ -795,7 +813,7 @@ public class CartController implements CartViewHost {
     }
 
     /**
-     * 搜索会员
+     * 搜索会员（查询放后台，避免回车/按钮触发时阻塞界面）
      */
     @FXML
     public void handleSearchMember() {
@@ -807,14 +825,19 @@ public class CartController implements CartViewHost {
             return;
         }
 
-        Member member = null;
-        try {
-            member = DAOFactory.getInstance().getMemberDAO().findByPhone(phone);
-        } catch (Exception e) {
-            logger.error("从数据库查找会员失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-        }
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getMemberDAO().findByPhone(phone),
+            this::applyMemberSearchResult,
+            e -> {
+                logger.error("从数据库查找会员失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
+            });
+    }
 
+    /**
+     * 在 JavaFX 线程展示会员查询结果
+     */
+    private void applyMemberSearchResult(Member member) {
         if (member != null) {
             currentMember = member;
             memberInfoLabel.setText(I18nManager.getInstance().get("runtime.member_summary_discount",
