@@ -803,6 +803,23 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `TouchCartController.preCheck()`）：每次点击一次单行查询，且其后立即弹出模态框，
   改造需把三条支付流程都改成回调，风险大于收益，暂按现状保留
 
+**触屏收银台自动化覆盖（v2.6.0 补强）**
+
+- 触屏收银台没有 UI 级自动化测试：TestFX 需要真实显示环境，`mvn verify`/CI 跑不了
+  （`LoginControllerUITest` 就被 Surefire 排除）。因此改为**把纯逻辑抽成包内可见的静态方法，
+  用无界面单测直接验证生产代码**，而不是复制一份逻辑到测试里
+- 抽取出的可测方法（均在 `TouchCartController`）：
+  `mergeHotProducts(manualHot, topSelling, target)`、`applyCashPayment(received, thisPayment,
+  finalAmount)`（返回 `CashProgress`）、`serializeCartItems(List<CartItem>)`、
+  `parseHoldCartItems(String)`、`currentStock(Product, Map)`、`findCartItem(List<CartItem>, int)`
+- 覆盖见 `TouchCartControllerLogicTest`（11 项）：热销推荐按商品 ID 去重补足到 12 且不截断手动标记、
+  现金分次收款累计与找零及"差一分钱不结算"边界、挂单序列化↔恢复往返、已删除商品行跳过、
+  损坏/空 JSON 容错、库存快照优先与回退、按商品 ID 定位购物车行（改名不影响同一行）
+- 这些用例做过**变异验证**：去掉去重、把付清判定 `>= 0` 改成 `> 0`、把默认数量 1 改成 0，
+  对应 4 项立即变红
+- 待清理：`TouchCartController.filterByKeyword` / `containsIgnoreCase` 已无调用方
+  （关键字搜索改走 `productDAO.search` 的 SQL），属历史遗留死代码，暂留未删
+
 **热销榜统计口径（v2.6.0 补强）**
 
 - 热销榜/商品销量必须按 `product_id` 关联，**不能按商品名称**：名称一旦被改名，
