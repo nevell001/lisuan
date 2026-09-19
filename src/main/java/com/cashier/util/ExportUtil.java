@@ -231,16 +231,15 @@ public class ExportUtil {
                 windir + "\\Fonts\\simkai.ttf"     // 楷体
             };
         } else {
-            // Linux 系统字体路径（必须选 PDFBox 能嵌入的 TrueType/glyf 字体；
-            // OTF/CFF 字体在 PDF 保存做子集化时会抛 "OTF fonts do not have a glyf table"）
+            // Linux 系统字体路径：必须是 PDFBox 能嵌入的 TrueType/glyf 字体
+            // （OTF/CFF 字体在 PDF 保存做子集化时会抛 "OTF fonts do not have a glyf table"，
+            //   没有 glyf 表的候选会被 isEmbeddable 跳过）
             systemFontPaths = new String[]{
-                "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",             // 文泉驿正黑（TrueType 集合）
-                "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",           // 文泉驿微米黑
-                "/usr/share/fonts/truetype/fonts-ukij-uyghur/UKIJCJK.ttf",  // UKIJ CJK (支持中文和英文)
+                "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",  // Droid Sans Fallback（TrueType）
+                "/usr/share/fonts/truetype/arphic-gkai00mp/gkai00mp.ttf",     // AR PL 楷体（TrueType）
+                "/usr/share/fonts/truetype/fonts-ukij-uyghur/UKIJCJK.ttf",    // UKIJ CJK (支持中文和英文)
                 "/usr/share/fonts/truetype/lxgw-wenkai/LXGWWenKai-Regular.ttf",
-                "/usr/share/fonts/truetype/arphic-gkai00mp/gkai00mp.ttf",
-                "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",  // Droid Sans Fallback (可能有问题)
-                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"  // TTC 最后尝试
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"      // OTF/CFF，会被跳过
             };
         }
 

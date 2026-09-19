@@ -38,14 +38,16 @@ jobs:
             sudo apt-get update && sudo apt-get install -y xvfb
           fi
 
-      # PDF 导出需要嵌入 PDFBox 支持的 TrueType 中文字体（Ubuntu 镜像默认不含中文字体；
-      # 项目内置的 NotoSansSC 是 OTF/CFF，PDFBox 无法嵌入）。文泉驿正黑是 TrueType 集合。
+      # PDF 导出必须嵌入一个 PDFBox 能处理的 TrueType(glyf) 中文字体：Ubuntu 镜像默认不含
+      # 中文字体，而项目内置的 NotoSansSC-Regular.ttc 是 OTF/CFF，PDFBox 无法嵌入。
+      # Droid Sans Fallback（Apache-2.0）与 AR PL 楷体均为 TrueType，装两个做冗余。
       - name: Install CJK TrueType font
         run: |
           sudo apt-get update
-          sudo apt-get install -y fonts-wqy-zenhei
-          sudo apt-get install -y fonts-droid-fallback || true
-          test -f /usr/share/fonts/truetype/wqy/wqy-zenhei.ttc
+          sudo apt-get install -y fonts-droid-fallback
+          sudo apt-get install -y fonts-arphic-gkai00mp || true
+          test -f /usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf \
+            -o -f /usr/share/fonts/truetype/arphic-gkai00mp/gkai00mp.ttf
 
       - name: Maven verify (tests + SpotBugs + JaCoCo)
         run: xvfb-run -a mvn -B -ntp verify
