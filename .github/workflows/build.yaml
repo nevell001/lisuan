@@ -13,6 +13,11 @@ concurrency:
   group: build-${{ github.ref }}
   cancel-in-progress: true
 
+# checkout@v4 / upload-artifact@v4 仍以 Node 20 为目标；官方在被强制升级前
+# 推荐用该变量显式选择 Node 24（sync.yaml 同样设置），以消除弃用告警。
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
 jobs:
   verify:
     name: mvn verify (Java 17)
@@ -24,7 +29,7 @@ jobs:
         uses: actions/checkout@v4
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
