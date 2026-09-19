@@ -1375,9 +1375,10 @@ public class CartController implements CartViewHost {
         // total_amount = 明细原价合计（与触屏收银台、REST API 同一口径）：
         // 写成折后金额会让 total_amount - final_amount 恒为 0，小票/详情的"商品总额"与"实付"也无法体现优惠
         transaction.totalAmount = TransactionService.calculateTotalAmount(cartList);
-        // 实现税费计算：税率以小数形式配置（设置界面校验区间 0.0-1.0），基数同样是原价合计
-        transaction.tax = TransactionService.calculateTax(transaction.totalAmount);
         transaction.finalAmount = getFinalAmount();
+        // 税额按**实付金额**计（业务确认）：税率以小数形式配置（设置界面校验区间 0.0-1.0），
+        // 税是价内税，不参与应付金额计算，只随交易记录展示/打印
+        transaction.tax = TransactionService.calculateTax(transaction.finalAmount);
         transaction.paymentMethod = paymentMethod;
         
         if (currentMember != null) {

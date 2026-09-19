@@ -284,8 +284,9 @@ public class TransactionService {
         }
 
         transaction.totalAmount = calculateTotalAmount(cartItems);
-        transaction.tax = calculateTax(transaction.getTotalAmount());
         transaction.finalAmount = calculateFinalAmount(cartItems, member);
+        // 税额按实付金额计（与两个收银台/API 同口径）；价内税，不影响应付金额
+        transaction.tax = calculateTax(transaction.finalAmount);
         transaction.paymentMethod = paymentMethod;
 
         if (member != null) {

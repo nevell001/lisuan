@@ -3,6 +3,7 @@ package com.cashier.api.controller;
 import com.cashier.api.support.TestContext;
 import com.cashier.dao.DAOFactory;
 import com.cashier.dao.TransactionDAORefactored;
+import com.cashier.service.DataService;
 import com.cashier.model.*;
 import com.cashier.util.DatabaseTestBase;
 import io.javalin.http.HandlerType;
@@ -66,6 +67,37 @@ class TransactionApiControllerTest extends DatabaseTestBase {
         assertEquals(48, DAOFactory.getInstance().getProductDAO().findById(product.id).quantity);
         // 积分按每元 10 分：20 × 10 = 200
         assertAmountEquals(new BigDecimal("200"), DAOFactory.getInstance().getMemberDAO().findById(member.id).points);
+    }
+
+    @Test
+    @DisplayName("API 下单：total_amount 写原价合计，税额按实付金额计")
+    void createStoresOriginalTotalAndTaxesPayableAmount() throws Exception {
+        DataService.saveSettings(Map.of("taxRate", "0.06"));
+        Product product = insertProduct("API口径商品", "APITAX001", new BigDecimal("100.00"), 50);
+        Member member = insertMember("13900000009");
+        member.discount = new BigDecimal("9.0");      // 9 折
+        member.discountRate = new BigDecimal("9.0");
+        assertTrue(DAOFactory.getInstance().getMemberDAO().update(member));
+
+        User operator = new User();
+        operator.username = "cashier01";
+        operator.name = "真实收银员";
+
+        TestContext ctx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions")
+            .withAttribute("currentUser", operator)
+            .withBody(createRequest(product.id, 2, "现金", member.phone));
+
+        TransactionApiController.create(ctx.context);
+        assertEquals(HttpStatus.CREATED, ctx.status);
+
+        Transaction saved = transactionDAO.findById((String) response(ctx).get("transactionId"));
+        assertNotNull(saved);
+        // 2 × 100.00 = 200.00 是商品原价合计；9 折后实付 180.00
+        assertAmountEquals(new BigDecimal("200.00"), saved.totalAmount);
+        assertAmountEquals(new BigDecimal("180.00"), saved.finalAmount);
+        // 税额按实付计：180.00 × 0.06 = 10.80（按原价合计算会得到 12.00）
+        assertAmountEquals(new BigDecimal("10.80"), saved.tax);
     }
 
     @Test

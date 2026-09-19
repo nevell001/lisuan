@@ -44,11 +44,12 @@ class CheckoutConsistencyPolicyTest {
     }
 
     @Test
-    @DisplayName("三处结账路径口径一致：total_amount = 明细原价合计，tax 基于原价合计")
+    @DisplayName("三处结账路径口径一致：total_amount = 明细原价合计，tax 按实付金额计")
     void allCheckoutPathsUseOriginalTotal() throws Exception {
         String cart = readMainSource("controller/CartController.java");
         String touch = readMainSource("controller/TouchCartController.java");
         String api = readMainSource("api/controller/TransactionApiController.java");
+        String service = readMainSource("service/TransactionService.java");
 
         for (String source : List.of(cart, touch, api)) {
             assertTrue(source.contains("totalAmount = TransactionService.calculateTotalAmount("),
@@ -60,11 +61,21 @@ class CheckoutConsistencyPolicyTest {
                 "不得把折后/应付金额写进 total_amount");
         }
 
-        // 税额基数同样是原价合计，避免"标准端按折后、触屏端按原价"再次分叉
-        Pattern taxBase = Pattern.compile("calculateTax\\((?:transaction|tx)\\.totalAmount\\)");
-        assertTrue(taxBase.matcher(cart).find(), "标准收银台税额基数应为 total_amount（原价合计）");
-        assertTrue(taxBase.matcher(touch).find(), "触屏收银台税额基数应为 total_amount（原价合计）");
-        assertTrue(taxBase.matcher(api).find(), "REST API 税额基数应为 total_amount（原价合计）");
+        // 税额基数按业务确认改为**实付金额**（税是价内税，不参与应付计算），四处都必须一致
+        Pattern taxOnFinal = Pattern.compile("calculateTax\\((?:transaction|tx)\\.finalAmount\\)");
+        assertTrue(taxOnFinal.matcher(cart).find(), "标准收银台税额基数应为实付金额");
+        assertTrue(taxOnFinal.matcher(touch).find(), "触屏收银台税额基数应为实付金额");
+        assertTrue(taxOnFinal.matcher(api).find(), "REST API 税额基数应为实付金额");
+        assertTrue(service.contains("calculateTax(transaction.finalAmount)"),
+            "TransactionService 自身的建单路径也要按实付计税");
+
+        // 回归：不得再按原价合计计税（会产生"打折了但税没少"的口径）
+        for (String source : List.of(cart, touch, api, service)) {
+            assertFalse(source.contains("calculateTax(transaction.totalAmount)")
+                    || source.contains("calculateTax(tx.totalAmount)")
+                    || source.contains("calculateTax(transaction.getTotalAmount())"),
+                "税额基数不得再是原价合计");
+        }
     }
 
     @Test

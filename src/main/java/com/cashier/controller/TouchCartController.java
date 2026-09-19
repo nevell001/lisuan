@@ -1626,8 +1626,9 @@ public class TouchCartController implements CartViewHost {
         tx.items.addAll(productMap.values());
 
         tx.totalAmount = TransactionService.calculateTotalAmount(cartItems);
-        tx.tax = TransactionService.calculateTax(tx.totalAmount);
-        tx.finalAmount = getPayableAmount();
+        tx.finalAmount = getPayableAmount(); // 同时固定本次结账使用的 appliedPromotion
+        // 税额按实付金额计（与标准收银台/API 同口径）；价内税，不影响应付金额
+        tx.tax = TransactionService.calculateTax(tx.finalAmount);
         tx.paymentMethod = paymentMethod;
         if (currentMember != null) {
             tx.memberPhone = currentMember.phone;

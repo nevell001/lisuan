@@ -729,7 +729,7 @@ When working on files that still use the old `ProductDAO`, consider migrating th
 - 打印机降级：`PrinterManagerTest` 补"无可用打印机时任务失败且不中断"覆盖
 - 结账口径一致性：`CheckoutConsistencyPolicyTest` 断言税额只在 `TransactionService.calculateTax`
   计算（税率是小数 0.0-1.0，不得再除以 100）、三处结账路径的 `total_amount` 都是明细原价合计、
-  触屏收银台必须计算并落库促销、支付方式筛选
+  税额基数都是实付金额、触屏收银台必须计算并落库促销、支付方式筛选
   必须归一化后再比较；`TransactionServiceTest` 覆盖税率小数语义、促销按原价总额计算、
   `selectBestPromotion` 选优；`I18nUiUtilsTest` 覆盖中文/代码支付方式归一化
 - 启动入口：可执行 JAR 的 Main-Class 为 `com.cashier.Launcher`（不继承 `Application`），
@@ -742,21 +742,32 @@ When working on files that still use the old `ProductDAO`, consider migrating th
 API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后金额**——于是标准端
 `total_amount - final_amount` 恒为 0，小票"商品总额"与"实付金额"永远相等，看不出优惠。
 
-- 现已统一（改标准端一处）：`total_amount` = `TransactionService.calculateTotalAmount(明细)`
-  （原价合计）、`tax` = `calculateTax(total_amount)`（基数同为原价）、
-  `final_amount` = 实付（含会员折扣与促销）。选择这个口径的原因：API 与触屏台已是如此
-  （2/3 路径 + 对外 API 契约），且只有这样才能从 `total_amount - final_amount` 算出优惠
+- 现已统一：`total_amount` = `TransactionService.calculateTotalAmount(明细)`（原价合计）、
+  `final_amount` = 实付（含会员折扣与促销）、**`tax` = `calculateTax(final_amount)`（按实付计，业务确认）**。
+  选原价合计作 `total_amount` 的原因：API 与触屏台已是如此（2/3 路径 + 对外 API 契约），
+  且只有这样才能从 `total_amount - final_amount` 算出优惠；选实付作税额基数的原因：
+  税是**价内税**（`calculateFinalAmount` 不含税、不参与应付金额计算，只在记录/小票上展示），
+  顾客实付多少就按多少计税，打折后税额同步下降
+- 税额基数四处一致：`CartController` / `TouchCartController` / `TransactionApiController` /
+  `TransactionService` 私有建单路径（旧的向后兼容入口仍在用）。注意三处真实结账走的
+  `executeTransaction(cartItems, member, transaction, inventory, promotion)` **不重算 tax**，
+  控制器写的值就是落库值
 - 配套：小票必须打印优惠行，否则打折单上"商品总额 ≠ 实付金额"无从解释——
   `ReceiptPrinter` 两个模板都加了 `优惠:` 行（`total_amount > final_amount` 时才打，
   以负数呈现，无优惠不出现该行）；交易详情弹窗同样补了一行（复用既有 key
   `cart.discount_amount`，未新增文案）
 - **无需数据迁移**：目前没有门店库（无历史数据），本机开发库 35 笔全部 `total_amount == final_amount`
   （从未使用会员折扣/促销），改动前后这些行的值完全相同
-- 门禁：`CheckoutConsistencyPolicyTest.allCheckoutPathsUseOriginalTotal`（三处都必须
-  `totalAmount = calculateTotalAmount(...)`、税额基数 `calculateTax(<totalAmount>)`，
-  不得出现 `totalAmount = getFinalAmount()/getPayableAmount()`）；
-  `ReceiptPrinterTest`（3 项，行为级：打折单打优惠行且金额自洽、无优惠不打、金额缺失不抛异常）。
-  两者都做过变异验证：把标准端改回 `getFinalAmount()`、删掉小票优惠行 → 各红 1 项
+- 门禁：
+  - `CheckoutConsistencyPolicyTest.allCheckoutPathsUseOriginalTotal`：三处都必须
+    `totalAmount = calculateTotalAmount(...)`、税额基数必须是 `calculateTax(<finalAmount>)`，
+    不得出现 `totalAmount = getFinalAmount()/getPayableAmount()`，也不得再按原价合计计税
+  - `TransactionApiControllerTest.createStoresOriginalTotalAndTaxesPayableAmount`（**行为级、走真实 API**）：
+    税率 6% + 会员 9 折下单 2×100 → 落库 `total_amount = 200.00`、`final_amount = 180.00`、
+    `tax = 10.80`（按原价会得到 12.00）
+  - `ReceiptPrinterTest`（3 项，行为级：打折单打优惠行且金额自洽、无优惠不打、金额缺失不抛异常）
+  - 均做过变异验证：把标准端改回 `getFinalAmount()`、删掉小票优惠行、把税额基数改回原价 →
+    对应门禁/行为测试各自变红
 
 **退货/库存正确性（v2.6.0 补强）**
 

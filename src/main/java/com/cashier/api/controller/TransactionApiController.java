@@ -151,9 +151,10 @@ public class TransactionApiController {
                 transaction.items.add(saleLine(cartItem));
             }
             transaction.totalAmount = TransactionService.calculateTotalAmount(cartItems);
-            transaction.tax = TransactionService.calculateTax(transaction.totalAmount);
             Promotion promotion = TransactionService.selectBestPromotion(transaction.totalAmount);
             transaction.finalAmount = TransactionService.calculateFinalAmount(cartItems, member, promotion);
+            // 税额按实付金额计（与两个收银台同口径）；价内税，不影响应付金额
+            transaction.tax = TransactionService.calculateTax(transaction.finalAmount);
             transaction.paymentMethod = request.paymentMethod;
             if (member != null) {
                 transaction.memberId = member.id;
