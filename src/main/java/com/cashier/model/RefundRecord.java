@@ -3,6 +3,7 @@ package com.cashier.model;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.util.Date;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 退款记录模型
@@ -10,6 +11,8 @@ import java.util.Date;
 public class RefundRecord {
 
     private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    /** 进程内序号：同一毫秒内多次退款也可能发生，仅靠时间戳+4位随机仍会撞唯一键 */
+    private static final AtomicLong REFUND_NO_SEQ = new AtomicLong();
     
     /**
      * 退款ID
@@ -131,6 +134,8 @@ public class RefundRecord {
      * 生成退款单号
      */
     private static String generateRefundNo() {
-        return "RFD" + System.currentTimeMillis() + String.format("%04d", SECURE_RANDOM.nextInt(10000));
+        return "RFD" + System.currentTimeMillis()
+            + String.format("%04d", REFUND_NO_SEQ.incrementAndGet() % 10000)
+            + String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
     }
 }

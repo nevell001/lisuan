@@ -6,6 +6,7 @@ import com.cashier.util.LoggerFactoryUtil;
 import org.slf4j.Logger;
 
 import java.math.BigDecimal;
+import java.security.SecureRandom;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -17,6 +18,7 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicLong;
 
 /**
  * 支付订单数据访问对象（重构版）
@@ -24,6 +26,10 @@ import java.util.Map;
  */
 public class PaymentDAORefactored extends BaseDAO {
     private static final Logger logger = LoggerFactoryUtil.getLogger(PaymentDAORefactored.class);
+
+    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
+    /** 进程内序号：refund_id 仅用毫秒时间戳会在同毫秒两笔退款时撞主键 */
+    private static final AtomicLong REFUND_ID_SEQ = new AtomicLong();
 
     public void createTable() throws SQLException {
         String sql = """
@@ -125,6 +131,22 @@ public class PaymentDAORefactored extends BaseDAO {
         }
     }
 
+    /**
+     * 在事务内按主键锁定支付单（{@code SELECT ... FOR UPDATE}）。
+     *
+     * <p>并发退款需要先串行化到同一行：拿到行锁后再统计已退金额并预占额度，
+     * 第二个事务必须等第一个提交后才能读取，避免两边读到相同的"已退 0 元"。</p>
+     */
+    public PaymentOrder findByIdForUpdate(Connection conn, String paymentId) throws SQLException {
+        try (PreparedStatement pstmt = conn.prepareStatement(
+            "SELECT * FROM payment_orders WHERE payment_id = ? FOR UPDATE")) {
+            pstmt.setString(1, paymentId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? mapResultSetToPaymentOrder(rs) : null;
+            }
+        }
+    }
+
     public PaymentOrder findByMerchantOrderNo(String merchantOrderNo) throws SQLException {
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement("SELECT * FROM payment_orders WHERE merchant_order_no = ?")) {
@@ -174,6 +196,16 @@ public class PaymentDAORefactored extends BaseDAO {
     public boolean updateStatus(String paymentId, PaymentOrder.PaymentStatus status) throws SQLException {
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement("UPDATE payment_orders SET status = ? WHERE payment_id = ?")) {
+            pstmt.setString(1, status.name());
+            pstmt.setString(2, paymentId);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    public boolean updateStatusWithConnection(Connection conn, String paymentId, PaymentOrder.PaymentStatus status)
+            throws SQLException {
+        try (PreparedStatement pstmt = conn.prepareStatement(
+            "UPDATE payment_orders SET status = ? WHERE payment_id = ?")) {
             pstmt.setString(1, status.name());
             pstmt.setString(2, paymentId);
             return pstmt.executeUpdate() > 0;
@@ -280,6 +312,12 @@ public class PaymentDAORefactored extends BaseDAO {
     }
 
     public boolean insertRefund(RefundRecord record) throws SQLException {
+        try (Connection conn = getConnection()) {
+            return insertRefundWithConnection(conn, record);
+        }
+    }
+
+    public boolean insertRefundWithConnection(Connection conn, RefundRecord record) throws SQLException {
         String sql = """
             INSERT INTO refund_records (
                 refund_id, payment_id, transaction_id, merchant_refund_no, channel_refund_no,
@@ -288,10 +326,11 @@ public class PaymentDAORefactored extends BaseDAO {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
         if (record.refundId == null) {
-            record.refundId = "RFD" + System.currentTimeMillis();
+            record.refundId = "RFD" + System.currentTimeMillis()
+                + String.format("%04d", REFUND_ID_SEQ.incrementAndGet() % 10000)
+                + String.format("%06d", SECURE_RANDOM.nextInt(1_000_000));
         }
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, record.refundId);
             pstmt.setString(2, record.paymentId);
             pstmt.setString(3, record.transactionId);
@@ -325,6 +364,54 @@ public class PaymentDAORefactored extends BaseDAO {
             pstmt.setTimestamp(3, status.isSuccess() ? new Timestamp(System.currentTimeMillis()) : null);
             pstmt.setString(4, refundId);
             return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * 统计某支付单已发生的退款金额（失败/关闭的退款单不计入）。
+     *
+     * <p>部分退款后 {@code payment_orders.paid_amount} 不会减少，
+     * 必须用它来限制累计退款额，否则同一笔支付可以被退超过实付金额。</p>
+     */
+    public BigDecimal sumRefundedAmount(String paymentId) throws SQLException {
+        try (Connection conn = getConnection()) {
+            return sumRefundedAmount(conn, paymentId);
+        }
+    }
+
+    /**
+     * 统计某支付单已发生的退款金额（失败/关闭的退款单不计入），使用调用方事务连接。
+     *
+     * <p>申请中/处理中的退款单也计入，这样并发退款在预占额度后立即互相可见。</p>
+     */
+    public BigDecimal sumRefundedAmount(Connection conn, String paymentId) throws SQLException {
+        String sql = "SELECT COALESCE(SUM(refund_amount), 0) FROM refund_records "
+            + "WHERE payment_id = ? AND status NOT IN ('FAILED', 'CLOSED')";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, paymentId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                BigDecimal total = rs.next() ? rs.getBigDecimal(1) : null;
+                return total != null ? total : BigDecimal.ZERO;
+            }
+        }
+    }
+
+    /**
+     * 统计某支付单**已成功**的退款金额。
+     *
+     * <p>用于判定订单终态：申请中/处理中的退款只是预占额度（防超额），
+     * 不能算作已退款，否则并发场景下订单会被提前标成 REFUNDED。</p>
+     */
+    public BigDecimal sumSettledRefundAmount(String paymentId) throws SQLException {
+        String sql = "SELECT COALESCE(SUM(refund_amount), 0) FROM refund_records "
+            + "WHERE payment_id = ? AND status = 'SUCCESS'";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, paymentId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                BigDecimal total = rs.next() ? rs.getBigDecimal(1) : null;
+                return total != null ? total : BigDecimal.ZERO;
+            }
         }
     }
 

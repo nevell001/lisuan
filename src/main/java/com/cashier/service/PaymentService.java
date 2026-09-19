@@ -247,24 +247,68 @@ public final class PaymentService {
         return true;
     }
 
+    /**
+     * 申请支付退款。
+     *
+     * <p>并发安全分三段，避免"先查后写"导致同一笔支付被退超：</p>
+     * <ol>
+     *   <li><b>事务内预占</b>：{@code SELECT ... FOR UPDATE} 锁定支付单行，统计已退金额后
+     *       以 {@code APPLYING} 状态插入退款单。行锁使并发退款串行化，预占记录又立刻计入
+     *       已退金额，因此第二笔退款只能拿到扣掉预占后的剩余额度。</li>
+     *   <li><b>事务外调渠道</b>：网络调用不占用数据库事务与行锁。</li>
+     *   <li><b>落终态</b>：渠道成功后按"已成功退款合计"决定 PARTIAL_REFUND / REFUNDED；
+     *       渠道失败则把预占标记为 {@code FAILED} 释放额度，异常继续上抛。</li>
+     * </ol>
+     */
     public static RefundRecord applyRefund(String paymentId, BigDecimal refundAmount,
                                            String reason, String operator) throws SQLException {
-        PaymentOrder order = DAOFactory.getInstance().getPaymentDAO().findById(paymentId);
-        if (order == null) throw new IllegalArgumentException("支付订单不存在: " + paymentId);
-        if (!order.status.canRefund()) throw new IllegalStateException("订单状态不允许退款: " + order.status);
         if (refundAmount == null || refundAmount.compareTo(BigDecimal.ZERO) <= 0)
             throw new IllegalArgumentException("退款金额必须大于零");
-        BigDecimal refundable = order.paidAmount != null ? order.paidAmount : order.amount;
-        if (refundAmount.compareTo(refundable) > 0) throw new IllegalArgumentException("退款金额超过已支付金额");
 
         RefundRecord refund = RefundRecord.create(paymentId, refundAmount, reason, operator);
-        refund.transactionId = order.transactionId;
-        refund.originalAmount = refundable;
-        refund.channel = order.channel.name();
-        requireProvider(order.channel).refund(order, refund);
-        DAOFactory.getInstance().getPaymentDAO().insertRefund(refund);
-        DAOFactory.getInstance().getPaymentDAO().updateStatus(paymentId, refundAmount.compareTo(refundable) == 0
-            ? PaymentOrder.PaymentStatus.REFUNDED : PaymentOrder.PaymentStatus.PARTIAL_REFUND);
+        // APPLYING 计入 sumRefundedAmount：预占额度，让并发请求立即看到这笔
+        refund.status = RefundRecord.RefundStatus.APPLYING;
+
+        boolean reserved = DatabaseManager.executeBooleanTransaction(conn -> {
+            PaymentOrder locked = DAOFactory.getInstance().getPaymentDAO().findByIdForUpdate(conn, paymentId);
+            if (locked == null) throw new IllegalArgumentException("支付订单不存在: " + paymentId);
+            if (!locked.status.canRefund()) throw new IllegalStateException("订单状态不允许退款: " + locked.status);
+
+            BigDecimal refundable = locked.paidAmount != null ? locked.paidAmount : locked.amount;
+            BigDecimal alreadyRefunded = DAOFactory.getInstance().getPaymentDAO()
+                .sumRefundedAmount(conn, paymentId);
+            BigDecimal remaining = refundable.subtract(alreadyRefunded);
+            if (refundAmount.compareTo(remaining) > 0)
+                throw new IllegalArgumentException("退款金额超过可退余额（剩余可退 " + remaining + "）");
+
+            refund.transactionId = locked.transactionId;
+            refund.originalAmount = refundable;
+            refund.channel = locked.channel.name();
+            return DAOFactory.getInstance().getPaymentDAO().insertRefundWithConnection(conn, refund);
+        });
+        if (!reserved) {
+            throw new SQLException("退款额度预占失败: " + paymentId);
+        }
+
+        // 渠道退款在事务外执行，避免网络耗时长时间占住行锁
+        PaymentOrder order = DAOFactory.getInstance().getPaymentDAO().findById(paymentId);
+        if (order == null) throw new IllegalArgumentException("支付订单不存在: " + paymentId);
+        try {
+            requireProvider(order.channel).refund(order, refund);
+        } catch (RuntimeException e) {
+            // 渠道失败：释放预占额度，失败退款不得计入已退金额
+            DAOFactory.getInstance().getPaymentDAO().updateRefundStatus(
+                refund.refundId, RefundRecord.RefundStatus.FAILED, null);
+            throw e;
+        }
+
+        DAOFactory.getInstance().getPaymentDAO().updateRefundStatus(
+            refund.refundId, refund.status, refund.channelRefundNo);
+        // 终态只看已成功退款合计：申请中/处理中的预占不算已退
+        BigDecimal settled = DAOFactory.getInstance().getPaymentDAO().sumSettledRefundAmount(paymentId);
+        DAOFactory.getInstance().getPaymentDAO().updateStatus(paymentId,
+            settled.compareTo(refund.originalAmount) >= 0
+                ? PaymentOrder.PaymentStatus.REFUNDED : PaymentOrder.PaymentStatus.PARTIAL_REFUND);
         AuditService.success(operator, "REFUND", "PAYMENT_REFUND",
             "退款单=" + refund.merchantRefundNo + ", 支付单=" + paymentId + ", 金额=" + refundAmount, 1);
         return refund;
