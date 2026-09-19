@@ -231,8 +231,11 @@ public class ExportUtil {
                 windir + "\\Fonts\\simkai.ttf"     // 楷体
             };
         } else {
-            // Linux 系统字体路径（TTC 文件可能有问题，优先使用 TTF）
+            // Linux 系统字体路径（必须选 PDFBox 能嵌入的 TrueType/glyf 字体；
+            // OTF/CFF 字体在 PDF 保存做子集化时会抛 "OTF fonts do not have a glyf table"）
             systemFontPaths = new String[]{
+                "/usr/share/fonts/truetype/wqy/wqy-zenhei.ttc",             // 文泉驿正黑（TrueType 集合）
+                "/usr/share/fonts/truetype/wqy/wqy-microhei.ttc",           // 文泉驿微米黑
                 "/usr/share/fonts/truetype/fonts-ukij-uyghur/UKIJCJK.ttf",  // UKIJ CJK (支持中文和英文)
                 "/usr/share/fonts/truetype/lxgw-wenkai/LXGWWenKai-Regular.ttf",
                 "/usr/share/fonts/truetype/arphic-gkai00mp/gkai00mp.ttf",
@@ -327,6 +330,15 @@ public class ExportUtil {
 
     /**
      * 从 TrueTypeCollection 中选择简体中文子字体并嵌入
+     *
+     * <p>两点约束：</p>
+     * <ul>
+     *   <li>必须使用子集嵌入（{@code embedSubset=true}）：PDFBox 不支持字体集合的整体嵌入，
+     *       {@code false} 会抛 {@code IOException: Full embedding of TrueType font collections not supported}。</li>
+     *   <li>必须跳过没有 {@code glyf} 表的子字体：NotoSansCJK 这类 OTF/CFF 字体在
+     *       {@code PDDocument.save()} 子集化时会抛 {@code UnsupportedOperationException}，
+     *       加载阶段看似成功、保存阶段才失败，跳过才能继续尝试下一个可用字体。</li>
+     * </ul>
      */
     private static PDFont loadFromCollection(PDDocument document, TrueTypeCollection collection)
             throws IOException {
@@ -340,19 +352,22 @@ public class ExportUtil {
             for (String name : names) {
                 try {
                     TrueTypeFont ttf = collection.getFontByName(name);
-                    if (ttf != null) {
-                        return PDType0Font.load(document, ttf, false);
+                    if (ttf != null && isEmbeddable(ttf)) {
+                        return PDType0Font.load(document, ttf, true);
                     }
                 } catch (IOException e) {
                     logger.debug("TTC 子字体 {} 加载失败: {}", name, e.getMessage());
                 }
             }
         }
-        // 兜底：嵌入第一个可用子字体
+        // 兜底：嵌入第一个可嵌入的子字体
         final PDFont[] result = new PDFont[1];
         collection.processAllFonts(ttf -> {
+            if (result[0] != null || !isEmbeddable(ttf)) {
+                return;
+            }
             try {
-                result[0] = PDType0Font.load(document, ttf, false);
+                result[0] = PDType0Font.load(document, ttf, true);
             } catch (IOException e) {
                 logger.debug("TTC 兜底字体加载失败 {}: {}", ttf.getName(), e.getMessage());
             }
@@ -361,6 +376,21 @@ public class ExportUtil {
             return result[0];
         }
         throw new IOException("TTC 字体集合中无可嵌入的子字体");
+    }
+
+    /**
+     * 字体是否可被 PDFBox 嵌入。
+     *
+     * <p>OTF/CFF 字体没有 {@code glyf} 表，子集化时会失败，必须排除。</p>
+     */
+    private static boolean isEmbeddable(TrueTypeFont ttf) {
+        try {
+            return ttf.getGlyph() != null;
+        } catch (IOException | RuntimeException e) {
+            // ttf.getName() 同样会抛 IOException，这里只用异常信息记录
+            logger.debug("字体不可嵌入（无 glyf 表）: {}", e.getMessage());
+            return false;
+        }
     }
 
     /**
