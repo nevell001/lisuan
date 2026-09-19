@@ -166,10 +166,16 @@ public final class AlipayPrecreatePaymentProvider implements PaymentChannelProvi
         ));
     }
 
-    private boolean verifyAlipayResponse(JsonNode root, String responseNode) {
+    /**
+     * 校验支付宝出站响应签名。
+     *
+     * <p>支付宝对每个响应都会签名；缺少 sign 时无法证明响应来自支付宝，
+     * 必须拒绝，否则伪造/中间人返回的网关响应会被直接采信。</p>
+     */
+    boolean verifyAlipayResponse(JsonNode root, String responseNode) {
         String sign = root.path("sign").asText();
-        if (sign == null || sign.isBlank()) {
-            return true;
+        if (PaymentCryptoUtil.isBlank(sign)) {
+            return false;
         }
         PublicKey publicKey = PaymentCryptoUtil.loadPublicKeyFromPem(config.alipayPublicKey);
         return PaymentCryptoUtil.verifySha256WithRsa(root.path(responseNode).toString(), sign, publicKey);

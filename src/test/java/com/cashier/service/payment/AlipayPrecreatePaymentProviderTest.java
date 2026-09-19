@@ -1,6 +1,8 @@
 package com.cashier.service.payment;
 
 import com.cashier.service.PaymentService;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -24,6 +26,7 @@ class AlipayPrecreatePaymentProviderTest {
 
     private static PrivateKey privateKey;
     private static AlipayPrecreatePaymentProvider provider;
+    private static final ObjectMapper MAPPER = new ObjectMapper();
 
     @BeforeAll
     static void setUp() throws Exception {
@@ -112,5 +115,31 @@ class AlipayPrecreatePaymentProviderTest {
 
         assertFalse(provider.verifyNotification(notify));
         assertFalse(provider.verifyNotification(null));
+    }
+
+    @Test
+    @DisplayName("出站响应缺少签名时验签失败（不得放行）")
+    void outboundResponseWithoutSignRejected() {
+        ObjectNode root = MAPPER.createObjectNode();
+        root.putObject("alipay_trade_query_response").put("code", "10000").put("trade_status", "TRADE_SUCCESS");
+
+        // 回归：此前缺 sign 直接 return true，伪造/中间人返回的网关响应会被采信
+        assertFalse(provider.verifyAlipayResponse(root, "alipay_trade_query_response"),
+            "支付宝响应没有签名时无法证明来源，必须拒绝");
+    }
+
+    @Test
+    @DisplayName("出站响应签名合法被接受，响应体被篡改则失败")
+    void outboundResponseSignatureVerified() {
+        ObjectNode root = MAPPER.createObjectNode();
+        root.putObject("alipay_trade_query_response").put("code", "10000").put("trade_status", "TRADE_SUCCESS");
+        root.put("sign", PaymentCryptoUtil.signSha256WithRsa(
+            root.path("alipay_trade_query_response").toString(), privateKey));
+
+        assertTrue(provider.verifyAlipayResponse(root, "alipay_trade_query_response"));
+
+        // 篡改响应体后原签名失效
+        root.putObject("alipay_trade_query_response").put("code", "10000").put("trade_status", "TRADE_CLOSED");
+        assertFalse(provider.verifyAlipayResponse(root, "alipay_trade_query_response"));
     }
 }
