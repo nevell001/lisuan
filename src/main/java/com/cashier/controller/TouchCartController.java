@@ -88,8 +88,9 @@ import java.util.concurrent.atomic.AtomicLong;
  * 自管 {@link ObservableList}&lt;{@link CartItem}&gt; 与库存快照 {@code inventoryMap}，
  * 直接复用主项目 DAO/Service 层完成核心收银闭环。</p>
  *
- * <p>首版范围:分类、商品卡片、购物车增删改、4 种支付、会员查询折扣、结账、打印。
- * 不含挂单、促销、交接班(交接班由 PosModeView 底栏处理)。</p>
+ * <p>这是 {@code cashier} 角色登录后的默认收银界面（{@code CashierSystemFXApplication.switchToPosModeView}），
+ * 覆盖：分类/热销推荐、商品卡片、购物车增删改、会员查询与折扣、促销选优、挂单与取单、
+ * 现金/银行卡/微信/支付宝四种支付、交接班、退出登录、打印小票。</p>
  */
 public class TouchCartController implements CartViewHost {
     private static final Logger logger = LoggerFactoryUtil.getLogger(TouchCartController.class);

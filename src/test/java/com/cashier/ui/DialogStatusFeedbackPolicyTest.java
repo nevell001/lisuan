@@ -46,13 +46,15 @@ class DialogStatusFeedbackPolicyTest {
     }
 
     @Test
-    @DisplayName("POS 模式退出前的购物车警告应同步状态栏")
-    void posModeCartExitWarningUpdatesStatusBar() throws Exception {
+    @DisplayName("触屏收银台退出前的购物车警告应同步状态栏")
+    void posCartExitWarningUpdatesStatusBar() throws Exception {
         String controller = Files.readString(Path.of(
-            "src/main/java/com/cashier/controller/PosModeController.java"
+            "src/main/java/com/cashier/controller/TouchCartController.java"
         ));
 
-        assertTrue(controller.contains("StatusBarManager.updateWarning(message)"));
-        assertTrue(controller.contains("runtime.cart_exit_confirm"));
+        assertTrue(controller.contains("StatusBarManager.updateWarning(msg)"),
+            "触屏收银台 warn() 应把警告同步到状态栏");
+        assertTrue(controller.contains("runtime.cart_exit_confirm"),
+            "退出确认应使用带商品丢失提示的文案 key");
     }
 }

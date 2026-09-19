@@ -5,7 +5,6 @@ import com.cashier.constant.SystemPropertyKeys;
 
 import com.cashier.controller.LoginController;
 import com.cashier.controller.MainController;
-import com.cashier.controller.PosModeController;
 import com.cashier.constant.FXConstants;
 import com.cashier.i18n.I18nKeys;
 import com.cashier.i18n.I18nManager;
@@ -713,8 +712,6 @@ public class CashierSystemFXApplication extends Application {
         try {
             if (currentController instanceof com.cashier.controller.MainController) {
                 ((com.cashier.controller.MainController) currentController).cleanup();
-            } else if (currentController instanceof com.cashier.controller.PosModeController) {
-                ((com.cashier.controller.PosModeController) currentController).cleanup();
             } else if (currentController instanceof com.cashier.controller.TouchCartController) {
                 ((com.cashier.controller.TouchCartController) currentController).cleanup();
             }

@@ -129,7 +129,7 @@ install.bat            # Windows
 ### Layer Structure
 
 ```
-Controller (35 classes) → Service (14 classes) → DAO (29 instance DAOs) → Database
+Controller (34 classes) → Service (14 classes) → DAO (29 instance DAOs) → Database
         ↓                          ↓              ↓
      FXML Views              Business Logic    Data Access
 
@@ -268,14 +268,18 @@ productDAO.update(product);
 
 ### User Roles & Views
 
-- **admin**: Full access → MainView (full interface)
-- **cashier**: POS operations → CartView (standard), TouchCartView (touch-optimized), or PosModeView (simplified)
-- **finance**: Reports and statistics → MainView
+- **admin**: 完整主界面 `MainView`（全部功能）
+- **finance**: 完整主界面 `MainView`（报表与统计）
+- **cashier**: 登录后**直接进触屏收银台** `TouchCartView`（`CashierSystemFXApplication.switchToPosModeView`），
+  不经完整主界面
+
+标准收银台 `CartView` 只能从完整主界面进入（`MainController.handleCart`，导航栏"收银台"按钮）。
+没有"POS 模式"设置项，用哪套收银界面**完全由角色决定**。
 
 **POS Interface Variants:**
-- `CartView` - Standard POS with keyboard shortcuts
+- `CartView` - Standard POS with keyboard shortcuts（`CartController`，管理员/财务在完整界面里打开）
 - `TouchCartView` - Touch-optimized POS with larger buttons, one-tap language switching
-- `PosModeView` - Simplified POS mode for cashiers
+  （`TouchCartController`，`cashier` 角色登录后的默认界面）
 
 ### i18n (Internationalization)
 
@@ -850,9 +854,26 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   - 默认回退包 `messages.properties` 语言不统一：`runtime.*` 是中文、部分 `tpos.*` 是英文
     （新增的 `tpos.cash.*` 跟邻居保持一致用了英文）。只有在**不支持的语言环境**下才会落到
     这个包，届时界面会中英混排；不影响 zh_CN/zh_TW/en 三种正式语言
-- 已删除的死代码：`TouchCartController.filterByKeyword` / `containsIgnoreCase`
-  （关键字搜索早已改走 `productDAO.search` 的 SQL，这两个内存过滤方法无任何调用方；
-  `InventoryController` 里另有一份仍在使用，未动）
+- 已删除的死代码：
+  - `TouchCartController.filterByKeyword` / `containsIgnoreCase`（关键字搜索早已改走
+    `productDAO.search` 的 SQL，这两个内存过滤方法无任何调用方；
+    `InventoryController` 里另有一份仍在使用，未动）
+  - `PosModeView.fxml` + `PosModeController`：整套「POS 模式外壳」早已被
+    `switchToPosModeView` 直接加载 `TouchCartView.fxml` 取代，没有任何 Java 代码加载该视图；
+    连带删除 `CashierSystemFXApplication` 里 `instanceof PosModeController` 的清理分支，
+    并修正 `TouchCartController` 类注释（原注释称触屏台"不含挂单/促销/交接班，由 PosModeView 底栏
+    处理"，与该类实际能力完全相反）与 `CartViewHost` 注释
+  - 新门禁 `ViewWiringPolicyTest`（双向）：视图文件必须有人加载（或登记在 `KNOWN_UNWIRED`）、
+    Java 里写到的视图路径必须存在。它同时暴露出 `PasswordResetView.fxml` +
+    `PasswordResetController` 也是**未接线**的——那是"首次登录强制改密"（`users.force_password_change`
+    目前没有 UI 入口）的待建功能，不是死代码，已登记白名单而非删除
+  - 清理连带发现（**待修**）：触屏收银台的底部状态栏只有品牌/班次/日期/时间，**没有状态文本控件**，
+    也不绑定 `StatusBarManager.statusLevelProperty()`（原先唯一的绑定者在已删除的 PosModeController
+    里，而它从未被加载）。所以触屏版里 `StatusBarManager.updateSuccess/updateError` 这类提示
+    （如"商品加载失败"、扫码添加成功）**在界面上看不到**——只有 `warn()`/`showInfo()` 里附带弹窗的
+    提示可见。修法：给 `TouchCartView` 底栏加一个状态标签并在 `TouchCartController` 里绑定级别样式
+    （照 `MainController.applyStatusLevelStyle` 抄），补上后 `StatusBarSeverityPolicyTest`
+    应同时断言触屏控制器
 
 **热销榜统计口径（v2.6.0 补强）**
 

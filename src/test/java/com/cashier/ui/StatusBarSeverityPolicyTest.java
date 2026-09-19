@@ -30,17 +30,16 @@ class StatusBarSeverityPolicyTest {
     }
 
     @Test
-    @DisplayName("主窗口和 POS 模式状态栏应按级别切换颜色类")
+    @DisplayName("主窗口状态栏应按级别切换颜色类")
     void shellControllersApplySeverityStyleClasses() throws Exception {
         String mainController = Files.readString(Path.of(
             "src/main/java/com/cashier/controller/MainController.java"
         ));
-        String posModeController = Files.readString(Path.of(
-            "src/main/java/com/cashier/controller/PosModeController.java"
-        ));
 
         assertSeverityBinding(mainController);
-        assertSeverityBinding(posModeController);
+        // 注：触屏收银台（TouchCartView）底部没有状态栏文本控件，也不绑定 statusLevelProperty，
+        // 因此 StatusBarManager 的级别提示在触屏版界面上不显示（只有弹窗类提示可见）。
+        // 详见 CLAUDE.md 的待修项；补上状态栏后应在此处同时断言 TouchCartController。
     }
 
     @Test
@@ -91,7 +90,6 @@ class StatusBarSeverityPolicyTest {
         List<String> controllerFiles = List.of(
             "src/main/java/com/cashier/controller/CartController.java",
             "src/main/java/com/cashier/controller/MainController.java",
-            "src/main/java/com/cashier/controller/PosModeController.java",
             "src/main/java/com/cashier/controller/SettingsController.java",
             "src/main/java/com/cashier/controller/ShiftController.java",
             "src/main/java/com/cashier/controller/PurchaseOrderController.java",

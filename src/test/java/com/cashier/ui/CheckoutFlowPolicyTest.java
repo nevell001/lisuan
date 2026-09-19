@@ -17,14 +17,14 @@ class CheckoutFlowPolicyTest {
         String mainController = Files.readString(Path.of(
             "src/main/java/com/cashier/controller/MainController.java"
         ));
-        String posModeController = Files.readString(Path.of(
-            "src/main/java/com/cashier/controller/PosModeController.java"
+        String application = Files.readString(Path.of(
+            "src/main/java/com/cashier/CashierSystemFXApplication.java"
         ));
 
         assertFalse(mainController.contains("CheckoutView.fxml"));
         assertTrue(mainController.contains("/com/cashier/view/CartView.fxml"));
-        // cashier 角色现在使用触屏版 TouchCartView(同样走事务化流程)
-        assertTrue(posModeController.contains("/com/cashier/view/TouchCartView.fxml"));
+        // cashier 角色登录后直接进触屏版 TouchCartView(同样走事务化流程)
+        assertTrue(application.contains("/com/cashier/view/TouchCartView.fxml"));
         assertFalse(Files.exists(Path.of(
             "src/main/java/com/cashier/controller/CheckoutController.java"
         )));

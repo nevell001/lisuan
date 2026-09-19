@@ -43,13 +43,13 @@ class SuccessStatusLevelPolicyTest {
     }
 
     @Test
-    @DisplayName("POS 模式加载和交接班完成应显式使用成功状态")
-    void posModeSuccessActionsUseSuccessStatus() throws Exception {
+    @DisplayName("触屏收银台交接班完成应显式使用成功状态")
+    void posSuccessActionsUseSuccessStatus() throws Exception {
         String controller = Files.readString(Path.of(
-            "src/main/java/com/cashier/controller/PosModeController.java"
+            "src/main/java/com/cashier/controller/TouchCartController.java"
         ));
 
-        assertTrue(controller.contains("StatusBarManager.updateSuccess(\"收银台已加载\")"));
+        assertTrue(controller.contains("StatusBarManager.updateSuccess(\"交接班完成，正在退出…\")"));
         assertTrue(controller.contains("StatusBarManager.updateSuccess(\"交接班操作完成\")"));
     }
 }
