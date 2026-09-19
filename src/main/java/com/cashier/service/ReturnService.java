@@ -243,7 +243,7 @@ public class ReturnService {
     }
 
     /** 退款方式是否为现金（兼容 POS 落库的中文与接口写入的代码形式）。 */
-    static boolean isCashPaymentMethod(String paymentMethod) {
+    public static boolean isCashPaymentMethod(String paymentMethod) {
         return "CASH".equals(com.cashier.util.I18nUiUtils.canonicalPaymentMethod(paymentMethod));
     }
 

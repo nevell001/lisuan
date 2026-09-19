@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 
@@ -88,8 +89,8 @@ class TransactionApiControllerTest extends DatabaseTestBase {
     }
 
     @Test
-    @DisplayName("API 退款退回会员余额、冲减积分、还原库存，且不能重复退款")
-    void refundCreditsBalanceReversesPointsAndRestoresStock() throws Exception {
+    @DisplayName("现金单 API 退款不退会员余额、冲减积分、还原库存，且不能重复退款")
+    void cashRefundDoesNotCreditMemberBalance() throws Exception {
         Product product = insertProduct("API退款商品", "APIREFUND001", new BigDecimal("10.00"), 50);
         Member member = insertMember("13900000002");
 
@@ -115,7 +116,8 @@ class TransactionApiControllerTest extends DatabaseTestBase {
 
         assertEquals(HttpStatus.OK, refundCtx.status);
         Member afterRefund = DAOFactory.getInstance().getMemberDAO().findById(member.id);
-        assertAmountEquals(new BigDecimal("1020.00"), afterRefund.balance);
+        // 现金退款退的是现金，不能再给会员加一笔可消费余额（否则等于退两次）
+        assertAmountEquals(new BigDecimal("1000.00"), afterRefund.balance);
         assertAmountEquals(BigDecimal.ZERO, afterRefund.points);
         assertEquals(50, DAOFactory.getInstance().getProductDAO().findById(product.id).quantity);
         assertEquals("REFUNDED", transactionDAO.findById(transactionId).status);
@@ -126,7 +128,93 @@ class TransactionApiControllerTest extends DatabaseTestBase {
             .withPathParam("id", transactionId);
         TransactionApiController.refund(secondRefund.context);
         assertEquals(HttpStatus.BAD_REQUEST, secondRefund.status);
-        assertAmountEquals(new BigDecimal("1020.00"), DAOFactory.getInstance().getMemberDAO().findById(member.id).balance);
+        assertAmountEquals(new BigDecimal("1000.00"), DAOFactory.getInstance().getMemberDAO().findById(member.id).balance);
+    }
+
+    @Test
+    @DisplayName("非现金单 API 退款退回会员余额")
+    void nonCashRefundCreditsMemberBalance() throws Exception {
+        Product product = insertProduct("API微信退款商品", "APIREFUND002", new BigDecimal("10.00"), 50);
+        Member member = insertMember("13900000003");
+
+        TestContext saleCtx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions")
+            .withBody(createRequest(product.id, 2, "微信", member.phone));
+        TransactionApiController.create(saleCtx.context);
+        assertEquals(HttpStatus.CREATED, saleCtx.status);
+        String transactionId = (String) response(saleCtx).get("transactionId");
+
+        TestContext refundCtx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions/" + transactionId + "/refund")
+            .withPathParam("id", transactionId);
+        TransactionApiController.refund(refundCtx.context);
+
+        assertEquals(HttpStatus.OK, refundCtx.status);
+        // 非现金单退款应退回会员余额（1000 + 20）
+        assertAmountEquals(new BigDecimal("1020.00"),
+            DAOFactory.getInstance().getMemberDAO().findById(member.id).balance);
+    }
+
+    @Test
+    @DisplayName("会员余额支付扣减余额，退款退回余额（不误判为现金）")
+    void memberBalancePaymentDebitsAndRefundsBalance() throws Exception {
+        Product product = insertProduct("API余额支付商品", "APIBALANCE001", new BigDecimal("10.00"), 50);
+        Member member = insertMember("13900000005");
+
+        // 用英文文案支付：此前只有中文文案才会扣余额，导致收款却不扣款
+        TestContext saleCtx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions")
+            .withBody(createRequest(product.id, 2, "Member Balance", member.phone));
+        TransactionApiController.create(saleCtx.context);
+        assertEquals(HttpStatus.CREATED, saleCtx.status);
+        String transactionId = (String) response(saleCtx).get("transactionId");
+        assertAmountEquals(new BigDecimal("980.00"),
+            DAOFactory.getInstance().getMemberDAO().findById(member.id).balance);
+
+        TestContext refundCtx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions/" + transactionId + "/refund")
+            .withPathParam("id", transactionId);
+        TransactionApiController.refund(refundCtx.context);
+
+        assertEquals(HttpStatus.OK, refundCtx.status);
+        // 余额支付退款必须退回余额，而不是当作现金退款
+        assertAmountEquals(new BigDecimal("1000.00"),
+            DAOFactory.getInstance().getMemberDAO().findById(member.id).balance);
+    }
+
+    @Test
+    @DisplayName("桌面端已有退货记录的交易不允许再走 API 退款")
+    void refundRejectedWhenReturnOrderAlreadyExists() throws Exception {
+        Product product = insertProduct("API重复退款商品", "APIREFUND003", new BigDecimal("10.00"), 50);
+        Member member = insertMember("13900000004");
+
+        TestContext saleCtx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions")
+            .withBody(createRequest(product.id, 2, "现金", member.phone));
+        TransactionApiController.create(saleCtx.context);
+        String transactionId = (String) response(saleCtx).get("transactionId");
+
+        // 模拟桌面退货流程：只建退货单，不改 transactions.status
+        ReturnOrder existing = new ReturnOrder();
+        existing.returnOrderId = DAOFactory.getInstance().getReturnOrderDAO().generateNextReturnOrderId();
+        existing.originalTransactionId = transactionId;
+        existing.returnDate = Instant.now();
+        existing.totalAmount = new BigDecimal("20.00");
+        existing.status = "COMPLETED";
+        existing.operatorName = "操作员";
+        assertTrue(DAOFactory.getInstance().getReturnOrderDAO().insert(existing));
+
+        TestContext refundCtx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions/" + transactionId + "/refund")
+            .withPathParam("id", transactionId);
+        TransactionApiController.refund(refundCtx.context);
+
+        assertEquals(HttpStatus.BAD_REQUEST, refundCtx.status);
+        // 交易状态、库存、余额都不得被二次退款改动
+        assertEquals("NORMAL", transactionDAO.findById(transactionId).status);
+        assertEquals(48, DAOFactory.getInstance().getProductDAO().findById(product.id).quantity);
+        assertAmountEquals(new BigDecimal("1000.00"),
+            DAOFactory.getInstance().getMemberDAO().findById(member.id).balance);
     }
 
     private static TransactionApiController.TransactionRequest createRequest(
@@ -221,6 +309,43 @@ class TransactionApiControllerTest extends DatabaseTestBase {
 
         assertEquals(HttpStatus.OK, ctx.status);
         assertTrue((Integer) response(ctx).get("total") >= 1);
+    }
+
+    @Test
+    @DisplayName("带日期筛选时 limit 生效，不返回整段交易")
+    void listByDateRangeRespectsLimit() throws Exception {
+        insertTransaction("T-LIM-001");
+        insertTransaction("T-LIM-002");
+        insertTransaction("T-LIM-003");
+
+        TestContext ctx = new TestContext().withRequest(HandlerType.GET, "/api/transactions")
+            .withQueryParam("startDate", "2026-08-06")
+            .withQueryParam("endDate", "2026-08-06")
+            .withQueryParam("limit", "2");
+        TransactionApiController.list(ctx.context);
+
+        assertEquals(HttpStatus.OK, ctx.status);
+        assertEquals(2, (Integer) response(ctx).get("total"));
+        assertEquals(2, ((List<?>) response(ctx).get("data")).size());
+    }
+
+    @Test
+    @DisplayName("按支付方式代码筛选能匹配落库的中文")
+    void listByPaymentMethodMatchesCanonicalForm() throws Exception {
+        insertTransaction("T-PAY-CANON-001"); // 落库为「现金」
+
+        TestContext ctx = new TestContext().withRequest(HandlerType.GET, "/api/transactions")
+            .withQueryParam("paymentMethod", "CASH");
+        TransactionApiController.list(ctx.context);
+
+        assertEquals(HttpStatus.OK, ctx.status);
+        assertEquals(1, (Integer) response(ctx).get("total"));
+
+        // 反向：其它支付方式不应命中现金单
+        TestContext wechat = new TestContext().withRequest(HandlerType.GET, "/api/transactions")
+            .withQueryParam("paymentMethod", "WECHAT");
+        TransactionApiController.list(wechat.context);
+        assertEquals(0, (Integer) response(wechat).get("total"));
     }
 
     @Test

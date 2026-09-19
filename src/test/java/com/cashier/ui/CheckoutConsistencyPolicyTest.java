@@ -80,10 +80,13 @@ class CheckoutConsistencyPolicyTest {
     void paymentMethodIsComparedAfterNormalization() throws Exception {
         String transactionController = readMainSource("controller/TransactionController.java");
         String transactionDAO = readMainSource("dao/TransactionDAORefactored.java");
+        String transactionApi = readMainSource("api/controller/TransactionApiController.java");
 
         assertTrue(transactionController.contains("canonicalPaymentMethod"),
             "交易列表筛选必须归一化后再比较（历史数据存中文，下拉框用代码）");
         assertTrue(transactionDAO.contains("IN ('现金', 'CASH')"),
             "现金笔数统计必须同时匹配中文落库值与代码形式");
+        assertTrue(transactionApi.contains("canonicalPaymentMethod"),
+            "REST 交易列表筛选同样必须归一化后再比较（否则 ?paymentMethod=CASH 查不到「现金」）");
     }
 }

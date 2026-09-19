@@ -45,7 +45,7 @@ public class TransactionApiController {
             int limit = Math.max(1, Math.min(requestedLimit, MAX_TRANSACTION_LIST_LIMIT));
 
             List<Transaction> transactions = hasDateFilter(startDate, endDate)
-                ? DAOFactory.getInstance().getTransactionDAO().findByDateRange(toStartDateTime(startDate), toEndDateTime(endDate))
+                ? DAOFactory.getInstance().getTransactionDAO().findByDateRange(toStartDateTime(startDate), toEndDateTime(endDate), limit)
                 : DAOFactory.getInstance().getTransactionDAO().findRecent(limit);
             
             // 按条件筛选
@@ -220,7 +220,7 @@ public class TransactionApiController {
             String transactionId = ctx.pathParam("id");
             Transaction transaction = DAOFactory.getInstance().getTransactionDAO().findById(transactionId);
 
-            if (!validateRefundRequest(ctx, transaction)) {
+            if (!validateRefundRequest(ctx, transactionId, transaction)) {
                 return;
             }
 
@@ -241,7 +241,7 @@ public class TransactionApiController {
         }
     }
 
-    private static boolean validateRefundRequest(Context ctx, Transaction transaction) {
+    private static boolean validateRefundRequest(Context ctx, String transactionId, Transaction transaction) {
         if (transaction == null) {
             ctx.status(HttpStatus.NOT_FOUND)
                .json(Map.of("success", false, "message", "交易不存在"));
@@ -252,12 +252,24 @@ public class TransactionApiController {
                .json(Map.of("success", false, "message", "该交易已退款"));
             return false;
         }
+        // 桌面退货流程不写 transactions.status，必须显式检查已有退货单，否则同一单会被退两次
+        if (!DAOFactory.getInstance().getReturnOrderDAO()
+                .findByOriginalTransactionId(transactionId).isEmpty()) {
+            ctx.status(HttpStatus.BAD_REQUEST)
+               .json(Map.of("success", false, "message", "该交易已有退货记录，不能重复退款"));
+            return false;
+        }
         return true;
     }
 
     private static boolean processRefundTransaction(Connection conn, String transactionId, Transaction transaction)
             throws SQLException {
         try {
+            // 原子抢占退款标记：并发/重复请求只有一次能成功，其余直接失败
+            if (!DAOFactory.getInstance().getTransactionDAO().claimRefundWithConnection(conn, transactionId)) {
+                logger.warn("退款抢占失败，交易已被其他请求退款: {}", transactionId);
+                return false;
+            }
             Member member = resolveMemberByPhone(conn, transaction.memberPhone);
             ReturnOrder returnOrder = createRefundReturnOrder(conn, transactionId, transaction, member);
             if (!DAOFactory.getInstance().getReturnOrderDAO().insertWithConnection(conn, returnOrder)) {
@@ -267,7 +279,6 @@ public class TransactionApiController {
                 return false;
             }
             applyRefundToMember(conn, member, transaction, returnOrder);
-            DAOFactory.getInstance().getTransactionDAO().updateStatusWithConnection(conn, transactionId, "REFUNDED");
             return true;
         } catch (SQLException e) {
             logger.error("退款事务执行失败", e);
@@ -276,10 +287,11 @@ public class TransactionApiController {
     }
 
     /**
-     * 退款落会员账：余额退回整单实付 + 冲减本单积分 + 重算等级。
+     * 退款落会员账：非现金单退回余额 + 冲减本单积分 + 重算等级。
      *
-     * <p>此前 REST 退款只还原库存、不退钱也不正确冲减积分，与
-     * {@code ReturnService.completeReturnOrder} 的口径不一致。</p>
+     * <p>现金退款不退会员余额（否则顾客既拿现金又得多一笔可消费余额），
+     * 只写 {@code RETURN_REFUND_CASH} 操作日志留痕，与
+     * {@code ReturnService.completeReturnOrder} 的退款口径一致。</p>
      */
     private static void applyRefundToMember(Connection conn, Member member, Transaction transaction,
                                             ReturnOrder returnOrder) throws SQLException {
@@ -294,7 +306,10 @@ public class TransactionApiController {
         BigDecimal updatedPoints = member.getPoints().subtract(earnedPoints).max(BigDecimal.ZERO);
         String level = MemberService.calculateLevel(updatedPoints);
 
-        member.balance = member.getBalance().add(refundAmount);
+        boolean cashRefund = ReturnService.isCashPaymentMethod(returnOrder.paymentMethod);
+        if (!cashRefund) {
+            member.balance = member.getBalance().add(refundAmount);
+        }
         member.points = updatedPoints;
         member.level = level;
         member.discount = MemberService.getDiscountByLevelDecimal(level);
@@ -302,6 +317,21 @@ public class TransactionApiController {
 
         if (!DAOFactory.getInstance().getMemberDAO().updateWithConnection(conn, member)) {
             throw new SQLException(I18nManager.getInstance().get("service.member_update_failed"));
+        }
+
+        if (cashRefund) {
+            OperationLog log = new OperationLog();
+            log.username = returnOrder.operatorName;
+            log.operation = "RETURN_REFUND_CASH";
+            log.details = String.format("现金退款: %s, 金额: %.2f (原交易 %s)",
+                returnOrder.returnOrderId, refundAmount, returnOrder.originalTransactionId);
+            log.ipAddress = "api";
+            log.timestamp = java.time.Instant.now();
+            log.category = "REFUND";
+            log.result = "SUCCESS";
+            log.affectedRecords = 1;
+            DAOFactory.getInstance().getOperationLogDAO().insertWithConnection(conn, log);
+            return;
         }
 
         RechargeRecord record = new RechargeRecord();
@@ -400,11 +430,14 @@ public class TransactionApiController {
      * 映射支付方式到退款方式
      */
     private static String mapPaymentMethodToRefund(String paymentMethod) {
-        if (paymentMethod == null) return "CASH";
-        if (paymentMethod.contains("微信")) return "WECHAT";
-        if (paymentMethod.contains("支付宝")) return "ALIPAY";
-        if (paymentMethod.contains("银行卡") || paymentMethod.contains("刷卡")) return "CARD";
-        return "CASH";
+        String canonical = com.cashier.util.I18nUiUtils.canonicalPaymentMethod(paymentMethod);
+        if (canonical == null) return "CASH";
+        // 非现金渠道按代码原样落库，退款时才能正确区分是否退会员余额；
+        // 会员余额支付退款也必须退余额（不能落成 CASH）
+        return switch (canonical) {
+            case "WECHAT", "ALIPAY", "CARD", "MEMBER_BALANCE" -> canonical;
+            default -> "CASH";
+        };
     }
     
     /**
@@ -442,16 +475,22 @@ public class TransactionApiController {
     }
     
     /**
-     * 筛选交易
+     * 筛选交易。
+     *
+     * <p>支付方式在库里既有本地化文案（「现金」）也有代码（{@code CASH}），
+     * 必须先归一化再比较，否则按代码筛选永远为空、按中文又漏掉代码形式的记录。</p>
      */
     private static List<Transaction> filterTransactions(List<Transaction> transactions, String paymentMethod) {
+        String target = com.cashier.util.I18nUiUtils.canonicalPaymentMethod(paymentMethod);
         List<Transaction> result = new ArrayList<>();
         
         for (Transaction t : transactions) {
-            if (t.paymentMethod == null || !t.paymentMethod.contains(paymentMethod)) {
+            if (t.paymentMethod == null || target == null) {
                 continue;
             }
-            result.add(t);
+            if (target.equals(com.cashier.util.I18nUiUtils.canonicalPaymentMethod(t.paymentMethod))) {
+                result.add(t);
+            }
         }
         
         return result;

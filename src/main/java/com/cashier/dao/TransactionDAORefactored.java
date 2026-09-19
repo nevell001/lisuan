@@ -157,6 +157,32 @@ public class TransactionDAORefactored extends BaseDAO {
         }
     }
 
+    /**
+     * 按日期范围查询交易并限制条数。
+     *
+     * <p>limit 作用在交易主表的子查询上（与 {@link #findRecent(int)} 同理），
+     * 否则 JOIN transaction_items 后 LIMIT 会按明细行截断，返回的交易条数少于 limit。</p>
+     */
+    public List<Transaction> findByDateRange(String startDate, String endDate, int limit) throws SQLException {
+        if (limit < 1) {
+            return List.of();
+        }
+        String sql = JOIN_SELECT +
+            "FROM (SELECT transaction_id, timestamp, total_amount, tax, final_amount, payment_method, " +
+            "member_phone, operator_username, operator_name, status FROM transactions " +
+            "WHERE timestamp BETWEEN ? AND ? ORDER BY timestamp DESC LIMIT ?) t " +
+            "LEFT JOIN users u ON t.operator_username = u.username " +
+            "LEFT JOIN transaction_items ti ON t.transaction_id = ti.transaction_id " +
+            "LEFT JOIN products p ON ti.product_id = p.id ORDER BY t.timestamp DESC";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, startDate);
+            pstmt.setString(2, endDate);
+            pstmt.setInt(3, limit);
+            return readJoinedTransactions(pstmt.executeQuery());
+        }
+    }
+
     public List<Transaction> findByPaymentMethod(String paymentMethod) throws SQLException {
         String sql = JOIN_SELECT +
             "FROM transactions t LEFT JOIN users u ON t.operator_username = u.username " +
@@ -330,6 +356,20 @@ public class TransactionDAORefactored extends BaseDAO {
             "UPDATE transactions SET status = ? WHERE transaction_id = ?")) {
             pstmt.setString(1, status);
             pstmt.setString(2, transactionId);
+            return pstmt.executeUpdate() > 0;
+        }
+    }
+
+    /**
+     * 原子抢占退款标记：仅当交易当前不是 REFUNDED 时才置为 REFUNDED。
+     *
+     * <p>用于退款幂等——并发或重复的退款请求只有一次能更新到 1 行，
+     * 其余返回 false，避免同一笔交易被重复退款。</p>
+     */
+    public boolean claimRefundWithConnection(Connection conn, String transactionId) throws SQLException {
+        try (PreparedStatement pstmt = conn.prepareStatement(
+            "UPDATE transactions SET status = 'REFUNDED' WHERE transaction_id = ? AND status <> 'REFUNDED'")) {
+            pstmt.setString(1, transactionId);
             return pstmt.executeUpdate() > 0;
         }
     }
