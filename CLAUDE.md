@@ -815,27 +815,29 @@ When working on files that still use the old `ProductDAO`, consider migrating th
 
 ## Known Issues
 
-### Linux PDF 导出需要 TrueType 中文字体
+### PDF 中文字体：已内置 TrueType 字体，不再依赖系统字体
 
-`ExportUtil` 生成 PDF 时会嵌入一个中文字体，而 PDFBox 只能嵌入 **TrueType(glyf)** 字体：
+PDFBox 只能嵌入 **TrueType(glyf)** 字体，而 JavaFX 用的字体可以是 OTF/CFF：
 
-- 项目内置的 `src/main/resources/fonts/NotoSansSC-Regular.ttc` 是 **OTF/CFF**（子字体名形如
-  `NotoSansCJKsc-Regular`），没有 `glyf` 表。PDFBox 既不能整体嵌入字体集合
-  （`IOException: Full embedding of TrueType font collections not supported`），
-  子集化时也会抛 `UnsupportedOperationException: OTF fonts do not have a glyf table`。
-  **该内置字体不能用于 PDF 导出**。
-- macOS / Windows 会先命中系统 TrueType 中文字体（如 `Arial Unicode.ttf`、`msyh.ttc`），
-  问题被掩盖；Linux（含 GitHub Actions 的 Ubuntu runner）默认不含中文字体，回退到内置 OTF
-  后失败，报 `无法加载中文字体，请安装中文字体或检查字体文件`。
-- 已做的加固：`ExportUtil.loadFromCollection` 改用 `embedSubset=true`（字体集合不支持整体嵌入）；
-  `isEmbeddable()` 跳过没有 `glyf` 表的候选；`canRender()` 跳过缺少数字/中文覆盖的候选
-  —— 只校验可嵌入还不够，`Droid Sans Fallback` 这类**只有 CJK 字形、没有数字**的字体能嵌入，
-  但渲染金额/数量时会抛 `IllegalArgumentException: No glyph for U+0031 (1)`。
-- **部署到 Linux 时必须保证系统存在"可嵌入且覆盖数字+中文"的 TrueType 中文字体**。
-  CI 见 `.github/workflows/build.yaml`：安装 `fonts-arphic-uming`
-  （`/usr/share/fonts/truetype/arphic/uming.ttc`，AR PL UMing，TrueType，拉丁+中文全覆盖，
-  已实测可嵌入并 `save()` 成功），该路径在 `ExportUtil` 的 Linux 候选列表中排第一。
-- 若要彻底摆脱对系统字体的依赖，应改为**内置一个 TrueType 中文字体**（尚未做，属产品决策）。
+- `src/main/resources/fonts/NotoSansSC-Regular.ttc` / `-Bold.ttc` 实际是 **Noto Sans CJK 的
+  OTF/CFF 版本**（子字体名形如 `NotoSansCJKsc-Regular`），没有 `glyf` 表：
+  整体嵌入抛 `IOException: Full embedding of TrueType font collections not supported`，
+  子集化在 `PDDocument.save()` 时抛 `UnsupportedOperationException: OTF fonts do not have a glyf table`。
+  **它们只能给 JavaFX 界面用，不能用于 PDF 导出**。
+- **已内置** `src/main/resources/fonts/NotoSansSC-Regular.ttf`（约 10MB，TrueType，
+  SIL OFL 1.1，许可证见同目录 `OFL-NotoSansSC.txt`），PDF 导出不再依赖系统字体，
+  Linux（含 CI 的 Ubuntu runner）无中文字体时也能正常导出。CI 已不再安装系统中文字体，
+  这同时构成"无系统字体仍可用"的回归验证。
+- 该 `.ttf` 由 Google Fonts 的**变量字体** `NotoSansSC[wght].ttf` 固化而来：
+  其 `fvar` 的 `wght` **默认值是 100（Thin）**，必须用
+  `fonttools varLib.instancer ... wght=400` 生成静态 Regular；来源与复现命令见
+  `src/main/resources/fonts/README.md`。
+- 代码侧加固（`ExportUtil`）：候选顺序为 系统字体 → 文件系统 → 项目资源，其中 `.ttf` 排在
+  `.ttc` 之前；`isEmbeddable()` 跳过没有 `glyf` 表的候选；`canRender()` 跳过缺少
+  数字/中文覆盖的候选（`Droid Sans Fallback` 只有 CJK 字形，渲染数字会抛
+  `No glyph for U+0031`）。
+- **替换字体时**：必须是 TrueType(glyf)、覆盖数字与中文、许可证允许嵌入与再分发，
+  并同步更新 `fonts/README.md` 与许可证文件。
 
 ### JavaFX Class Loading Warning (macOS + Homebrew JDK)
 When running tests on macOS with Homebrew's OpenJDK 17, you may see:
