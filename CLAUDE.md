@@ -406,7 +406,7 @@ public class YourControllerUITest extends DatabaseTestBase {
 
 **UI Rendering:**
 - Use `UIOptimizer.runInBackground(...)`（查库→刷新界面）或 `UIOptimizer.loadAsync(Task, ...)` for background data loading
-- Virtualize large lists with `UIOptimizer.virtualize()`
+- Virtualize large lists with `UIOptimizer.enableTableViewVirtualization(TableView)`（或 `createVirtualListView(int)`）
 
 **Query Optimization:**
 - Batch queries with `QueryOptimizer.batchQuery()`
@@ -456,6 +456,21 @@ String randomCode = String.format("%04d", SECURE_RANDOM.nextInt(10000));
 
 ### Password Storage
 All passwords are hashed using BCrypt via `PasswordUtil`. Never store plaintext passwords.
+
+### 历史明文口令的处置决定（2026-09 审计）
+
+早期提交里存在明文数据库口令（`config/database.properties`、`docker/docker-init.sh`、
+`install.sh` 等，文件已删除但仍在 git 历史中）。当时的处置结论：
+
+- **已核对**：这些历史口令与当前 `.env` / `config/*.properties` 里的凭据**逐个比对均不相等**，
+  即本机配置层面已作废；但本机没有可连的 MySQL，无法验证它们对其它环境是否仍有效。
+- **不重写历史**：仓库已公开且存在 fork，泄露已不可收回，`git filter-repo` 重写只会破坏
+  现有克隆/PR（且 GitHub 侧每 3 小时被 Gitee 强制覆盖），收益有限。
+  若这些口令曾在开发机/预发/生产复用，**以轮换为准**——重写历史不能替代轮换。
+- **防止再犯**：新增 `com.cashier.security.SecretHygienePolicyTest`（随 `mvn verify` 在 CI 运行），
+  扫描 **git 跟踪**文件——properties/.env 的凭据键不得带非占位符字面量；脚本/yml 不得出现
+  带引号的硬编码凭据或 `${VAR:-"字面量"}` 默认口令。违规时直接报出 `文件:行号`。
+  只扫跟踪文件，故本地 `.env`、`config/*.properties`（gitignored，本就该放真实口令）不参与。
 
 ### SQL Injection Prevention
 Always use `PreparedStatement` with parameterized queries. Never concatenate user input into SQL strings.
