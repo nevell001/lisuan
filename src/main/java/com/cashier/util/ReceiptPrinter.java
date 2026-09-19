@@ -78,7 +78,8 @@ public class ReceiptPrinter {
     /**
      * 生成小票内容
      */
-    private static String generateReceiptContent(Transaction transaction, List<CartItem> cartItems, Member member) {
+    /** 生成小票正文（包内可见，便于无界面单测；只拼字符串，不打印、不落盘）。 */
+    static String generateReceiptContent(Transaction transaction, List<CartItem> cartItems, Member member) {
         StringBuilder sb = new StringBuilder();
 
         // 店铺信息（带 Logo）
@@ -138,6 +139,10 @@ public class ReceiptPrinter {
 
         // 金额汇总
         sb.append(String.format("%35s %10.2f\n", "商品总额:", transaction.totalAmount));
+        BigDecimal discount = receiptDiscount(transaction);
+        if (discount != null) {
+            sb.append(String.format("%35s %10.2f\n", "优惠:", discount));
+        }
         if (transaction.tax.compareTo(BigDecimal.ZERO) > 0) {
             sb.append(String.format("%35s %10.2f\n", "税费:", transaction.tax));
         }
@@ -211,6 +216,19 @@ public class ReceiptPrinter {
             logger.info("小票文件: {}", file.getAbsolutePath());
             logger.info("请手动打开文件并打印。");
         }
+    }
+
+    /**
+     * 小票上的优惠额（商品总额 - 实付），无优惠或金额缺失时返回 null（不打印该行）。
+     *
+     * <p>返回负数，使小票读起来是"商品总额 - 优惠 = 实付金额"。</p>
+     */
+    private static BigDecimal receiptDiscount(Transaction transaction) {
+        if (transaction.totalAmount == null || transaction.finalAmount == null) {
+            return null;
+        }
+        BigDecimal discount = transaction.totalAmount.subtract(transaction.finalAmount);
+        return discount.compareTo(BigDecimal.ZERO) > 0 ? discount.negate() : null;
     }
 
     /**
@@ -518,6 +536,10 @@ public class ReceiptPrinter {
 
             content.append(THIN_SEPARATOR);
             content.append(String.format("商品总额: " + sym + "%.2f\n", transaction.totalAmount));
+            BigDecimal discount = receiptDiscount(transaction);
+            if (discount != null) {
+                content.append(String.format("优惠: " + sym + "%.2f\n", discount));
+            }
             if (transaction.tax.compareTo(BigDecimal.ZERO) > 0) {
                 content.append(String.format("税费: " + sym + "%.2f\n", transaction.tax));
             }

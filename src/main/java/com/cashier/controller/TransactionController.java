@@ -283,6 +283,12 @@ public class TransactionController {
 
         detail.append("\n");
         detail.append(i18n.get("transaction.product_amount")).append(CurrencyUtil.format(transaction.totalAmount.doubleValue())).append("\n");
+        // 商品金额是原价合计，有优惠时必须列出来，否则"商品金额 ≠ 实付金额"看不出原因
+        if (transaction.totalAmount != null && transaction.finalAmount != null
+                && transaction.totalAmount.compareTo(transaction.finalAmount) > 0) {
+            BigDecimal discount = transaction.totalAmount.subtract(transaction.finalAmount);
+            detail.append(i18n.get("cart.discount_amount")).append(CurrencyUtil.format(discount.doubleValue())).append("\n");
+        }
         detail.append(i18n.get("transaction.tax_label")).append(CurrencyUtil.format(transaction.tax.doubleValue())).append("\n");
         detail.append(i18n.get("transaction.paid_amount")).append(CurrencyUtil.format(transaction.finalAmount.doubleValue())).append("\n");
 

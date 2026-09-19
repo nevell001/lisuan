@@ -1372,8 +1372,10 @@ public class CartController implements CartViewHost {
         // 将合并后的商品列表添加到交易中
         transaction.items.addAll(productMap.values());
         
-        transaction.totalAmount = getFinalAmount();  // 使用最终金额（包含会员折扣和促销优惠）
-        // 实现税费计算：税率以小数形式配置（设置界面校验区间 0.0-1.0）
+        // total_amount = 明细原价合计（与触屏收银台、REST API 同一口径）：
+        // 写成折后金额会让 total_amount - final_amount 恒为 0，小票/详情的"商品总额"与"实付"也无法体现优惠
+        transaction.totalAmount = TransactionService.calculateTotalAmount(cartList);
+        // 实现税费计算：税率以小数形式配置（设置界面校验区间 0.0-1.0），基数同样是原价合计
         transaction.tax = TransactionService.calculateTax(transaction.totalAmount);
         transaction.finalAmount = getFinalAmount();
         transaction.paymentMethod = paymentMethod;

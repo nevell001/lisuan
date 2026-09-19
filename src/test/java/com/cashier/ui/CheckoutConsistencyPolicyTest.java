@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.List;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -39,6 +41,30 @@ class CheckoutConsistencyPolicyTest {
             "税率是小数形式（0.0-1.0），不得再按百分比除以 100");
         assertFalse(touch.contains(".divide(BigDecimal.valueOf(100)"),
             "税率是小数形式（0.0-1.0），不得再按百分比除以 100");
+    }
+
+    @Test
+    @DisplayName("三处结账路径口径一致：total_amount = 明细原价合计，tax 基于原价合计")
+    void allCheckoutPathsUseOriginalTotal() throws Exception {
+        String cart = readMainSource("controller/CartController.java");
+        String touch = readMainSource("controller/TouchCartController.java");
+        String api = readMainSource("api/controller/TransactionApiController.java");
+
+        for (String source : List.of(cart, touch, api)) {
+            assertTrue(source.contains("totalAmount = TransactionService.calculateTotalAmount("),
+                "total_amount 必须写明细原价合计（写折后金额会让 total_amount - final_amount 恒为 0）");
+            assertTrue(source.contains("calculateTax("),
+                "税额必须走 TransactionService.calculateTax");
+            assertFalse(source.contains("totalAmount = getFinalAmount()")
+                    || source.contains("totalAmount = getPayableAmount()"),
+                "不得把折后/应付金额写进 total_amount");
+        }
+
+        // 税额基数同样是原价合计，避免"标准端按折后、触屏端按原价"再次分叉
+        Pattern taxBase = Pattern.compile("calculateTax\\((?:transaction|tx)\\.totalAmount\\)");
+        assertTrue(taxBase.matcher(cart).find(), "标准收银台税额基数应为 total_amount（原价合计）");
+        assertTrue(taxBase.matcher(touch).find(), "触屏收银台税额基数应为 total_amount（原价合计）");
+        assertTrue(taxBase.matcher(api).find(), "REST API 税额基数应为 total_amount（原价合计）");
     }
 
     @Test

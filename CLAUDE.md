@@ -728,11 +728,35 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `AlipayPrecreatePaymentProviderTest`（支付宝回调验签正反）
 - 打印机降级：`PrinterManagerTest` 补"无可用打印机时任务失败且不中断"覆盖
 - 结账口径一致性：`CheckoutConsistencyPolicyTest` 断言税额只在 `TransactionService.calculateTax`
-  计算（税率是小数 0.0-1.0，不得再除以 100）、触屏收银台必须计算并落库促销、支付方式筛选
+  计算（税率是小数 0.0-1.0，不得再除以 100）、三处结账路径的 `total_amount` 都是明细原价合计、
+  触屏收银台必须计算并落库促销、支付方式筛选
   必须归一化后再比较；`TransactionServiceTest` 覆盖税率小数语义、促销按原价总额计算、
   `selectBestPromotion` 选优；`I18nUiUtilsTest` 覆盖中文/代码支付方式归一化
 - 启动入口：可执行 JAR 的 Main-Class 为 `com.cashier.Launcher`（不继承 `Application`），
   使 `java -jar lisuan-fx-*-jar-with-dependencies.jar` 无需 module-path 即可启动
+
+**结账字段口径统一（v2.6.0 补强）**
+
+三处结账路径（标准收银台 `CartController.createTransaction`、触屏收银台
+`TouchCartController.createTransaction`、`TransactionApiController`）此前字段口径不一致：
+API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后金额**——于是标准端
+`total_amount - final_amount` 恒为 0，小票"商品总额"与"实付金额"永远相等，看不出优惠。
+
+- 现已统一（改标准端一处）：`total_amount` = `TransactionService.calculateTotalAmount(明细)`
+  （原价合计）、`tax` = `calculateTax(total_amount)`（基数同为原价）、
+  `final_amount` = 实付（含会员折扣与促销）。选择这个口径的原因：API 与触屏台已是如此
+  （2/3 路径 + 对外 API 契约），且只有这样才能从 `total_amount - final_amount` 算出优惠
+- 配套：小票必须打印优惠行，否则打折单上"商品总额 ≠ 实付金额"无从解释——
+  `ReceiptPrinter` 两个模板都加了 `优惠:` 行（`total_amount > final_amount` 时才打，
+  以负数呈现，无优惠不出现该行）；交易详情弹窗同样补了一行（复用既有 key
+  `cart.discount_amount`，未新增文案）
+- **无需数据迁移**：目前没有门店库（无历史数据），本机开发库 35 笔全部 `total_amount == final_amount`
+  （从未使用会员折扣/促销），改动前后这些行的值完全相同
+- 门禁：`CheckoutConsistencyPolicyTest.allCheckoutPathsUseOriginalTotal`（三处都必须
+  `totalAmount = calculateTotalAmount(...)`、税额基数 `calculateTax(<totalAmount>)`，
+  不得出现 `totalAmount = getFinalAmount()/getPayableAmount()`）；
+  `ReceiptPrinterTest`（3 项，行为级：打折单打优惠行且金额自洽、无优惠不打、金额缺失不抛异常）。
+  两者都做过变异验证：把标准端改回 `getFinalAmount()`、删掉小票优惠行 → 各红 1 项
 
 **退货/库存正确性（v2.6.0 补强）**
 
@@ -846,9 +870,9 @@ When working on files that still use the old `ProductDAO`, consider migrating th
     paymentInProgress` 等可变状态，抽离需要先设计协作接口，且无 UI 测试兜底，须一块一块来
   - `CartController` 2135 行**几乎全是逻辑**（视图构建只剩约 50 行），
     拆分 = 按职责抽逻辑簇（扫码/搜索流水线、支付编排、会员、挂单），风险同上
-  - 共享两端 `createTransaction` 的阻碍：两端 `total_amount`/`tax` 口径不一致
-    （标准端 `total_amount = 折后金额`、触屏端 `= 商品原价总额`，税额基数随之不同），
-    统一前需要业务确认哪种口径权威，并考虑历史数据的处理
+  - 共享两端 `createTransaction` 的口径障碍**已解除**（见下节「结账字段口径」）；
+    仍没抽成共用构建器的原因是三处订单号生成方式不同（标准端 `generateOrderNumber()`、
+    触屏端/API 走 `TransactionService.generateOrderNumber()`），统一会改变标准端订单号格式
 - 顺带发现（未修，待定）：
   - `TouchCartController` 里 `import com.cashier.model.Shift;` 已无使用方（历史遗留）
   - 默认回退包 `messages.properties` 语言不统一：`runtime.*` 是中文、部分 `tpos.*` 是英文
