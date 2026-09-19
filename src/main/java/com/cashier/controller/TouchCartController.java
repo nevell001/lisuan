@@ -12,7 +12,10 @@ import com.cashier.model.Promotion;
 import com.cashier.model.Transaction;
 import com.cashier.model.User;
 import com.cashier.printer.PrintUtil;
+import com.cashier.printer.ReceiptBuilder;
+import com.cashier.printer.ReceiptData;
 import com.cashier.printer.PrinterManager;
+import com.cashier.service.HoldOrderCodec;
 import com.cashier.service.TransactionService;
 import com.cashier.util.CurrencyUtil;
 import com.cashier.util.DateTimeFormats;
@@ -41,12 +44,10 @@ import javafx.scene.layout.FlowPane;
 import javafx.scene.layout.GridPane;
 import javafx.stage.Modality;
 import javafx.scene.layout.HBox;
-import javafx.scene.layout.Priority;
 import javafx.scene.shape.Circle;
 import javafx.animation.Timeline;
 import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import org.slf4j.Logger;
 
@@ -312,7 +313,7 @@ public class TouchCartController implements CartViewHost {
         buttons.setMinWidth(3 * 180 + 2 * 16);
         buttons.setMaxWidth(3 * 180 + 2 * 16);
 
-        VBox content = new VBox(20, message(message), buttons);
+        VBox content = new VBox(20, TouchCartViewFactory.message(message), buttons);
         content.setAlignment(javafx.geometry.Pos.CENTER);
         content.setPadding(new Insets(20, 30, 20, 30));
 
@@ -340,12 +341,6 @@ public class TouchCartController implements CartViewHost {
         }
     }
 
-    private Label message(String text) {
-        Label label = new Label(text);
-        label.setWrapText(true);
-        label.getStyleClass().add("fs-18");
-        return label;
-    }
 
     /**
      * 打开交接班弹窗（模态），返回 ShiftController 供调用方判断交班状态。
@@ -558,17 +553,17 @@ public class TouchCartController implements CartViewHost {
                 ToggleGroup group = new ToggleGroup();
 
                 // 热销推荐 - 置顶
-                ToggleButton hotBtn = buildCategoryButton("● " + i18n.get("tpos.hot_products"), HOT_CATEGORY_KEY, group);
+                ToggleButton hotBtn = TouchCartViewFactory.categoryButton("● " + i18n.get("tpos.hot_products"), HOT_CATEGORY_KEY, group);
                 categoryBox.getChildren().add(hotBtn);
                 logger.info("已添加'热销推荐'分类按钮");
 
                 // 全部商品
-                ToggleButton allBtn = buildCategoryButton(i18n.get("tpos.all_categories"), ALL_CATEGORY_KEY, group);
+                ToggleButton allBtn = TouchCartViewFactory.categoryButton(i18n.get("tpos.all_categories"), ALL_CATEGORY_KEY, group);
                 categoryBox.getChildren().add(allBtn);
                 logger.info("已添加'全部商品'分类按钮");
 
                 for (Category c : cats) {
-                    categoryBox.getChildren().add(buildCategoryButton(c.name, c.name, group));
+                    categoryBox.getChildren().add(TouchCartViewFactory.categoryButton(c.name, c.name, group));
                     logger.debug("添加分类按钮: {}", c.name);
                 }
                 group.selectedToggleProperty().addListener((obs, o, n) -> {
@@ -588,14 +583,6 @@ public class TouchCartController implements CartViewHost {
             });
     }
 
-    private ToggleButton buildCategoryButton(String label, String categoryName, ToggleGroup group) {
-        ToggleButton btn = new ToggleButton(label);
-        btn.getStyleClass().add("tpos-category-btn");
-        btn.setMaxWidth(Double.MAX_VALUE);
-        btn.setUserData(categoryName); // HOT_CATEGORY_KEY = 热销, null = 全部, 其他 = 分类名
-        btn.setToggleGroup(group);
-        return btn;
-    }
 
     private void onCategorySelected(String categoryName) {
         this.currentCategoryName = categoryName;
@@ -692,26 +679,6 @@ public class TouchCartController implements CartViewHost {
         return merged;
     }
 
-    private List<Product> filterByKeyword(List<Product> all, String keyword) {
-        String k = keyword.trim().toLowerCase();
-        if (k.isEmpty()) {
-            return all;
-        }
-        List<Product> result = new ArrayList<>();
-        for (Product p : all) {
-            if (containsIgnoreCase(p.name, k)
-                || containsIgnoreCase(p.barcode, k)
-                || containsIgnoreCase(p.productCode, k)) {
-                result.add(p);
-            }
-        }
-        return result;
-    }
-
-    private static boolean containsIgnoreCase(String text, String keyword) {
-        return text != null && text.toLowerCase().contains(keyword);
-    }
-
     private void refreshProductGrid(List<Product> products) {
         logger.info("刷新商品网格: 商品数量={}", products.size());
         for (Product p : products) {
@@ -719,42 +686,10 @@ public class TouchCartController implements CartViewHost {
         }
         productGrid.getChildren().clear();
         for (Product p : products) {
-            productGrid.getChildren().add(buildProductCard(p));
+            productGrid.getChildren().add(TouchCartViewFactory.productCard(p, this::addToCart));
         }
     }
 
-    /** 商品卡片:首字符色块 + 名称 + 库存 + 价格(无图标字段,用首字符代替) */
-    private VBox buildProductCard(Product p) {
-        VBox card = new VBox(6);
-        card.getStyleClass().add("tpos-product-card");
-        card.setUserData(p);
-
-        StackPane initialPane = new StackPane();
-        initialPane.getStyleClass().add("tpos-product-card-initial");
-        String firstChar = (p.name != null && !p.name.isEmpty()) ? p.name.substring(0, 1) : "?";
-        Label initial = new Label(firstChar);
-        initial.getStyleClass().add("tpos-product-card-initial-text"); initial.setStyle("-fx-font-size: 26; -fx-font-weight: bold;");
-        initialPane.getChildren().add(initial);
-
-        Label name = new Label(p.name);
-        name.getStyleClass().add("tpos-product-card-name");
-
-        Label meta = new Label(i18n.get("tpos.stock_label", p.quantity));
-        meta.getStyleClass().add("tpos-product-card-meta");
-
-        String unitSuffix = (p.unit != null && !p.unit.isEmpty()) ? "/" + p.unit : "";
-        Label price = new Label(CurrencyUtil.format(p.getPrice().doubleValue()) + unitSuffix);
-        price.getStyleClass().add("tpos-product-card-price");
-
-        card.getChildren().addAll(initialPane, name, meta, price);
-
-        if (p.quantity <= 0) {
-            card.getStyleClass().add("tpos-product-card--out");
-        } else {
-            card.setOnMouseClicked(e -> addToCart(p));
-        }
-        return card;
-    }
 
     // ===== 购物车操作 =====
 
@@ -873,68 +808,10 @@ public class TouchCartController implements CartViewHost {
             return;
         }
         for (CartItem item : cartItems) {
-            cartList.getChildren().add(buildCartRow(item));
+            cartList.getChildren().add(TouchCartViewFactory.cartRow(item, this::incrementQty, this::decrementQty, this::removeItem));
         }
     }
 
-    private HBox buildCartRow(CartItem item) {
-        HBox row = new HBox(10);
-        row.getStyleClass().add("tpos-cart-row");
-        row.setAlignment(Pos.CENTER_LEFT);
-
-        // 左侧：商品信息
-        VBox info = new VBox(4);
-        HBox.setHgrow(info, Priority.ALWAYS);
-        info.getStyleClass().add("tpos-cart-row-content");
-
-        // 第一行：商品名称
-        Label name = new Label(item.product.name);
-        name.getStyleClass().add("tpos-cart-row-name");
-        name.setMaxWidth(200);
-
-        // 第二行：单价 × 数量
-        String unitSuffix = (item.product.unit != null && !item.product.unit.isEmpty())
-            ? "/" + item.product.unit : "";
-        Label priceQty = new Label(String.format("%s × %d%s",
-            CurrencyUtil.format(item.product.getPrice().doubleValue()), item.quantity, unitSuffix));
-        priceQty.getStyleClass().add("tpos-cart-row-price-qty");
-
-        info.getChildren().addAll(name, priceQty);
-
-        // 右侧：小计 + 控制按钮
-        VBox right = new VBox(6);
-        right.setAlignment(Pos.TOP_RIGHT);
-
-        // 小计金额
-        Label subtotal = new Label(CurrencyUtil.format(item.subtotal.doubleValue()));
-        subtotal.getStyleClass().add("tpos-cart-row-subtotal");
-
-        // 控制按钮行
-        HBox ctrl = new HBox(6);
-        ctrl.getStyleClass().add("tpos-cart-row-ctrl");
-        ctrl.setAlignment(Pos.CENTER_RIGHT);
-
-        Button minus = new Button("−");
-        minus.getStyleClass().add("tpos-qty-minus");
-        minus.setOnAction(e -> decrementQty(item));
-
-        Label qty = new Label(String.valueOf(item.quantity));
-        qty.getStyleClass().add("tpos-qty-val");
-
-        Button plus = new Button("+");
-        plus.getStyleClass().add("tpos-qty-plus");
-        plus.setOnAction(e -> incrementQty(item));
-
-        Button remove = new Button("×");
-        remove.getStyleClass().add("tpos-remove-btn");
-        remove.setOnAction(e -> removeItem(item));
-
-        ctrl.getChildren().addAll(minus, qty, plus, remove);
-        right.getChildren().addAll(subtotal, ctrl);
-
-        row.getChildren().addAll(info, right);
-        return row;
-    }
 
     private void updateSummary() {
         int count = cartItems.size();
@@ -1019,7 +896,7 @@ public class TouchCartController implements CartViewHost {
             holdOrder.discountAmount = total.subtract(finalAmt);
             holdOrder.finalAmount = finalAmt;
             holdOrder.itemCount = cartItems.size();
-            holdOrder.itemsJson = serializeCartItems(cartItems);
+            holdOrder.itemsJson = HoldOrderCodec.serialize(cartItems);
             holdOrderDAO.insert(holdOrder);
 
             clearCartForHold();
@@ -1105,7 +982,7 @@ public class TouchCartController implements CartViewHost {
 
         UIOptimizer.runInBackground(
             () -> {
-                List<CartItem> items = parseHoldCartItems(order.itemsJson);
+                List<CartItem> items = HoldOrderCodec.parse(order.itemsJson, productDAO);
                 Member member = null;
                 if (order.memberId != null) {
                     try {
@@ -1165,71 +1042,6 @@ public class TouchCartController implements CartViewHost {
         updateSummary();
     }
 
-    /** 序列化购物车为 JSON（与 CartController 格式一致，便于互通） */
-    static String serializeCartItems(List<CartItem> items) {
-        StringBuilder json = new StringBuilder("[");
-        for (int i = 0; i < items.size(); i++) {
-            CartItem item = items.get(i);
-            if (i > 0) json.append(",");
-            json.append("{\"productId\":").append(item.product.id)
-                .append(",\"quantity\":").append(item.quantity).append("}");
-        }
-        json.append("]");
-        return json.toString();
-    }
-
-    /** 从 JSON 反序列化恢复购物车 */
-    /**
-     * 解析挂单明细并逐条查商品。
-     *
-     * <p>纯数据操作，不触碰 UI 状态，可安全在后台线程调用。</p>
-     */
-    /**
-     * 解析挂单明细并逐条查商品。
-     *
-     * <p>纯数据操作，不触碰 UI 状态，可安全在后台线程调用；商品已被删除或字段损坏的行跳过，
-     * 单行失败不影响其余明细。</p>
-     */
-    static List<CartItem> parseHoldCartItems(String json) {
-        List<CartItem> result = new ArrayList<>();
-        if (json == null || json.isEmpty()) return result;
-        json = json.trim();
-        if (!json.startsWith("[") || !json.endsWith("]")) return result;
-        String body = json.substring(1, json.length() - 1);
-        if (body.isEmpty()) return result;
-        String[] items = body.split("\\},\\{");
-        for (String item : items) {
-            item = item.replace("{", "").replace("}", "");
-            String[] fields = item.split(",");
-            int productId = 0;
-            int quantity = 1;
-            for (String field : fields) {
-                String[] kv = field.split(":");
-                if (kv.length == 2) {
-                    String key = kv[0].replace("\"", "").trim();
-                    String value = kv[1].trim();
-                    try {
-                        if ("productId".equals(key)) {
-                            productId = Integer.parseInt(value);
-                        } else if ("quantity".equals(key)) {
-                            quantity = Integer.parseInt(value);
-                        }
-                    } catch (NumberFormatException e) {
-                        logger.debug("解析挂单项字段失败", e);
-                    }
-                }
-            }
-            try {
-                Product product = productDAO.findById(productId);
-                if (product != null) {
-                    result.add(new CartItem(product, quantity));
-                }
-            } catch (SQLException e) {
-                logger.warn("恢复商品失败 (ID:{}): {}", productId, e.getMessage());
-            }
-        }
-        return result;
-    }
 
     /** 信息提示（同步状态栏） */
     private void showInfo(String msg) {
@@ -1485,20 +1297,20 @@ public class TouchCartController implements CartViewHost {
         content.setPadding(new Insets(12, 20, 16, 20));
         content.setPrefWidth(520);
 
-        TextField receivedField = createCashInputField();
-        GridPane denomGrid = createCashDenominationGrid(receivedField, finalAmount);
-        Label statusLabel = createCashStatusLabel(receivedField, finalAmount);
-        Button continueBtn = createCashConfirmButton();
+        TextField receivedField = TouchCartViewFactory.cashInputField();
+        GridPane denomGrid = TouchCartViewFactory.cashDenominationGrid(receivedField, finalAmount);
+        Label statusLabel = TouchCartViewFactory.cashStatusLabel(receivedField, cashReceivedAmount, finalAmount);
+        Button continueBtn = TouchCartViewFactory.cashConfirmButton();
 
         // 组装内容
-        content.getChildren().add(createCashDueBox(finalAmount));
-        HBox partialBox = createCashPartialBox(remainingAmount);
+        content.getChildren().add(TouchCartViewFactory.cashDueBox(finalAmount));
+        HBox partialBox = TouchCartViewFactory.cashPartialBox(cashReceivedAmount, remainingAmount);
         if (partialBox != null) {
             content.getChildren().add(partialBox);
         }
         content.getChildren().addAll(
-            createCashSectionTitle("收款金额"), receivedField,
-            createCashSectionTitle("快捷金额"), denomGrid,
+            TouchCartViewFactory.cashSectionTitle("收款金额"), receivedField,
+            TouchCartViewFactory.cashSectionTitle("快捷金额"), denomGrid,
             statusLabel, continueBtn);
 
         dialog.getDialogPane().setContent(content);
@@ -1544,137 +1356,12 @@ public class TouchCartController implements CartViewHost {
             handleCashPaymentResult(thisPayment, finalAmount));
     }
 
-    /** 创建应付金额展示行 */
-    private HBox createCashDueBox(BigDecimal finalAmount) {
-        Label dueTitleLabel = new Label("应付金额");
-        dueTitleLabel.getStyleClass().add("cash-section-title");
 
-        Label dueLabel = new Label(CurrencyUtil.format(finalAmount.doubleValue()));
-        dueLabel.getStyleClass().add("cash-due-highlight");
 
-        HBox dueBox = new HBox(8, dueTitleLabel, dueLabel);
-        dueBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-        return dueBox;
-    }
 
-    /** 创建部分付款的“已付/还需”展示行，未发生部分付款时返回 null */
-    private HBox createCashPartialBox(BigDecimal remainingAmount) {
-        if (cashReceivedAmount.compareTo(BigDecimal.ZERO) <= 0) {
-            return null;
-        }
-        Label paidLabel = new Label("已付 " + CurrencyUtil.format(cashReceivedAmount.doubleValue()));
-        paidLabel.getStyleClass().add("cash-paid-label");
-        Label sep = new Label("  |  ");
-        sep.getStyleClass().add("cash-separator");
-        Label remainLabel = new Label("还需 " + CurrencyUtil.format(remainingAmount.doubleValue()));
-        remainLabel.getStyleClass().add("cash-remain-label");
 
-        HBox partialBox = new HBox(4, paidLabel, sep, remainLabel);
-        partialBox.setAlignment(javafx.geometry.Pos.CENTER_LEFT);
-        return partialBox;
-    }
 
-    /** 创建现金支付弹窗的分节标题 */
-    private Label createCashSectionTitle(String text) {
-        Label title = new Label(text);
-        title.getStyleClass().add("cash-section-title");
-        return title;
-    }
 
-    /** 创建收款金额输入框 */
-    private TextField createCashInputField() {
-        TextField receivedField = new TextField();
-        receivedField.setPromptText("请输入收款金额");
-        receivedField.setPrefHeight(56);
-        receivedField.setMaxWidth(Double.MAX_VALUE);
-        receivedField.getStyleClass().add("cash-input-field");
-        return receivedField;
-    }
-
-    /** 创建快捷面额按钮区（含精确金额/清除按钮） */
-    private GridPane createCashDenominationGrid(TextField receivedField, BigDecimal finalAmount) {
-        String symbol = CurrencyUtil.getSymbol();
-        int[] amounts = {100, 50, 20, 10, 5, 1};
-        GridPane denomGrid = new GridPane();
-        denomGrid.setHgap(10);
-        denomGrid.setVgap(10);
-        denomGrid.setAlignment(javafx.geometry.Pos.CENTER);
-
-        for (int i = 0; i < amounts.length; i++) {
-            Button b = new Button(symbol + amounts[i]);
-            b.setPrefSize(110, 62);
-            b.getStyleClass().add("cash-denom-btn");
-            final int amt = amounts[i];
-            b.setOnAction(e -> {
-                receivedField.setText(String.valueOf(amt));
-                receivedField.requestFocus();
-            });
-            denomGrid.add(b, i % 4, i / 4);
-        }
-
-        Button exactBtn = new Button("精确金额");
-        exactBtn.setPrefSize(110, 62);
-        exactBtn.getStyleClass().add("cash-exact-btn");
-        exactBtn.setOnAction(e -> {
-            receivedField.setText(finalAmount.toPlainString());
-            receivedField.requestFocus();
-        });
-        denomGrid.add(exactBtn, 2, 1);
-
-        Button clearBtn = new Button("清除 C");
-        clearBtn.setPrefSize(110, 62);
-        clearBtn.getStyleClass().add("cash-clear-btn");
-        clearBtn.setOnAction(e -> {
-            receivedField.clear();
-            receivedField.requestFocus();
-        });
-        denomGrid.add(clearBtn, 3, 1);
-
-        return denomGrid;
-    }
-
-    /** 创建状态标签并绑定输入监听（找零/还需提示） */
-    private Label createCashStatusLabel(TextField receivedField, BigDecimal finalAmount) {
-        Label statusLabel = new Label("请输入收款金额");
-        statusLabel.getStyleClass().add("cash-status-default");
-        statusLabel.setMaxWidth(Double.MAX_VALUE);
-        statusLabel.setAlignment(javafx.geometry.Pos.CENTER);
-        statusLabel.setPrefHeight(40);
-
-        receivedField.textProperty().addListener((o, ov, nv) -> {
-            try {
-                BigDecimal thisPayment = new BigDecimal(nv.trim());
-                BigDecimal totalAfterThis = cashReceivedAmount.add(thisPayment);
-                BigDecimal diff = totalAfterThis.subtract(finalAmount);
-
-                if (thisPayment.compareTo(BigDecimal.ZERO) <= 0) {
-                    statusLabel.setText("请输入收款金额");
-                    statusLabel.getStyleClass().setAll("cash-status-default");
-                } else if (totalAfterThis.compareTo(finalAmount) < 0) {
-                    BigDecimal stillNeed = finalAmount.subtract(totalAfterThis);
-                    statusLabel.setText("还需支付 " + CurrencyUtil.format(stillNeed.doubleValue()));
-                    statusLabel.getStyleClass().setAll("cash-status-warn");
-                } else {
-                    statusLabel.setText("找零 " + CurrencyUtil.format(diff.doubleValue()));
-                    statusLabel.getStyleClass().setAll("cash-status-change");
-                }
-            } catch (NumberFormatException e) {
-                statusLabel.setText("请输入收款金额");
-                statusLabel.getStyleClass().setAll("cash-status-default");
-            }
-        });
-        return statusLabel;
-    }
-
-    /** 创建确认收款按钮 */
-    private Button createCashConfirmButton() {
-        Button continueBtn = new Button("确认收款 (Enter)");
-        continueBtn.setDefaultButton(true);
-        continueBtn.setPrefHeight(52);
-        continueBtn.setMaxWidth(Double.MAX_VALUE);
-        continueBtn.getStyleClass().add("cash-confirm-btn");
-        return continueBtn;
-    }
 
     /** 处理现金支付结果：付清则完成交易，未付清则提示并重新打开 */
     private void handleCashPaymentResult(BigDecimal thisPayment, BigDecimal finalAmount) {
@@ -1990,7 +1677,10 @@ public class TouchCartController implements CartViewHost {
                 logger.info("触屏版交易成功,交易ID: {}", settled.transactionId);
 
                 // 在购物车被清空前，先在后台准备好小票快照（settings/明细读取都在 worker 内完成）
-                final ReceiptData receipt = createReceiptData(settled, paymentMethod, receivedAmount, changeAmount);
+                final ReceiptData receipt = ReceiptBuilder.build(cartItems, currentMember,
+                    currentUser != null ? currentUser.name : "", paymentMethod,
+                    settled.finalAmount, receivedAmount, changeAmount,
+                    com.cashier.service.DataService.loadSettings());
 
                 javafx.application.Platform.runLater(() -> {
                     paymentInProgress = false;
@@ -2012,85 +1702,6 @@ public class TouchCartController implements CartViewHost {
         }, "touch-cart-settle");
         worker.setDaemon(true);
         worker.start();
-    }
-
-    /** 小票打印所需数据（在结算 worker 内、购物车被清空前一次性快照） */
-    private static final class ReceiptData {
-        final String storeName;
-        final String cashierName;
-        final String itemsText;
-        final int totalQuantity;
-        final double totalAmount;
-        final double discountAmount;
-        final double finalAmount;
-        final double paidAmount;
-        final double changeAmount;
-        final String paymentMethod;
-        final String memberInfo;
-        final boolean printLogo;
-        final String printerName;
-        final String paperSize;
-
-        ReceiptData(String storeName, String cashierName, String itemsText, int totalQuantity,
-                    double totalAmount, double discountAmount, double finalAmount, double paidAmount,
-                    double changeAmount, String paymentMethod, String memberInfo, boolean printLogo,
-                    String printerName, String paperSize) {
-            this.storeName = storeName;
-            this.cashierName = cashierName;
-            this.itemsText = itemsText;
-            this.totalQuantity = totalQuantity;
-            this.totalAmount = totalAmount;
-            this.discountAmount = discountAmount;
-            this.finalAmount = finalAmount;
-            this.paidAmount = paidAmount;
-            this.changeAmount = changeAmount;
-            this.paymentMethod = paymentMethod;
-            this.memberInfo = memberInfo;
-            this.printLogo = printLogo;
-            this.printerName = printerName;
-            this.paperSize = paperSize;
-        }
-    }
-
-    /** 在结算 worker 内构建打印快照；打印功能未启用时返回 null */
-    private ReceiptData createReceiptData(Transaction tx, String paymentMethod,
-                                          BigDecimal received, BigDecimal change) {
-        Map<String, String> settings = com.cashier.service.DataService.loadSettings();
-        if (!Boolean.parseBoolean(settings.getOrDefault("enablePrint", "false"))) {
-            logger.info("打印功能未启用（enablePrint=false），跳过小票打印");
-            return null;
-        }
-
-        StringBuilder items = new StringBuilder();
-        int totalQty = 0;
-        for (CartItem ci : cartItems) {
-            items.append(ci.product.name)
-                .append(" x").append(ci.quantity)
-                .append("  ").append(String.format("%.2f", ci.subtotal.doubleValue()))
-                .append("\n");
-            totalQty += ci.quantity;
-        }
-        BigDecimal total = TransactionService.calculateTotalAmount(cartItems);
-        BigDecimal discount = total.subtract(tx.finalAmount);
-        String memberInfo = currentMember != null
-            ? (currentMember.name + "(" + currentMember.phone + ") " + currentMember.level) : null;
-        String cashierName = currentUser != null ? currentUser.name : "";
-
-        return new ReceiptData(
-            settings.getOrDefault("storeName", "狸算收银"),
-            cashierName,
-            items.toString(),
-            totalQty,
-            total.doubleValue(),
-            discount.doubleValue(),
-            tx.finalAmount.doubleValue(),
-            received.doubleValue(),
-            change.doubleValue(),
-            paymentMethod,
-            memberInfo,
-            Boolean.parseBoolean(settings.getOrDefault("printLogo", "true")),
-            settings.getOrDefault("printerName", "").trim(),
-            settings.getOrDefault("paperSize", ""));
     }
 
     /** 在串行打印线程执行实际打印（含网络打印机连接/IO 超时，不占用 FX 线程） */

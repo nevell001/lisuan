@@ -808,17 +808,50 @@ When working on files that still use the old `ProductDAO`, consider migrating th
 - 触屏收银台没有 UI 级自动化测试：TestFX 需要真实显示环境，`mvn verify`/CI 跑不了
   （`LoginControllerUITest` 就被 Surefire 排除）。因此改为**把纯逻辑抽成包内可见的静态方法，
   用无界面单测直接验证生产代码**，而不是复制一份逻辑到测试里
-- 抽取出的可测方法（均在 `TouchCartController`）：
-  `mergeHotProducts(manualHot, topSelling, target)`、`applyCashPayment(received, thisPayment,
-  finalAmount)`（返回 `CashProgress`）、`serializeCartItems(List<CartItem>)`、
-  `parseHoldCartItems(String)`、`currentStock(Product, Map)`、`findCartItem(List<CartItem>, int)`
-- 覆盖见 `TouchCartControllerLogicTest`（11 项）：热销推荐按商品 ID 去重补足到 12 且不截断手动标记、
-  现金分次收款累计与找零及"差一分钱不结算"边界、挂单序列化↔恢复往返、已删除商品行跳过、
-  损坏/空 JSON 容错、库存快照优先与回退、按商品 ID 定位购物车行（改名不影响同一行）
+- 抽取出的可测方法：`TouchCartController` 的 `mergeHotProducts(manualHot, topSelling, target)`、
+  `applyCashPayment(received, thisPayment, finalAmount)`（返回 `CashProgress`）、
+  `currentStock(Product, Map)`、`findCartItem(List<CartItem>, int)`；
+  挂单编解码已进一步搬到 `HoldOrderCodec.serialize/parse`（见下节「巨型控制器拆分」）
+- 覆盖见 `TouchCartControllerLogicTest`（8 项）：热销推荐按商品 ID 去重补足到 12 且不截断手动标记、
+  现金分次收款累计与找零及"差一分钱不结算"边界、库存快照优先与回退、
+  按商品 ID 定位购物车行（改名不影响同一行）；挂单编解码的 4 项用例随实现迁到
+  `HoldOrderCodecTest`
 - 这些用例做过**变异验证**：去掉去重、把付清判定 `>= 0` 改成 `> 0`、把默认数量 1 改成 0，
   对应 4 项立即变红
-- 待清理：`TouchCartController.filterByKeyword` / `containsIgnoreCase` 已无调用方
-  （关键字搜索改走 `productDAO.search` 的 SQL），属历史遗留死代码，暂留未删
+
+**巨型控制器拆分（v2.6.0 补强）**
+
+两个收银台控制器一度各自涨到 2200 行上下（查库、结账、打印、弹窗、布局、样式全在一个类里）。
+`mvn verify` 与 GitHub CI 都跑不了 UI，所以拆分只做**可机械搬运、行为不变**的部分，并逐块加门禁：
+
+- `TouchCartController` 2267 → 1878 行，搬出三块互不相关的职责：
+  - 视图构建 → `TouchCartViewFactory`（商品卡片、购物车行、分类按钮、现金弹窗控件、
+    `message`），无状态静态方法，交互行为用 `Consumer` 回调注入；控制器只剩"什么时候画、点了做什么"
+  - 挂单明细编解码 → `com.cashier.service.HoldOrderCodec`（`serialize` / `parse(json, dao)`），
+    **标准收银台与触屏收银台共用同一实现**——此前两端各一份复制，且损坏字段处理不一致：
+    标准端 `FormValidator.parseInt(value)` 会抛 `IllegalArgumentException`，一个坏字段就让整单
+    挂单恢复失败；现在两端都只跳过坏行（`HoldOrderCodecTest.parseToleratesBrokenFieldAmongValidRows`）
+  - 小票内容构建 → `com.cashier.printer.ReceiptBuilder` + `ReceiptData`（设置与购物车由调用方传入，
+    打印线程只读不可变快照）；`ReceiptBuilderTest` 锁住小票上的合计/优惠/实收/找零/会员信息口径
+- 体积棘轮门禁 `ControllerSizePolicyTest`：两个收银台控制器超过当前上限即失败
+  （`TouchCartController` 1980 / `CartController` 2240），并要求视图构建留在
+  `TouchCartViewFactory`（样式类不得回到控制器）。**继续拆分后应把上限一起调小**
+- 仍需继续拆分（本轮未做，风险更高）：
+  - `TouchCartController` 余下的大块是结算/支付流程（现金弹窗、电子支付、`completeTransaction`、
+    打印调度）、商品加载与搜索、挂单对话框——它们共享 `cartItems/inventoryMap/currentMember/
+    paymentInProgress` 等可变状态，抽离需要先设计协作接口，且无 UI 测试兜底，须一块一块来
+  - `CartController` 2135 行**几乎全是逻辑**（视图构建只剩约 50 行），
+    拆分 = 按职责抽逻辑簇（扫码/搜索流水线、支付编排、会员、挂单），风险同上
+  - 共享两端 `createTransaction` 的阻碍：两端 `total_amount`/`tax` 口径不一致
+    （标准端 `total_amount = 折后金额`、触屏端 `= 商品原价总额`，税额基数随之不同），
+    统一前需要业务确认哪种口径权威，并考虑历史数据的处理
+- 顺带发现（未修，待定）：
+  - 触屏现金弹窗的文案是硬编码中文（"应付金额/已付/还需/找零/精确金额/确认收款"），
+    切到 en/zh_TW 仍是中文；修法是在 `I18nKeys` + 三份语言包补 key 后替换
+  - `TouchCartController` 里 `import com.cashier.model.Shift;` 已无使用方（历史遗留）
+- 已删除的死代码：`TouchCartController.filterByKeyword` / `containsIgnoreCase`
+  （关键字搜索早已改走 `productDAO.search` 的 SQL，这两个内存过滤方法无任何调用方；
+  `InventoryController` 里另有一份仍在使用，未动）
 
 **热销榜统计口径（v2.6.0 补强）**
 

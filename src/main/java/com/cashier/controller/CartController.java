@@ -9,6 +9,7 @@ import com.cashier.dao.ProductDAORefactored;
 import com.cashier.model.CartItem;
 import com.cashier.model.Promotion;
 import com.cashier.service.DataService;
+import com.cashier.service.HoldOrderCodec;
 import com.cashier.service.TransactionService;
 import com.cashier.model.Member;
 import com.cashier.model.Product;
@@ -1920,7 +1921,7 @@ public class CartController implements CartViewHost {
             holdOrder.itemCount = cartList.size();
 
             // 序列化购物车项目
-            holdOrder.itemsJson = serializeCartItems();
+            holdOrder.itemsJson = HoldOrderCodec.serialize(cartList);
 
             // 保存到数据库
             holdOrderDAO.insert(holdOrder);
@@ -2034,7 +2035,7 @@ public class CartController implements CartViewHost {
     private void resumeOrder(com.cashier.model.HoldOrder order) {
         UIOptimizer.runInBackground(
             () -> {
-                List<CartItem> items = parseCartItems(order.itemsJson);
+                List<CartItem> items = HoldOrderCodec.parse(order.itemsJson, productDAO);
                 Member member = null;
                 if (order.memberId != null) {
                     try {
@@ -2077,74 +2078,7 @@ public class CartController implements CartViewHost {
     /** 恢复挂单的结果：后台解析/查库完成后一次性带回 FX 线程。 */
     private record ResumedOrder(List<CartItem> items, Member member) {}
 
-    /**
-     * 序列化购物车项目为JSON字符串
-     */
-    private String serializeCartItems() {
-        StringBuilder json = new StringBuilder("[");
-        for (int i = 0; i < cartList.size(); i++) {
-            CartItem item = cartList.get(i);
-            if (i > 0) json.append(",");
-            json.append("{");
-            json.append("\"productId\":").append(item.product.id).append(",");
-            json.append("\"quantity\":").append(item.quantity);
-            json.append("}");
-        }
-        json.append("]");
-        return json.toString();
-    }
 
-    /**
-     * 解析挂单明细并逐条查商品。
-     *
-     * <p>纯数据操作，不触碰任何 UI 状态，可安全在后台线程调用
-     * （调用方负责把结果回填到 FX 线程）。</p>
-     */
-    private List<CartItem> parseCartItems(String json) {
-        List<CartItem> items = new ArrayList<>();
-        if (json == null || json.isEmpty()) return items;
-
-        // 简单的JSON解析（生产环境建议使用Jackson或Gson）
-        json = json.trim();
-        if (!json.startsWith("[") || !json.endsWith("]")) return items;
-
-        String itemsJson = json.substring(1, json.length() - 1);
-        if (itemsJson.isEmpty()) return items;
-
-        String[] parts = itemsJson.split("\\},\\{");
-        for (String item : parts) {
-            item = item.replace("{", "").replace("}", "");
-            String[] fields = item.split(",");
-
-            int productId = 0;
-            int quantity = 1;
-
-            for (String field : fields) {
-                String[] kv = field.split(":");
-                if (kv.length == 2) {
-                    String key = kv[0].replace("\"", "").trim();
-                    String value = kv[1].trim();
-
-                    if ("productId".equals(key)) {
-                        productId = FormValidator.parseInt(value);
-                    } else if ("quantity".equals(key)) {
-                        quantity = FormValidator.parseInt(value);
-                    }
-                }
-            }
-
-            // 查找商品；单个商品失败不影响其余明细
-            try {
-                Product product = productDAO.findById(productId);
-                if (product != null) {
-                    items.add(new CartItem(product, quantity));
-                }
-            } catch (SQLException e) {
-                logger.warn("恢复商品失败 (ID: {}): {}", productId, e.getMessage());
-            }
-        }
-        return items;
-    }
 
     /**
      * 获取总金额

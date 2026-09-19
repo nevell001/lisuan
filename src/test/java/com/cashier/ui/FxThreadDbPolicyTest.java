@@ -90,20 +90,20 @@ class FxThreadDbPolicyTest {
         String cart = readMainSource("controller/CartController.java");
         String touch = readMainSource("controller/TouchCartController.java");
 
-        // 解析助手只允许出现在「定义处 + 后台任务里」两处：别处调用就说明又在 FX 线程查库了
-        assertEquals(2, countOccurrences(cart, "parseCartItems("),
-            "CartController 的挂单解析只应在定义处与后台任务中出现");
-        assertEquals(2, countOccurrences(touch, "parseHoldCartItems("),
-            "TouchCartController 的挂单解析只应在定义处与后台任务中出现");
-
-        assertTrue(cart.contains("parseCartItems(order.itemsJson)"),
+        // 解析入口只允许出现一次——就在后台任务里；回到 FX 线程就会在恢复大额挂单时卡死界面
+        assertEquals(1, countOccurrences(cart, "HoldOrderCodec.parse(order.itemsJson, productDAO)"),
             "标准收银台恢复挂单必须在后台解析");
-        assertTrue(touch.contains("parseHoldCartItems(order.itemsJson)"),
+        assertEquals(1, countOccurrences(touch, "HoldOrderCodec.parse(order.itemsJson, productDAO)"),
             "触屏收银台恢复挂单必须在后台解析");
+
         assertTrue(cart.contains("private record ResumedOrder(") && touch.contains("private record ResumedHoldOrder("),
             "后台结果应通过不可变结果对象一次性带回 FX 线程");
 
-        // 曾经的同步写法：边解析边直接改 UI 列表
+        // 编解码必须共用同一实现：两端各留一份复制，格式会悄悄分叉
+        assertTrue(readMainSource("service/HoldOrderCodec.java").contains("public static List<CartItem> parse("),
+            "挂单明细编解码应收敛到 HoldOrderCodec");
+        assertFalse(cart.contains("parseCartItems"), "控制器不得再自带一份挂单解析");
+        assertFalse(touch.contains("parseHoldCartItems"), "控制器不得再自带一份挂单解析");
         assertFalse(cart.contains("deserializeCartItems"),
             "挂单解析不得再边查库边改 cartList");
         assertFalse(touch.contains("deserializeHoldCartItems"),
