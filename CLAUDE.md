@@ -815,6 +815,26 @@ When working on files that still use the old `ProductDAO`, consider migrating th
 
 ## Known Issues
 
+### Linux PDF 导出需要 TrueType 中文字体
+
+`ExportUtil` 生成 PDF 时会嵌入一个中文字体，而 PDFBox 只能嵌入 **TrueType(glyf)** 字体：
+
+- 项目内置的 `src/main/resources/fonts/NotoSansSC-Regular.ttc` 是 **OTF/CFF**（子字体名形如
+  `NotoSansCJKsc-Regular`），没有 `glyf` 表。PDFBox 既不能整体嵌入字体集合
+  （`IOException: Full embedding of TrueType font collections not supported`），
+  子集化时也会抛 `UnsupportedOperationException: OTF fonts do not have a glyf table`。
+  **该内置字体不能用于 PDF 导出**。
+- macOS / Windows 会先命中系统 TrueType 中文字体（如 `Arial Unicode.ttf`、`msyh.ttc`），
+  问题被掩盖；Linux（含 GitHub Actions 的 Ubuntu runner）默认不含中文字体，回退到内置 OTF
+  后失败，报 `无法加载中文字体，请安装中文字体或检查字体文件`。
+- 已做的加固：`ExportUtil.loadFromCollection` 改用 `embedSubset=true`（字体集合不支持整体嵌入），
+  并用 `isEmbeddable()` 跳过没有 `glyf` 表的候选，继续尝试下一个字体。
+- **部署到 Linux 时必须保证系统存在 TrueType 中文字体**。CI 见 `.github/workflows/build.yaml`：
+  安装 `fonts-droid-fallback`（`/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf`，
+  Apache-2.0）与 `fonts-arphic-gkai00mp`（`/usr/share/fonts/truetype/arphic-gkai00mp/gkai00mp.ttf`）
+  做冗余，两个路径都在 `ExportUtil` 的 Linux 候选列表中。
+- 若要彻底摆脱对系统字体的依赖，应改为**内置一个 TrueType 中文字体**（尚未做，属产品决策）。
+
 ### JavaFX Class Loading Warning (macOS + Homebrew JDK)
 When running tests on macOS with Homebrew's OpenJDK 17, you may see:
 ```
