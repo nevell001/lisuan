@@ -95,6 +95,32 @@ class CheckoutConsistencyPolicyTest {
     }
 
     @Test
+    @DisplayName("标准收银台结账后打印小票，且用结账前的会员折扣")
+    void standardPosPrintsReceiptWithSaleTimeSnapshot() throws Exception {
+        String cart = readMainSource("controller/CartController.java");
+        String receiptPrinter = readMainSource("util/ReceiptPrinter.java");
+
+        // 标准收银台此前完全没有打印入口（只有触屏版打小票）
+        assertTrue(cart.contains("RECEIPT_PRINTER.submit("), "标准收银台结账后应提交小票打印任务");
+        assertTrue(cart.contains("ReceiptPrinter.printReceipt(")
+                || cart.contains("ReceiptPrinter.printReceiptWithPrinter("),
+            "标准收银台应调用 ReceiptPrinter 生成/打印小票");
+
+        // 折扣必须取结账前的值：executeTransaction 会就地改写 currentMember
+        int snapshot = cart.indexOf("memberDiscountAtSale =");
+        int checkout = cart.indexOf("TransactionService.executeTransaction(");
+        assertTrue(snapshot > 0, "标准收银台应保留结账前的会员折扣快照");
+        assertTrue(snapshot < checkout,
+            "会员折扣快照必须在 executeTransaction 之前取，否则会印出结账后升级的折扣");
+
+        // 小票模板自身不得再硬编码收银员，也不得用 %d 格式化 BigDecimal 积分
+        assertFalse(receiptPrinter.contains("收银员: 系统"),
+            "销售小票不得固定打印“系统”，应取本单操作员");
+        assertFalse(receiptPrinter.contains("积分: %d"),
+            "member.points 是 BigDecimal，用 %d 会抛 IllegalFormatConversionException");
+    }
+
+    @Test
     @DisplayName("触屏收银台必须计算并落库促销优惠")
     void touchPosAppliesPromotions() throws Exception {
         String touch = readMainSource("controller/TouchCartController.java");

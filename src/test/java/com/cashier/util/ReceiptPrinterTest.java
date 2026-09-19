@@ -1,6 +1,7 @@
 package com.cashier.util;
 
 import com.cashier.model.CartItem;
+import com.cashier.model.Member;
 import com.cashier.model.Product;
 import com.cashier.model.Transaction;
 import org.junit.jupiter.api.DisplayName;
@@ -27,7 +28,7 @@ class ReceiptPrinterTest {
     void discountedTransactionPrintsDiscountLine() {
         Transaction transaction = transaction(new BigDecimal("100.00"), new BigDecimal("90.00"));
 
-        String content = ReceiptPrinter.generateReceiptContent(transaction, cart(), null);
+        String content = ReceiptPrinter.generateReceiptContent(transaction, cart(), null, null);
 
         assertTrue(content.contains("商品总额:"), content);
         assertTrue(content.contains("优惠:"), "打折交易必须打印优惠行：" + content);
@@ -40,7 +41,7 @@ class ReceiptPrinterTest {
     void plainTransactionHasNoDiscountLine() {
         Transaction transaction = transaction(new BigDecimal("30.00"), new BigDecimal("30.00"));
 
-        String content = ReceiptPrinter.generateReceiptContent(transaction, cart(), null);
+        String content = ReceiptPrinter.generateReceiptContent(transaction, cart(), null, null);
 
         assertTrue(content.contains("商品总额:"), content);
         assertFalse(content.contains("优惠:"), "没有优惠不该出现优惠行：" + content);
@@ -52,10 +53,69 @@ class ReceiptPrinterTest {
     void missingAmountsDoNotBreakReceipt() {
         Transaction transaction = transaction(null, null);
 
-        String content = ReceiptPrinter.generateReceiptContent(transaction, cart(), null);
+        String content = ReceiptPrinter.generateReceiptContent(transaction, cart(), null, null);
 
         assertTrue(content.contains("商品总额:"), content);
         assertFalse(content.contains("优惠:"), content);
+    }
+
+    @Test
+    @DisplayName("收银员取本单落库的操作员，不再固定打印“系统”")
+    void cashierLineUsesTransactionOperator() {
+        Transaction transaction = transaction(new BigDecimal("30.00"), new BigDecimal("30.00"));
+        transaction.operatorName = "张收银";
+        transaction.operatorUsername = "zhang01";
+
+        String content = ReceiptPrinter.generateReceiptContent(transaction, cart(), null, null);
+
+        assertTrue(content.contains("收银员: 张收银"), content);
+        assertFalse(content.contains("收银员: 系统"), "小票不得再固定印“系统”：" + content);
+    }
+
+    @Test
+    @DisplayName("收银员缺失时回退用户名，两者都无才显示未知")
+    void cashierLineFallsBackToUsername() {
+        Transaction noName = transaction(new BigDecimal("30.00"), new BigDecimal("30.00"));
+        noName.operatorName = null;
+        noName.operatorUsername = "zhang01";
+        assertTrue(ReceiptPrinter.generateReceiptContent(noName, cart(), null, null)
+            .contains("收银员: zhang01"));
+
+        Transaction noOperator = transaction(new BigDecimal("30.00"), new BigDecimal("30.00"));
+        noOperator.operatorName = null;
+        noOperator.operatorUsername = null;
+        assertTrue(ReceiptPrinter.generateReceiptContent(noOperator, cart(), null, null)
+            .contains("收银员: 未知"));
+    }
+
+    @Test
+    @DisplayName("会员折扣打印的是结账前的折扣，不是结账后升级的折扣")
+    void memberDiscountUsesSaleTimeValue() {
+        Transaction transaction = transaction(new BigDecimal("100.00"), new BigDecimal("90.00"));
+        Member member = new Member("13800000000", "张三", BigDecimal.TEN, "普通", BigDecimal.valueOf(9.0));
+
+        // 结账把会员升成银卡（9.5 折），但本单是按 9 折成交的 → 小票必须印 9.0
+        member.level = "银卡";
+        member.discount = BigDecimal.valueOf(9.5);
+
+        String content = ReceiptPrinter.generateReceiptContent(
+            transaction, cart(), member, BigDecimal.valueOf(9.0));
+
+        assertTrue(content.contains("会员折扣: 9.0折"),
+            "小票必须按结账前的折扣打印：" + content);
+        assertFalse(content.contains("9.5折"), "不得印结账后升级的折扣：" + content);
+    }
+
+    @Test
+    @DisplayName("没有结账前折扣时宁可不打印该行，也不印错数字")
+    void memberDiscountLineSkippedWhenSaleTimeDiscountMissing() {
+        Transaction transaction = transaction(new BigDecimal("100.00"), new BigDecimal("90.00"));
+        Member member = new Member("13800000000", "张三", BigDecimal.TEN, "金卡", BigDecimal.valueOf(9.0));
+
+        String content = ReceiptPrinter.generateReceiptContent(transaction, cart(), member, null);
+
+        assertFalse(content.contains("会员折扣:"), "折扣缺失时不应打印该行：" + content);
+        assertTrue(content.contains("会员信息:"), content);
     }
 
     private static Transaction transaction(BigDecimal totalAmount, BigDecimal finalAmount) {

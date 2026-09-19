@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import com.cashier.util.FormValidator;
 import com.cashier.util.QrCodeImageUtil;
+import com.cashier.util.ReceiptPrinter;
 import com.cashier.util.UIOptimizer;
 
 import java.math.BigDecimal;
@@ -66,6 +67,14 @@ public class CartController implements CartViewHost {
     private static final String TEXT_DANGER_STYLE = "text-danger";
     private static final String QUICK_AMOUNT_BUTTON_CLASS = "title-md";
     private static final long DUPLICATE_SCAN_SUPPRESSION_MILLIS = 300;
+
+    /** 小票打印串行执行器（daemon）：生成文件+调用系统打印机可能阻塞数秒，多笔交易也不得交叠 */
+    private static final java.util.concurrent.ExecutorService RECEIPT_PRINTER =
+        java.util.concurrent.Executors.newSingleThreadExecutor(runnable -> {
+            Thread thread = new Thread(runnable, "cart-receipt-printer");
+            thread.setDaemon(true);
+            return thread;
+        });
     private enum ScanMessageLevel {
         SUCCESS,
         WARNING,
@@ -1078,6 +1087,41 @@ public class CartController implements CartViewHost {
         }
     }
 
+    /**
+     * 生成并打印本单小票（在打印线程执行）。
+     *
+     * <p>与触屏收银台一致：受设置项 {@code enablePrint} 控制；配置了 {@code printerName}
+     * 就走网络打印机（ESC/POS），否则用系统默认打印机打印生成的文本小票。
+     * 打印失败只记日志，不影响已经成功的交易。</p>
+     */
+    private void printReceiptInBackground(Transaction transaction, List<CartItem> itemsAtSale,
+                                         Member memberAtSale, BigDecimal memberDiscountAtSale) {
+        try {
+            Map<String, String> settings = DataService.loadSettings();
+            if (!Boolean.parseBoolean(settings.getOrDefault("enablePrint", "false"))) {
+                logger.info("打印功能未启用（enablePrint=false），跳过小票打印");
+                return;
+            }
+            String printerName = settings.getOrDefault("printerName", "").trim();
+            if (!printerName.isEmpty()) {
+                boolean printed = ReceiptPrinter.printReceiptWithPrinter(
+                    transaction, itemsAtSale, memberAtSale, printerName, memberDiscountAtSale);
+                if (!printed) {
+                    logger.warn("小票打印未完成（打印机: {}，交易仍已成功）: {}",
+                        printerName, transaction.transactionId);
+                }
+                return;
+            }
+            String path = ReceiptPrinter.printReceipt(
+                transaction, itemsAtSale, memberAtSale, memberDiscountAtSale);
+            if (path == null) {
+                logger.warn("小票生成失败（交易仍已成功）: {}", transaction.transactionId);
+            }
+        } catch (Exception e) {
+            logger.error("后台小票打印失败（交易仍已成功）: {}", transaction.transactionId, e);
+        }
+    }
+
     private void completeTransaction(Transaction transaction, String paymentMethod,
                                      BigDecimal receivedAmount, BigDecimal changeAmount) {
         // 交易事务含逐商品乐观锁往返+会员扣减+明细落库+同步广播，放到 daemon 线程执行；
@@ -1089,6 +1133,13 @@ public class CartController implements CartViewHost {
 
         Thread worker = new Thread(() -> {
             try {
+                // 小票所需快照必须在结账前取：executeTransaction 会就地改写 currentMember 的
+                // 等级/折扣/积分，且随后 clear() 会清空购物车
+                final Member memberAtSale = currentMember;
+                final BigDecimal memberDiscountAtSale =
+                    currentMember != null ? currentMember.getDiscount() : null;
+                final List<CartItem> itemsAtSale = new ArrayList<>(cartList);
+
                 TransactionService.TransactionResult result = TransactionService.executeTransaction(
                     cartList,
                     currentMember,
@@ -1110,6 +1161,11 @@ public class CartController implements CartViewHost {
 
                 final com.cashier.model.Transaction settled = result.getTransaction();
                 logger.info("交易成功完成，交易ID: {}", settled.transactionId);
+
+                // 小票打印放到独立串行线程：不阻塞 FX，也不影响下一笔交易
+                RECEIPT_PRINTER.submit(() -> printReceiptInBackground(
+                    settled, itemsAtSale, memberAtSale, memberDiscountAtSale));
+
                 javafx.application.Platform.runLater(() -> {
                     setPaymentInProgress(false);
                     showSuccess(paymentMethod, settled, receivedAmount.doubleValue(), changeAmount.doubleValue());

@@ -757,6 +757,16 @@ API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后�
   印在小票上（冒烟实测：9 折普通会员买 180 元得 1800 分、当场升银卡，旧实现的小票会印"银卡"）。
   现在 `ReceiptBuilder.build(...)` 只接受 `ReceiptBuilder.MemberSnapshot`（`MemberSnapshot.of(member)`
   须在 `executeTransaction` 之前调用），从类型上杜绝传错对象
+- 销售小票两条路径都已接通并修正：
+  - **触屏收银台**：`ReceiptBuilder`（结账前会员快照）→ `PrintUtil` 打印，会员等级取快照
+  - **标准收银台**：此前**完全没有打印入口**（只有触屏版打小票），现在结账成功后由
+    `CartController.printReceiptInBackground` 在 daemon 串行线程打印，受 `enablePrint` 控制，
+    配了 `printerName` 走网络打印机（ESC/POS），否则用系统默认打印机；打印失败只记日志，不影响已成交订单
+  - `ReceiptPrinter` 的销售模板（`printReceipt` / `generateReceiptOnly` / `printReceiptWithPrinter`）
+    随之修正三处：① `收银员: 系统` 是硬编码 → 改为取本单落库的 `operatorName`（回退
+    `operatorUsername`，再回退"未知"）；② `会员折扣` 读活 `member.getDiscount()`（会被结账就地改写）
+    → 改为显式传入**结账前**折扣，传 null 时**不打印该行**（宁可少一行也不印错）；③ `积分: %d`
+    配 `member.points`（BigDecimal）会抛 `IllegalFormatConversionException` → 改为 `%s`
 - 配套：小票必须打印优惠行，否则打折单上"商品总额 ≠ 实付金额"无从解释——
   `ReceiptPrinter` 两个模板都加了 `优惠:` 行（`total_amount > final_amount` 时才打，
   以负数呈现，无优惠不出现该行）；交易详情弹窗同样补了一行（复用既有 key
@@ -774,7 +784,11 @@ API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后�
     （把 member 改成银卡 9.5 折后，小票仍须显示成交时的"普通"）
   - `CheckoutConsistencyPolicyTest.touchReceiptSnapshotsMemberBeforeCheckout`：断言快照出现在
     `executeTransaction` **之前**，且小票不得直接传 `currentMember`
-  - `ReceiptPrinterTest`（3 项，行为级：打折单打优惠行且金额自洽、无优惠不打、金额缺失不抛异常）
+  - `ReceiptPrinterTest`（7 项，行为级：打折单打优惠行且金额自洽、无优惠不打、金额缺失不抛异常、
+    收银员取本单操作员并回退用户名/未知、会员折扣按结账前值打印、折扣缺失时不打印该行）
+  - `CheckoutConsistencyPolicyTest.standardPosPrintsReceiptWithSaleTimeSnapshot`：标准收银台必须提交
+    打印任务且调用 `ReceiptPrinter`、折扣快照必须在 `executeTransaction` **之前**取；
+    小票模板不得再出现 `收银员: 系统` 与 `积分: %d`
   - 均做过变异验证：把标准端改回 `getFinalAmount()`、删掉小票优惠行、把税额基数改回原价 →
     对应门禁/行为测试各自变红
 

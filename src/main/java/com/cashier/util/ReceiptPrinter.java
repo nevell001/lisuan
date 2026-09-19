@@ -41,7 +41,8 @@ public class ReceiptPrinter {
      * @param member 会员信息（可选）
      * @return 小票文件路径，如果打印失败则返回 null
      */
-    public static String printReceipt(Transaction transaction, List<CartItem> cartItems, Member member) {
+    public static String printReceipt(Transaction transaction, List<CartItem> cartItems, Member member,
+                                      BigDecimal memberDiscountAtSale) {
         try {
             // 创建收据目录
             File dir = new File(RECEIPT_DIR);
@@ -57,7 +58,7 @@ public class ReceiptPrinter {
             File receiptFile = new File(dir, fileName);
 
             // 生成小票内容
-            String content = generateReceiptContent(transaction, cartItems, member);
+            String content = generateReceiptContent(transaction, cartItems, member, memberDiscountAtSale);
 
             // 写入文件
             try (java.io.BufferedWriter writer = Files.newBufferedWriter(receiptFile.toPath(), StandardCharsets.UTF_8)) {
@@ -79,7 +80,8 @@ public class ReceiptPrinter {
      * 生成小票内容
      */
     /** 生成小票正文（包内可见，便于无界面单测；只拼字符串，不打印、不落盘）。 */
-    static String generateReceiptContent(Transaction transaction, List<CartItem> cartItems, Member member) {
+    static String generateReceiptContent(Transaction transaction, List<CartItem> cartItems, Member member,
+                                         BigDecimal memberDiscountAtSale) {
         StringBuilder sb = new StringBuilder();
 
         // 店铺信息（带 Logo）
@@ -103,7 +105,7 @@ public class ReceiptPrinter {
         } catch (Exception e) {
             sb.append("时间: ").append(transaction.timestamp).append("\n");
         }
-        sb.append("收银员: 系统\n");
+        sb.append("收银员: ").append(cashierName(transaction)).append("\n");
 
         // 会员信息
         if (member != null) {
@@ -154,9 +156,10 @@ public class ReceiptPrinter {
         String paymentMethod = getPaymentMethodDisplayName(transaction.paymentMethod);
         sb.append(String.format("支付方式: %s\n", paymentMethod));
 
-        // 会员折扣（如果有）
-        if (member != null && member.getDiscount().compareTo(BigDecimal.TEN) < 0) {
-            sb.append(String.format("会员折扣: %.1f折\n", member.getDiscount()));
+        // 会员折扣（如果有）：用结账前取好的折扣，避免印出本单成交后升级的折扣
+        BigDecimal discountRate = memberDiscountAtSale(member, memberDiscountAtSale);
+        if (discountRate != null) {
+            sb.append(String.format("会员折扣: %.1f折\n", discountRate));
         }
 
         sb.append("\n");
@@ -238,7 +241,8 @@ public class ReceiptPrinter {
      * @param member 会员信息（可选）
      * @return 小票文件路径，如果失败则返回 null
      */
-    public static String generateReceiptOnly(Transaction transaction, List<CartItem> cartItems, Member member) {
+    public static String generateReceiptOnly(Transaction transaction, List<CartItem> cartItems, Member member,
+                                             BigDecimal memberDiscountAtSale) {
         try {
             // 创建收据目录
             File dir = new File(RECEIPT_DIR);
@@ -254,7 +258,7 @@ public class ReceiptPrinter {
             File receiptFile = new File(dir, fileName);
 
             // 生成小票内容
-            String content = generateReceiptContent(transaction, cartItems, member);
+            String content = generateReceiptContent(transaction, cartItems, member, memberDiscountAtSale);
 
             // 写入文件
             try (java.io.BufferedWriter writer = Files.newBufferedWriter(receiptFile.toPath(), StandardCharsets.UTF_8)) {
@@ -478,6 +482,33 @@ public class ReceiptPrinter {
     }
 
     /**
+     * 小票上的收银员：取本单落库的操作员（结账时由控制器写入），缺失时回退用户名。
+     */
+    private static String cashierName(Transaction transaction) {
+        if (transaction.operatorName != null && !transaction.operatorName.isBlank()) {
+            return transaction.operatorName;
+        }
+        if (transaction.operatorUsername != null && !transaction.operatorUsername.isBlank()) {
+            return transaction.operatorUsername;
+        }
+        return "未知";
+    }
+
+    /**
+     * 小票要打印的会员折扣：必须传**结账前**取好的折扣。
+     *
+     * <p>结账会就地改写 {@code member} 的等级/折扣（本单积分可能让会员当场升级），
+     * 结账后再读 {@code member.getDiscount()} 会印出与实收不符的折扣。传 null 时返回 null，
+     * 调用方据此不打印该行——宁可少一行，也不印错数字。</p>
+     */
+    private static BigDecimal memberDiscountAtSale(Member member, BigDecimal discountAtSale) {
+        if (member == null || discountAtSale == null) {
+            return null;
+        }
+        return discountAtSale.compareTo(BigDecimal.TEN) < 0 ? discountAtSale : null;
+    }
+
+    /**
      * 使用网络打印机打印小票（支持位图 Logo）
      * @param transaction 交易信息
      * @param cartItems 购物车商品列表
@@ -485,7 +516,8 @@ public class ReceiptPrinter {
      * @param printerId 打印机ID（可选，null 使用默认）
      * @return 是否打印成功
      */
-    public static boolean printReceiptWithPrinter(Transaction transaction, List<CartItem> cartItems, Member member, String printerId) {
+    public static boolean printReceiptWithPrinter(Transaction transaction, List<CartItem> cartItems, Member member,
+                                                  String printerId, BigDecimal memberDiscountAtSale) {
         PrinterManager printerManager = PrinterManager.getInstance();
 
         try {
@@ -509,14 +541,14 @@ public class ReceiptPrinter {
             // 交易信息
             content.append(String.format("订单号: %s\n", transaction.transactionId));
             content.append(String.format("时间: %s\n", transaction.timestamp));
-            content.append("收银员: 系统\n");
+            content.append(String.format("收银员: %s\n", cashierName(transaction)));
 
             // 会员信息
             if (member != null) {
                 content.append(THIN_SEPARATOR);
                 content.append(String.format("会员: %s\n", member.name));
                 content.append(String.format("手机: %s\n", member.phone));
-                content.append(String.format("积分: %d\n", member.points));
+                content.append(String.format("积分: %s\n", member.points == null ? "0" : member.points.toPlainString()));
                 content.append(THIN_SEPARATOR);
             }
 
@@ -551,9 +583,10 @@ public class ReceiptPrinter {
             String paymentMethod = getPaymentMethodDisplayName(transaction.paymentMethod);
             content.append(String.format("支付方式: %s\n", paymentMethod));
 
-            // 会员折扣
-            if (member != null && member.getDiscount().compareTo(BigDecimal.TEN) < 0) {
-                content.append(String.format("会员折扣: %.1f折\n", member.getDiscount()));
+            // 会员折扣（用结账前取好的折扣）
+            BigDecimal discountRate = memberDiscountAtSale(member, memberDiscountAtSale);
+            if (discountRate != null) {
+                content.append(String.format("会员折扣: %.1f折\n", discountRate));
             }
 
             content.append("\n");
