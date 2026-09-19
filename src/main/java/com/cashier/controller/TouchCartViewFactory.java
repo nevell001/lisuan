@@ -1,5 +1,6 @@
 package com.cashier.controller;
 
+import com.cashier.i18n.I18nKeys;
 import com.cashier.i18n.I18nManager;
 import com.cashier.model.CartItem;
 import com.cashier.model.Product;
@@ -146,7 +147,7 @@ final class TouchCartViewFactory {
 
     /** 创建应付金额展示行 */
     static HBox cashDueBox(BigDecimal finalAmount) {
-        Label dueTitleLabel = new Label("应付金额");
+        Label dueTitleLabel = new Label(i18n.get(I18nKeys.Tpos.CASH_AMOUNT_DUE_LABEL));
         dueTitleLabel.getStyleClass().add("cash-section-title");
 
         Label dueLabel = new Label(CurrencyUtil.format(finalAmount.doubleValue()));
@@ -162,11 +163,13 @@ final class TouchCartViewFactory {
         if (cashReceivedAmount.compareTo(BigDecimal.ZERO) <= 0) {
             return null;
         }
-        Label paidLabel = new Label("已付 " + CurrencyUtil.format(cashReceivedAmount.doubleValue()));
+        Label paidLabel = new Label(i18n.get(I18nKeys.Runtime.AMOUNT_PAID,
+            CurrencyUtil.format(cashReceivedAmount.doubleValue())));
         paidLabel.getStyleClass().add("cash-paid-label");
         Label sep = new Label("  |  ");
         sep.getStyleClass().add("cash-separator");
-        Label remainLabel = new Label("还需 " + CurrencyUtil.format(remainingAmount.doubleValue()));
+        Label remainLabel = new Label(i18n.get(I18nKeys.Runtime.AMOUNT_REMAINING,
+            CurrencyUtil.format(remainingAmount.doubleValue())));
         remainLabel.getStyleClass().add("cash-remain-label");
 
         HBox partialBox = new HBox(4, paidLabel, sep, remainLabel);
@@ -184,7 +187,7 @@ final class TouchCartViewFactory {
     /** 创建收款金额输入框 */
     static TextField cashInputField() {
         TextField receivedField = new TextField();
-        receivedField.setPromptText("请输入收款金额");
+        receivedField.setPromptText(i18n.get(I18nKeys.Runtime.PAYMENT_AMOUNT_HINT));
         receivedField.setPrefHeight(56);
         receivedField.setMaxWidth(Double.MAX_VALUE);
         receivedField.getStyleClass().add("cash-input-field");
@@ -212,7 +215,7 @@ final class TouchCartViewFactory {
             denomGrid.add(b, i % 4, i / 4);
         }
 
-        Button exactBtn = new Button("精确金额");
+        Button exactBtn = new Button(i18n.get(I18nKeys.Tpos.CASH_EXACT_AMOUNT));
         exactBtn.setPrefSize(110, 62);
         exactBtn.getStyleClass().add("cash-exact-btn");
         exactBtn.setOnAction(e -> {
@@ -221,7 +224,7 @@ final class TouchCartViewFactory {
         });
         denomGrid.add(exactBtn, 2, 1);
 
-        Button clearBtn = new Button("清除 C");
+        Button clearBtn = new Button(i18n.get(I18nKeys.Tpos.CASH_CLEAR_AMOUNT));
         clearBtn.setPrefSize(110, 62);
         clearBtn.getStyleClass().add("cash-clear-btn");
         clearBtn.setOnAction(e -> {
@@ -235,7 +238,7 @@ final class TouchCartViewFactory {
 
     /** 创建状态标签并绑定输入监听（找零/还需提示） */
     static Label cashStatusLabel(TextField receivedField, BigDecimal cashReceivedAmount, BigDecimal finalAmount) {
-        Label statusLabel = new Label("请输入收款金额");
+        Label statusLabel = new Label(i18n.get(I18nKeys.Runtime.PAYMENT_AMOUNT_HINT));
         statusLabel.getStyleClass().add("cash-status-default");
         statusLabel.setMaxWidth(Double.MAX_VALUE);
         statusLabel.setAlignment(Pos.CENTER);
@@ -248,18 +251,18 @@ final class TouchCartViewFactory {
                 BigDecimal diff = totalAfterThis.subtract(finalAmount);
 
                 if (thisPayment.compareTo(BigDecimal.ZERO) <= 0) {
-                    statusLabel.setText("请输入收款金额");
+                    statusLabel.setText(i18n.get(I18nKeys.Runtime.PAYMENT_AMOUNT_HINT));
                     statusLabel.getStyleClass().setAll("cash-status-default");
                 } else if (totalAfterThis.compareTo(finalAmount) < 0) {
                     BigDecimal stillNeed = finalAmount.subtract(totalAfterThis);
-                    statusLabel.setText("还需支付 " + CurrencyUtil.format(stillNeed.doubleValue()));
+                    statusLabel.setText(i18n.get(I18nKeys.Runtime.AMOUNT_REMAINING, CurrencyUtil.format(stillNeed.doubleValue())));
                     statusLabel.getStyleClass().setAll("cash-status-warn");
                 } else {
-                    statusLabel.setText("找零 " + CurrencyUtil.format(diff.doubleValue()));
+                    statusLabel.setText(i18n.get(I18nKeys.Runtime.CHANGE_AMOUNT, CurrencyUtil.format(diff.doubleValue())));
                     statusLabel.getStyleClass().setAll("cash-status-change");
                 }
             } catch (NumberFormatException e) {
-                statusLabel.setText("请输入收款金额");
+                statusLabel.setText(i18n.get(I18nKeys.Runtime.PAYMENT_AMOUNT_HINT));
                 statusLabel.getStyleClass().setAll("cash-status-default");
             }
         });
@@ -268,7 +271,7 @@ final class TouchCartViewFactory {
 
     /** 创建确认收款按钮 */
     static Button cashConfirmButton() {
-        Button continueBtn = new Button("确认收款 (Enter)");
+        Button continueBtn = new Button(i18n.get(I18nKeys.Tpos.CASH_CONFIRM_RECEIPT));
         continueBtn.setDefaultButton(true);
         continueBtn.setPrefHeight(52);
         continueBtn.setMaxWidth(Double.MAX_VALUE);

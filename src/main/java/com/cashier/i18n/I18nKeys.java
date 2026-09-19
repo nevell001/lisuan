@@ -180,17 +180,22 @@ public final class I18nKeys {
     }
 
     public static final class Runtime {
+        public static final String AMOUNT_DUE = "runtime.amount_due";
+        public static final String AMOUNT_PAID = "runtime.amount_paid";
+        public static final String AMOUNT_REMAINING = "runtime.amount_remaining";
         public static final String CART_EMPTY_PAYMENT = "runtime.cart_empty_payment";
         public static final String CHANGE_AMOUNT = "runtime.change_amount";
         public static final String CONFIRM_EXIT = "runtime.confirm_exit";
         public static final String EXPORT_FAILED_DETAIL = "runtime.export_failed_detail";
         public static final String EXPORT_SUCCESS_PATH = "runtime.export_success_path";
         public static final String FORMAT_LABEL = "runtime.format_label";
+        public static final String INVALID_AMOUNT = "runtime.invalid_amount";
         public static final String INVALID_DATE_RANGE = "runtime.invalid_date_range";
         public static final String NO_ACTIVE_SHIFT = "runtime.no_active_shift";
         public static final String PRINT_NO_PRINTER = "runtime.print_no_printer";
         public static final String ORDER_INFO = "runtime.order_info";
         public static final String PAYMENT_ALIPAY = "runtime.payment.alipay";
+        public static final String PAYMENT_AMOUNT_HINT = "runtime.payment_amount_hint";
         public static final String PAYMENT_CARD = "runtime.payment.card";
         public static final String PAYMENT_CASH = "runtime.payment.cash";
         public static final String PAYMENT_WECHAT = "runtime.payment.wechat";
@@ -316,6 +321,20 @@ public final class I18nKeys {
         public static final String READY = "status.ready";
 
         private Status() {
+        }
+    }
+
+    /** 触屏收银台（TouchCartView / TouchCartController）文案；历史 tpos.* 仍是字面量，新增项统一走这里。 */
+    public static final class Tpos {
+        public static final String CASH_AMOUNT_DUE_LABEL = "tpos.cash.amount_due_label";
+        public static final String CASH_EXACT_AMOUNT = "tpos.cash.exact_amount";
+        public static final String CASH_CLEAR_AMOUNT = "tpos.cash.clear_amount";
+        public static final String CASH_CONFIRM_RECEIPT = "tpos.cash.confirm_receipt";
+        public static final String CASH_SECTION_AMOUNT_RECEIVED = "tpos.cash.section_amount_received";
+        public static final String CASH_SECTION_QUICK_AMOUNT = "tpos.cash.section_quick_amount";
+        public static final String CASH_PARTIAL_PAYMENT_HINT = "tpos.cash.partial_payment_hint";
+
+        private Tpos() {
         }
     }
 

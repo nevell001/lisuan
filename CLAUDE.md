@@ -846,9 +846,10 @@ When working on files that still use the old `ProductDAO`, consider migrating th
     （标准端 `total_amount = 折后金额`、触屏端 `= 商品原价总额`，税额基数随之不同），
     统一前需要业务确认哪种口径权威，并考虑历史数据的处理
 - 顺带发现（未修，待定）：
-  - 触屏现金弹窗的文案是硬编码中文（"应付金额/已付/还需/找零/精确金额/确认收款"），
-    切到 en/zh_TW 仍是中文；修法是在 `I18nKeys` + 三份语言包补 key 后替换
   - `TouchCartController` 里 `import com.cashier.model.Shift;` 已无使用方（历史遗留）
+  - 默认回退包 `messages.properties` 语言不统一：`runtime.*` 是中文、部分 `tpos.*` 是英文
+    （新增的 `tpos.cash.*` 跟邻居保持一致用了英文）。只有在**不支持的语言环境**下才会落到
+    这个包，届时界面会中英混排；不影响 zh_CN/zh_TW/en 三种正式语言
 - 已删除的死代码：`TouchCartController.filterByKeyword` / `containsIgnoreCase`
   （关键字搜索早已改走 `productDAO.search` 的 SQL，这两个内存过滤方法无任何调用方；
   `InventoryController` 里另有一份仍在使用，未动）
@@ -870,6 +871,15 @@ When working on files that still use the old `ProductDAO`, consider migrating th
 
 **i18n 与启动画面（v2.6.0 补强）**
 
+- 触屏现金支付弹窗文案**已全部走 i18n**（此前硬编码中文，触屏有语言切换按钮，
+  切到 en/zh_TW 后弹窗仍是中文）：新增 `I18nKeys.Tpos` 的 7 个 `tpos.cash.*`
+  （应付金额标题、精确金额、清除、确认收款、收款金额/快捷金额分节标题、部分收款提示）；
+  另复用 `runtime.amount_paid` / `amount_remaining` / `payment_amount_hint` /
+  `change_amount` / `invalid_amount`——这 5 个键原先只有字面量引用，本次补上了
+  `I18nKeys.Runtime` 常量。四份语言包（zh_CN/zh_TW/en + 默认回退包）同步补齐。
+  门禁 `TouchCashDialogI18nTest`：三种语言都有译文且**英文≠中文**（防止把中文抄进英文包）、
+  带 `{0}` 的文案能正确代入、`TouchCartViewFactory` 的字符串字面量零中文、
+  曾经的 13 处硬编码写法不得回归
 - REST API 语言**按请求隔离**：新增 `ApiLocaleResolver`（`?locale=` → `Accept-Language` →
   当前用户偏好 → 系统语言），`I18nManager.get(Locale, key)` / `getAvailableLocales(Locale)`
   支持按指定语言取值而不改状态；`PUT /api/i18n/locale` 只写**当前用户**的语言偏好，

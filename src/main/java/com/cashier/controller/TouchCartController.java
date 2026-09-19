@@ -3,6 +3,7 @@ package com.cashier.controller;
 import com.cashier.CashierSystemFXApplication;
 import com.cashier.dao.DAOFactory;
 import com.cashier.dao.ProductDAORefactored;
+import com.cashier.i18n.I18nKeys;
 import com.cashier.i18n.I18nManager;
 import com.cashier.model.CartItem;
 import com.cashier.model.Category;
@@ -1309,8 +1310,8 @@ public class TouchCartController implements CartViewHost {
             content.getChildren().add(partialBox);
         }
         content.getChildren().addAll(
-            TouchCartViewFactory.cashSectionTitle("收款金额"), receivedField,
-            TouchCartViewFactory.cashSectionTitle("快捷金额"), denomGrid,
+            TouchCartViewFactory.cashSectionTitle(i18n.get(I18nKeys.Tpos.CASH_SECTION_AMOUNT_RECEIVED)), receivedField,
+            TouchCartViewFactory.cashSectionTitle(i18n.get(I18nKeys.Tpos.CASH_SECTION_QUICK_AMOUNT)), denomGrid,
             statusLabel, continueBtn);
 
         dialog.getDialogPane().setContent(content);
@@ -1348,7 +1349,7 @@ public class TouchCartController implements CartViewHost {
                 dialog.setResult(thisPayment);
                 dialog.close();
             } catch (NumberFormatException ex) {
-                warn("请输入有效的金额");
+                warn(i18n.get(I18nKeys.Runtime.INVALID_AMOUNT));
             }
         });
 
@@ -1375,7 +1376,8 @@ public class TouchCartController implements CartViewHost {
             // 未付清：提示并重新打开（递归在前一个 showAndWait 返回后，不会卡死）
             Alert info = new Alert(Alert.AlertType.INFORMATION);
             info.setHeaderText(null);
-            info.setContentText("收款成功！还需: " + CurrencyUtil.format(progress.stillNeed().doubleValue()));
+            info.setContentText(i18n.get(I18nKeys.Tpos.CASH_PARTIAL_PAYMENT_HINT,
+                CurrencyUtil.format(progress.stillNeed().doubleValue())));
             info.showAndWait();
             handleCashPayment();
         }
