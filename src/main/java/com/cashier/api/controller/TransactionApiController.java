@@ -216,10 +216,28 @@ public class TransactionApiController {
      * POST /api/transactions/:id/refund
      */
     public static void refund(Context ctx) {
+        String transactionId = ctx.pathParam("id");
+        Transaction transaction;
         try {
-            String transactionId = ctx.pathParam("id");
-            Transaction transaction = DAOFactory.getInstance().getTransactionDAO().findById(transactionId);
+            transaction = DAOFactory.getInstance().getTransactionDAO().findById(transactionId);
+        } catch (SQLException e) {
+            logger.error("读取交易失败: {}", transactionId, e);
+            ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
+               .json(Map.of("success", false, "message", "交易退款失败"));
+            return;
+        }
+        refundFetched(ctx, transactionId, transaction);
+    }
 
+    /**
+     * 退款主体：入参 {@code transaction} 是调用方读取到的快照。
+     *
+     * <p>单独抽出来是为了能测试"读取快照之后、抢占之前被并发退款"的窗口——
+     * 此时 {@code validateRefundRequest} 用的是陈旧快照、会放行，
+     * 真正的拦截依赖事务内的原子抢占，必须返回 409 而不是 500。</p>
+     */
+    static void refundFetched(Context ctx, String transactionId, Transaction transaction) {
+        try {
             if (!validateRefundRequest(ctx, transactionId, transaction)) {
                 return;
             }
@@ -234,10 +252,22 @@ public class TransactionApiController {
                 ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
                    .json(Map.of("success", false, "message", "退款处理失败"));
             }
+        } catch (RefundConflictException e) {
+            // 并发/重复退款：交易已被另一方抢占，属客户端可理解的冲突而非服务器错误
+            logger.warn("退款冲突: {}", e.getMessage());
+            ctx.status(HttpStatus.CONFLICT)
+               .json(Map.of("success", false, "message", "该交易已退款"));
         } catch (Exception e) {
             logger.error("交易退款失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
                .json(Map.of("success", false, "message", "交易退款失败"));
+        }
+    }
+
+    /** 事务内原子抢占退款标记失败：说明同一交易已被并发/重复请求退过。 */
+    private static final class RefundConflictException extends RuntimeException {
+        RefundConflictException(String transactionId) {
+            super("该交易已退款: " + transactionId);
         }
     }
 
@@ -265,10 +295,9 @@ public class TransactionApiController {
     private static boolean processRefundTransaction(Connection conn, String transactionId, Transaction transaction)
             throws SQLException {
         try {
-            // 原子抢占退款标记：并发/重复请求只有一次能成功，其余直接失败
+            // 原子抢占退款标记：并发/重复请求只有一次能成功，其余抛冲突（由上层映射为 409）
             if (!DAOFactory.getInstance().getTransactionDAO().claimRefundWithConnection(conn, transactionId)) {
-                logger.warn("退款抢占失败，交易已被其他请求退款: {}", transactionId);
-                return false;
+                throw new RefundConflictException(transactionId);
             }
             Member member = resolveMemberByPhone(conn, transaction.memberPhone);
             ReturnOrder returnOrder = createRefundReturnOrder(conn, transactionId, transaction, member);

@@ -11,6 +11,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
@@ -180,6 +181,39 @@ class TransactionApiControllerTest extends DatabaseTestBase {
         // 余额支付退款必须退回余额，而不是当作现金退款
         assertAmountEquals(new BigDecimal("1000.00"),
             DAOFactory.getInstance().getMemberDAO().findById(member.id).balance);
+    }
+
+    @Test
+    @DisplayName("读取快照后被并发退款：原子抢占失败返回 409 而不是 500")
+    void refundConflictReturns409() throws Exception {
+        Product product = insertProduct("API并发退款商品", "APIREFUND409", new BigDecimal("10.00"), 50);
+
+        TestContext saleCtx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions")
+            .withBody(createRequest(product.id, 2, "现金", null));
+        TransactionApiController.create(saleCtx.context);
+        assertEquals(HttpStatus.CREATED, saleCtx.status);
+        String transactionId = (String) response(saleCtx).get("transactionId");
+
+        // 调用方读到的快照：状态仍为 NORMAL
+        Transaction snapshot = transactionDAO.findById(transactionId);
+        assertEquals("NORMAL", snapshot.status);
+
+        // 模拟并发：另一个请求在"读取快照之后、抢占之前"完成了退款（抢占成功）
+        try (Connection conn = getTestConnection()) {
+            assertTrue(transactionDAO.claimRefundWithConnection(conn, transactionId));
+        }
+
+        // 用陈旧快照发起退款：预检放行，事务内原子抢占必须失败 → 409（而不是 500）
+        TestContext refundCtx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions/" + transactionId + "/refund")
+            .withPathParam("id", transactionId);
+        TransactionApiController.refundFetched(refundCtx.context, transactionId, snapshot);
+
+        assertEquals(HttpStatus.CONFLICT, refundCtx.status, "并发退款冲突应为 409 而非 500");
+        // 也不应产生第二张退货单
+        assertEquals(0, DAOFactory.getInstance().getReturnOrderDAO()
+            .findByOriginalTransactionId(transactionId).size());
     }
 
     @Test
