@@ -79,6 +79,22 @@ class CheckoutConsistencyPolicyTest {
     }
 
     @Test
+    @DisplayName("触屏小票的会员快照必须在结账前取")
+    void touchReceiptSnapshotsMemberBeforeCheckout() throws Exception {
+        String touch = readMainSource("controller/TouchCartController.java");
+
+        int snapshot = touch.indexOf("ReceiptBuilder.MemberSnapshot.of(currentMember)");
+        int checkout = touch.indexOf("TransactionService.executeTransaction(");
+        assertTrue(snapshot > 0, "触屏结账应先取一份会员快照供小票使用");
+        assertTrue(checkout > 0, "触屏结账应调用 TransactionService.executeTransaction");
+        assertTrue(snapshot < checkout,
+            "会员快照必须在 executeTransaction 之前取：结账会就地改写 currentMember 的等级/折扣/积分，"
+                + "结账后再取会把升级后的等级印进本单小票");
+        assertFalse(touch.contains("ReceiptBuilder.build(cartItems, currentMember"),
+            "小票不得直接传 currentMember（ReceiptBuilder 只接受结账前的 MemberSnapshot）");
+    }
+
+    @Test
     @DisplayName("触屏收银台必须计算并落库促销优惠")
     void touchPosAppliesPromotions() throws Exception {
         String touch = readMainSource("controller/TouchCartController.java");

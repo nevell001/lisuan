@@ -24,10 +24,25 @@ public final class ReceiptBuilder {
     }
 
     /**
+     * 结账前的会员快照。
+     *
+     * <p>结账会**就地改写**调用方持有的 {@link Member}（等级/折扣/积分/余额都会变），
+     * 而小票要反映的是**这一单成交时**的会员身份，所以入参只接受快照而不是 Member 实例，
+     * 从类型上杜绝"拿结账后的等级去打印"。</p>
+     */
+    public record MemberSnapshot(String name, String phone, String level) {
+
+        /** 在结账**之前**调用；member 为 null 时返回 null（非会员单）。 */
+        public static MemberSnapshot of(Member member) {
+            return member == null ? null : new MemberSnapshot(member.name, member.phone, member.level);
+        }
+    }
+
+    /**
      * 构建小票快照。
      *
      * @param cartItems 购物车明细（用于打印行项目与合计）
-     * @param member 会员，可为 null
+     * @param member 结账前的会员快照（{@link MemberSnapshot#of}），可为 null
      * @param cashierName 收银员姓名
      * @param paymentMethod 支付方式
      * @param finalAmount 交易实付金额（用于反推优惠额）
@@ -36,7 +51,7 @@ public final class ReceiptBuilder {
      * @param settings 打印相关设置（enablePrint/storeName/printLogo/printerName/paperSize）
      * @return 小票快照；打印功能未启用（{@code enablePrint != true}）时返回 null
      */
-    public static ReceiptData build(List<CartItem> cartItems, Member member, String cashierName,
+    public static ReceiptData build(List<CartItem> cartItems, MemberSnapshot member, String cashierName,
                                     String paymentMethod, BigDecimal finalAmount,
                                     BigDecimal received, BigDecimal change, Map<String, String> settings) {
         if (!Boolean.parseBoolean(settings.getOrDefault("enablePrint", "false"))) {

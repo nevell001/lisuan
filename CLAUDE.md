@@ -752,6 +752,11 @@ API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后�
   `TransactionService` 私有建单路径（旧的向后兼容入口仍在用）。注意三处真实结账走的
   `executeTransaction(cartItems, member, transaction, inventory, promotion)` **不重算 tax**，
   控制器写的值就是落库值
+- 小票的会员信息必须用**结账前快照**：`TransactionService.applyMemberInTransaction` 会就地改写调用方持有的
+  `Member`（等级/折扣/积分/余额都变），结账后再读 `currentMember.level` 会把"本单成交后升级的等级"
+  印在小票上（冒烟实测：9 折普通会员买 180 元得 1800 分、当场升银卡，旧实现的小票会印"银卡"）。
+  现在 `ReceiptBuilder.build(...)` 只接受 `ReceiptBuilder.MemberSnapshot`（`MemberSnapshot.of(member)`
+  须在 `executeTransaction` 之前调用），从类型上杜绝传错对象
 - 配套：小票必须打印优惠行，否则打折单上"商品总额 ≠ 实付金额"无从解释——
   `ReceiptPrinter` 两个模板都加了 `优惠:` 行（`total_amount > final_amount` 时才打，
   以负数呈现，无优惠不出现该行）；交易详情弹窗同样补了一行（复用既有 key
@@ -765,6 +770,10 @@ API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后�
   - `TransactionApiControllerTest.createStoresOriginalTotalAndTaxesPayableAmount`（**行为级、走真实 API**）：
     税率 6% + 会员 9 折下单 2×100 → 落库 `total_amount = 200.00`、`final_amount = 180.00`、
     `tax = 10.80`（按原价会得到 12.00）
+  - `ReceiptBuilderTest`（4 项，行为级）：小票字段口径 + **会员等级取结账前快照**
+    （把 member 改成银卡 9.5 折后，小票仍须显示成交时的"普通"）
+  - `CheckoutConsistencyPolicyTest.touchReceiptSnapshotsMemberBeforeCheckout`：断言快照出现在
+    `executeTransaction` **之前**，且小票不得直接传 `currentMember`
   - `ReceiptPrinterTest`（3 项，行为级：打折单打优惠行且金额自洽、无优惠不打、金额缺失不抛异常）
   - 均做过变异验证：把标准端改回 `getFinalAmount()`、删掉小票优惠行、把税额基数改回原价 →
     对应门禁/行为测试各自变红

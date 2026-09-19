@@ -32,7 +32,8 @@ class ReceiptBuilderTest {
         List<CartItem> cart = List.of(new CartItem(first, 2), new CartItem(second, 3));
         Member member = new Member("13800000000", "张三", BigDecimal.TEN, "金卡", BigDecimal.valueOf(9.0));
 
-        ReceiptData data = ReceiptBuilder.build(cart, member, "收银员小李", "现金",
+        ReceiptData data = ReceiptBuilder.build(cart, ReceiptBuilder.MemberSnapshot.of(member),
+            "收银员小李", "现金",
             new BigDecimal("31.50"), new BigDecimal("50.00"), new BigDecimal("18.50"), settings());
 
         assertTrue(data.itemsText.contains("小票商品A x2  20.00"), data.itemsText);
@@ -50,6 +51,28 @@ class ReceiptBuilderTest {
         assertTrue(data.printLogo);
         assertEquals("前台打印机", data.printerName);
         assertEquals("80mm", data.paperSize);
+    }
+
+    @Test
+    @DisplayName("会员等级取结账前快照：结账后升级不影响本单小票")
+    void memberLevelComesFromSnapshotTakenBeforeCheckout() {
+        Member member = new Member("13800000000", "张三", BigDecimal.TEN, "普通", BigDecimal.valueOf(9.0));
+
+        // 结账前快照
+        ReceiptBuilder.MemberSnapshot atSale = ReceiptBuilder.MemberSnapshot.of(member);
+
+        // 结账会就地改写 member：本单 1800 积分把普通升成银卡、折扣跟着变
+        member.level = "银卡";
+        member.discount = BigDecimal.valueOf(9.5);
+        member.discountRate = BigDecimal.valueOf(9.5);
+
+        ReceiptData data = ReceiptBuilder.build(List.of(new CartItem(product(1, "小票商品A", 10.0), 2)),
+            atSale, "收银员小李", "现金", new BigDecimal("18.00"),
+            new BigDecimal("20.00"), new BigDecimal("2.00"), settings());
+
+        assertTrue(data.memberInfo.endsWith("普通"),
+            "小票必须显示成交时的等级，而不是结账后升级的银卡: " + data.memberInfo);
+        assertEquals("张三(13800000000) 普通", data.memberInfo);
     }
 
     @Test

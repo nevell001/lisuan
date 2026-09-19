@@ -1665,6 +1665,9 @@ public class TouchCartController implements CartViewHost {
                     });
                 }
 
+                // 结账会就地改写 currentMember（等级/折扣/积分），先留一份成交时的会员快照给小票
+                final ReceiptBuilder.MemberSnapshot memberAtSale = ReceiptBuilder.MemberSnapshot.of(currentMember);
+
                 TransactionService.TransactionResult result = TransactionService.executeTransaction(
                     cartItems, currentMember, transaction, inventoryMap, promotionToApply);
 
@@ -1680,8 +1683,10 @@ public class TouchCartController implements CartViewHost {
                 final Transaction settled = result.getTransaction();
                 logger.info("触屏版交易成功,交易ID: {}", settled.transactionId);
 
-                // 在购物车被清空前，先在后台准备好小票快照（settings/明细读取都在 worker 内完成）
-                final ReceiptData receipt = ReceiptBuilder.build(cartItems, currentMember,
+                // 在购物车被清空前，先在后台准备好小票快照（settings/明细读取都在 worker 内完成）。
+                // memberAtSale 是在结账前取好的快照：executeTransaction 会就地改写 currentMember 的
+                // 等级/折扣/积分，直接读 currentMember 会把"结账后升级的等级"印在小票上。
+                final ReceiptData receipt = ReceiptBuilder.build(cartItems, memberAtSale,
                     currentUser != null ? currentUser.name : "", paymentMethod,
                     settled.finalAmount, receivedAmount, changeAmount,
                     com.cashier.service.DataService.loadSettings());
