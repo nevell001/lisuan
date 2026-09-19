@@ -650,39 +650,46 @@ public class TouchCartController implements CartViewHost {
      */
     private List<Product> loadHotProductsHybrid() {
         try {
-            List<Product> hotProducts = new ArrayList<>();
             // 1. 获取手动标记的热销商品
             List<Product> manualHot = productDAO.findHotProducts();
-            hotProducts.addAll(manualHot);
             logger.info("手动标记热销商品: {}个", manualHot.size());
-            for (Product p : manualHot) {
-                logger.info("  - {} (ID: {}, isHot: {})", p.name, p.id, p.isHot);
-            }
 
-            // 2. 如果不足12个，补充销量高的商品（最近30天）
+            // 2. 如果不足 12 个，补充销量高的商品（最近30天）
             final int TARGET_COUNT = 12;
-            if (hotProducts.size() < TARGET_COUNT) {
-                List<Product> topSelling = productDAO.findTopSellingProducts(30, TARGET_COUNT * 2);
-                for (Product p : topSelling) {
-                    // 避免重复添加
-                    boolean exists = hotProducts.stream().anyMatch(h -> h.id == p.id);
-                    if (!exists && hotProducts.size() < TARGET_COUNT) {
-                        hotProducts.add(p);
-                    }
-                }
-                logger.info("补充销量商品后，共{}个", hotProducts.size());
-            }
+            List<Product> topSelling = manualHot.size() < TARGET_COUNT
+                ? productDAO.findTopSellingProducts(30, TARGET_COUNT * 2)
+                : List.of();
 
+            List<Product> hotProducts = mergeHotProducts(manualHot, topSelling, TARGET_COUNT);
             logger.info("loadHotProductsHybrid 返回: {}个商品", hotProducts.size());
-            for (Product p : hotProducts) {
-                logger.info("  返回商品: {} (ID: {})", p.name, p.id);
-            }
             return hotProducts;
         } catch (SQLException e) {
             logger.error("加载热销商品失败", e);
             StatusBarManager.updateError(i18n.get("label.error") + ": " + e.getMessage());
             return new ArrayList<>();
         }
+    }
+
+    /**
+     * 合并“热销推荐”列表：手动标记的排在前面且不截断，不足 {@code target} 时用销量榜按商品 ID 去重补足。
+     *
+     * <p>纯函数（不碰界面、不查库），触屏收银台“热销推荐”的取数规则可直接单测。</p>
+     */
+    static List<Product> mergeHotProducts(List<Product> manualHot, List<Product> topSelling, int target) {
+        List<Product> merged = new ArrayList<>(manualHot);
+        if (merged.size() >= target) {
+            return merged;
+        }
+        for (Product candidate : topSelling) {
+            if (merged.size() >= target) {
+                break;
+            }
+            boolean exists = merged.stream().anyMatch(h -> h.id == candidate.id);
+            if (!exists) {
+                merged.add(candidate);
+            }
+        }
+        return merged;
     }
 
     private List<Product> filterByKeyword(List<Product> all, String keyword) {
@@ -787,8 +794,8 @@ public class TouchCartController implements CartViewHost {
         } else {
             inventoryMap.putIfAbsent(product.name, product);
         }
-        int stock = currentStock(product);
-        CartItem existing = findCartItem(product.id);
+        int stock = currentStock(product, inventoryMap);
+        CartItem existing = findCartItem(cartItems, product.id);
         int inCart = existing != null ? existing.quantity : 0;
         if (inCart + 1 > stock) {
             playScanErrorSound();
@@ -813,7 +820,7 @@ public class TouchCartController implements CartViewHost {
 
     private void incrementQty(CartItem item) {
         if (blockIfPaymentInProgress()) return;
-        int stock = currentStock(item.product);
+        int stock = currentStock(item.product, inventoryMap);
         if (item.quantity + 1 > stock) {
             warn(i18n.get("tpos.out_of_stock_warn", item.product.name));
             return;
@@ -841,8 +848,9 @@ public class TouchCartController implements CartViewHost {
         updateSummary();
     }
 
-    private CartItem findCartItem(int productId) {
-        for (CartItem item : cartItems) {
+    /** 按商品 ID 定位购物车行（改名前后的同一商品仍算同一行）。 */
+    static CartItem findCartItem(List<CartItem> items, int productId) {
+        for (CartItem item : items) {
             if (item.product.id == productId) {
                 return item;
             }
@@ -850,8 +858,9 @@ public class TouchCartController implements CartViewHost {
         return null;
     }
 
-    private int currentStock(Product product) {
-        Product inv = inventoryMap.get(product.name);
+    /** 取商品可用库存：优先用库存快照里的最新数量，快照里没有才回退用商品自带数量。 */
+    static int currentStock(Product product, Map<String, Product> inventory) {
+        Product inv = inventory.get(product.name);
         return inv != null ? inv.quantity : product.quantity;
     }
 
@@ -1010,7 +1019,7 @@ public class TouchCartController implements CartViewHost {
             holdOrder.discountAmount = total.subtract(finalAmt);
             holdOrder.finalAmount = finalAmt;
             holdOrder.itemCount = cartItems.size();
-            holdOrder.itemsJson = serializeCartItems();
+            holdOrder.itemsJson = serializeCartItems(cartItems);
             holdOrderDAO.insert(holdOrder);
 
             clearCartForHold();
@@ -1157,10 +1166,10 @@ public class TouchCartController implements CartViewHost {
     }
 
     /** 序列化购物车为 JSON（与 CartController 格式一致，便于互通） */
-    private String serializeCartItems() {
+    static String serializeCartItems(List<CartItem> items) {
         StringBuilder json = new StringBuilder("[");
-        for (int i = 0; i < cartItems.size(); i++) {
-            CartItem item = cartItems.get(i);
+        for (int i = 0; i < items.size(); i++) {
+            CartItem item = items.get(i);
             if (i > 0) json.append(",");
             json.append("{\"productId\":").append(item.product.id)
                 .append(",\"quantity\":").append(item.quantity).append("}");
@@ -1175,7 +1184,13 @@ public class TouchCartController implements CartViewHost {
      *
      * <p>纯数据操作，不触碰 UI 状态，可安全在后台线程调用。</p>
      */
-    private List<CartItem> parseHoldCartItems(String json) {
+    /**
+     * 解析挂单明细并逐条查商品。
+     *
+     * <p>纯数据操作，不触碰 UI 状态，可安全在后台线程调用；商品已被删除或字段损坏的行跳过，
+     * 单行失败不影响其余明细。</p>
+     */
+    static List<CartItem> parseHoldCartItems(String json) {
         List<CartItem> result = new ArrayList<>();
         if (json == null || json.isEmpty()) return result;
         json = json.trim();
@@ -1664,20 +1679,35 @@ public class TouchCartController implements CartViewHost {
     /** 处理现金支付结果：付清则完成交易，未付清则提示并重新打开 */
     private void handleCashPaymentResult(BigDecimal thisPayment, BigDecimal finalAmount) {
         // 此处已脱离对话框事件循环，不再嵌套 showAndWait
-        cashReceivedAmount = cashReceivedAmount.add(thisPayment);
-        if (cashReceivedAmount.compareTo(finalAmount) >= 0) {
-            BigDecimal change = cashReceivedAmount.subtract(finalAmount);
-            executePayment("现金", cashReceivedAmount, change);
+        CashProgress progress = applyCashPayment(cashReceivedAmount, thisPayment, finalAmount);
+        cashReceivedAmount = progress.received();
+        if (progress.settled()) {
+            executePayment("现金", cashReceivedAmount, progress.change());
             cashReceivedAmount = BigDecimal.ZERO; // 重置
         } else {
             // 未付清：提示并重新打开（递归在前一个 showAndWait 返回后，不会卡死）
-            BigDecimal stillNeed = finalAmount.subtract(cashReceivedAmount);
             Alert info = new Alert(Alert.AlertType.INFORMATION);
             info.setHeaderText(null);
-            info.setContentText("收款成功！还需: " + CurrencyUtil.format(stillNeed.doubleValue()));
+            info.setContentText("收款成功！还需: " + CurrencyUtil.format(progress.stillNeed().doubleValue()));
             info.showAndWait();
             handleCashPayment();
         }
+    }
+
+    /** 现金支付累计后的结果：新累计收款、找零、尚需金额、是否已付清。 */
+    record CashProgress(BigDecimal received, BigDecimal change, BigDecimal stillNeed, boolean settled) {}
+
+    /**
+     * 累计一笔现金收款并判定是否付清（触屏收银台支持分次收现）。
+     *
+     * <p>纯函数：付清时仍返回累计收款额，由调用方负责执行支付后清零。</p>
+     */
+    static CashProgress applyCashPayment(BigDecimal received, BigDecimal thisPayment, BigDecimal finalAmount) {
+        BigDecimal total = received.add(thisPayment);
+        if (total.compareTo(finalAmount) >= 0) {
+            return new CashProgress(total, total.subtract(finalAmount), BigDecimal.ZERO, true);
+        }
+        return new CashProgress(total, BigDecimal.ZERO, finalAmount.subtract(total), false);
     }
 
     // ===== 银行卡支付 =====
