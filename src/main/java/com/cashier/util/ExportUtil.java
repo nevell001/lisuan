@@ -231,15 +231,15 @@ public class ExportUtil {
                 windir + "\\Fonts\\simkai.ttf"     // 楷体
             };
         } else {
-            // Linux 系统字体路径：必须是 PDFBox 能嵌入的 TrueType/glyf 字体
-            // （OTF/CFF 字体在 PDF 保存做子集化时会抛 "OTF fonts do not have a glyf table"，
-            //   没有 glyf 表的候选会被 isEmbeddable 跳过）
+            // Linux 系统字体路径：必须是 PDFBox 能嵌入的 TrueType/glyf 字体，且必须覆盖数字与中文
+            // （OTF/CFF 会被 isEmbeddable 跳过；Droid Sans Fallback 只有 CJK 字形、没有数字，
+            //   会被 canRender 跳过，否则渲染金额/数量时会抛 No glyph for U+0031）
             systemFontPaths = new String[]{
-                "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",  // Droid Sans Fallback（TrueType）
-                "/usr/share/fonts/truetype/arphic-gkai00mp/gkai00mp.ttf",     // AR PL 楷体（TrueType）
-                "/usr/share/fonts/truetype/fonts-ukij-uyghur/UKIJCJK.ttf",    // UKIJ CJK (支持中文和英文)
+                "/usr/share/fonts/truetype/arphic/uming.ttc",               // AR PL UMing（TrueType，含拉丁+中文）
+                "/usr/share/fonts/truetype/arphic-gkai00mp/gkai00mp.ttf",   // AR PL 楷体（TrueType）
+                "/usr/share/fonts/truetype/fonts-ukij-uyghur/UKIJCJK.ttf",  // UKIJ CJK (支持中文和英文)
                 "/usr/share/fonts/truetype/lxgw-wenkai/LXGWWenKai-Regular.ttf",
-                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"      // OTF/CFF，会被跳过
+                "/usr/share/fonts/opentype/noto/NotoSansCJK-Regular.ttc"    // OTF/CFF，会被跳过
             };
         }
 
@@ -248,6 +248,10 @@ public class ExportUtil {
             if (fontFile.exists()) {
                 try {
                     PDFont font = loadFont(document, fontFile);
+                    if (!canRender(font)) {
+                        logger.debug("系统字体缺少数字/中文覆盖，跳过: {}", fontPath);
+                        continue;
+                    }
                     logger.info("成功加载系统字体: {}", fontPath);
                     return font;
                 } catch (IOException e) {
@@ -267,6 +271,10 @@ public class ExportUtil {
             if (fontFile.exists() && fontFile.length() > 1000) {
                 try {
                     PDFont font = loadFont(document, fontFile);
+                    if (!canRender(font)) {
+                        logger.debug("文件系统字体缺少数字/中文覆盖，跳过: {}", fsPath);
+                        continue;
+                    }
                     logger.info("成功从文件系统加载字体: {}", fsPath);
                     return font;
                 } catch (IOException e) {
@@ -289,6 +297,10 @@ public class ExportUtil {
             try (InputStream is = ExportUtil.class.getResourceAsStream(fontPath)) {
                 if (is != null && is.available() > 1000) {
                     PDFont font = loadFont(document, is, fontPath.endsWith(".ttc"));
+                    if (!canRender(font)) {
+                        logger.debug("项目字体缺少数字/中文覆盖，跳过: {}", fontPath);
+                        continue;
+                    }
                     logger.info("成功加载项目字体: {}", fontPath);
                     return font;
                 }
@@ -299,6 +311,24 @@ public class ExportUtil {
 
         logger.error("未能加载任何中文字体，PDF 导出将无法正确显示中文");
         throw new IOException("无法加载中文字体，请安装中文字体或检查字体文件");
+    }
+
+    /** 字体必须覆盖报表里必然出现的字符：数字、常见符号与中文 */
+    private static final String REQUIRED_SAMPLE = "0123456789%.-: 中";
+
+    /**
+     * 字体是否覆盖报表必需字符。
+     *
+     * <p>只校验可嵌入还不够：Droid Sans Fallback 这类只有 CJK 字形的字体能嵌入，
+     * 但渲染金额/数量时会抛 {@code IllegalArgumentException: No glyph for U+0031}。</p>
+     */
+    private static boolean canRender(PDFont font) {
+        try {
+            font.getStringWidth(REQUIRED_SAMPLE);
+            return true;
+        } catch (IOException | RuntimeException e) {
+            return false;
+        }
     }
 
     /**
