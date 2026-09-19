@@ -6,9 +6,11 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -74,5 +76,18 @@ class TransactionDAOTest extends DatabaseTestBase {
     @DisplayName("不存在的交易返回null")
     void findMissingReturnsNull() throws Exception {
         assertNull(transactionDAO.findById("T-MISSING"));
+    }
+
+    @Test
+    @DisplayName("退款标记只能被抢占一次")
+    void claimRefundOnlySucceedsOnce() throws Exception {
+        insertTransaction("T-CLAIM-001", "2026-08-22 10:00:00", "现金");
+
+        try (Connection conn = getTestConnection()) {
+            assertTrue(transactionDAO.claimRefundWithConnection(conn, "T-CLAIM-001"));
+            // 并发/重复退款时第二次必须拿不到，否则同一单会被退两次
+            assertFalse(transactionDAO.claimRefundWithConnection(conn, "T-CLAIM-001"));
+        }
+        assertEquals("REFUNDED", transactionDAO.findById("T-CLAIM-001").status);
     }
 }
