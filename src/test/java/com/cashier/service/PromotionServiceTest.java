@@ -11,6 +11,7 @@ import org.junit.jupiter.api.*;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.util.*;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -20,6 +21,9 @@ import static org.junit.jupiter.api.Assertions.*;
  */
 @TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class PromotionServiceTest extends DatabaseTestBase {
+
+    /** 进程内自增序号：毫秒时间戳在同一毫秒内会重复，补充序号才能保证促销编码唯一。 */
+    private static final AtomicInteger PROMOTION_CODE_SEQ = new AtomicInteger();
 
     private final PromotionDAORefactored promotionDAO = DAOFactory.getInstance().getPromotionDAO();
 
@@ -310,7 +314,8 @@ class PromotionServiceTest extends DatabaseTestBase {
      */
     private Promotion createPromotion(String name, String type, double threshold, double discount) throws Exception {
         Promotion promotion = new Promotion();
-        promotion.promotionCode = "PROMO_" + System.currentTimeMillis() + "_" + name.hashCode();  // 设置唯一的促销编码
+        promotion.promotionCode = "PROMO_" + System.currentTimeMillis() + "_"
+            + PROMOTION_CODE_SEQ.incrementAndGet() + "_" + name.hashCode();  // 设置唯一的促销编码
         promotion.name = name;
         promotion.type = type;
         promotion.threshold = BigDecimal.valueOf(threshold);
