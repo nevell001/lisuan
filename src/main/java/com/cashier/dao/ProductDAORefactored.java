@@ -790,6 +790,8 @@ public class ProductDAORefactored extends BaseDAO {
     public List<Product> findTopSellingProducts(int days, int limit) throws SQLException {
         // 日期条件必须作用在聚合上：放在 JOIN 的 ON 里只会让 t 的列为空，
         // 早于时间窗的 transaction_items 仍会被 SUM(quantity) 计入。
+        // 关联条件优先用 product_id：商品改名后按名称关联会丢掉全部历史销量
+        // （旧名对不上新名，SUM 归零）。只有 product_id 为空的旧数据才回退按名称匹配。
         String cutoff = java.time.LocalDateTime.now().minusDays(days)
             .format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME);
         // 为带表前缀的列创建别名，避免歧义
@@ -799,7 +801,8 @@ public class ProductDAORefactored extends BaseDAO {
             "COALESCE(SUM(CASE WHEN t.transaction_id IS NOT NULL AND t.timestamp >= ? " +
             "THEN ti.quantity ELSE 0 END), 0) as total_sold " +
             "FROM products p " +
-            "LEFT JOIN transaction_items ti ON p.name = ti.product_name " +
+            "LEFT JOIN transaction_items ti " +
+            "ON ti.product_id = p.id OR (ti.product_id IS NULL AND ti.product_name = p.name) " +
             "LEFT JOIN transactions t ON ti.transaction_id = t.transaction_id " +
             "GROUP BY p.id, p.product_code, p.name, p.price, p.quantity, p.category, p.barcode, " +
             "p.unit, p.description, p.brand, p.supplier, p.spec, p.min_stock, p.cost, p.version, p.is_hot " +

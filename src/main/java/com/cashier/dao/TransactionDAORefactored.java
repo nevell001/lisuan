@@ -12,6 +12,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -216,10 +217,16 @@ public class TransactionDAORefactored extends BaseDAO {
         if (limit < 1) {
             return List.of();
         }
-        String sql = "SELECT product_name, SUM(quantity) AS quantity, " +
-            "COALESCE(SUM(COALESCE(subtotal, price * quantity)), 0) AS amount " +
-            "FROM transaction_items WHERE product_name IS NOT NULL " +
-            "GROUP BY product_name ORDER BY quantity DESC LIMIT ?";
+        // 商品改名后仍要把历史销量归到改名后的商品上：优先按 product_id 取商品当前名称，
+        // 只有 product_id 为空的旧数据才回退用明细里存的名称。
+        String sql = "SELECT name, SUM(quantity) AS quantity, " +
+            "COALESCE(SUM(amount), 0) AS amount FROM (" +
+            "SELECT COALESCE(p.name, ti.product_name) AS name, ti.quantity AS quantity, " +
+            "COALESCE(ti.subtotal, ti.price * ti.quantity) AS amount " +
+            "FROM transaction_items ti " +
+            "LEFT JOIN products p ON p.id = ti.product_id " +
+            "WHERE ti.product_name IS NOT NULL) t " +
+            "GROUP BY name ORDER BY quantity DESC LIMIT ?";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, limit);
@@ -227,7 +234,7 @@ public class TransactionDAORefactored extends BaseDAO {
                 List<Map<String, Object>> products = new ArrayList<>();
                 while (rs.next()) {
                     Map<String, Object> item = new HashMap<>();
-                    item.put("name", rs.getString("product_name"));
+                    item.put("name", rs.getString("name"));
                     item.put("quantity", rs.getInt("quantity"));
                     item.put("amount", rs.getBigDecimal("amount"));
                     products.add(item);
@@ -318,16 +325,22 @@ public class TransactionDAORefactored extends BaseDAO {
                     pstmt.executeBatch();
                 }
 
-                String detailSql = "INSERT INTO transaction_items (transaction_id, product_name, price, quantity, subtotal) " +
-                    "VALUES (?, ?, ?, ?, ?)";
+                String detailSql = "INSERT INTO transaction_items (transaction_id, product_id, product_name, price, quantity, subtotal) " +
+                    "VALUES (?, ?, ?, ?, ?, ?)";
                 try (PreparedStatement pstmt = conn.prepareStatement(detailSql)) {
                     for (Transaction transaction : transactions) {
                         for (Product item : transaction.items) {
                             pstmt.setString(1, transaction.transactionId);
-                            pstmt.setString(2, item.name);
-                            pstmt.setBigDecimal(3, item.price);
-                            pstmt.setInt(4, item.quantity);
-                            pstmt.setBigDecimal(5, item.price.multiply(BigDecimal.valueOf(item.quantity)));
+                            // 有商品 ID 就落库，别让新数据退化成只能按名称关联
+                            if (item.id > 0) {
+                                pstmt.setInt(2, item.id);
+                            } else {
+                                pstmt.setNull(2, Types.INTEGER);
+                            }
+                            pstmt.setString(3, item.name);
+                            pstmt.setBigDecimal(4, item.price);
+                            pstmt.setInt(5, item.quantity);
+                            pstmt.setBigDecimal(6, item.price.multiply(BigDecimal.valueOf(item.quantity)));
                             pstmt.addBatch();
                         }
                     }

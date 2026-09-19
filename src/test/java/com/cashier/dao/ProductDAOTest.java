@@ -230,6 +230,41 @@ public class ProductDAOTest extends DatabaseTestBase {
             "近30天热销榜不应把窗口外销量计入: " + names);
     }
 
+    @Test
+    @Order(51)
+    @DisplayName("商品改名后其历史销量仍计入热销榜")
+    public void testTopSellingKeepsHistoryAfterRename() throws SQLException {
+        // 对照商品零销量、名称排序更靠前：若改名后按名称关联，改名前商品的销量会归零，
+        // 两者同为 0 时按名称排序，对照商品就会排到前面
+        String controlName = "AAA-热销测试-零销量对照";
+        String oldName = "热销测试-改名前";
+        String newName = "ZZZ-热销测试-改名后";
+        Product control = createTestProduct("TOPS003", controlName, "TOP-BAR-003");
+        Product renamed = createTestProduct("TOPS004", oldName, "TOP-BAR-004");
+        ProductDAORefactored dao = DAOFactory.getInstance().getProductDAO();
+        assertTrue(dao.insert(control));
+        assertTrue(dao.insert(renamed));
+
+        String now = LocalDateTime.now().format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME);
+        try (Connection conn = getTestConnection(); Statement stmt = conn.createStatement()) {
+            stmt.execute("INSERT INTO transactions (transaction_id, timestamp, total_amount, final_amount, payment_method) "
+                + "VALUES ('T-TOP-RENAME', '" + now + "', 50, 50, '现金')");
+            // 明细存的是改名前的名称，但 product_id 指向该商品
+            stmt.execute("INSERT INTO transaction_items (transaction_id, product_id, product_name, price, quantity, subtotal) "
+                + "VALUES ('T-TOP-RENAME', " + renamed.id + ", '" + oldName + "', 10, 5, 50)");
+        }
+
+        Product reloaded = dao.findById(renamed.id);
+        reloaded.name = newName;
+        assertTrue(dao.update(reloaded));
+
+        List<String> names = dao.findTopSellingProducts(30, 100).stream().map(p -> p.name).toList();
+        assertTrue(names.contains(newName), "改名后的商品应出现在热销榜: " + names);
+        assertTrue(names.contains(controlName));
+        assertTrue(names.indexOf(newName) < names.indexOf(controlName),
+            "改名后历史销量丢失：热销榜仍在按商品名称关联: " + names);
+    }
+
     private Product createTestProduct(String productCode, String name, String barcode) {
         return new Product(0, productCode, name, 19.99, 50, "测试分类", barcode, "件",
             "这是一个用于单元测试的商品描述", "测试品牌", "测试供应商", "规格信息", 10, 15.00);

@@ -1,5 +1,6 @@
 package com.cashier.dao;
 
+import com.cashier.model.Product;
 import com.cashier.model.Transaction;
 import com.cashier.util.DatabaseTestBase;
 import org.junit.jupiter.api.DisplayName;
@@ -8,6 +9,7 @@ import org.junit.jupiter.api.Test;
 import java.math.BigDecimal;
 import java.sql.Connection;
 import java.util.List;
+import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -70,6 +72,35 @@ class TransactionDAOTest extends DatabaseTestBase {
         assertNotNull(transactionDAO.getStatistics("2026-08-22 00:00:00", "2026-08-22 23:59:59"));
         assertNotNull(transactionDAO.getTopProducts(10));
         assertNotNull(transactionDAO.getPaymentMethodStats());
+    }
+
+    @Test
+    @DisplayName("热销榜按商品ID归并改名后的历史销量")
+    void topProductsMergeHistoryAfterRename() throws Exception {
+        ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
+        Product product = new Product(0, "RPT-TOP-001", "报表热销-旧名", 10.0, 10, "测试分类",
+            "RPT-BAR-001", "件", "描述", "品牌", "供应商", "规格", 0, 1.0);
+        assertTrue(productDAO.insert(product));
+
+        insertTransaction("T-TOP-RPT-001", "2026-08-22 10:00:00", "现金");
+        try (Connection conn = getTestConnection()) {
+            try (java.sql.Statement stmt = conn.createStatement()) {
+                stmt.execute("INSERT INTO transaction_items (transaction_id, product_id, product_name, price, quantity, subtotal) "
+                    + "VALUES ('T-TOP-RPT-001', " + product.id + ", '报表热销-旧名', 10, 4, 40)");
+            }
+        }
+
+        Product reloaded = productDAO.findById(product.id);
+        reloaded.name = "报表热销-新名";
+        assertTrue(productDAO.update(reloaded));
+
+        // 改名后同一商品的历史销量必须归到当前名称下，而不是按明细里的旧名称分裂成两行
+        Map<String, Object> row = transactionDAO.getTopProducts(100).stream()
+            .filter(item -> "报表热销-新名".equals(item.get("name")))
+            .findFirst()
+            .orElse(null);
+        assertNotNull(row, "改名后热销榜应显示商品当前名称: " + transactionDAO.getTopProducts(100));
+        assertEquals(4, ((Number) row.get("quantity")).intValue());
     }
 
     @Test
