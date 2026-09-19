@@ -794,6 +794,29 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   门禁见 `FxThreadDbPolicyTest`（断言查询必须作为后台任务提交，且旧的同步写法不得回归）
 - 触屏收银台初始商品列表由默认选中的「热销推荐」驱动（`initialize()` 不再额外同步
   `loadProducts(null)`），分类加载失败时兜底展示全部商品
+- **单行查库同样不得留在 FX 线程**：入车前的班次检查 + 最新库存查询（`CartController.addToCart`
+  汇总为 `CartAddContext`，`TouchCartController.addToCart` 拆出 `applyAddToCart`）与
+  会员查询（`handleSearchMember` → `findByPhone`）都先提交后台，回 FX 线程再校验/落库；
+  `FxThreadDbPolicyTest.singleRowLookupsRunOffTheFxThread` 按**方法体**断言
+  （同步写法里"查库与改界面"在同一方法，后台化后必然分离）
+- 仍未后台化的同步查询只剩**支付前置校验的班次查询**（`CartController` 现金/电子支付入口、
+  `TouchCartController.preCheck()`）：每次点击一次单行查询，且其后立即弹出模态框，
+  改造需把三条支付流程都改成回调，风险大于收益，暂按现状保留
+
+**热销榜统计口径（v2.6.0 补强）**
+
+- 热销榜/商品销量必须按 `product_id` 关联，**不能按商品名称**：名称一旦被改名，
+  `p.name = ti.product_name` 会让该商品的历史销量全部归零（排行按 0 计），
+  报表侧还会把同一商品按旧名/新名分裂成两行
+  - `ProductDAORefactored.findTopSellingProducts`：`ON ti.product_id = p.id
+    OR (ti.product_id IS NULL AND ti.product_name = p.name)`——`product_id` 为空的旧数据
+    （`batchInsert` 早期版本不写 `product_id`）才回退按名称匹配
+  - `TransactionDAORefactored.getTopProducts`：子查询取 `COALESCE(p.name, ti.product_name)`，
+    再把结果按名称聚合，改名后历史销量归到商品当前名称下
+  - `TransactionDAORefactored.batchInsert` 现在也写 `product_id`（商品 ID 未知时写 NULL），
+    新数据不再退化成只能按名称关联
+  - 门禁：`ProductDAOTest.testTopSellingKeepsHistoryAfterRename`、
+    `TransactionDAOTest.topProductsMergeHistoryAfterRename`（回退成按名称关联即变红）
 
 **i18n 与启动画面（v2.6.0 补强）**
 
