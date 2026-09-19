@@ -209,7 +209,10 @@ public class TransactionService {
             throw new SQLException(I18nManager.getInstance().get("service.member_not_found", member.phone));
         }
 
-        boolean memberBalancePayment = I18nManager.getInstance().get("payment.method.member_balance").equals(transaction.paymentMethod);
+        // 支付方式可能是本地化文案或接口传入的代码，必须先归一化再判断，
+        // 否则 "MEMBER_BALANCE"/英文文案会记成已付款却不扣会员余额。
+        boolean memberBalancePayment = "MEMBER_BALANCE".equals(
+            com.cashier.util.I18nUiUtils.canonicalPaymentMethod(transaction.paymentMethod));
         if (memberBalancePayment && latestMember.getBalance().compareTo(payableAmount) < 0) {
             throw new SQLException(I18nManager.getInstance().get("service.member_balance_insufficient",
                 latestMember.getBalance(), payableAmount));

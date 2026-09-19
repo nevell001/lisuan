@@ -6,7 +6,10 @@ import org.junit.jupiter.api.*;
 import org.junit.jupiter.api.DisplayName;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
 import java.sql.SQLException;
+import java.sql.Statement;
+import java.time.LocalDateTime;
 import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -191,6 +194,40 @@ public class ProductDAOTest extends DatabaseTestBase {
         for (Product p : products) {
             DAOFactory.getInstance().getProductDAO().delete(p.id);
         }
+    }
+
+    @Test
+    @Order(50)
+    @DisplayName("近N天热销榜只统计时间窗内的销量")
+    public void testTopSellingRespectsDateWindow() throws SQLException {
+        String recentName = "热销测试-近期商品";
+        String oldName = "热销测试-历史商品";
+        Product recent = createTestProduct("TOPS001", recentName, "TOP-BAR-001");
+        Product old = createTestProduct("TOPS002", oldName, "TOP-BAR-002");
+        assertTrue(DAOFactory.getInstance().getProductDAO().insert(recent));
+        assertTrue(DAOFactory.getInstance().getProductDAO().insert(old));
+
+        String now = LocalDateTime.now().format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME);
+        String longAgo = LocalDateTime.now().minusDays(40).format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME);
+
+        try (Connection conn = getTestConnection(); Statement stmt = conn.createStatement()) {
+            stmt.execute("INSERT INTO transactions (transaction_id, timestamp, total_amount, final_amount, payment_method) "
+                + "VALUES ('T-TOP-RECENT', '" + now + "', 30, 30, '现金')");
+            stmt.execute("INSERT INTO transactions (transaction_id, timestamp, total_amount, final_amount, payment_method) "
+                + "VALUES ('T-TOP-OLD', '" + longAgo + "', 70, 70, '现金')");
+            stmt.execute("INSERT INTO transaction_items (transaction_id, product_name, price, quantity, subtotal) "
+                + "VALUES ('T-TOP-RECENT', '" + recentName + "', 10, 3, 30)");
+            stmt.execute("INSERT INTO transaction_items (transaction_id, product_name, price, quantity, subtotal) "
+                + "VALUES ('T-TOP-OLD', '" + oldName + "', 10, 7, 70)");
+        }
+
+        List<Product> top = DAOFactory.getInstance().getProductDAO().findTopSellingProducts(30, 10);
+        List<String> names = top.stream().map(p -> p.name).toList();
+        // 窗口内近期商品卖 3，历史商品窗口内为 0：历史商品绝不能因窗口外销量排到前面
+        assertTrue(names.contains(recentName));
+        assertTrue(names.contains(oldName));
+        assertTrue(names.indexOf(recentName) < names.indexOf(oldName),
+            "近30天热销榜不应把窗口外销量计入: " + names);
     }
 
     private Product createTestProduct(String productCode, String name, String barcode) {

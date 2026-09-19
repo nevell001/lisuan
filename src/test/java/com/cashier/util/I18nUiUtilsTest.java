@@ -29,6 +29,20 @@ class I18nUiUtilsTest {
     }
 
     @Test
+    @DisplayName("会员余额与繁体/英文文案同样归一化（避免按语言漏扣余额）")
+    void canonicalizesMemberBalanceAndOtherLocales() {
+        assertEquals("MEMBER_BALANCE", I18nUiUtils.canonicalPaymentMethod("会员余额"));
+        assertEquals("MEMBER_BALANCE", I18nUiUtils.canonicalPaymentMethod("會員餘額"));
+        assertEquals("MEMBER_BALANCE", I18nUiUtils.canonicalPaymentMethod("MEMBER_BALANCE"));
+        assertEquals("MEMBER_BALANCE", I18nUiUtils.canonicalPaymentMethod("Member Balance"));
+        assertEquals("CASH", I18nUiUtils.canonicalPaymentMethod("現金"));
+        assertEquals("CASH", I18nUiUtils.canonicalPaymentMethod("Cash"));
+        assertEquals("WECHAT", I18nUiUtils.canonicalPaymentMethod("WeChat Pay"));
+        assertEquals("ALIPAY", I18nUiUtils.canonicalPaymentMethod("支付寶"));
+        assertEquals("CARD", I18nUiUtils.canonicalPaymentMethod("銀行卡"));
+    }
+
+    @Test
     @DisplayName("下拉框选中的代码能匹配收银端落库的中文，筛选不再恒为空")
     void comboCodeMatchesStoredChinese() {
         assertEquals(

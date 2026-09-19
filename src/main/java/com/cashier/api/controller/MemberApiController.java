@@ -3,6 +3,7 @@ package com.cashier.api.controller;
 import com.cashier.dao.DAOFactory;
 import com.cashier.model.Member;
 import com.cashier.model.PageResult;
+import com.cashier.model.User;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
@@ -214,11 +215,16 @@ public class MemberApiController {
                 return;
             }
             
+            // 操作员一律取认证用户，忽略请求体自报身份（充值流水/审计需要可追溯到人）
+            User operator = ctx.attribute("currentUser");
+            String operatorName = operator == null ? "system"
+                : (operator.name != null && !operator.name.isBlank() ? operator.name : operator.username);
+
             boolean success = com.cashier.service.MemberService.recharge(
                 member, 
                 request.amount.doubleValue(), 
                 "API", 
-                "system"
+                operatorName
             );
             
             if (success) {

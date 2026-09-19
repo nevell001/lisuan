@@ -788,15 +788,19 @@ public class ProductDAORefactored extends BaseDAO {
      * @throws SQLException 数据库操作异常
      */
     public List<Product> findTopSellingProducts(int days, int limit) throws SQLException {
+        // 日期条件必须作用在聚合上：放在 JOIN 的 ON 里只会让 t 的列为空，
+        // 早于时间窗的 transaction_items 仍会被 SUM(quantity) 计入。
+        String cutoff = java.time.LocalDateTime.now().minusDays(days)
+            .format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME);
         // 为带表前缀的列创建别名，避免歧义
         String sql =
             "SELECT p.id, p.product_code, p.name, p.price, p.quantity, p.category, p.barcode, " +
             "p.unit, p.description, p.brand, p.supplier, p.spec, p.min_stock, p.cost, p.version, p.is_hot, " +
-            "COALESCE(SUM(ti.quantity), 0) as total_sold " +
+            "COALESCE(SUM(CASE WHEN t.transaction_id IS NOT NULL AND t.timestamp >= ? " +
+            "THEN ti.quantity ELSE 0 END), 0) as total_sold " +
             "FROM products p " +
             "LEFT JOIN transaction_items ti ON p.name = ti.product_name " +
             "LEFT JOIN transactions t ON ti.transaction_id = t.transaction_id " +
-            "  AND t.timestamp >= DATE_SUB(NOW(), INTERVAL ? DAY) " +
             "GROUP BY p.id, p.product_code, p.name, p.price, p.quantity, p.category, p.barcode, " +
             "p.unit, p.description, p.brand, p.supplier, p.spec, p.min_stock, p.cost, p.version, p.is_hot " +
             "ORDER BY total_sold DESC, p.name " +
@@ -807,7 +811,7 @@ public class ProductDAORefactored extends BaseDAO {
                 Product product = PRODUCT_MAPPER.mapRow(rs, rowNum);
                 return product;
             }
-        }, days, limit);
+        }, cutoff, limit);
     }
 
     /**

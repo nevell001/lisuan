@@ -58,10 +58,11 @@ public final class I18nUiUtils {
             return null;
         }
         return switch (value) {
-            case "现金", "CASH" -> "CASH";
-            case "微信", "WECHAT" -> "WECHAT";
-            case "支付宝", "ALIPAY" -> "ALIPAY";
-            case "银行卡", "CARD" -> "CARD";
+            case "现金", "現金", "CASH", "Cash" -> "CASH";
+            case "微信", "WECHAT", "WeChat Pay" -> "WECHAT";
+            case "支付宝", "支付寶", "ALIPAY", "Alipay" -> "ALIPAY";
+            case "银行卡", "銀行卡", "刷卡", "CARD", "Bank Card" -> "CARD";
+            case "会员余额", "會員餘額", "MEMBER_BALANCE", "Member Balance" -> "MEMBER_BALANCE";
             default -> value;
         };
     }

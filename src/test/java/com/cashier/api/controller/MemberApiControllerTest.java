@@ -4,6 +4,7 @@ import com.cashier.api.support.TestContext;
 import com.cashier.dao.DAOFactory;
 import com.cashier.dao.MemberDAORefactored;
 import com.cashier.model.Member;
+import com.cashier.model.User;
 import com.cashier.util.DatabaseTestBase;
 import io.javalin.http.HandlerType;
 import io.javalin.http.HttpStatus;
@@ -123,19 +124,28 @@ class MemberApiControllerTest extends DatabaseTestBase {
     }
 
     @Test
-    @DisplayName("会员充值增加余额")
+    @DisplayName("会员充值增加余额，并把操作员记为认证用户")
     void rechargeIncreasesBalance() throws Exception {
         Member saved = insertMember("13800000006");
         MemberApiController.RechargeRequest request = new MemberApiController.RechargeRequest();
         request.amount = BigDecimal.valueOf(100);
 
+        User operator = new User();
+        operator.username = "finance01";
+        operator.name = "财务小李";
+
         TestContext ctx = new TestContext().withRequest(HandlerType.POST, "/api/members/1/recharge")
             .withPathParam("id", String.valueOf(saved.id))
+            .withAttribute("currentUser", operator)
             .withBody(request);
         MemberApiController.recharge(ctx.context);
 
         assertEquals(HttpStatus.OK, ctx.status);
         assertTrue(memberDAO.findById(saved.id).balance.compareTo(BigDecimal.ZERO) > 0);
+        // 充值流水必须归属到真实操作员，而不是写死的 "system"
+        var records = DAOFactory.getInstance().getRechargeRecordDAO().findByMemberPhone(saved.phone);
+        assertEquals(1, records.size());
+        assertEquals("财务小李", records.get(0).operator);
     }
 
     @Test
