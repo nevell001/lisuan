@@ -50,15 +50,9 @@
 # 默认时区
 -Duser.timezone=Asia/Shanghai
 
-# 启用断言
--ea
-
 # ============================================
 # 日志和调试
 # ============================================
-# 日志文件路径
--Djava.util.logging.config.file=config/logging.properties
-
 # 启用详细 GC 日志 (需要调试时取消注释)
 # -XX:+PrintGCDetails
 # -XX:+PrintGCTimeStamps

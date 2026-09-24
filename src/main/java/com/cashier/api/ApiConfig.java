@@ -27,6 +27,13 @@ public class ApiConfig {
     static {
         loadConfig();
 
+        // API 默认关闭（安全默认）；关闭时这些告警每次启动都会刷屏，只有真正启用后才提示
+        if (enabled) {
+            warnIfInsecureConfiguration();
+        }
+    }
+
+    private static void warnIfInsecureConfiguration() {
         // 安全检查：警告使用默认密钥
         if (tokenSecret.equals(DEFAULT_TOKEN_SECRET)) {
             logger.warn("========================================");
@@ -80,7 +87,9 @@ public class ApiConfig {
                 tokenExpireHours = Integer.parseInt(props.getProperty("token.expire.hours", "24"));
 
                 logger.info("API 配置加载成功: enabled={}, port={}", enabled, port);
-                logger.warn("生产环境请设置环境变量 TOKEN_SECRET 和 CORS_ALLOWED_ORIGINS");
+                if (enabled) {
+                    logger.warn("生产环境请设置环境变量 TOKEN_SECRET 和 CORS_ALLOWED_ORIGINS");
+                }
             } catch (Exception e) {
                 enabled = false;
                 logger.warn("加载 API 配置失败，API 已安全关闭: {}", e.getMessage());

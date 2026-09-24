@@ -47,6 +47,9 @@ AGENTS.md
 *.lock
 temp/
 
+# JaCoCo 覆盖率数据（正常落在 target/，兜底防止异常调用写到仓库根）
+jacoco.exec
+
 # 导出文件
 exports/
 

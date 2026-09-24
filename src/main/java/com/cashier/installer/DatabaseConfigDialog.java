@@ -14,6 +14,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.*;
 import java.sql.*;
+import java.util.concurrent.CountDownLatch;
 
 /**
  * Database Configuration Dialog
@@ -34,6 +35,9 @@ public class DatabaseConfigDialog {
     private JButton testButton;
     private JButton cancelButton;
 
+    /** 窗口关闭后的回调（嵌入式等待用） */
+    private Runnable onClosed;
+
     public static void main(String[] args) {
         try {
             UIManager.setLookAndFeel(UIManager.getSystemLookAndFeelClassName());
@@ -41,6 +45,39 @@ public class DatabaseConfigDialog {
             // Use default look and feel
         }
         SwingUtilities.invokeLater(() -> new DatabaseConfigDialog().show());
+    }
+
+    /**
+     * 显示配置窗口并阻塞到窗口关闭，供应用启动时的配置向导使用。
+     *
+     * <p>必须在非 AWT 事件线程上调用。窗口本身仍按独立工具的语义退出进程
+     * （见 {@link #exitDialog()}），调用方只需等待，不要提前继续初始化——
+     * 提前继续会在用户还没配好时就判定"配置不存在"，并顺手写下一份空密码的
+     * config/database.properties 模板。</p>
+     *
+     * @return 窗口关闭时 {@code config/database.properties} 是否已存在
+     */
+    public static boolean showAndWait() {
+        DatabaseConfigDialog dialog = new DatabaseConfigDialog();
+
+        CountDownLatch closed = new CountDownLatch(1);
+        dialog.onClosed = closed::countDown;
+        SwingUtilities.invokeLater(() -> {
+            try {
+                dialog.show();
+            } catch (Throwable t) {
+                // 窗口没起来就没有 windowClosed 可等，必须放行否则启动会一直挂住
+                logger.error("配置向导启动失败", t);
+                closed.countDown();
+            }
+        });
+
+        try {
+            closed.await();
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return Files.exists(Paths.get("config", DatabaseConfigKeys.DATABASE_PROPERTIES_FILE));
     }
 
     public void show() {
@@ -51,6 +88,14 @@ public class DatabaseConfigDialog {
         frame.setResizable(false);
 
         createUI();
+        if (onClosed != null) {
+            frame.addWindowListener(new WindowAdapter() {
+                @Override
+                public void windowClosed(WindowEvent e) {
+                    onClosed.run();
+                }
+            });
+        }
         frame.setVisible(true);
     }
 

@@ -146,9 +146,10 @@ set "JFX_PATH=%JFX_BASE%\javafx-base\17.0.12\javafx-base-17.0.12-win.jar;%JFX_BA
 
 if not exist "%JFX_BASE%\javafx-base\17.0.12\javafx-base-17.0.12-win.jar" (
     echo [WARNING] JavaFX not found in Maven repository
-    echo [INFO] Will use standard classpath
-    set "JFX_PATH="
+    echo [INFO] JavaFX is bundled in the fat JAR, launching without --module-path
+    set "JFX_MODULES="
 ) else (
+    set "JFX_MODULES=--module-path "%JFX_PATH%" --add-modules javafx.controls,javafx.fxml,javafx.graphics"
     echo [OK] JavaFX modules found
 )
 
@@ -166,20 +167,20 @@ if "%1"=="--gui" goto :launch_gui
 echo [INFO] Using java (console mode)...
 echo [INFO] Use "start.bat --gui" to launch without console window
 echo.
-java --module-path "%JFX_PATH%" --add-modules javafx.controls,javafx.fxml,javafx.graphics !JVM_OPTS! -jar "%JAR_FILE%"
+java !JFX_MODULES! !JVM_OPTS! -jar "%JAR_FILE%"
 goto :after_launch
 
 :launch_gui
 where javaw >nul 2>&1
 if errorlevel 1 goto :launch_console
 echo [INFO] Using javaw (GUI mode)...
-start "" javaw --module-path "%JFX_PATH%" --add-modules javafx.controls,javafx.fxml,javafx.graphics !JVM_OPTS! -jar "%JAR_FILE%"
+start "" javaw !JFX_MODULES! !JVM_OPTS! -jar "%JAR_FILE%"
 echo [INFO] Application launched in background
 goto :eof
 
 :launch_console
 echo [WARNING] javaw not found, using java instead
-java --module-path "%JFX_PATH%" --add-modules javafx.controls,javafx.fxml,javafx.graphics !JVM_OPTS! -jar "%JAR_FILE%"
+java !JFX_MODULES! !JVM_OPTS! -jar "%JAR_FILE%"
 
 :after_launch
 

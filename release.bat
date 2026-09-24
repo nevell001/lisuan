@@ -52,10 +52,10 @@ REM 1. 完整验证门禁：单元测试 + SpotBugs + JaCoCo 覆盖率 + 打包
 echo [1/3] Running full verification gate (mvn clean verify)...
 call mvn clean verify -DskipTests=false
 if %ERRORLEVEL% NEQ 0 (
-    echo FAILED: full verification (tests/SpotBugs/coverage/package)
+    echo FAILED: full verification ^(tests/SpotBugs/coverage/package^)
     exit /b %ERRORLEVEL%
 )
-echo Full verification passed (tests/SpotBugs/coverage/package)
+echo Full verification passed ^(tests/SpotBugs/coverage/package^)
 
 REM 2. 环境与配置验证
 echo [2/3] Checking release configuration...

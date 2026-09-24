@@ -341,7 +341,9 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <addClasspath>true</addClasspath>
+                            <!-- 不写 Class-Path：瘦 jar 无人单独使用，而 shade 会把这份
+                                 指向 65 个不存在兄弟 jar 的清单继承到 shaded JAR 里 -->
+                            <addClasspath>false</addClasspath>
                             <mainClass>com.cashier.Launcher</mainClass>
                         </manifest>
                     </archive>

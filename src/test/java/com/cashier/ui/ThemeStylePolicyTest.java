@@ -8,6 +8,8 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 import java.util.stream.Stream;
 
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -16,6 +18,45 @@ class ThemeStylePolicyTest {
     private static final List<String> THEME_COLOR_PROPERTIES = List.of(
         "-fx-background-color", "-fx-text-fill", "-fx-border-color"
     );
+
+    /** 声明界面正文字体的样式表（不含 package-wizard 等独立窗口） */
+    private static final List<String> UI_FONT_STYLESHEETS = List.of(
+        "styles.css", "lisuan-theme.css", "light-theme.css", "dark-theme.css", "splash.css"
+    );
+
+    @Test
+    @DisplayName("界面字体：每个 CJK 字体栈的首项必须等于 Java 侧校验的族名")
+    void uiFontStacksStartWithTheBundledFamily() throws IOException {
+        String app = Files.readString(Path.of(
+            "src/main/java/com/cashier/CashierSystemFXApplication.java"
+        ));
+        Matcher declaration = Pattern.compile("UI_FONT_FAMILY\\s*=\\s*\"([^\"]+)\"").matcher(app);
+        assertTrue(declaration.find(),
+            "CashierSystemFXApplication 必须定义 UI_FONT_FAMILY 常量（启动时按它校验字体是否注册成功）");
+        String bundled = declaration.group(1);
+
+        List<String> violations = new ArrayList<>();
+        for (String file : UI_FONT_STYLESHEETS) {
+            String css = Files.readString(Path.of("src/main/resources/css/" + file));
+            Matcher families = Pattern.compile("-fx-font-family:\\s*([^;]+);").matcher(css);
+            while (families.find()) {
+                String value = families.group(1).replaceAll("\\s+", " ").trim();
+                // 只看界面正文字体栈，跳过 FontAwesome / Consolas 这类专用字体
+                if (!value.contains("Noto") && !value.contains("YaHei") && !value.contains("SimHei")) {
+                    continue;
+                }
+                int comma = value.indexOf(',');
+                String first = (comma < 0 ? value : value.substring(0, comma)).replace("\"", "").trim();
+                if (!first.equals(bundled)) {
+                    violations.add(file + ": 首个族名是 \"" + first + "\"，应为 \"" + bundled + "\"");
+                }
+            }
+        }
+
+        assertTrue(violations.isEmpty(),
+            "JavaFX 只使用 -fx-font-family 的第一个族名（不会遍历回退列表），首项对不上会静默"
+                + "回退到平台默认字体（Windows 上是 Microsoft YaHei UI）：\n" + String.join("\n", violations));
+    }
 
     @Test
     @DisplayName("FXML 和控制器不得用内联颜色覆盖主题")

@@ -46,6 +46,19 @@ public class CashierSystemFXApplication extends Application {
     /** 启动窗口显示后，延后这么多毫秒再跑重量级初始化，确保窗口已经绘制出来 */
     private static final double SPLASH_FIRST_FRAME_DELAY_MS = 60;
 
+    /**
+     * 界面字体族名：必须与 {@code css/*.css} 里 {@code -fx-font-family} 的**首项**一致，
+     * 门禁见 {@code ThemeStylePolicyTest.uiFontStacksStartWithTheBundledFamily}。
+     *
+     * <p>JavaFX 只使用候选列表的第一个族名（实测 17.0.12 不会遍历回退列表），而 Windows/macOS
+     * 默认都不安装这个族名，随包内置的 .ttc 是唯一来源——所以它对不上时界面不会报错，只会静默
+     * 换成平台默认字体。</p>
+     */
+    static final String UI_FONT_FAMILY = "Noto Sans CJK SC";
+
+    /** 内置界面字体是否注册成功；失败时界面会回退到平台默认字体 */
+    private boolean uiFontReady = true;
+
     private static CashierSystemFXApplication instance;
 
     private Stage primaryStage;
@@ -105,10 +118,13 @@ public class CashierSystemFXApplication extends Application {
         defer.setOnFinished(event -> {
             try {
                 initializeApplication(splash);
-            } catch (Exception e) {
-                logger.error("应用初始化失败", e);
+            } catch (Throwable t) {
+                // 数据库静态初始化失败抛的是 ExceptionInInitializerError（Error 而非 Exception），
+                // 只 catch Exception 会让启动失败完全静默（javaw/双击启动时用户什么都看不到）
+                logger.error("应用初始化失败", t);
                 splash.close();
-                showStartupFailure(e);
+                // 动画/布局处理期间不允许 showAndWait，必须回到事件循环后再弹窗
+                Platform.runLater(() -> showStartupFailure(t));
                 return;
             }
             splash.close();
@@ -122,8 +138,13 @@ public class CashierSystemFXApplication extends Application {
     private void initializeApplication(SplashWindow splash) throws Exception {
         splash.updateProgress(0.3);
 
-        // 检查数据库配置
-        checkDatabaseConfiguration();
+        // 检查数据库配置：缺失时弹配置向导，用户取消则不再继续
+        // （向导自身按独立工具的语义退出进程，这里只需等它结束）
+        if (!checkDatabaseConfiguration()) {
+            logger.warn("数据库配置未完成，应用退出");
+            Platform.exit();
+            return;
+        }
 
         // 支付渠道必须在收银界面加载前完成配置，未配置渠道保持禁用。
         com.cashier.service.PaymentService.init();
@@ -149,6 +170,11 @@ public class CashierSystemFXApplication extends Application {
         // 立即显示窗口 - 不等待后台初始化
         primaryStage.show();
 
+        if (!uiFontReady) {
+            // 动画/布局处理期间不允许 showAndWait，回到事件循环后再弹
+            Platform.runLater(this::warnUiFontMissing);
+        }
+
         splash.updateProgress(0.9);
 
         // 异步初始化后台服务 - 启动后立即执行
@@ -158,11 +184,11 @@ public class CashierSystemFXApplication extends Application {
     /**
      * 初始化失败时给出可见反馈并退出，避免只留一个空启动窗口。
      */
-    private void showStartupFailure(Exception e) {
+    private void showStartupFailure(Throwable t) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
         alert.setTitle("启动失败");
         alert.setHeaderText(null);
-        alert.setContentText("应用初始化失败：" + e.getMessage());
+        alert.setContentText("应用初始化失败：" + t.getMessage());
         alert.showAndWait();
         Platform.exit();
     }
@@ -249,32 +275,61 @@ public class CashierSystemFXApplication extends Application {
      * 确保在所有平台上中文都能正确显示
      */
     private void loadCustomFonts() {
+        boolean regular;
+        boolean bold;
         try {
-            loadFontCollection("/fonts/NotoSansSC-Regular.ttc", "Regular");
-            loadFontCollection("/fonts/NotoSansSC-Bold.ttc", "Bold");
-
-            logger.debug("自定义字体加载完成");
+            regular = loadFontCollection("/fonts/NotoSansSC-Regular.ttc", "Regular");
+            bold = loadFontCollection("/fonts/NotoSansSC-Bold.ttc", "Bold");
         } catch (Exception e) {
             logger.error("加载自定义字体时发生错误: {}", e.getMessage(), e);
+            regular = false;
+            bold = false;
         }
+        uiFontReady = regular && bold;
+
+        if (uiFontReady) {
+            logger.debug("自定义字体加载完成");
+            return;
+        }
+
+        logger.error("内置界面字体 {} 未注册成功：JavaFX 只使用 -fx-font-family 的第一个族名，"
+            + "界面将静默回退到平台默认字体（Windows 上是 Microsoft YaHei UI），"
+            + "在缺少中文字体的系统上会显示成方框。"
+            + "请确认安装包完整（src/main/resources/fonts/*.ttc 未被裁剪）", UI_FONT_FAMILY);
     }
 
-    private void loadFontCollection(String resourcePath, String styleName) throws IOException {
+    private boolean loadFontCollection(String resourcePath, String styleName) throws IOException {
         try (InputStream inputStream = getClass().getResourceAsStream(resourcePath)) {
             if (inputStream == null) {
-                logger.warn("未找到 Noto Sans CJK {} 字体资源: {}", styleName, resourcePath);
-                return;
+                logger.error("未找到界面字体资源 {}（{}），安装包可能被裁剪", resourcePath, styleName);
+                return false;
             }
 
             Font[] loadedFonts = Font.loadFonts(inputStream, 14);
-            boolean simplifiedChineseLoaded = loadedFonts != null && java.util.Arrays.stream(loadedFonts)
-                .anyMatch(font -> "Noto Sans CJK SC".equals(font.getFamily()));
-            if (simplifiedChineseLoaded) {
-                logger.info("成功加载 Noto Sans CJK SC {} 字体", styleName);
+            boolean loaded = loadedFonts != null && java.util.Arrays.stream(loadedFonts)
+                .anyMatch(font -> UI_FONT_FAMILY.equals(font.getFamily()));
+            if (loaded) {
+                logger.info("成功加载 {} {} 字体", UI_FONT_FAMILY, styleName);
             } else {
-                logger.warn("Noto Sans CJK SC {} 字体加载失败", styleName);
+                logger.error("{} 未提供族名 {}（实际族名: {}）", resourcePath, UI_FONT_FAMILY,
+                    loadedFonts == null ? "null" : java.util.Arrays.stream(loadedFonts)
+                        .map(Font::getFamily).distinct().collect(java.util.stream.Collectors.joining(", ")));
             }
+            return loaded;
         }
+    }
+
+    /**
+     * 内置界面字体缺失时给出可见提示：字体是"静默降级"，只在日志里报错等于没报。
+     */
+    private void warnUiFontMissing() {
+        Alert alert = new Alert(Alert.AlertType.WARNING);
+        alert.setTitle("界面字体缺失");
+        alert.setHeaderText(null);
+        alert.setContentText("未能加载随包内置的界面字体 \"" + UI_FONT_FAMILY + "\"。\n\n"
+            + "界面已回退到系统默认字体，中文或符号可能显示异常。\n"
+            + "请确认安装包完整（fonts/*.ttc 未被裁剪）。");
+        alert.showAndWait();
     }
 
     /**
@@ -779,38 +834,34 @@ public class CashierSystemFXApplication extends Application {
     }
 
     /**
-     * 检查数据库配置
-     * 如果配置不存在，显示配置向导
+     * 检查数据库配置：文件缺失时弹出配置向导并等待其关闭。
+     *
+     * @return true 表示配置就绪、可以继续启动；false 表示用户取消了配置
      */
-    private void checkDatabaseConfiguration() {
+    private boolean checkDatabaseConfiguration() {
         java.nio.file.Path configPath = java.nio.file.Paths.get("config", DatabaseConfigKeys.DATABASE_PROPERTIES_FILE);
-
-        if (!java.nio.file.Files.exists(configPath)) {
-            logger.info("数据库配置不存在，启动配置向导");
-
-            // 使用 Swing 显示配置向导
-            try {
-                javax.swing.UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName());
-            } catch (Exception e) {
-                logger.warn("无法设置系统外观", e);
-            }
-
-            try {
-                javax.swing.SwingUtilities.invokeAndWait(() -> {
-                    com.cashier.installer.DatabaseConfigDialog.main(new String[]{});
-                });
-            } catch (Exception e) {
-                logger.error("配置向导执行失败", e);
-            }
-
-            // 配置完成后检查文件是否创建
-            if (!java.nio.file.Files.exists(configPath)) {
-                logger.warn("用户取消配置，退出应用");
-                javafx.application.Platform.exit();
-            }
-
-            logger.info("数据库配置完成");
+        if (java.nio.file.Files.exists(configPath)) {
+            return true;
         }
+
+        logger.info("数据库配置不存在，启动配置向导");
+
+        // 使用 Swing 显示配置向导
+        try {
+            javax.swing.UIManager.setLookAndFeel(javax.swing.UIManager.getSystemLookAndFeelClassName());
+        } catch (Exception e) {
+            logger.warn("无法设置系统外观", e);
+        }
+
+        // 必须等向导真正关闭：向导是异步显示的，提前返回会把"还没配"误判成"用户取消配置"，
+        // 接着继续初始化会抛 ExceptionInInitializerError，并顺手写下一份空密码的配置文件模板
+        boolean configured = com.cashier.installer.DatabaseConfigDialog.showAndWait();
+        if (!configured) {
+            logger.warn("配置向导已关闭，但 config/{} 仍不存在", DatabaseConfigKeys.DATABASE_PROPERTIES_FILE);
+            return false;
+        }
+        logger.info("数据库配置完成");
+        return true;
     }
 
     /**
@@ -818,14 +869,11 @@ public class CashierSystemFXApplication extends Application {
      * @param args 命令行参数
      */
     public static void main(String[] args) {
-        // Windows DPI 缩放支持
-        // 确保应用程序在高 DPI 显示器上正确缩放
+        // Windows DPI 缩放支持：声明进程 DPI 感知，缩放交给系统处理。
+        // 注意不要设 sun.java2d.win.uiScaleX/Y=1.0——那是把缩放强行按回 100%，
+        // 高 DPI 屏上 Swing 弹窗（如数据库配置向导）会明显偏小。
         if (System.getProperty(SystemPropertyKeys.OS_NAME, "").toLowerCase().contains("win")) {
-            // 设置系统 DPI 感知
             System.setProperty("sun.java2d.dpiaware", "true");
-            System.setProperty("sun.java2d.dpiaware", "true");
-            System.setProperty("sun.java2d.win.uiScaleX", "1.0");
-            System.setProperty("sun.java2d.win.uiScaleY", "1.0");
         }
 
         launch(args);

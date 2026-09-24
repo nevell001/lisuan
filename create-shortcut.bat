@@ -15,7 +15,7 @@ set WORKING_DIR=%SCRIPT_DIR%
 REM 检查启动器优先级：Quick Start > Run CashierSystem > start.bat
 if exist "%SCRIPT_DIR%Quick Start.bat" (
     set TARGET_SCRIPT=%SCRIPT_DIR%Quick Start.bat
-    echo [Info] Using Quick Start launcher (recommended)
+    echo [Info] Using Quick Start launcher ^(recommended^)
 ) else if exist "%SCRIPT_DIR%Run CashierSystem.bat" (
     set TARGET_SCRIPT=%SCRIPT_DIR%Run CashierSystem.bat
     echo [Info] Using Run CashierSystem launcher
