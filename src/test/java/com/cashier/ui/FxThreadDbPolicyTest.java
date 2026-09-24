@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -150,9 +152,50 @@ class FxThreadDbPolicyTest {
             "会员查询不得再在 FX 线程同步查库并就地捕获异常");
     }
 
+    @Test
+    @DisplayName("启动期数据库初始化必须离开 FX 线程，并有有界等待")
+    void startupDatabaseInitializationRunsOffTheFxThreadWithBoundedWait() throws Exception {
+        String app = readMainSource("CashierSystemFXApplication.java");
+
+        String startPhase = methodBody(app, "private void initializeApplication(");
+        assertFalse(startPhase.contains("PaymentService.init()"),
+            "建连接池/建表迁移/语言偏好不得再留在 FX 线程：会把启动画面占死，进度文案刷不出来");
+        assertTrue(startPhase.contains("STARTUP_DATABASE_THREAD"),
+            "数据库阶段必须在具名后台线程上执行");
+
+        String dbPhase = methodBody(app, "private StartupDatabase initializeDatabasePhase(");
+        assertTrue(dbPhase.contains("PaymentService.init()"),
+            "首次触碰 DatabaseManager（建连接池/建表迁移）应发生在后台的数据库阶段里");
+
+        assertTrue(startPhase.contains("whenComplete("),
+            "数据库阶段应以非阻塞回调收口，否则 FX 线程仍会被占住");
+        assertFalse(startPhase.contains(".get("),
+            "不得在 FX 线程上阻塞等待数据库阶段：启动画面会卡住，看门狗也跑不起来");
+        assertTrue(app.contains("STARTUP_DATABASE_TIMEOUT_MS"),
+            "等待数据库必须有上限，超时要给出可操作的提示而不是无限期停在启动画面");
+        assertTrue(app.contains("已等待"),
+            "等待期间要向用户反馈已经等了多久");
+    }
+
+    @Test
+    @DisplayName("数据库连接超时默认值必须容得下冷启动首连")
+    void databaseConnectionTimeoutToleratesColdStart() throws Exception {
+        String databaseManager = readMainSource("util/DatabaseManager.java");
+
+        Matcher matcher = Pattern.compile("connectionTimeout = (\\d+)").matcher(databaseManager);
+        assertTrue(matcher.find(), "DatabaseManager 必须为 connectionTimeout 设默认值");
+        int timeout = Integer.parseInt(matcher.group(1));
+        // 本机实测：同一 JVM 内首连 8.5s、后续约 40ms；原来的 5000ms 会让数据库其实正常的机器建池失败
+        assertTrue(timeout >= 10_000,
+            "db.connection.timeout 默认值过小（当前 " + timeout + "ms）：冷启动首连要好几秒，"
+                + "会让数据库其实正常的机器启动时直接报 Communications link failure");
+
+        assertTrue(databaseManager.contains("connectTimeout"),
+            "应给 JDBC 设 TCP 建连超时：Connector/J 默认不超时，被丢弃的路由会让启动一直挂住");
+    }
+
     /** 取出指定方法（按大括号配对）的方法体，便于断言"查库与改界面是否还在同一个方法里"。 */
-    private static String methodBody(String source, String signature) {
-        int start = source.indexOf(signature);
+    private static String methodBody(String source, String signature) {        int start = source.indexOf(signature);
         assertTrue(start >= 0, "找不到方法签名: " + signature);
         int open = source.indexOf('{', start + signature.length());
         assertTrue(open >= 0, "方法没有方法体: " + signature);

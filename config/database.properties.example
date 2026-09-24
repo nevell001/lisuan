@@ -12,3 +12,8 @@ db.username=lisuan
 # 安全提示：建议通过环境变量设置密码，以防泄露
 # export CASHIER_DB_PASSWORD=your_password
 db.password=
+
+# 等待数据库连接的毫秒数（连接池取连接 / 启动时建连）
+# 冷启动首次连接可能要好几秒（本机实测 8.5s，之后约 40ms），默认给到 15000；
+# 如果部署在很慢的机器或跨网段访问数据库，可以调大
+#db.connection.timeout=15000

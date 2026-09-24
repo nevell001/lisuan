@@ -45,7 +45,9 @@ public class DatabaseManager {
     private static String dbUsername;
     private static String dbPassword;
     private static int poolSize = 10;  // 桌面应用默认连接池大小
-    private static long connectionTimeout = 5000;  // 减少超时时间避免 UI 冻结
+    // 冷启动首次连接要付类加载/TLS/鉴权的一次性成本，本机实测可达 8.5 秒（同一 JVM 后续连接仅约 40ms），
+    // 原来的 5000ms 会让"数据库其实正常"的机器在启动时直接建池失败；15 秒仍远低于用户感知的"卡死"。
+    private static long connectionTimeout = 15000;  // 等待连接的毫秒数，可在 config/database.properties 调小/调大
     private static long idleTimeout = 600000;
     private static long maxLifetime = 1800000;
     private static long leakDetectionThreshold = 30000;  // 30秒泄漏检测
@@ -88,7 +90,12 @@ public class DatabaseManager {
                 initializeDatabase();
             } catch (Exception e) {
                 logger.error("数据库初始化失败，系统将终止启动", e);
-                throw new ExceptionInInitializerError("数据库初始化失败: " + e.getMessage());
+                // 报错要可直接行动：只说 "Communications link failure" 用户无从下手
+                throw new ExceptionInInitializerError("数据库初始化失败: " + e.getMessage()
+                    + "\n请确认：MySQL 已启动、config/database.properties 的主机/端口/用户名正确、"
+                    + "CASHIER_DB_PASSWORD 与数据库口令一致；"
+                    + "若数据库响应较慢，可在 config/database.properties 调大 db.connection.timeout"
+                    + "（当前 " + connectionTimeout + "ms）");
             }
         } else {
             logger.info("检测到测试模式，跳过 MySQL 数据库初始化");
@@ -120,6 +127,10 @@ public class DatabaseManager {
         // 连接验证配置
         config.setConnectionTestQuery(connectionTestQuery);
         config.setValidationTimeout(validationTimeout);
+
+        // TCP 建连超时。Connector/J 默认是 0（不超时），遇到被丢弃的路由会一直挂着；
+        // 它只作用于建立 TCP 连接，不影响长查询，因此比 socketTimeout 安全得多。
+        config.addDataSourceProperty("connectTimeout", String.valueOf(Math.min(connectionTimeout, 10000)));
 
         // MySQL 特定配置
         config.addDataSourceProperty("cachePrepStmts", "true");

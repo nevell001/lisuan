@@ -15,7 +15,10 @@ import com.cashier.util.FXUtils;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.application.Application;
 import javafx.application.Platform;
+import javafx.animation.Animation;
+import javafx.animation.KeyFrame;
 import javafx.animation.PauseTransition;
+import javafx.animation.Timeline;
 import javafx.fxml.FXMLLoader;
 import javafx.scene.Parent;
 import javafx.scene.Scene;
@@ -45,6 +48,13 @@ public class CashierSystemFXApplication extends Application {
     private static final double WINDOW_HEIGHT = 800;
     /** 启动窗口显示后，延后这么多毫秒再跑重量级初始化，确保窗口已经绘制出来 */
     private static final double SPLASH_FIRST_FRAME_DELAY_MS = 60;
+
+    /** 数据库阶段所在后台线程名（门禁据此断言该阶段不在 FX 线程上跑） */
+    private static final String STARTUP_DATABASE_THREAD = "startup-database";
+    /** 数据库阶段最多等多久：冷启动首次连接实测可达 8 秒以上，这里给足余量；超时明确报错而不是无限卡住 */
+    private static final long STARTUP_DATABASE_TIMEOUT_MS = 60_000;
+    /** 等待数据库期间刷新"已等待 N 秒"的间隔 */
+    private static final double STARTUP_STATUS_REFRESH_SECONDS = 1;
 
     /**
      * 界面字体族名：必须与 {@code css/*.css} 里 {@code -fx-font-family} 的**首项**一致，
@@ -125,47 +135,141 @@ public class CashierSystemFXApplication extends Application {
                 splash.close();
                 // 动画/布局处理期间不允许 showAndWait，必须回到事件循环后再弹窗
                 Platform.runLater(() -> showStartupFailure(t));
-                return;
             }
-            splash.close();
+            // 正常路径由 completeStartup 负责关掉启动窗口：initializeApplication 现在是异步的
         });
         defer.play();
     }
 
-    /**
-     * 重量级初始化：数据库、支付渠道、语言偏好、登录界面与主窗口。
-     */
-    private void initializeApplication(SplashWindow splash) throws Exception {
-        splash.updateProgress(0.3);
+    /** 数据库阶段的结果；{@code null} 结果表示用户在配置向导里取消了配置 */
+    private record StartupDatabase(String languageTag) {
+    }
 
+    /**
+     * 启动第一阶段：把数据库相关的重活交给后台线程，FX 线程只负责刷新启动画面。
+     *
+     * <p>此前配置向导、连接池建连、建表迁移、语言偏好读取都在 FX 线程上同步执行，
+     * 后果有两个：① 启动画面被占死、进度文案根本刷不出来；② 冷启动首连要好几秒
+     * （本机实测 8.5s），连接一旦被挂住就会无限期停在启动画面上、既无提示也无超时。</p>
+     */
+    private void initializeApplication(SplashWindow splash) {
+        splash.updateProgress(0.2, "正在连接数据库...");
+        long startedAt = System.currentTimeMillis();
+        logger.info("启动阶段: 正在连接数据库（等待上限 {} 秒）", STARTUP_DATABASE_TIMEOUT_MS / 1000);
+
+        CompletableFuture<StartupDatabase> databasePhase = new CompletableFuture<>();
+        Thread worker = new Thread(() -> {
+            try {
+                databasePhase.complete(initializeDatabasePhase());
+            } catch (Throwable t) {
+                databasePhase.completeExceptionally(t);
+            }
+        }, STARTUP_DATABASE_THREAD);
+        // 守护线程：即使它仍卡在 socket 上，也不会阻止进程退出
+        worker.setDaemon(true);
+        worker.start();
+
+        // 完成即回到 FX 线程继续；不轮询、不阻塞，启动画面才能重绘
+        databasePhase.whenComplete((result, error) ->
+            Platform.runLater(() -> completeStartup(splash, result, error, startedAt)));
+
+        // 看门狗：只负责"等太久"的提示与超时判定
+        long[] lastLoggedSecond = {0};
+        Timeline watchdog = new Timeline(new KeyFrame(
+            Duration.seconds(STARTUP_STATUS_REFRESH_SECONDS), event -> {
+                if (databasePhase.isDone()) {
+                    return;
+                }
+                long waited = System.currentTimeMillis() - startedAt;
+                if (waited >= STARTUP_DATABASE_TIMEOUT_MS) {
+                    logger.error("启动阶段: 等待数据库超过 {} 秒，放弃启动", STARTUP_DATABASE_TIMEOUT_MS / 1000);
+                    databasePhase.completeExceptionally(new IOException(
+                        "连接数据库超过 " + (STARTUP_DATABASE_TIMEOUT_MS / 1000) + " 秒仍未完成（已等待 "
+                            + (waited / 1000) + " 秒）。请检查 MySQL 是否已启动、"
+                            + "config/database.properties 的主机/端口是否正确；"
+                            + "若数据库响应较慢，可调大 db.connection.timeout"));
+                    return;
+                }
+                long seconds = waited / 1000;
+                // 每 5 秒在日志里留一行：出问题时只看日志就知道启动卡在哪一步（此前是彻底静默）
+                if (seconds >= 5 && seconds % 5 == 0 && seconds != lastLoggedSecond[0]) {
+                    lastLoggedSecond[0] = seconds;
+                    logger.info("启动阶段: 仍在等待数据库（已 {} 秒）", seconds);
+                }
+                splash.updateProgress(0.2, "正在连接数据库...（已等待 " + seconds + " 秒）");
+            }));
+        watchdog.setCycleCount(Animation.INDEFINITE);
+        watchdog.play();
+        databasePhase.whenComplete((result, error) -> Platform.runLater(watchdog::stop));
+    }
+
+    /**
+     * 数据库阶段（在 {@value #STARTUP_DATABASE_THREAD} 线程执行）。
+     *
+     * <p>首次触碰 {@code DatabaseManager} 会在这里建连接池、建表并跑迁移，是最耗时的一段。</p>
+     *
+     * @return 结果；返回 {@code null} 表示用户在配置向导里取消了配置
+     */
+    private StartupDatabase initializeDatabasePhase() throws Exception {
         // 检查数据库配置：缺失时弹配置向导，用户取消则不再继续
         // （向导自身按独立工具的语义退出进程，这里只需等它结束）
         if (!checkDatabaseConfiguration()) {
-            logger.warn("数据库配置未完成，应用退出");
-            Platform.exit();
-            return;
+            return null;
         }
 
         // 支付渠道必须在收银界面加载前完成配置，未配置渠道保持禁用。
         com.cashier.service.PaymentService.init();
 
-        // 立即设置应用图标（同步）
+        return new StartupDatabase(DataService.loadLanguagePreference());
+    }
+
+    /**
+     * 数据库阶段结束后的收口：区分"失败 / 用户取消 / 成功"，再回到 FX 线程做界面部分。
+     */
+    private void completeStartup(SplashWindow splash, StartupDatabase database, Throwable error, long startedAt) {
+        if (error != null) {
+            logger.error("应用初始化失败", error);
+            splash.close();
+            showStartupFailure(error);
+            return;
+        }
+        if (database == null) {
+            logger.warn("数据库配置未完成，应用退出");
+            splash.close();
+            Platform.exit();
+            return;
+        }
+
+        logger.info("启动阶段: 数据库就绪，耗时 {}ms", System.currentTimeMillis() - startedAt);
+        try {
+            finishStartup(splash, database.languageTag());
+        } catch (Throwable t) {
+            logger.error("应用初始化失败", t);
+            splash.close();
+            showStartupFailure(t);
+        }
+    }
+
+    /**
+     * 启动第二阶段（FX 线程）：应用图标、语言、登录界面、主窗口与后台服务。
+     */
+    private void finishStartup(SplashWindow splash, String savedLanguage) {
+        splash.updateProgress(0.5, "正在加载界面...");
+
+        // 立即设置应用图标
         setupApplicationIcon();
 
-        // 加载语言偏好（同步，轻量级）
-        String savedLanguage = DataService.loadLanguagePreference();
-        com.cashier.i18n.I18nManager.getInstance().setLocale(savedLanguage);
-        logger.info("应用启动 - 已加载语言偏好: {}, I18nManager 当前语言: {}", savedLanguage, com.cashier.i18n.I18nManager.getInstance().getCurrentLanguageTag());
+        I18nManager.getInstance().setLocale(savedLanguage);
+        logger.info("应用启动 - 已加载语言偏好: {}, I18nManager 当前语言: {}",
+            savedLanguage, I18nManager.getInstance().getCurrentLanguageTag());
 
-        splash.updateProgress(0.5);
-
-        // 加载登录界面（同步）
+        // 加载登录界面
         loadLoginScene();
 
-        // 配置主窗口（同步）
+        // 配置主窗口
         configurePrimaryStage();
 
-        splash.updateProgress(0.7);
+        splash.updateProgress(0.85, "正在启动服务...");
 
         // 立即显示窗口 - 不等待后台初始化
         primaryStage.show();
@@ -175,7 +279,8 @@ public class CashierSystemFXApplication extends Application {
             Platform.runLater(this::warnUiFontMissing);
         }
 
-        splash.updateProgress(0.9);
+        splash.updateProgress(1.0, "即将完成...");
+        splash.close();
 
         // 异步初始化后台服务 - 启动后立即执行
         startBackgroundServices();

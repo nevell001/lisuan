@@ -70,6 +70,17 @@ public final class SplashWindow {
         updateStatusText(value);
     }
 
+    /**
+     * 更新进度并显式指定状态文案。
+     *
+     * <p>启动期的等待需要说清"在等什么、等了多久"（例如连接数据库），
+     * 只按进度区间套固定文案是不够的。</p>
+     */
+    public void updateProgress(double value, String status) {
+        progress.setProgress(value);
+        statusLabel.setText(status);
+    }
+
     public void close() {
         if (stage.isShowing()) {
             stage.close();

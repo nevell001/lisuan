@@ -865,6 +865,24 @@ API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后�
   `TouchCartController.preCheck()`）：每次点击一次单行查询，且其后立即弹出模态框，
   改造需把三条支付流程都改成回调，风险大于收益，暂按现状保留
 
+**启动期数据库阶段（v2.6.0 补强）**
+
+- 配置向导、连接池建连/建表迁移、语言偏好读取**整体移到 `startup-database` 后台线程**：
+  此前全在 FX 线程同步执行，启动画面被占死（进度文案根本刷不出来），连接一旦被挂住就
+  无限期停在启动画面——实测一次 **2 小时 11 分没有任何输出**
+- `db.connection.timeout` 默认 **5000 → 15000**：同一 JVM 内首次连接实测 8.5s、后续仅约 40ms，
+  5s 会让"数据库其实正常"的机器在建池阶段直接失败。另给 JDBC 设了 `connectTimeout`
+  （Connector/J 默认不超时，被丢弃的路由会让启动一直挂着；它只影响建立 TCP 连接，不动长查询）
+- 启动阶段有 **60 秒上限**（`STARTUP_DATABASE_TIMEOUT_MS` + Timeline 看门狗；不用阻塞式 `get`，
+  否则又占死 FX 线程），每 5 秒在日志留一行 `启动阶段: 仍在等待数据库（已 N 秒）`，
+  启动画面同步显示 `正在连接数据库...（已等待 N 秒）`；超时给出可操作文案而不是静默卡住
+- 建池失败的错误信息一并带上"确认 MySQL/主机端口/口令，必要时调大 db.connection.timeout
+  （当前 15000ms）"——原来只有一句 `Communications link failure`，用户无从下手
+- 门禁：`FxThreadDbPolicyTest.startupDatabaseInitializationRunsOffTheFxThreadWithBoundedWait`
+  （按方法体断言 `PaymentService.init()` 不在 `initializeApplication` 内、且不得在 FX 线程 `.get(` 阻塞）
+  与 `FxThreadDbPolicyTest.databaseConnectionTimeoutToleratesColdStart`（默认值 ≥10s 且必须设 TCP 建连超时）；
+  两者均做过变异验证（把默认值改回 5000 即变红）
+
 **触屏收银台自动化覆盖（v2.6.0 补强）**
 
 - 触屏收银台没有 UI 级自动化测试：TestFX 需要真实显示环境，`mvn verify`/CI 跑不了
