@@ -983,9 +983,16 @@ API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后�
   回归门禁见 `PerformancePolicyTest.installersNeverPersistPasswordIntoConfig`
 - 本机约定：密码放根目录 `.env`（已 gitignore），`config/database.properties` 的 `db.password` 留空
 - 口令变量名只有一个：`CASHIER_DB_PASSWORD`（应用侧 `DotEnv.DB_PASSWORD_KEY`，compose 也读它，
-  `CASHER_DB_PASSWORD` 是应用侧的历史拼写兼容）。**旧 `.env` 里的 `MYSQL_PASSWORD` 不会被任何一方读取**：
-  `docker compose up -d mysql` 会直接报 `required variable CASHIER_DB_PASSWORD is missing`，
-  应用也会因为 `db.password` 为空而连不上——从旧 `.env` 升级时把该行改名即可（`.env.example` 已注明）
+  `CASHER_DB_PASSWORD` 是应用侧的历史拼写兼容）
+- **旧 `.env` 里的 `MYSQL_PASSWORD` 只有启动/发布脚本还认**：`start.bat`/`start.sh`、
+  `release.bat`/`release.sh`、`install.bat`/`install.sh`、`docker/docker-init.sh`、
+  `docker/backup-db.sh` 都把它当作 `CASHIER_DB_PASSWORD` 的旧别名回退读取（README 四份都写明了这一兼容）。
+  不认它的只有两处：
+  - **docker compose**：`docker compose up -d mysql` 会直接报 `required variable CASHIER_DB_PASSWORD is missing`；
+  - **应用自身**（`DotEnv`）：直接用 `java -jar` 启动时 `db.password` 为空会连不上。
+
+  也就是说同一份旧 `.env` 经 `start.bat` 能跑、`java -jar` 不能跑。从旧 `.env` 升级时把
+  `MYSQL_PASSWORD` 改名为 `CASHIER_DB_PASSWORD` 即可（`.env.example` 已注明）
 
 **REST API 启用步骤（本地冒烟/生产）**
 

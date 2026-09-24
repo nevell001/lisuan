@@ -1,0 +1,26 @@
+# 统一换行符：仓库内一律存 LF，仅在检出时按平台还原。
+# 没有这份文件时，Windows 上 core.autocrlf=true 会把 .sh / my.cnf 一并变成 CRLF。
+
+* text=auto
+
+# Shell 脚本必须在 Linux/macOS/WSL 下按 LF 执行（CRLF 会报 bad interpreter）
+*.sh   text eol=lf
+*.bash text eol=lf
+
+# Windows 批处理必须 CRLF：LF 结尾的 .bat 会让 goto :label 与 if 块解析失效
+*.bat  text eol=crlf
+*.cmd  text eol=crlf
+
+# 该文件被 docker compose 绑定挂载进 Linux 容器，不能带 CRLF
+docker/my.cnf text eol=lf
+
+# 二进制资源：不做换行符转换
+*.ttf  binary
+*.ttc  binary
+*.otf  binary
+*.png  binary
+*.jpg  binary
+*.jpeg binary
+*.ico  binary
+*.wav  binary
+*.jar  binary
