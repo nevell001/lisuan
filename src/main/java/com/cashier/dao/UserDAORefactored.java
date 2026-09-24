@@ -74,14 +74,14 @@ public class UserDAORefactored extends BaseDAO {
                 "INSERT INTO users (id, username, password, name, role, create_time, last_login_time, active) " +
                     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
                 user.id, user.username, user.password, user.name, user.role,
-                new Timestamp(user.createTime.getTime()), new Timestamp(user.lastLoginTime.getTime()),
+                toEpochMillis(user.createTime), toEpochMillis(user.lastLoginTime),
                 user.active) > 0;
         }
         long id = executeInsertReturnId(
             "INSERT INTO users (username, password, name, role, create_time, last_login_time, active) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?)",
             user.username, user.password, user.name, user.role,
-            new Timestamp(user.createTime.getTime()), new Timestamp(user.lastLoginTime.getTime()),
+            toEpochMillis(user.createTime), toEpochMillis(user.lastLoginTime),
             user.active);
         user.id = (int) id;
         return id > 0;
@@ -96,13 +96,13 @@ public class UserDAORefactored extends BaseDAO {
     public boolean updateLastLoginTime(int id) throws SQLException {
         return executeUpdate(
             "UPDATE users SET last_login_time = ? WHERE id = ?",
-            new Timestamp(System.currentTimeMillis()), id) > 0;
+            System.currentTimeMillis(), id) > 0;
     }
 
     public boolean updateLastLoginTimeByUsername(String username) throws SQLException {
         return executeUpdate(
             "UPDATE users SET last_login_time = ? WHERE username = ?",
-            new Timestamp(System.currentTimeMillis()), username) > 0;
+            System.currentTimeMillis(), username) > 0;
     }
 
     public boolean delete(int id) throws SQLException {
@@ -125,7 +125,7 @@ public class UserDAORefactored extends BaseDAO {
         for (User user : users) {
             params.add(new Object[]{
                 user.username, user.password, user.name, user.role,
-                new Timestamp(user.createTime.getTime()), new Timestamp(user.lastLoginTime.getTime()),
+                toEpochMillis(user.createTime), toEpochMillis(user.lastLoginTime),
                 user.active});
         }
         // BaseDAO.batchUpdate 不返回自增ID；批量插入后按用户名回填ID以保持兼容
@@ -150,6 +150,19 @@ public class UserDAORefactored extends BaseDAO {
         return executeUpdate(
             "UPDATE users SET password = ?, force_password_change = 0 WHERE username = ?",
             newPassword, username) > 0;
+    }
+
+    /**
+     * 把时间值转成 users 表要求的 epoch 毫秒。
+     *
+     * <p>{@code create_time} / {@code last_login_time} 在 MySQL 侧是 BIGINT，
+     * 语义是 epoch 毫秒（与 {@code docker/mysql-init/00-init-complete.sql} 的
+     * {@code UNIX_TIMESTAMP() * 1000} 以及 {@code DatabaseManager} 的 {@code setLong} 一致）。
+     * 若直接传 {@link Timestamp}，MySQL 会把时间值按 {@code YYYYMMDDHHMMSS} 数值化写进 BIGINT，
+     * 读回时又被当作毫秒，界面会显示成 2612 年。</p>
+     */
+    private static Long toEpochMillis(java.util.Date date) {
+        return date == null ? null : date.getTime();
     }
 
     /** 读取日期列，兼容 BIGINT (epoch millis) 和 TIMESTAMP 两种存储方式 */

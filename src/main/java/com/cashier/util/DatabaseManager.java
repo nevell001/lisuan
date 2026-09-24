@@ -13,6 +13,8 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Map;
 import java.util.Properties;
 import java.nio.file.Files;
@@ -53,8 +55,25 @@ public class DatabaseManager {
     private static final String CONSOLE_SEPARATOR = "========================================";
     private static final String DEFAULT_DATABASE_NAME = "lisuan_system";
     private static final String OPERATION_LOGS_TABLE = "operation_logs";
+    /** 用 'default' 伪用户存全局默认值的偏好表；其 username 不能加指向 users 的外键 */
+    private static final String[] PREFERENCE_TABLES = {
+        "theme_preferences", "language_preferences", "font_size_preferences"
+    };
     private static final long DATABASE_COMMAND_TIMEOUT_SECONDS = 30 * 60;
     private static final long DOCKER_STATUS_TIMEOUT_SECONDS = 10;
+    /**
+     * YYYYMMDDHHMMSS 形式的下界（1000-01-01 00:00:00）。
+     * BIGINT 时间列的正常值是 epoch 毫秒（到 2100 年也就 13 位），不可能达到这个量级，
+     * 因此用它区分"被 MySQL 数值化成紧凑日期时间"的脏数据。
+     */
+    private static final long COMPACT_DATETIME_FLOOR = 10_000_101_000_000L;
+    private static final long COMPACT_DATETIME_CEILING = 29_991_231_235_959L;
+    /**
+     * 必须声明在下面的 static 初始化块之前：该块会在启动时跑到脏数据修复，
+     * 而静态字段是按文本顺序初始化的，放在后面这里会是 null。
+     */
+    private static final java.time.format.DateTimeFormatter COMPACT_DATE_TIME_FORMAT =
+        java.time.format.DateTimeFormatter.ofPattern("yyyyMMddHHmmss");
 
     static {
         // 检查是否在测试环境中运行
@@ -1120,11 +1139,29 @@ public class DatabaseManager {
                     username VARCHAR(50) PRIMARY KEY,
                     font_size VARCHAR(20) DEFAULT 'medium',
                     updated_at BIGINT,
-                    INDEX idx_username (username),
-                    FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+                    INDEX idx_username (username)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """);
         }
+
+        // 创建语言偏好表（如果不存在）
+        // 注意：LanguagePreferenceDAORefactored 读写该表，但此前只有 docker 初始化 SQL 建它，
+        // 走 DatabaseManager 建库的部署会因为缺表而静默丢失语言/货币偏好
+        if (tableMissing(stmt, "language_preferences")) {
+            logger.info("正在创建 language_preferences 表...");
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS language_preferences (
+                    username VARCHAR(50) PRIMARY KEY,
+                    language_tag VARCHAR(10) DEFAULT 'zh-CN',
+                    currency_code VARCHAR(10) DEFAULT 'CNY' COMMENT '货币代码',
+                    updated_at BIGINT,
+                    INDEX idx_username (username)
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
+            """);
+        }
+
+        // 偏好表用 'default' 伪用户存全局默认值，不能对 username 加指向 users 的外键
+        dropPreferenceUsernameForeignKeys(stmt);
 
         // 为 promotions 表添加 promotion_code 字段（如果不存在）
         if (columnMissing(stmt, "promotions", "promotion_code")) {
@@ -1141,6 +1178,9 @@ public class DatabaseManager {
             logger.info("正在为 users 表添加 force_password_change 字段...");
             stmt.execute("ALTER TABLE users ADD COLUMN force_password_change TINYINT(1) DEFAULT 0 AFTER active");
         }
+
+        // 修复历史脏数据：早期把 Timestamp 写进 BIGINT 时间列，落库成了 YYYYMMDDHHMMSS
+        repairUserTimestampColumns(stmt);
 
         // 为 transactions 表添加 status 字段（REST 退款终态/幂等保护，如果不存在）
         ensureColumn(stmt, "transactions", "status",
@@ -1167,6 +1207,37 @@ public class DatabaseManager {
         }
 
         logger.info("表结构检查完成");
+    }
+
+    /**
+     * 移除偏好表 username 列上指向 users 的外键。
+     *
+     * <p>这三张表除"每用户一行"外，还用字面量 {@code 'default'} 存全局默认值
+     * （{@code DataService.saveThemePreference("default", ...)} 等）。{@code 'default'}
+     * 不是 users 里的真实用户，外键会让全局默认永远写不进去，因此这里把历史库上的外键删掉。</p>
+     */
+    private static void dropPreferenceUsernameForeignKeys(Statement stmt) throws SQLException {
+        String sql = "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
+                     "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? " +
+                     "AND COLUMN_NAME = 'username' AND REFERENCED_TABLE_NAME = 'users'";
+        for (String table : PREFERENCE_TABLES) {
+            if (tableMissing(stmt, table)) {
+                continue;
+            }
+            List<String> constraints = new ArrayList<>();
+            try (PreparedStatement pstmt = stmt.getConnection().prepareStatement(sql)) {
+                pstmt.setString(1, table);
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        constraints.add(rs.getString("CONSTRAINT_NAME"));
+                    }
+                }
+            }
+            for (String constraint : constraints) {
+                logger.info("正在移除 {} 表的 username 外键 {}（偏好表需要存放 default 全局默认值）", table, constraint);
+                stmt.execute("ALTER TABLE `" + table + "` DROP FOREIGN KEY `" + constraint + "`");
+            }
+        }
     }
 
     private static boolean columnMissing(Statement stmt, String table, String column) throws SQLException {
@@ -1243,6 +1314,73 @@ public class DatabaseManager {
             stmt.execute("ALTER TABLE promotions CHANGE COLUMN " + tmpCol + " " + col + " TIMESTAMP NULL");
         }
         logger.info("promotions 日期列迁移完成");
+    }
+
+    /**
+     * 修复 users 表时间列的历史脏数据。
+     *
+     * <p>{@code create_time} / {@code last_login_time} 在 MySQL 侧是 BIGINT（epoch 毫秒）。
+     * 早期版本把 {@link java.sql.Timestamp} 直接绑给这两列，MySQL 会按 {@code YYYYMMDDHHMMSS}
+     * 数值化（例如 {@code 20260924105609}），而读取侧又把该数字当毫秒，界面于是显示成 2612 年。
+     * 这里把落在紧凑日期时间区间的值还原成 epoch 毫秒；正常毫秒值不会被触及。</p>
+     */
+    private static void repairUserTimestampColumns(Statement stmt) throws SQLException {
+        List<Object[]> fixes = new ArrayList<>();  // {id, createMillis|null, lastLoginMillis|null}
+        String select = "SELECT id, create_time, last_login_time FROM users " +
+                        "WHERE create_time >= ? OR last_login_time >= ?";
+        try (PreparedStatement pstmt = stmt.getConnection().prepareStatement(select)) {
+            pstmt.setLong(1, COMPACT_DATETIME_FLOOR);
+            pstmt.setLong(2, COMPACT_DATETIME_FLOOR);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    fixes.add(new Object[]{
+                        rs.getInt("id"),
+                        compactDateTimeToEpochMillis(rs.getObject("create_time")),
+                        compactDateTimeToEpochMillis(rs.getObject("last_login_time"))
+                    });
+                }
+            }
+        }
+        if (fixes.isEmpty()) {
+            return;
+        }
+
+        logger.info("检测到 users 时间列脏数据 {} 行，正在修复为 epoch 毫秒...", fixes.size());
+        String update = "UPDATE users SET create_time = COALESCE(?, create_time), " +
+                        "last_login_time = COALESCE(?, last_login_time) WHERE id = ?";
+        for (Object[] fix : fixes) {
+            if (fix[1] == null && fix[2] == null) {
+                continue;
+            }
+            try (PreparedStatement pstmt = stmt.getConnection().prepareStatement(update)) {
+                pstmt.setObject(1, fix[1]);
+                pstmt.setObject(2, fix[2]);
+                pstmt.setInt(3, (Integer) fix[0]);
+                pstmt.executeUpdate();
+            }
+        }
+        logger.info("users 时间列脏数据修复完成");
+    }
+
+    /**
+     * 仅当值确实落在 YYYYMMDDHHMMSS 区间时才转成 epoch 毫秒，否则返回 null（不改动）。
+     */
+    private static Long compactDateTimeToEpochMillis(Object value) {
+        if (!(value instanceof Number number)) {
+            return null;
+        }
+        long raw = number.longValue();
+        if (raw < COMPACT_DATETIME_FLOOR || raw > COMPACT_DATETIME_CEILING) {
+            return null;
+        }
+        try {
+            java.time.LocalDateTime dateTime = java.time.LocalDateTime.parse(
+                Long.toString(raw), COMPACT_DATE_TIME_FORMAT);
+            return dateTime.atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli();
+        } catch (java.time.format.DateTimeParseException e) {
+            logger.warn("无法解析 users 时间列脏数据 {}，已跳过", raw);
+            return null;
+        }
     }
 
     /**

@@ -102,4 +102,57 @@ class ProductionSchemaConsistencyTest {
         assertTrue(databaseManager.contains("ensureColumn(stmt, \"transactions\", \"status\""),
             "upgradeTableStructure 应为老库补 transactions.status 列");
     }
+
+    @Test
+    @DisplayName("users 时间列在三处都是 BIGINT(epoch 毫秒)，DAO 不得再绑 Timestamp")
+    void userTimestampColumnsUseEpochMillisEverywhere() throws Exception {
+        String databaseManager = Files.readString(
+            Path.of("src/main/java/com/cashier/util/DatabaseManager.java"));
+        String initSql = Files.readString(
+            Path.of("docker/mysql-init/00-init-complete.sql"));
+        String testBase = Files.readString(
+            Path.of("src/test/java/com/cashier/util/DatabaseTestBase.java"));
+
+        for (String ddl : new String[]{
+                sliceTableDdl(databaseManager, "CREATE TABLE IF NOT EXISTS users ("),
+                sliceTableDdl(initSql, "CREATE TABLE IF NOT EXISTS users (")}) {
+            assertTrue(ddl.contains("last_login_time BIGINT"),
+                "users.last_login_time 应为 BIGINT（epoch 毫秒）");
+            assertTrue(ddl.contains("create_time BIGINT"),
+                "users.create_time 应为 BIGINT（epoch 毫秒）");
+        }
+
+        // H2 测试库必须与生产一致：写成 TIMESTAMP 时，Timestamp 绑定的缺陷会在 H2 上假装通过
+        assertTrue(testBase.contains("last_login_time BIGINT"),
+            "DatabaseTestBase 的 users.last_login_time 必须与生产一致（BIGINT），不能是 TIMESTAMP");
+        assertTrue(testBase.contains("create_time BIGINT"),
+            "DatabaseTestBase 的 users.create_time 必须与生产一致（BIGINT），不能是 TIMESTAMP");
+
+        String userDao = Files.readString(
+            Path.of("src/main/java/com/cashier/dao/UserDAORefactored.java"));
+        assertFalse(userDao.contains("new Timestamp("),
+            "UserDAORefactored 不得把 Timestamp 绑给 BIGINT 时间列："
+                + "MySQL 会按 YYYYMMDDHHMMSS 数值化，读回被当成毫秒后显示成 2612 年");
+    }
+
+    @Test
+    @DisplayName("偏好表不得对 username 加 users 外键（否则 default 全局默认值永远写不进）")
+    void preferenceTablesHaveNoUsernameForeignKey() throws Exception {
+        String databaseManager = Files.readString(
+            Path.of("src/main/java/com/cashier/util/DatabaseManager.java"));
+        String initSql = Files.readString(
+            Path.of("docker/mysql-init/00-init-complete.sql"));
+
+        // 这三张表除“每用户一行”外还用字面量 'default' 存全局默认值，'default' 不是真实用户
+        for (String table : new String[]{"theme_preferences", "language_preferences", "font_size_preferences"}) {
+            String marker = "CREATE TABLE IF NOT EXISTS " + table + " (";
+            assertFalse(sliceTableDdl(databaseManager, marker).contains("REFERENCES users(username)"),
+                "DatabaseManager 的 " + table + " 不应有 username 外键（需要存 default 全局默认值）");
+            assertFalse(sliceTableDdl(initSql, marker).contains("REFERENCES users(username)"),
+                "初始化 SQL 的 " + table + " 不应有 username 外键（需要存 default 全局默认值）");
+        }
+
+        assertTrue(databaseManager.contains("DROP FOREIGN KEY"),
+            "需要保留老库迁移：删掉历史偏好表上的 username 外键");
+    }
 }

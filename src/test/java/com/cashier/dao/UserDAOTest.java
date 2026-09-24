@@ -133,6 +133,30 @@ public class UserDAOTest extends DatabaseTestBase {
     }
 
     @Test
+    @Order(7)
+    @DisplayName("时间列落库为 epoch 毫秒，而不是 YYYYMMDDHHMMSS（回归：界面曾显示 2612 年）")
+    public void testTimestampColumnsStoreEpochMillis() throws Exception {
+        userDAO.updateLastLoginTimeByUsername(testUser.username);
+
+        String sql = "SELECT create_time, last_login_time FROM users WHERE username = ?";
+        try (java.sql.Connection conn = getTestConnection();
+             java.sql.PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, testUser.username);
+            try (java.sql.ResultSet rs = pstmt.executeQuery()) {
+                assertTrue(rs.next());
+                for (String column : new String[]{"create_time", "last_login_time"}) {
+                    long raw = rs.getLong(column);
+                    // epoch 毫秒：约 2001-09-09 ~ 2096-10-02；YYYYMMDDHHMMSS 是 14 位（≥1e13），
+                    // 一旦写成紧凑日期时间，这个区间断言就会失败
+                    assertTrue(raw > 1_000_000_000_000L && raw < 4_000_000_000_000L,
+                        column + " 应为 epoch 毫秒，实际=" + raw
+                            + "（若为 14 位说明被 MySQL 按 YYYYMMDDHHMMSS 数值化了）");
+                }
+            }
+        }
+    }
+
+    @Test
     @Order(8)
     @DisplayName("测试验证用户密码")
     public void testVerifyPassword() throws Exception {

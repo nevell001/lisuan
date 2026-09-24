@@ -113,8 +113,10 @@ public abstract class DatabaseTestBase {
                 role VARCHAR(20) NOT NULL,
                 active TINYINT(1) DEFAULT 1,
                 force_password_change TINYINT(1) DEFAULT 0,
-                last_login_time TIMESTAMP,
-                create_time TIMESTAMP
+                -- 与生产库一致：BIGINT 存 epoch 毫秒。
+                -- 这里若写成 TIMESTAMP，Timestamp 绑定/读取的缺陷在 H2 上会假装通过。
+                last_login_time BIGINT,
+                create_time BIGINT
             )
             """);
 

@@ -420,8 +420,7 @@ SET @sql = IF(@table_exists = 0,
         username VARCHAR(50) PRIMARY KEY,
         theme_name VARCHAR(20) DEFAULT ''lisuan'',
         updated_at BIGINT,
-        INDEX idx_username (username),
-        FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+        INDEX idx_username (username)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
     'SELECT "theme_preferences table already exists" AS message'
 );
@@ -443,8 +442,7 @@ SET @sql = IF(@table_exists = 0,
         language_tag VARCHAR(10) DEFAULT ''zh-CN'',
         currency_code VARCHAR(10) DEFAULT ''CNY'' COMMENT ''货币代码'',
         updated_at BIGINT,
-        INDEX idx_username (username),
-        FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+        INDEX idx_username (username)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
     'SELECT "language_preferences table already exists" AS message'
 );
@@ -465,8 +463,7 @@ SET @sql = IF(@table_exists = 0,
         username VARCHAR(50) PRIMARY KEY,
         font_size VARCHAR(20) DEFAULT ''medium'',
         updated_at BIGINT,
-        INDEX idx_username (username),
-        FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+        INDEX idx_username (username)
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
     'SELECT "font_size_preferences table already exists" AS message'
 );
