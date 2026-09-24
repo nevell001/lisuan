@@ -20,6 +20,7 @@ public final class TestContext {
     private final Map<String, String> queryParams = new HashMap<>();
     private final Map<String, String> pathParams = new HashMap<>();
     private Object body;
+    private RuntimeException bodyParseFailure;
     private HandlerType method = HandlerType.GET;
     private String path = "/";
 
@@ -57,6 +58,9 @@ public final class TestContext {
                     return validatorFor((String) args[0], (Class<?>) args[1], pathParams);
                 }
                 if (name.equals("bodyAsClass") && args.length == 1) {
+                    if (bodyParseFailure != null) {
+                        throw bodyParseFailure;
+                    }
                     return body;
                 }
                 if (name.equals("method") || name.equals("handlerType")) {
@@ -118,6 +122,17 @@ public final class TestContext {
 
     public TestContext withBody(Object value) {
         this.body = value;
+        return this;
+    }
+
+    /**
+     * 让 {@code ctx.bodyAsClass(...)} 抛出指定异常，用于验证"请求体写错"的响应码。
+     *
+     * <p>真实 Javalin/Jackson 遇到未知字段、类型不符、空请求体时就是这么抛的
+     * （{@code UnrecognizedPropertyException} / {@code BadRequestResponse}）。</p>
+     */
+    public TestContext withBodyParseFailure(RuntimeException failure) {
+        this.bodyParseFailure = failure;
         return this;
     }
 

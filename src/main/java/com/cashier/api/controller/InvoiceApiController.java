@@ -103,10 +103,10 @@ public class InvoiceApiController {
      */
     public static void createFromTransaction(Context ctx) {
         try {
-            InvoiceService.InvoiceRequest request = ctx.bodyAsClass(InvoiceService.InvoiceRequest.class);
+            InvoiceService.InvoiceRequest request = ApiRequest.parse(ctx, InvoiceService.InvoiceRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体不能为空"));
+                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
                 return;
             }
             
@@ -134,10 +134,10 @@ public class InvoiceApiController {
      */
     public static void createManual(Context ctx) {
         try {
-            InvoiceService.InvoiceRequest request = ctx.bodyAsClass(InvoiceService.InvoiceRequest.class);
+            InvoiceService.InvoiceRequest request = ApiRequest.parse(ctx, InvoiceService.InvoiceRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体不能为空"));
+                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
                 return;
             }
             
@@ -166,10 +166,10 @@ public class InvoiceApiController {
     public static void voidInvoice(Context ctx) {
         try {
             String invoiceId = ctx.pathParam("id");
-            VoidRequest request = ctx.bodyAsClass(VoidRequest.class);
+            VoidRequest request = ApiRequest.parse(ctx, VoidRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体不能为空"));
+                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
                 return;
             }
             
@@ -197,10 +197,10 @@ public class InvoiceApiController {
     public static void recordPrint(Context ctx) {
         try {
             String invoiceId = ctx.pathParam("id");
-            PrintRequest request = ctx.bodyAsClass(PrintRequest.class);
+            PrintRequest request = ApiRequest.parse(ctx, PrintRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体不能为空"));
+                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
                 return;
             }
             
@@ -236,10 +236,10 @@ public class InvoiceApiController {
      */
     public static void setSellerInfo(Context ctx) {
         try {
-            Map<?, ?> info = ctx.bodyAsClass(Map.class);
+            Map<?, ?> info = ApiRequest.parse(ctx, Map.class);
             if (info == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体不能为空"));
+                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
                 return;
             }
             

@@ -98,10 +98,10 @@ public class UserApiController {
     public static void create(Context ctx) {
         if (!checkAdmin(ctx)) return;
         
-        UserRequest request = ctx.bodyAsClass(UserRequest.class);
+        UserRequest request = ApiRequest.parse(ctx, UserRequest.class);
         if (request == null) {
             ctx.status(HttpStatus.BAD_REQUEST)
-               .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE, "请求体不能为空"));
+               .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE, "请求体为空或字段不合法"));
             return;
         }
         
@@ -142,10 +142,10 @@ public class UserApiController {
         if (!checkAdmin(ctx)) return;
         
         int id = ctx.pathParamAsClass("id", Integer.class).get();
-        UserRequest request = ctx.bodyAsClass(UserRequest.class);
+        UserRequest request = ApiRequest.parse(ctx, UserRequest.class);
         if (request == null) {
             ctx.status(HttpStatus.BAD_REQUEST)
-               .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE, "请求体不能为空"));
+               .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE, "请求体为空或字段不合法"));
             return;
         }
         

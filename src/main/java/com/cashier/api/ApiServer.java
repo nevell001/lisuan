@@ -199,11 +199,13 @@ public class ApiServer {
     }
 
     private void registerTransactionRoutes() {
+        // 字面量路径必须排在 /{id} 之前：Javalin 按注册顺序匹配，
+        // 否则 /api/transactions/today 会先落到 {id} 上、被当成 id="today" 查库后回 404
         app.get("/api/transactions", TransactionApiController::list);
+        app.get("/api/transactions/today", TransactionApiController::todayStats);
         app.get("/api/transactions/{id}", TransactionApiController::get);
         app.post("/api/transactions", TransactionApiController::create);
         app.post("/api/transactions/{id}/refund", TransactionApiController::refund);
-        app.get("/api/transactions/today", TransactionApiController::todayStats);
     }
 
     private void registerInventoryRoutes() {
@@ -323,8 +325,43 @@ public class ApiServer {
         });
 
         app.error(HttpStatus.NOT_FOUND.getCode(), ctx -> {
+            // 端点自己写的业务 404（如「交易不存在」）不能被覆盖，否则客户端分不清
+            // "接口不存在"和"资源不存在"；而 Javalin 对未匹配路由会预填一段纯文本
+            // （Endpoint GET /x not found），那种情况要用统一的 JSON 文案换掉
+            String existingBody = ctx.result();
+            String contentType = ctx.res() == null ? null : ctx.res().getContentType();
+            if (!shouldFillNotFoundBody(existingBody, contentType)) {
+                return;
+            }
             ctx.json(Map.of("success", false, "message", "接口不存在: " + ctx.path()));
         });
+    }
+
+    /**
+     * 决定要不要用统一的"接口不存在"文案兜底。
+     *
+     * <p>实测两种 404 的差别：端点自己写的业务 404 是 {@code application/json}
+     * （{@code {"success":false,"message":"交易不存在"}}）；Javalin 对未匹配路由预填的是
+     * {@code text/plain}（{@code Endpoint GET /x not found}）。只按"有没有响应体"判断会把
+     * 后者误判成业务响应，于是把 Javalin 的英文默认文本直接透给客户端。</p>
+     *
+     * @param existingBody 当前响应体，未写时为 {@code null}
+     * @param contentType  当前响应的 Content-Type，未知时为 {@code null}
+     */
+    static boolean shouldFillNotFoundBody(String existingBody, String contentType) {
+        if (existingBody == null || existingBody.isBlank()) {
+            return true;
+        }
+        return contentType == null || !contentType.contains("application/json");
+    }
+
+    /**
+     * 端点没有写响应体时，才用统一的"接口不存在"兜底文案。
+     *
+     * @param existingBody 端点已经写好的响应体，未写时为 {@code null}
+     */
+    static boolean shouldFillNotFoundBody(String existingBody) {
+        return existingBody == null || existingBody.isBlank();
     }
 
     static boolean isPublicApiPath(String path) {

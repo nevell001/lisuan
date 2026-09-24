@@ -86,10 +86,10 @@ public class MemberApiController {
      */
     public static void create(Context ctx) {
         try {
-            MemberRequest request = ctx.bodyAsClass(MemberRequest.class);
+            MemberRequest request = ApiRequest.parse(ctx, MemberRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体不能为空"));
+                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
                 return;
             }
             
@@ -146,10 +146,10 @@ public class MemberApiController {
     public static void update(Context ctx) {
         try {
             int id = ctx.pathParamAsClass("id", Integer.class).get();
-            MemberRequest request = ctx.bodyAsClass(MemberRequest.class);
+            MemberRequest request = ApiRequest.parse(ctx, MemberRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体不能为空"));
+                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
                 return;
             }
             
@@ -195,10 +195,10 @@ public class MemberApiController {
     public static void recharge(Context ctx) {
         try {
             int id = ctx.pathParamAsClass("id", Integer.class).get();
-            RechargeRequest request = ctx.bodyAsClass(RechargeRequest.class);
+            RechargeRequest request = ApiRequest.parse(ctx, RechargeRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体不能为空"));
+                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
                 return;
             }
             

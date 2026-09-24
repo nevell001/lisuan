@@ -76,15 +76,29 @@ public class ProductApiController {
      */
     public static void create(Context ctx) {
         try {
-            ProductRequest request = ctx.bodyAsClass(ProductRequest.class);
+            ProductRequest request = ApiRequest.parse(ctx, ProductRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体不能为空"));
+                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                return;
+            }
+            
+            // 必填字段就地校验：留到落库才由 DAO 抛 SQLException 的话，
+            // 会被下面的 catch 兜成 500「创建商品失败」，客户端看不出少了哪个字段
+            if (request.productCode == null || request.productCode.isBlank()) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of("success", false, "message", "缺少必填字段: productCode（商品编号）"));
+                return;
+            }
+            if (request.name == null || request.name.isBlank()) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of("success", false, "message", "缺少必填字段: name（商品名称）"));
                 return;
             }
             
             Product product = new Product();
-            product.productCode = request.productCode != null ? request.productCode : "";
+            // productCode 已在上方校验过非空，这里不再需要兜底
+            product.productCode = request.productCode;
             product.name = request.name;
             product.price = request.price != null ? request.price : BigDecimal.ZERO;
             product.quantity = request.quantity != null ? request.quantity : 0;
@@ -117,10 +131,10 @@ public class ProductApiController {
     public static void update(Context ctx) {
         try {
             int id = ctx.pathParamAsClass("id", Integer.class).get();
-            ProductRequest request = ctx.bodyAsClass(ProductRequest.class);
+            ProductRequest request = ApiRequest.parse(ctx, ProductRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体不能为空"));
+                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
                 return;
             }
             

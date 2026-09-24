@@ -883,6 +883,30 @@ API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后�
   与 `FxThreadDbPolicyTest.databaseConnectionTimeoutToleratesColdStart`（默认值 ≥10s 且必须设 TCP 建连超时）；
   两者均做过变异验证（把默认值改回 5000 即变红）
 
+**REST API 错误语义（v2.6.0 补强）**
+
+实测发现三个问题（都只在真实 HTTP 上才暴露，控制器级的 TestContext 测试看不到）：
+
+- **请求体写错回 500 而不是 400**：`ctx.bodyAsClass(...)` 在未知字段、字段类型不符、请求体为空或
+  不是合法 JSON 时都是**抛异常**，会被各控制器自己的 `catch (Exception e) → 500` 兜住——给
+  `POST /api/products` 传一个不存在的 `stock` 字段（真实字段是 `quantity`）只得到「服务器内部错误」。
+  现在统一走 `com.cashier.api.controller.ApiRequest.parse`：把解析异常收敛成 `null`
+  （各控制器后面本来就有 `if (request == null) → 400` 的判断，原意就是"失败返回 null"），
+  服务端自身故障仍旧照 500 抛出、不伪装成客户端错误；具体原因（含写错的字段名与可用字段列表）记在 WARN 日志
+- **缺必填字段也是 500**：`ProductApiController.create` 把 `productCode` 默认成空串，交给 DAO 才抛
+  `SQLException: 商品编号不能为空`，同样被兜成 500。改为就地校验 `productCode`/`name` 并回 400
+  且指明缺哪个字段；校验后那行 `request.productCode != null ? … : ""` 成了多余判空，一并简化
+- **`/api/transactions/today` 不可达**：Javalin 按注册顺序匹配，`/api/transactions/{id}` 注册在它之前，
+  于是 `today` 被当成 `id="today"` 查库后回 404。已把字面量路由挪到 `{id}` 之前
+- **404 兜底文案覆盖业务 404**：端点自己写的 404（「交易不存在」）被统一的「接口不存在」覆盖，
+  客户端分不清"路由不存在"和"资源不存在"。但**不能只按"有没有响应体"判断**——实测 Javalin 对未匹配
+  路由会预填 `text/plain` 的 `Endpoint GET /x not found`，而业务 404 是 `application/json`；
+  所以判据是"响应体为空 **或** Content-Type 不是 JSON"
+- 门禁：`ApiRequestTest`（5 项：写错回 400、未知字段提示含字段名与可用字段、空请求体归 400、
+  服务端故障仍 500、所有控制器不得绕过 `ApiRequest.parse`）与 `ApiServerTest` 2 项
+  （404 兜底只在非 JSON 时生效、路由顺序 + 处理器必须看 Content-Type）；
+  5 处变异验证（路由顺序改回、404 无条件覆盖、不看 Content-Type、绕过助手、把服务端异常也当客户端错误）全部变红
+
 **触屏收银台自动化覆盖（v2.6.0 补强）**
 
 - 触屏收银台没有 UI 级自动化测试：TestFX 需要真实显示环境，`mvn verify`/CI 跑不了
@@ -1015,7 +1039,10 @@ API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后�
 **REST API 启用步骤（本地冒烟/生产）**
 
 1. `config/api.properties` 已生成就绪版本（随机 `token.secret`，`api.enabled=false`，gitignored 不入库）
-2. 本地冒烟：`api.enabled=true` + `cors.allowed.origins=*`（仅本机临时）后重启，验证 `/api/health` 与 `/api/auth/login`
+2. 本地冒烟：`api.enabled=true` 后重启 —— **注意 API 是在 `loadFullMainView(User)` 里启动的
+   （`CashierSystemFXApplication` 第 848 行附近）**，也就是必须有人用 admin/finance 登录进完整主界面
+   才会监听；`cashier` 角色登录走 `switchToPosModeView`、没人登录时都**不会**启动 API。
+   想不依赖登录做无界面冒烟，直接调 `ApiServer.getInstance().start(ApiConfig.getPort())`
 3. 生产：必须用环境变量 `TOKEN_SECRET`（≥64 字符）覆盖、`CORS_ALLOWED_ORIGINS` 限制具体域名、`api.host` 收紧到受信网段
 4. 生产禁用时应用会打印 `REST API 服务器已禁用` 并拒绝全部 API 请求（安全默认）
 

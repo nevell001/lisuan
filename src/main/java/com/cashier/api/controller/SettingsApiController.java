@@ -95,10 +95,10 @@ public class SettingsApiController {
     public static void set(Context ctx) {
         try {
             String key = ctx.pathParam("key");
-            Map<?, ?> body = ctx.bodyAsClass(Map.class);
+            Map<?, ?> body = ApiRequest.parse(ctx, Map.class);
             if (body == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体不能为空"));
+                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
                 return;
             }
             Object rawValue = body.get("value");

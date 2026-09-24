@@ -37,11 +37,11 @@ public class BackupApiController {
      */
     public static void executeBackup(Context ctx) {
         try {
-            Map<?, ?> body = ctx.bodyAsClass(Map.class);
+            Map<?, ?> body = ApiRequest.parse(ctx, Map.class);
             if (body == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "请求体不能为空"
+                    "error", "请求体为空或字段不合法"
                 ));
                 return;
             }
@@ -286,11 +286,11 @@ public class BackupApiController {
      */
     public static void updateConfig(Context ctx) {
         try {
-            Map<?, ?> body = ctx.bodyAsClass(Map.class);
+            Map<?, ?> body = ApiRequest.parse(ctx, Map.class);
             if (body == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "请求体不能为空"
+                    "error", "请求体为空或字段不合法"
                 ));
                 return;
             }

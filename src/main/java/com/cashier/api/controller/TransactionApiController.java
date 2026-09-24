@@ -100,7 +100,7 @@ public class TransactionApiController {
      */
     public static void create(Context ctx) {
         try {
-            TransactionRequest request = ctx.bodyAsClass(TransactionRequest.class);
+            TransactionRequest request = ApiRequest.parse(ctx, TransactionRequest.class);
             if (request == null || request.items == null || request.items.isEmpty()) {
                 ctx.status(HttpStatus.BAD_REQUEST)
                    .json(Map.of("success", false, "message", "交易明细不能为空"));

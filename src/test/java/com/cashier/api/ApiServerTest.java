@@ -6,6 +6,8 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.lang.reflect.Field;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.Base64;
 import java.util.HashSet;
 import java.util.Set;
@@ -113,5 +115,39 @@ class ApiServerTest {
         assertFalse(ApiServer.isPublicApiPath("/api/payment/create"));
         assertFalse(ApiServer.isPublicApiPath("/api/payment/PAY123/status"));
         assertFalse(ApiServer.isPublicApiPath("/api/payment/PAY123/refund"));
+    }
+
+    @Test
+    @DisplayName("404 兜底只在响应不是业务 JSON 时生效")
+    void notFoundFallbackOnlyFillsNonJsonBody() {
+        assertTrue(ApiServer.shouldFillNotFoundBody(null, null), "端点没写响应体时用统一的兜底文案");
+        assertTrue(ApiServer.shouldFillNotFoundBody("  ", null), "空白响应体同样视作没写");
+
+        // 实测：Javalin 对未匹配路由预填的是纯文本 "Endpoint GET /x not found"（text/plain）
+        assertTrue(ApiServer.shouldFillNotFoundBody("Endpoint GET /x not found", "text/plain"),
+            "未匹配路由必须换成统一的 JSON 文案，不能把 Javalin 的英文默认文本透给客户端");
+
+        // 实测：端点自己写的业务 404 是 application/json
+        assertFalse(ApiServer.shouldFillNotFoundBody(
+                "{\"success\":false,\"message\":\"交易不存在\"}", "application/json"),
+            "端点已经写了业务 404 时不得覆盖：否则客户端分不清「接口不存在」与「资源不存在」");
+    }
+
+    @Test
+    @DisplayName("404 处理器必须同时看响应体与 Content-Type，且字面量路由要排在 {id} 之前")
+    void notFoundHandlerAndRouteOrderAreGuarded() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/cashier/api/ApiServer.java"));
+
+        assertTrue(source.contains("shouldFillNotFoundBody(existingBody, contentType)"),
+            "404 处理器必须按「响应体 + Content-Type」决定要不要兜底，不能无条件覆盖");
+        assertTrue(source.contains(".getContentType()"),
+            "只看有没有响应体会把 Javalin 预填的纯文本当成业务响应");
+
+        int today = source.indexOf("app.get(\"/api/transactions/today\"");
+        int byId = source.indexOf("app.get(\"/api/transactions/{id}\"");
+        assertTrue(today >= 0 && byId >= 0, "找不到 transactions 的路由注册");
+        assertTrue(today < byId,
+            "/api/transactions/today 必须注册在 /api/transactions/{id} 之前，"
+                + "否则 Javalin 会把它当成 id=\"today\" 交给详情接口、回一个 404");
     }
 }

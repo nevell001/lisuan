@@ -36,11 +36,11 @@ public class PaymentApiController {
      */
     public static void createPayment(Context ctx) {
         try {
-            Map<?, ?> body = ctx.bodyAsClass(Map.class);
+            Map<?, ?> body = ApiRequest.parse(ctx, Map.class);
             if (body == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "请求体不能为空"
+                    "error", "请求体为空或字段不合法"
                 ));
                 return;
             }
@@ -237,11 +237,11 @@ public class PaymentApiController {
         String paymentId = ctx.pathParam(PAYMENT_ID_FIELD);
         
         try {
-            Map<?, ?> body = ctx.bodyAsClass(Map.class);
+            Map<?, ?> body = ApiRequest.parse(ctx, Map.class);
             if (body == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "请求体不能为空"
+                    "error", "请求体为空或字段不合法"
                 ));
                 return;
             }
@@ -394,11 +394,11 @@ public class PaymentApiController {
      */
     public static void setConfig(Context ctx) {
         try {
-            Map<?, ?> body = ctx.bodyAsClass(Map.class);
+            Map<?, ?> body = ApiRequest.parse(ctx, Map.class);
             if (body == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "请求体不能为空"
+                    "error", "请求体为空或字段不合法"
                 ));
                 return;
             }

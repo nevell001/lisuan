@@ -61,10 +61,10 @@ public class InventoryApiController {
     public static void updateStock(Context ctx) {
         try {
             int id = ctx.pathParamAsClass("id", Integer.class).get();
-            StockRequest request = ctx.bodyAsClass(StockRequest.class);
+            StockRequest request = ApiRequest.parse(ctx, StockRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体不能为空"));
+                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
                 return;
             }
             

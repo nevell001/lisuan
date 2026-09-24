@@ -29,10 +29,10 @@ public class AuthController {
      */
     public static void login(Context ctx) {
         try {
-            LoginRequest request = ctx.bodyAsClass(LoginRequest.class);
+            LoginRequest request = ApiRequest.parse(ctx, LoginRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体不能为空"));
+                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
                 return;
             }
             
