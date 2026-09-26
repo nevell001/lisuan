@@ -321,6 +321,15 @@
     -fx-background-color: linear-gradient(to right, rgba(184, 92, 27, 0.20), rgba(184, 92, 27, 0.28));
 }
 
+/* 交班页统计卡数值：#4CAF50/#FF9800 放在白卡上只有 2.78/2.16:1，改用深色同色相 */
+.shift-stat-value-success {
+    -fx-text-fill: #2E7D32;
+}
+
+.shift-stat-value-warning {
+    -fx-text-fill: #BF360C;
+}
+
 /* ========== 菜单和工具栏 ========== */
 .menu-bar {
     -fx-background-color: -lisuan-surface-muted;

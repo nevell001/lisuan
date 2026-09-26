@@ -1201,37 +1201,41 @@
 }
 
 .shift-btn {
-    -fx-background-color: rgba(255, 255, 255, 0.2);
+    /* 工具栏底色是主题主色（浅色 #B85C1B / 深色 #C96A24），原来的 20% 白底会把
+       底色冲淡到 #d48850，白字只有 2.82:1；改成深色半透明底后为 5.9:1（hover 7.4:1） */
+    -fx-background-color: rgba(0, 0, 0, 0.25);
     -fx-text-fill: white;
     -fx-font-size: 13px;
     -fx-font-weight: 500;
     -fx-background-radius: 8;
     -fx-cursor: hand;
-    -fx-border-color: rgba(255, 255, 255, 0.3);
+    -fx-border-color: rgba(255, 255, 255, 0.35);
     -fx-border-width: 1;
     -fx-border-radius: 8;
 }
 
 .shift-btn:hover {
-    -fx-background-color: rgba(255, 255, 255, 0.3);
+    -fx-background-color: rgba(0, 0, 0, 0.35);
 }
 
 .shift-btn-primary {
-    -fx-background-color: #4CAF50;
-    -fx-border-color: #66BB6A;
+    /* #4CAF50 配白字仅 2.78:1，压深到 800 号绿后 5.13:1 */
+    -fx-background-color: #2E7D32;
+    -fx-border-color: #43A047;
 }
 
 .shift-btn-primary:hover {
-    -fx-background-color: #66BB6A;
+    -fx-background-color: #1B5E20;
 }
 
 .shift-btn-warning {
-    -fx-background-color: #FF9800;
-    -fx-border-color: #FFB74D;
+    /* #FF9800 配白字仅 2.16:1（hover 1.73:1，全页最差），改用深橙红后 5.60:1 */
+    -fx-background-color: #BF360C;
+    -fx-border-color: #D84315;
 }
 
 .shift-btn-warning:hover {
-    -fx-background-color: #FFB74D;
+    -fx-background-color: #8F2C0B;
 }
 
 .shift-separator {
@@ -1244,6 +1248,18 @@
     -fx-background-color: white;
     -fx-border-color: -lisuan-primary-border;
     -fx-border-width: 0 0 1 0;
+}
+
+/* 筛选栏底色在浅色主题是白色，套用工具栏的"半透明白底+白字"会白字白底（≈1:1）：
+   这两个按钮改用主题表面色与正文色，深浅模式都跟随主题 */
+.shift-filter-bar .shift-btn {
+    -fx-background-color: -lisuan-surface-muted;
+    -fx-border-color: -lisuan-border-strong;
+    -fx-text-fill: -lisuan-text;
+}
+
+.shift-filter-bar .shift-btn:hover {
+    -fx-background-color: -lisuan-surface-selected;
 }
 
 .shift-filter-label {

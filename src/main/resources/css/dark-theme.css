@@ -1465,6 +1465,11 @@
  * styles.css 中这些类硬编码了白色背景，必须在此显式覆盖，
  * 否则交班页在深色主题下会残留白色区域。
  */
+/* 深色主题主色 #C96A24 上白字只有 3.77:1，压深一档后 4.58:1（按钮同步受益） */
+.shift-toolbar {
+    -fx-background-color: -lisuan-primary-muted;
+}
+
 .shift-filter-bar {
     -fx-background-color: #242424;
     -fx-border-color: #383838;
@@ -1497,6 +1502,17 @@
 
 .table-view.shift-table .placeholder .label {
     -fx-text-fill: #BDBDBD;
+}
+
+/* 选中行：深色主题默认用靛蓝底 #5C6BC0 + #9FA8DA 文字（右侧 4.07:1，hover 3.60:1），
+   这里把交班表的选中文字提亮到 #C5CAE9（5.15~6.54:1）；其余表格沿用原样式，如需统一可照此覆盖 */
+.table-view.shift-table .table-row-cell:selected,
+.table-view.shift-table .table-row-cell:selected:hover {
+    -fx-text-fill: #C5CAE9;
+}
+
+.table-view.shift-table .table-row-cell:selected .table-cell {
+    -fx-text-fill: #C5CAE9;
 }
 
 /* ========== 日期选择器（DatePicker）深色覆盖 ========== */

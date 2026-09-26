@@ -130,4 +130,113 @@ class ThemeStylePolicyTest {
     private String projectRootRelative(Path path) {
         return Path.of(System.getProperty("user.dir")).relativize(path).toString();
     }
+
+    @Test
+    @DisplayName("交接班页工具栏按钮配色在深浅主题下均达 WCAG AA（≥4.5:1）")
+    void shiftViewToolbarMeetsContrast() throws IOException {
+        String base = Files.readString(Path.of("src/main/resources/css/styles.css"));
+        String dark = Files.readString(Path.of("src/main/resources/css/dark-theme.css"));
+        String lisuan = Files.readString(Path.of("src/main/resources/css/lisuan-theme.css"));
+
+        List<String> failures = new ArrayList<>();
+        // 工具栏按钮自身填充 + 白字：开班(#2E7D32)、交班(#BF360C)
+        checkContrast(failures, "开班按钮", "#FFFFFF", background(base, ".shift-btn-primary {"), 4.5);
+        checkContrast(failures, "交班按钮", "#FFFFFF", background(base, ".shift-btn-warning {"), 4.5);
+
+        // 次级按钮是"深色半透明叠在工具栏底色上"，两种主题的工具栏底色都要够深
+        String translucent = background(base, ".shift-btn {");
+        checkContrast(failures, "次级按钮(浅色主题工具栏)",
+            "#FFFFFF", blendOver(translucent, themeValue(lisuan, "-lisuan-primary"), 0.25), 4.5);
+        checkContrast(failures, "次级按钮(深色主题工具栏)",
+            "#FFFFFF", blendOver(translucent, themeValue(dark, "-lisuan-primary-muted"), 0.25), 4.5);
+
+        // 工具栏标题白字
+        checkContrast(failures, "工具栏标题(浅色主题)",
+            "#FFFFFF", themeValue(lisuan, "-lisuan-primary"), 4.5);
+        checkContrast(failures, "工具栏标题(深色主题)",
+            "#FFFFFF", themeValue(dark, "-lisuan-primary-muted"), 4.5);
+
+        assertTrue(failures.isEmpty(),
+            "交接班页配色不达 WCAG AA 4.5:1：\n" + String.join("\n", failures));
+    }
+
+    @Test
+    @DisplayName("筛选栏按钮跟随主题，禁止白底白字")
+    void shiftFilterBarButtonsFollowTheme() throws IOException {
+        String base = Files.readString(Path.of("src/main/resources/css/styles.css"));
+        String block = cssBlock(base, ".shift-filter-bar .shift-btn {");
+        assertTrue(!block.isBlank(), "筛选栏按钮必须有独立的主题化规则（工具栏按钮的半透明白底在浅色筛选栏上会白字白底）");
+        assertTrue(block.contains("-fx-text-fill: -lisuan-text;"),
+            "筛选栏按钮文字应使用 -lisuan-text 跟随主题，而不是硬编码 white");
+    }
+
+    private void checkContrast(List<String> failures, String label, String foreground, String background, double min) {
+        double ratio = contrastRatio(foreground, background);
+        if (ratio < min) {
+            failures.add(String.format("%s: %s on %s = %.2f:1（需 ≥%.1f:1）", label, foreground, background, ratio, min));
+        }
+    }
+
+    private String cssBlock(String css, String selectorLine) {
+        int start = css.indexOf(selectorLine);
+        if (start < 0) {
+            return "";
+        }
+        int end = css.indexOf('}', start);
+        return end < 0 ? "" : css.substring(start, end + 1);
+    }
+
+    private String background(String css, String selectorLine) {
+        String block = cssBlock(css, selectorLine);
+        Matcher matcher = Pattern.compile("-fx-background-color:\\s*([^;]+);").matcher(block);
+        assertTrue(matcher.find(), "缺少 -fx-background-color: " + selectorLine);
+        return matcher.group(1).trim();
+    }
+
+    private String themeValue(String css, String variable) {
+        Matcher matcher = Pattern.compile(Pattern.quote(variable) + ":\\s*(#[0-9a-fA-F]{6})").matcher(css);
+        assertTrue(matcher.find(), "主题缺少变量 " + variable);
+        return matcher.group(1);
+    }
+
+    /** 把 rgba(0,0,0,a) 之类的半透明色叠到不透明底色上 */
+    private String blendOver(String overlay, String baseColor, double expectedAlpha) {
+        Matcher matcher = Pattern.compile("rgba\\(([^)]+)\\)").matcher(overlay);
+        assertTrue(matcher.find(), "需要半透明填充色用于合成：" + overlay);
+        String[] parts = matcher.group(1).split(",");
+        double alpha = parts.length > 3 ? Double.parseDouble(parts[3].trim()) : expectedAlpha;
+        int[] base = rgb(baseColor);
+        int[] over = new int[]{Integer.parseInt(parts[0].trim()), Integer.parseInt(parts[1].trim()), Integer.parseInt(parts[2].trim())};
+        StringBuilder hex = new StringBuilder("#");
+        for (int i = 0; i < 3; i++) {
+            hex.append(String.format("%02X", (int) Math.round(over[i] * alpha + base[i] * (1 - alpha))));
+        }
+        return hex.toString();
+    }
+
+    private int[] rgb(String hex) {
+        String value = hex.replace("#", "");
+        return new int[]{
+            Integer.parseInt(value.substring(0, 2), 16),
+            Integer.parseInt(value.substring(2, 4), 16),
+            Integer.parseInt(value.substring(4, 6), 16)
+        };
+    }
+
+    private double contrastRatio(String a, String b) {
+        double la = luminance(rgb(a));
+        double lb = luminance(rgb(b));
+        double lighter = Math.max(la, lb);
+        double darker = Math.min(la, lb);
+        return (lighter + 0.05) / (darker + 0.05);
+    }
+
+    private double luminance(int[] rgb) {
+        double[] channels = new double[3];
+        for (int i = 0; i < 3; i++) {
+            double channel = rgb[i] / 255.0;
+            channels[i] = channel <= 0.03928 ? channel / 12.92 : Math.pow((channel + 0.055) / 1.055, 2.4);
+        }
+        return 0.2126 * channels[0] + 0.7152 * channels[1] + 0.0722 * channels[2];
+    }
 }
