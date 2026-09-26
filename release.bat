@@ -29,13 +29,33 @@ set "VERSION_JAVA=!VERSION_JAVA:"=!"
 set "VERSION_JAVA=!VERSION_JAVA:;=!"
 set "VERSION_JAVA=!VERSION_JAVA: =!"
 
-if not "%VERSION_POM%"=="%VERSION_JAVA%" (
-    echo ERROR: Version numbers do not match!
-    echo   pom.xml: %VERSION_POM%
-    echo   AppConstants.java: %VERSION_JAVA%
-    exit /b 1
+set "VERSION_INSTALLER="
+for /f "tokens=2 delims==" %%I in ('findstr /C:"private static final String APP_VERSION" src\main\java\com\cashier\installer\Installer.java') do (
+    set "VERSION_INSTALLER=%%I"
+    goto :version_installer_found
 )
-echo Version numbers match (%VERSION_POM%)
+:version_installer_found
+set "VERSION_INSTALLER=!VERSION_INSTALLER:"=!"
+set "VERSION_INSTALLER=!VERSION_INSTALLER:;=!"
+set "VERSION_INSTALLER=!VERSION_INSTALLER: =!"
+
+set "VERSION_ENV="
+for /f "usebackq tokens=1,* delims==" %%a in (".env.example") do (
+    if /i "%%a"=="APP_VERSION" if not defined VERSION_ENV set "VERSION_ENV=%%b"
+)
+
+REM 四处必须一致；同一个不变量由 VersionConsistencyTest 在 CI 里守着
+for %%C in ("pom.xml=%VERSION_POM%" "AppConstants.java=%VERSION_JAVA%" "installer\Installer.java=%VERSION_INSTALLER%" ".env.example=%VERSION_ENV%") do (
+    for /f "tokens=1,* delims==" %%N in (%%C) do (
+        if not "%%O"=="%VERSION_POM%" (
+            echo ERROR: Version numbers do not match!
+            echo   pom.xml: %VERSION_POM%
+            echo   %%N: %%O
+            exit /b 1
+        )
+    )
+)
+echo Version numbers match (%VERSION_POM%, all four sources)
 
 REM 从 .env 定向读取数据库密码（仅限密码变量，与 start.sh/release.sh 保持一致）
 if exist ".env" (

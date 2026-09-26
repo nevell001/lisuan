@@ -12,14 +12,23 @@ echo "===================================================="
 echo "[0/3] 正在校验版本一致性..."
 VERSION_POM=$(grep -m 1 "<version>" pom.xml | sed 's/.*<version>\(.*\)<\/version>.*/\1/')
 VERSION_JAVA=$(grep "APP_VERSION =" src/main/java/com/cashier/constant/AppConstants.java | sed 's/.*"\(.*\)".*/\1/')
+VERSION_INSTALLER=$(grep "private static final String APP_VERSION" src/main/java/com/cashier/installer/Installer.java | sed 's/.*"\(.*\)".*/\1/')
+VERSION_ENV=$(grep -m 1 "^APP_VERSION=" .env.example | cut -d= -f2- | tr -d '\r')
 
-if [ "$VERSION_POM" != "$VERSION_JAVA" ]; then
-    echo "✗ 错误：版本号不一致！"
-    echo "  pom.xml: $VERSION_POM"
-    echo "  AppConstants.java: $VERSION_JAVA"
-    exit 1
-fi
-echo "✓ 版本号一致 ($VERSION_POM)"
+# 四处必须一致（pom.xml / AppConstants / 安装器 / .env.example）；
+# 同一个不变量由 src/test/java/com/cashier/constant/VersionConsistencyTest 在 CI 里守着
+for pair in "pom.xml:$VERSION_POM" "AppConstants.java:$VERSION_JAVA" \
+            "installer/Installer.java:$VERSION_INSTALLER" ".env.example:$VERSION_ENV"; do
+    name="${pair%%:*}"
+    value="${pair#*:}"
+    if [ "$value" != "$VERSION_POM" ]; then
+        echo "✗ 错误：版本号不一致！"
+        echo "  pom.xml: $VERSION_POM"
+        echo "  $name: $value"
+        exit 1
+    fi
+done
+echo "✓ 版本号一致 ($VERSION_POM，四处已比对)"
 
 # 从 .env 定向读取数据库密码，与 start.sh 保持一致（仅限密码变量）
 if [ -f ".env" ]; then
