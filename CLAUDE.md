@@ -708,7 +708,13 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `xvfb-run -a mvn -B -ntp verify`（与本地一致：测试 + SpotBugs + JaCoCo），
   失败时上传 `target/surefire-reports` 便于定位；`sync.yaml` 同步时会备份并恢复
   `.github/workflows`，故本文件不会被 Gitee 覆盖
-- 版本号四处同步（`AppConstants`/`pom.xml`/`installer/Installer.java`/`.env.example`）当前均为 `2.6.0`
+- 版本号四处同步（`AppConstants`/`pom.xml`/`installer/Installer.java`/`.env.example`）当前均为 `2.6.0`；
+  **不变量由 JUnit 门禁守着**（`com.cashier.constant.VersionConsistencyTest`，随 `mvn verify` 在 CI 跑）：
+  四处必须相等，失败时报出四处实际值；同时断言 `release.sh`/`release.bat` 的**比对清单**确实包含
+  Installer 与 `.env.example`（只"提到"来源不算）。两个发布脚本的检查段已同步扩到四处
+- 状态/支付方式归一化的大小写折叠一律用 `Locale.ROOT`（`I18nUiUtils`）：平台默认 locale 在土耳其语下
+  会把 `CHECKING` 折成 `checkıng`、`CASH` 折成 `cash` 之外的值，导致落库值匹配失败、界面回退成英文原值；
+  门禁 `I18nUiUtilsTest.caseFoldingIsLocaleIndependent`（切 `tr_TR` 默认 locale 后断言，改回即变红）
 - i18n 门禁：`I18nBundleConsistencyTest` 断言三份语言包 key 集合一致、`I18nKeys` 常量齐全、
   源码字面量 i18n 调用 key 齐全（缺 key 时界面会直接显示 key，属 UI 缺陷）
 - 并发安全：`ConcurrentDeductionTest` 多线程验证乐观锁防库存超卖、防会员余额超扣
@@ -848,6 +854,165 @@ API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后�
   `时间戳 + 进程内序号 + 6 位随机段`（`PaymentDAOTest.refundIdsAreUniqueWithinSameMillisecond`）
 - 删除 `UserDAORefactored.authenticate`（忽略密码参数的死方法，易被误用成免密登录）
 
+**结账/库存正确性第二批（2026-09 全量审计修复）**
+
+审计方式：`mvn verify` 三关全绿的前提下逐条回读代码，路由匹配用**真实 Javalin 6.1.3 最小复现**确认
+（不是读文档推断）。修掉的项：
+
+- **字面量路由被 `{id}` 遮蔽**：`GET /api/products/low-stock`、`GET /api/invoices/seller-info` 注册在
+  `/{id}` 之后 → 前者被当成 `id="low-stock"`（parseInt 失败回 500），后者恒回 404「发票不存在」。
+  实测最小复现证明 Javalin **取第一个匹配的路由**（`/api/transactions/today` 已修是因为只改了那一处）。
+  门禁 `ApiServerTest.noLiteralRouteIsShadowedByEarlierPatternRoute`：**通用扫描**全部路由注册，
+  任何"同方法同段数的字面量路径注册在占位路由之后"即失败（不再只盯 transactions 一对）。
+  注意 `AuthorizationMiddlewareTest` 曾断言这个不可达端点"允许"，是假绿灯
+- **商品/库存 API 丢弃乐观锁返回值**：`productDAO.update(product)` 在 `version` 未命中时**返回 false
+  而不抛异常**，两个接口原来直接回 `success:true` → 并发写入静默丢失。现在回 **409**；
+  库存接口同时拒绝负库存（400）。门禁 `ProductUpdateConflictPolicyTest`（源码门禁：控制器必须消费
+  该布尔；DAO 契约由 `ProductDAORefactoredTest.testOptimisticLock` 覆盖——单请求拿不到陈旧 version，
+  冲突只在"读到写之间"的窗口，TestContext 无法确定性触发）
+- **裸毫秒单号**：标准收银台 `"ORD" + 毫秒`、REST API `"T" + 毫秒`（只有触屏台用了加固版）；
+  `transaction_id` 是主键 → 同毫秒/跨终端碰撞会让整单回滚。统一为
+  `TransactionService.generateTransactionId(prefix)`（毫秒+4 位序号+8 位随机段），
+  `generateOrderNumber()` 委托它。门禁 `OrderNumberGenerationTest`（格式 + 5000 次不重复 + 两条路径不得回归裸毫秒）
+- **支付单主键裸毫秒**：`payment_orders.payment_id` 原来是 `"PAY" + System.currentTimeMillis()`
+  （随机段只加在了 `merchant_order_no` 上）→ 同毫秒两笔支付单主键冲突、订单丢失。改为
+  `PaymentOrder.generatePaymentId()`（毫秒+4 位序号+6 位随机段），`createScanPayOrder` 与 DAO 兜底都走它。
+  门禁 `PaymentOrderIdTest` + `PaymentDAOTest.insertGeneratesHardenedPaymentIdWhenMissing`
+- **盘点完成非原子**：原来"先 UPDATE status='completed'，再逐条用各自 autocommit 连接改库存、返回值全丢"
+  → 中途失败留下「已完成但库存只改一半」且不可重做（`canComplete` 要求 `checking`），重复点击还会二次累加。
+  现在 `completeWithConnection` 带 `AND status <> 'completed'` 守卫，状态迁移 + 逐条
+  `updateQuantityWithConnection` 在**同一事务**内。门禁 `InventoryCheckCompletionPolicyTest` +
+  `InventoryCheckDAOTest.completeIsGuardedAgainstRepeatedCompletion`
+- **会员对象回滚污染**：`executeTransaction` 在事务内就地改写调用方持有的 `Member`（等级/折扣/积分/余额），
+  事务后续步骤失败回滚后该对象仍是"升级后"的状态 → 收银台用 `getFinalAmount()` 重算会少收钱。
+  现在结算在 `copyMember` 副本上进行、**提交成功后才 `copyMemberFields` 写回**（库存早已用
+  `updatedProducts` 的同一思路）。门禁 `TransactionServiceTest.failedTransactionKeepsCallerMemberUntouched`
+  （同号交易制造主键冲突，断言等级/折扣/积分/余额/版本全不变）
+- **退款 `APPLYING` 预占泄漏**：渠道退款成功后要写两处状态，原来是裸调用、且只在
+  `catch (RuntimeException)` 里释放预占 → 落库抛 `SQLException` 时预占永久留在库里、被
+  `sumRefundedAmount` 计入已退（额度永久减少，界面永远显示"申请中"）。现在
+  `settleRefund` 把两处状态迁移放进一个事务并重试一次，仍失败则留下含
+  `refundId/paymentId/channelRefundNo` 的 ERROR 日志供人工核对
+- 上述 6 处门禁**全部做过变异验证**：把路由顺序改回、`if (!update(...))` 改成 `if (false)`、
+  标准端改回裸毫秒、DAO 兜底改回裸毫秒、控制器改回 autocommit 逐条改库存 + 去掉状态守卫、
+  取消会员副本 → 对应测试各自变红（共 7 处变异，逐个确认后还原）
+- 未修项（测试库无外键、脚本/文档漂移、FX 线程、API 校验等）登记在
+  `docs/TECH_DEBT.md`（TD-004、TD-006 ~ TD-014）；TD-002 / TD-003 / TD-005 已在下一批修复
+
+**支付方式口径与营业额净额（2026-09 审计修复，第三批）**
+
+- **支付方式落库前归一化**（TD-002）：新增 `I18nUiUtils.storedPaymentMethod(value)`
+  （中文/繁体/英文/代码 → 规范中文落库值：现金/微信/支付宝/银行卡/会员余额），
+  `TransactionApiController.create` 归一化后才写库，无法识别的写法回 **400**
+  （一并消除"任意字符串落库"与"超 20 字符 → 500"）。聚合侧全部改为按归一化代码处理：
+  `getPaymentMethodStats` 合并同一方式的多种写法（标签优先用规范中文值，已有输出不变）、
+  `ReportApiController.dailySales`、`StatisticsController`、`ShiftController.categorizeShiftRevenue`
+  按归一化分桶，`getStatistics` 现金笔数兼容 `'现金','現金','CASH','Cash'`
+- **营业额净额口径**（TD-003，已定稿）：**销售额** = 区间内未整单退款
+  （`COALESCE(status,'NORMAL') <> 'REFUNDED'`）交易的实付合计；**退款额** = 区间内已按
+  `completed_date` 完成、且原交易未被整单标记 REFUNDED 的退货单金额（避免与 REFUNDED 重复扣减）；
+  **净额** = 两者之差；**分渠道桶**先按归一化方式对有效销售分桶，再按**退款方式**冲减对应渠道
+  （现金退款减现金桶，退回余额只影响总额，允许为负）
+  - `TransactionDAORefactored` 的 `getStatistics` / `getTotalRevenue` / `getTransactionCount` /
+    `getPaymentMethodStats` 全部剔除 REFUNDED；
+  - 新增 `ReturnOrderDAORefactored.findCompletedReturnsBetween(start, end)`（含 NOT EXISTS 去重）
+    与纯函数 `TransactionService.returnsByMethod / returnsByDay / totalReturns`；
+  - 消费方：日报/月报新增 `refundedAmount` / `netAmount`（月报日趋势按退货完成日冲减，
+    Σ日趋势 == netAmount）、桌面统计、交班（净额 + 现金桶扣现金退款）、利润报表（已退款不计利润/毛利）；
+  - `TransactionApiController.createRefundReturnOrder` 补写 `completedDate`（此前 API 退款写的退货单
+    `completed_date` 为 NULL）
+- **门禁**（7 处，全部做过变异验证）：
+  `TransactionApiControllerTest.createNormalizesPaymentMethodForStorage`、
+  `TransactionDAOTest.paymentMethodStatsAndCashCountAreNormalized`、
+  `TransactionDAOTest.refundedTransactionsAreExcludedFromRevenueAggregates`、
+  `ReportApiControllerTest.dailySalesBucketsPaymentMethodAfterNormalization`、
+  `ReportApiControllerTest.dailySalesIsNetOfRefundedTransactionsAndCompletedReturns`、
+  `ReportApiControllerTest.monthlySalesNetMatchesDailyTrend`、
+  `TransactionServiceTest.returnsAreGroupedByNormalizedMethodAndCompletionDay`；
+  `ProfitReportController` / `StatisticsController` / `ShiftController` 三处为 UI 控制器，
+  本批只做源码级改动（无 UI 自动化测试兜底），口径由上述 DAO/纯函数门禁锁住
+- 有意保留：销量/库龄类口径（热销榜 `getTopProducts`、周转率）仍按"卖出去多少"统计，不剔除已退款交易
+
+**REST API 加固第二批（2026-09 审计修复，第四批）**
+
+- **会员更新校验对齐桌面端**（`MemberApiController.update`）：姓名非空白、手机号 11 位数字、
+  等级必须是 `普通/银卡/金卡/钻石`（新增 `MemberService.isKnownLevel`）、折扣 0..10，非法值回 **400**
+  （此前可写 `discount=999`/负数/任意等级，且会因列长度变成 500）；同时补 `discountRate = discount`
+  （桌面端两边都写，接口只改一个）
+- **会员乐观锁回 409**：新增 `MemberDAORefactored.OptimisticLockException extends SQLException`
+  （既有按 SQLException 捕获的调用方不变），接口单独捕获后回 409，不再把并发冲突伪装成 500
+- **`POST /api/payment/create` 金额交叉校验**：交易必须存在（**404**）、不得为 `REFUNDED`（400）、
+  `amount` 必须等于该交易 `finalAmount`（400）。此前只校验 `amount > 0`，认证用户可用 0.01 元
+  为 1000 元的单生成真实收款码。⚠️ **契约变更**：调用方必须先 `POST /api/transactions` 落一笔交易，
+  再按其实付金额建支付单；桌面两个收银台直接调 `PaymentService`，不走该端点，不受影响
+- **操作员一律取认证用户**：`PaymentApiController` / `BackupApiController` 改为
+  `ctx.attribute("currentUser")`（忽略请求体 `operator`）；`PaymentService.createPaymentOrder`
+  增加 `operator` 参数并**在 insert 之前**赋值——此前接口在 insert 之后赋值，
+  `payment_orders.operator` 恒为 NULL，而备份归属可被请求体伪造
+- 门禁（5 处变异验证全红）：`MemberApiControllerTest.updateMemberValidatesFieldsLikeDesktop`、
+  `MemberDAOTest.staleVersionThrowsTypedOptimisticLockException`、
+  `PaymentApiControllerTest.createPaymentValidatesTransactionAndAmount` 与
+  `createPaymentInMockModeSucceeds`（落库 operator = 认证用户）、
+  `OperatorIdentityPolicyTest`（三个写审计归属的控制器必须取认证上下文 + 支付单操作员早于 insert +
+  会员冲突映射 409）
+- 未纳入本轮：`POST /api/members` 仍允许 cashier 调用，"改等级/折扣是否需要更高角色"属产品决定，
+  已记在 `docs/TECH_DEBT.md` 的补充条目
+
+**测试库外键与审计归属（2026-09 审计修复，第五批）**
+
+测试用的 H2 schema 此前**一个外键都没有**（生产有 16 个），外键类缺陷在 CI 里完全不可见。
+本批把测试库与生产对齐，并顺手修掉它暴露的问题：
+
+- **审计归属列不再挂外键**：`transactions.operator_username` 与 `operation_logs.username`
+  改为纯文本归属（老库由新增的 `DatabaseManager.dropAuditAttributionForeignKeys` 幂等删除，已加
+  `docker/mysql-init` 同步）。理由两条：`ON DELETE SET NULL` 会在删用户时把历史交易/审计日志的
+  操作人**抹成 NULL**（改名同样不该改写历史）；且 `operation_logs.username` 在生产里有若干处
+  直接写**显示名**（`ReturnService.approveReturnOrder/completeReturnOrder`、现金退款日志），
+  挂外键会让这些写入**直接失败**——这正是测试库无外键时长期被隐藏的一类缺陷。
+  `transactions.member_phone` 外键保留（会员注销后本单不再归属会员，语义可接受）
+- **测试库补齐其余 14 个外键**：`DatabaseTestBase.TEST_SCHEMA_FOREIGN_KEYS` +
+  `createTestForeignKeys(stmt)`（建表后 `ALTER TABLE` 添加，按 `INFORMATION_SCHEMA` 判重）；
+  清库顺序本就是从依赖倒序删除，无需调整
+- **修掉外键暴露的 10 处测试悬空引用**（父行不存在却插子行）：盘点/采购审批/采购订单与明细/
+  入库明细/退货明细各测试补父行；`PurchaseServiceTest` 里"用不存在的商品 ID 制造失败"改为
+  真实的业务失败条件（入库数量超过采购数量），回滚断言不变
+- 门禁 `com.cashier.util.TestSchemaForeignKeyParityTest`（5 项，全部变异验证过）：
+  生产 DDL 与测试库外键**集合相等**（缺/多都报）、两个审计归属列两边都**不得**有外键、
+  悬空引用必须被拒绝（证明约束真的建出来了）、**删用户后历史交易与审计日志的操作人仍在**
+  （把外键加回去即变红：`expected: <audit_fk_user> but was: <null>`）
+- 新增测试便利方法 `DatabaseTestBase.executeSql(sql, params...)`（补父行用）
+
+**结账成功弹窗金额（2026-09 审计修复，第六批）**
+
+`CartController.showSuccess` 原来用 `getFinalAmount()` 显示实付金额——该方法按**结账后的**
+`currentMember` 重算，而 `executeTransaction` 成功后会就地升级等级/折扣（普通会员跨 1000 分
+当场升银卡），于是弹窗显示 9.5 折金额，与实际收款、落库 `final_amount`、小票都不一致。
+现改为显示**本单落库值** `transaction.finalAmount`（`createTransaction()` 结账前算好、也是实收值），
+无需改方法签名。门禁 `CheckoutConsistencyPolicyTest.successDialogUsesSettledAmount`
+（按方法体断言必须用 `transaction.finalAmount`、不得出现 `getFinalAmount()`；改回去即变红）。
+注意：源码级门禁扫方法体文本，方法体里的注释也不能出现 `getFinalAmount()` 字面量。
+
+**结账 worker 线程安全（2026-09 审计修复，第七批）**
+
+两个收银台的结账都在 daemon 线程执行，此前把 FX 线程拥有的活对象直接交给事务：
+worker 迭代 `cartItems`（`ObservableList`）、对 `inventoryMap`（普通 `HashMap`）做
+`computeIfAbsent`、并把活 `currentMember` 传给 `executeTransaction`——而后者会迭代明细、
+把扣减后的商品 **put 回传入的 map**、并把新等级/折扣/积分写回传入的会员对象，
+于是 FX 线程可能读到写了一半的集合或瞬间变化的会员状态（`paymentInProgress` 挡不住 FX 侧的读）。
+
+- 现在 worker **只吃切线程前的快照**：`itemsAtSale = new ArrayList<>(cartItems/cartList)`、
+  `inventoryForSale = new HashMap<>(inventoryMap)`、`memberForSale = TransactionService.copyMember(currentMember)`
+  （该助手改为 `public` 且 `null` 安全）、`promotionToApply = appliedPromotion`；
+  小票的 `MemberSnapshot` 也提前到切线程前取
+- **库存回填**：`executeTransaction` 的"库存输出"落在副本上，新增
+  `mergeSettledInventory(itemsAtSale, inventoryForSale)` 在 `Platform.runLater` 里**只把本单涉及的商品**
+  并回 FX 侧 `inventoryMap`（避免覆盖结账期间 FX 线程刚查到的数据）；触屏台随后还会 `loadProducts()` 重刷
+- 会员无需回写：两条成功路径紧接着都 `clear()` / `resetAfterPayment()` 把 `currentMember` 置空
+- 门禁 `CheckoutThreadSafetyPolicyTest`：按方法体切出 `new Thread(` 之后的 worker 段，断言
+  worker 内不得出现 `cartItems`/`cartList`/`inventoryMap`/`currentMember`/`appliedPromotion`、
+  三个快照必须在切线程前创建且被 `executeTransaction` 使用；两处变异（标准台改回传活对象、
+  触屏台改回写 `inventoryMap`）均确认变红
+
 **收银台 FX 线程纪律（v2.6.0 补强）**
 
 - 标准收银台与触屏收银台的**库存加载、商品搜索、分类加载、班次查询**统一走
@@ -864,6 +1029,53 @@ API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后�
 - 仍未后台化的同步查询只剩**支付前置校验的班次查询**（`CartController` 现金/电子支付入口、
   `TouchCartController.preCheck()`）：每次点击一次单行查询，且其后立即弹出模态框，
   改造需把三条支付流程都改成回调，风险大于收益，暂按现状保留
+
+**非收银台页面加载的后台化（2026-09 审计修复，第三批）**
+
+此前"查库统一后台化"只覆盖两个收银台，其它页面的"打开即查库"仍在 FX 线程（打开即冻结）。
+本批把 **9 个控制器 / 18 个页面级加载方法**统一改为 `UIOptimizer.runInBackground`
+（后台查库 + 回填都在 FX 线程）：
+
+- `InventoryController.loadTableData/loadCategories`、`SupplierController.loadSuppliers/handleSearch`、
+  `PromotionController.loadPromotions`、`TransactionController.loadTransactions/applyFilters`、
+  `ShiftController.loadShifts`、`PurchaseOrderController.loadSuppliers/loadOrders`、
+  `PurchaseApprovalController.loadPendingOrders/loadAllOrders/updateCountLabel`、
+  `PurchaseInboundController.loadApprovedOrders`（原本还有 N+1 次按订单查明细）、
+  `ProductEditController.loadCategories/loadUnits/loadSuppliers`、
+  `SearchController.performSearch`（加 `searchSequence` 丢弃过期结果）
+- 顺带修正"后台线程读界面控件"的隐患：`TransactionController` 的日期选择器、
+  `ShiftController` 的收银员过滤条件、`SupplierController`/`TransactionController` 的搜索框
+  都在**提交前**于 FX 线程取值，后台只拿不可变参数
+- 渲染与查询分离：新增 `refreshInventoryTable()` / `renderTransactions()` / `applyFiltersAndRender()` /
+  `renderShifts()` / `renderOrders()` 等只做界面刷新的方法，方便门禁按方法体断言
+- 核实为**误报**：`MemberController.loadTableData`、`UserController.loadUsers` 本来就是
+  `new Thread + Platform.runLater`，无需改动
+- 门禁 `FxThreadDbPolicyTest.nonPosPageLoadsRunOffTheFxThread`：18 条 (文件, 方法, 查库语句) 逐条断言
+  "必须走后台入口 + 查库语句仍在方法内 + 不得再有 `catch (SQLException)` 的同步写法"；
+  已做变异验证（把 `InventoryController.loadTableData` 改回同步即变红）
+- **报表链路（2026-09 第二批）**：报表页此前是"点按钮同步查两次库再聚合渲染"，现拆成
+  "后台 loader 只查库 + FX 线程聚合渲染"：
+  - `InventoryReportController.calculateStatistics` → `runInBackground(() -> loadReportData(...), data -> renderStatistics(...))`
+    （新增后台 loader `loadReportData` 与渲染方法 `renderStatistics`，删掉原先两个同步加载方法）
+  - `PurchaseReportController.handleQuery` → 后台 `loadReportData(startDate, endDate)`（订单 + 明细分组，
+    失败返回 `null`），筛选与统计回 FX 线程；`loadData()` 的供应商查询同样放后台
+  - `ProfitReportController` 主体本来就是 worker，但 `calculateStatistics`（在 `Platform.runLater` 里）会调
+    `loadOperatingCostRatio()` 查设置表 —— 现由 worker 预先查好、以参数传入
+  - `ReturnApprovalController.loadOrderItems`（点开待审批退货单查明细）改后台
+- **点击后短查询（2026-09 第三批）**：`ReturnOrderController.loadReturnOrderItems`（退货单明细）、
+  `SupplierController` 自动生成供应商编号（→ 异步 `applyGeneratedSupplierCode(codeField)`）、
+  `InventoryController` 分类/单位管理弹窗（抽出 `loadCategoryManagementData` / `loadUnitManagementData`）、
+  `MemberController.handleSearch`（会员搜索）、`ShiftController.updateShiftButtonStates`（活跃班次）
+  全部改为后台查询 + 回 FX 线程填表/切换状态
+- 门禁（均已变异验证）：`nonPosPageLoadsRunOffTheFxThread` 表扩到 **27 条**；
+  新增 `reportLoadersAreOnlyCalledAsBackgroundTask`（loader 里必须有查库语句、且只能以
+  `() -> loadXxx(...)` 形式提交一次）与 `profitReportDoesNotQuerySettingsOnTheFxThread`
+  （渲染方法不得出现 `loadOperatingCostRatio()`，且 worker 必须先取好比例）
+- **仍待办**（约 6 处）：`PurchaseInboundController`/`PurchaseOrderController` 的明细与选择器弹窗、
+  `PromotionController` 弹窗循环、`UserController` 搜索/停用等处理器、
+  `ShiftController.handleEndShift` + `loadShiftTransactions`（**交互流程**：查活跃班次 → 确认框 → 落库，
+  后台化需把整条流程改成回调链）、会员/用户的**写操作**（单行写 + 紧随刷新，收益低）；
+  清单见 `docs/TECH_DEBT.md` 的 TD-006；改的时候一并往上述门禁表里加行
 
 **启动期数据库阶段（v2.6.0 补强）**
 
@@ -947,8 +1159,12 @@ API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后�
   - `CartController` 2135 行**几乎全是逻辑**（视图构建只剩约 50 行），
     拆分 = 按职责抽逻辑簇（扫码/搜索流水线、支付编排、会员、挂单），风险同上
   - 共享两端 `createTransaction` 的口径障碍**已解除**（见下节「结账字段口径」）；
-    仍没抽成共用构建器的原因是三处订单号生成方式不同（标准端 `generateOrderNumber()`、
-    触屏端/API 走 `TransactionService.generateOrderNumber()`），统一会改变标准端订单号格式
+    三处订单号生成方式也已统一（2026-09 审计修）：标准端 `CartController.generateOrderNumber()`
+    与触屏端一样委托 `TransactionService.generateOrderNumber()`，REST API 走
+    `TransactionService.generateTransactionId("T")`，统一格式为"前缀 + 17 位毫秒 + 4 位序号 + 8 位随机段"。
+    此前标准端/API 用的是**裸毫秒时间戳**，同毫秒或跨终端会撞 `transactions.transaction_id` 主键、
+    整单回滚（并由 `executeTransaction` 的会员副本机制避免留下脏状态）；
+    门禁 `OrderNumberGenerationTest.allCheckoutPathsUseHardenedTransactionId`
 - 顺带发现（未修，待定）：
   - `TouchCartController` 里 `import com.cashier.model.Shift;` 已无使用方（历史遗留）
   - 默认回退包 `messages.properties` 语言不统一：`runtime.*` 是中文、部分 `tpos.*` 是英文
@@ -967,13 +1183,13 @@ API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后�
     Java 里写到的视图路径必须存在。它同时暴露出 `PasswordResetView.fxml` +
     `PasswordResetController` 也是**未接线**的——那是"首次登录强制改密"（`users.force_password_change`
     目前没有 UI 入口）的待建功能，不是死代码，已登记白名单而非删除
-  - 清理连带发现（**待修**）：触屏收银台的底部状态栏只有品牌/班次/日期/时间，**没有状态文本控件**，
-    也不绑定 `StatusBarManager.statusLevelProperty()`（原先唯一的绑定者在已删除的 PosModeController
-    里，而它从未被加载）。所以触屏版里 `StatusBarManager.updateSuccess/updateError` 这类提示
-    （如"商品加载失败"、扫码添加成功）**在界面上看不到**——只有 `warn()`/`showInfo()` 里附带弹窗的
-    提示可见。修法：给 `TouchCartView` 底栏加一个状态标签并在 `TouchCartController` 里绑定级别样式
-    （照 `MainController.applyStatusLevelStyle` 抄），补上后 `StatusBarSeverityPolicyTest`
-    应同时断言触屏控制器
+  - 清理连带发现（**已修，2026-09**）：触屏收银台的底部状态栏原先只有品牌/班次/日期/时间，
+    **没有状态文本控件**，也不绑定 `StatusBarManager.statusLevelProperty()`（原先唯一的绑定者在已删除的
+    PosModeController 里，而它从未被加载）。所以触屏版里 `StatusBarManager.updateSuccess/updateError`
+    这类提示（如"商品加载失败"、扫码添加成功）**在界面上看不到**。现已给 `TouchCartView` 底栏加
+    `fx:id="statusLabel"`，并在 `TouchCartController` 里 `bindStatusBar()` 绑定文本 + 级别样式
+    （照 `MainController.applyStatusLevelStyle` 抄，同一套 `text-success/warning/danger`），
+    `cleanup()` 解除绑定与监听；`StatusBarSeverityPolicyTest` 已同时断言触屏控制器与 FXML
 
 **热销榜统计口径（v2.6.0 补强）**
 
@@ -1012,7 +1228,13 @@ API 与触屏台写 `total_amount = 明细原价合计`，**标准端写折后�
   与全部 `notifyPreloader` 调用、manifest 的 `JavaFX-Preloader-Class` 已移除；
   `CashierSystemFXApplication.start()` 先显示 `SplashWindow`，延后 60ms 再跑重量级初始化
   （`initializeApplication`），失败时弹窗提示并退出
-- 技术债登记在 `docs/TECH_DEBT.md`：TD-001 发票文件路径白名单校验（阻塞于「发票预览/下载」需求）
+- 技术债登记在 `docs/TECH_DEBT.md`：TD-001 发票文件路径白名单校验（阻塞于「发票预览/下载」需求）；
+  2026-09 全量审计的结论均已登记，其中 TD-002（支付方式归一化）、TD-003（营业额净额口径）、
+  TD-004（API 校验/审计归属）、TD-005（触屏状态栏）、TD-007（结账线程安全）、
+  TD-008（成功弹窗金额）、TD-009（测试库外键/审计归属）、TD-013（版本号四处一致）**已修复**，
+  TD-006 仅剩约 6 处（含交互流程与写操作），
+  TD-014 部分（文档测试数不再写死、locale 折叠已修，可见文案硬编码待办）；
+  其余（初始化脚本漂移、Windows 启动、安装脚本、`String.format` 默认 locale 等）仍待处理
 
 **数据库密码来源（v2.6.0 补强）**
 
