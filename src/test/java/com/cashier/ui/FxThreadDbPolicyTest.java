@@ -194,6 +194,139 @@ class FxThreadDbPolicyTest {
             "应给 JDBC 设 TCP 建连超时：Connector/J 默认不超时，被丢弃的路由会让启动一直挂住");
     }
 
+    @Test
+    @DisplayName("报表的后台查库方法必须作为后台任务提交，且只被调用一次（TD-006 第二批）")
+    void reportLoadersAreOnlyCalledAsBackgroundTask() throws Exception {
+        // 每行：源码文件、后台 loader 方法签名、该方法内的查库语句、调用它的后台任务写法
+        String[][] loaders = {
+            {"controller/InventoryReportController.java",
+                "private ReportData loadReportData(String categoryName, LocalDate startDate, LocalDate endDate)",
+                "getTransactionDAO().findByDateRange(",
+                "() -> loadReportData(categoryName, startDate, endDate)"},
+            {"controller/PurchaseReportController.java",
+                "private ReportData loadReportData(LocalDate startDate, LocalDate endDate)",
+                "getPurchaseOrderItemDAO().findByOrderIds(",
+                "() -> loadReportData(startDate, endDate)"},
+        };
+
+        StringBuilder failures = new StringBuilder();
+        for (String[] loader : loaders) {
+            String source = readMainSource(loader[0]);
+            String body = methodBody(source, loader[1]);
+            String call = loader[3];
+            if (!body.contains(loader[2])) {
+                failures.append(loader[0]).append(": ").append(loader[1]).append(" 里没有查库语句; ");
+            }
+            if (!source.contains(call)) {
+                failures.append(loader[0]).append(": 后台查库必须写成 ").append(call).append("; ");
+            } else if (countOccurrences(source, call) != 1) {
+                failures.append(loader[0]).append(": 后台任务只应提交一次; ");
+            }
+        }
+        assertTrue(failures.isEmpty(),
+            "以下报表查库没有走后台入口（生成报表会冻结界面）: " + failures);
+    }
+
+    @Test
+    @DisplayName("利润报表不得在 FX 线程渲染时查库（运营成本比例由 worker 预取）")
+    void profitReportDoesNotQuerySettingsOnTheFxThread() throws Exception {
+        String source = readMainSource("controller/ProfitReportController.java");
+
+        // calculateStatistics 在 Platform.runLater 里执行，属于 FX 线程渲染路径
+        String render = methodBody(source, "private void calculateStatistics(LocalDate startDate, LocalDate endDate, String categoryName,");
+        assertFalse(render.contains("loadOperatingCostRatio()"),
+            "运营成本比例必须在 worker 里取好再传入，不能在 FX 线程渲染时查设置表");
+
+        // worker 里应先取好比例，再提交渲染
+        int fetch = source.indexOf("final double operatingCostRatio = loadOperatingCostRatio();");
+        int renderLater = source.indexOf("calculateStatistics(startDate, endDate, selectedCategory, operatingCostRatio)");
+        assertTrue(fetch > 0, "worker 里应先取好运营成本比例");
+        assertTrue(renderLater > fetch, "渲染必须使用 worker 取好的比例");
+    }
+
+    @Test
+    @DisplayName("非收银台页面的加载/查询也必须离开 FX 线程（TD-006）")
+    void nonPosPageLoadsRunOffTheFxThread() throws Exception {
+        // 每行：源码文件、方法签名、必须出现在该方法里的查库语句
+        String[][] pageLoads = {
+            {"controller/InventoryController.java", "protected void loadTableData()",
+                "productDAO.findAll(FIRST_PAGE, DESKTOP_PAGE_SIZE)"},
+            {"controller/InventoryController.java", "private void loadCategories()",
+                "getCategoryDAO().findAll()"},
+            {"controller/SupplierController.java", "private void loadSuppliers()",
+                "getSupplierDAO().findRecent(SUPPLIER_LIST_LIMIT)"},
+            {"controller/SupplierController.java", "public void handleSearch()",
+                "getSupplierDAO().search(searchText, SUPPLIER_LIST_LIMIT)"},
+            {"controller/PromotionController.java", "private void loadPromotions()",
+                "DataService::loadPromotions"},
+            {"controller/TransactionController.java", "private void loadTransactions()",
+                "getTransactionDAO().findByDateRange(range.start(), range.end())"},
+            {"controller/TransactionController.java", "private void applyFilters()",
+                "getTransactionDAO().findByDateRange(range.start(), range.end())"},
+            {"controller/ShiftController.java", "private void loadShifts()",
+                "getShiftDAO().findRecent(SHIFT_HISTORY_LIMIT)"},
+            {"controller/PurchaseOrderController.java", "private void loadSuppliers()",
+                "getSupplierDAO().findByStatus(true, PURCHASE_SUPPLIER_LIMIT)"},
+            {"controller/PurchaseOrderController.java", "private void loadOrders()",
+                "getPurchaseOrderDAO().findRecent(PURCHASE_ORDER_LIMIT)"},
+            {"controller/PurchaseApprovalController.java", "private void loadPendingOrders()",
+                "findByStatus(\"pending\")"},
+            {"controller/PurchaseApprovalController.java", "private void loadAllOrders()",
+                "findRecent(APPROVAL_ORDER_LIMIT)"},
+            {"controller/PurchaseApprovalController.java", "private void updateCountLabel()",
+                "countByStatus(\"pending\")"},
+            {"controller/PurchaseInboundController.java", "private void loadApprovedOrders()",
+                "findByStatus(\"approved\")"},
+            {"controller/ProductEditController.java", "private void loadCategories()",
+                "getCategoryDAO().findAll()"},
+            {"controller/ProductEditController.java", "private void loadUnits()",
+                "getUnitDAO().findAll()"},
+            {"controller/ProductEditController.java", "private void loadSuppliers()",
+                "findByStatus(true, PRODUCT_SUPPLIER_LIMIT)"},
+            {"controller/SearchController.java", "private void performSearch(String query)",
+                "SearchManager.search(query, 10)"},
+            {"controller/InventoryReportController.java",
+                "private void calculateStatistics(LocalDate startDate, LocalDate endDate, String categoryName,",
+                "() -> loadReportData(categoryName, startDate, endDate)"},
+            {"controller/PurchaseReportController.java", "public void handleQuery()",
+                "() -> loadReportData(startDate, endDate)"},
+            {"controller/PurchaseReportController.java", "private void loadData()",
+                "getSupplierDAO().findRecent(PURCHASE_REPORT_SUPPLIER_LIMIT)"},
+            {"controller/ReturnApprovalController.java", "private void loadOrderItems(String returnOrderId)",
+                "getReturnOrderItemDAO().findByReturnOrderId(returnOrderId)"},
+            {"controller/ReturnOrderController.java", "private void loadReturnOrderItems(String returnOrderId)",
+                "getReturnOrderItemDAO().findByReturnOrderId(returnOrderId)"},
+            {"controller/SupplierController.java",
+                "private void applyGeneratedSupplierCode(TextField codeField)",
+                "countBySupplierCodePrefix(prefix)"},
+            {"controller/InventoryController.java",
+                "private void loadCategoryManagementData(ObservableList<Category> target)",
+                "getCategoryDAO().findAll()"},
+            {"controller/InventoryController.java",
+                "private void loadUnitManagementData(ObservableList<Unit> target)",
+                "getUnitDAO().findAll()"},
+            {"controller/MemberController.java", "public void handleSearch()",
+                "getMemberDAO().search(searchText, FIRST_PAGE, DESKTOP_PAGE_SIZE)"},
+            {"controller/ShiftController.java", "private void updateShiftButtonStates()",
+                "getShiftDAO().hasActiveShift()"},
+        };
+
+        StringBuilder failures = new StringBuilder();
+        for (String[] load : pageLoads) {
+            String body = methodBody(readMainSource(load[0]), load[1]);
+            if (!body.contains("UIOptimizer.runInBackground(")) {
+                failures.append(load[0]).append(' ').append(load[1]).append(": 未走后台执行入口; ");
+            } else if (!body.contains(load[2])) {
+                failures.append(load[0]).append(' ').append(load[1]).append(": 查库语句已不在该方法里; ");
+            } else if (body.contains("catch (SQLException")) {
+                failures.append(load[0]).append(' ').append(load[1])
+                    .append(": 仍是同步 try/catch 查库; ");
+            }
+        }
+        assertTrue(failures.isEmpty(),
+            "以下页面加载仍在 FX 线程同步查库（打开页面会冻结界面）: " + failures);
+    }
+
     /** 取出指定方法（按大括号配对）的方法体，便于断言"查库与改界面是否还在同一个方法里"。 */
     private static String methodBody(String source, String signature) {        int start = source.indexOf(signature);
         assertTrue(start >= 0, "找不到方法签名: " + signature);

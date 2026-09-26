@@ -8,6 +8,7 @@ import com.cashier.i18n.I18nManager;
 import com.cashier.model.Member;
 import com.cashier.model.PageResult;
 import com.cashier.util.FXMLUtils;
+import com.cashier.util.UIOptimizer;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
@@ -198,18 +199,24 @@ public class MemberController extends BaseController<Member> {
         String searchText = searchField.getText().trim().toLowerCase();
         if (searchText.isEmpty()) {
             loadTableData();
-        } else {
-            try {
-                PageResult<Member> memberData = DAOFactory.getInstance().getMemberDAO().search(searchText, FIRST_PAGE, DESKTOP_PAGE_SIZE);
+            updateCountLabel();
+            return;
+        }
+
+        // 搜索放后台（全表 LIKE 查询），回 FX 线程再填表（TD-006）
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getMemberDAO().search(searchText, FIRST_PAGE, DESKTOP_PAGE_SIZE),
+            memberData -> {
                 totalMembers = memberData.getTotal();
                 setLoadedMembers(memberData.getData());
                 memberList.setAll(members.values());
-            } catch (SQLException e) {
+                updateCountLabel();
+            },
+            e -> {
                 logger.error("搜索会员失败", e);
-                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED) + ": " + e.getMessage());
-            }
-        }
-        updateCountLabel();
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED)
+                    + ": " + e.getMessage());
+            });
     }
 
     /**

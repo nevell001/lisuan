@@ -2,6 +2,7 @@ package com.cashier.api.controller;
 
 import com.cashier.model.PaymentOrder;
 import com.cashier.model.RefundRecord;
+import com.cashier.model.Transaction;
 import com.cashier.model.User;
 import com.cashier.dao.DAOFactory;
 import com.cashier.service.PaymentService;
@@ -49,7 +50,9 @@ public class PaymentApiController {
             BigDecimal amount = getBigDecimal(body, "amount");
             String channelStr = getString(body, "channel", "WECHAT");
             String terminalId = getString(body, "terminalId", "default");
-            String operator = getString(body, "operator", "system");
+            // 操作员一律取认证用户，忽略请求体自报身份（与下单/退款一致，防止审计归属被伪造）
+            User currentUser = ctx.attribute("currentUser");
+            String operator = currentUser != null ? currentUser.username : "system";
             
             if (transactionId == null || amount == null) {
                 ctx.status(400).json(Map.of(
@@ -58,12 +61,37 @@ public class PaymentApiController {
                 ));
                 return;
             }
+
+            // 金额必须与原交易实付一致：此前接口只校验 amount > 0，
+            // 客户端可以用 0.01 元为一张 1000 元的单生成真实的收款码
+            Transaction transaction = DAOFactory.getInstance().getTransactionDAO().findById(transactionId);
+            if (transaction == null) {
+                ctx.status(404).json(Map.of(
+                    "success", false,
+                    "error", "交易不存在: " + transactionId
+                ));
+                return;
+            }
+            if ("REFUNDED".equals(transaction.status)) {
+                ctx.status(400).json(Map.of(
+                    "success", false,
+                    "error", "该交易已退款，不能再发起收款"
+                ));
+                return;
+            }
+            if (transaction.finalAmount == null || amount.compareTo(transaction.finalAmount) != 0) {
+                ctx.status(400).json(Map.of(
+                    "success", false,
+                    "error", "支付金额与交易实付不一致（应为 " + transaction.finalAmount + "）"
+                ));
+                return;
+            }
             
             PaymentOrder.PaymentChannel channel = PaymentOrder.PaymentChannel.fromString(channelStr);
             
-            // 创建支付订单
-            PaymentOrder order = PaymentService.createPaymentOrder(transactionId, amount, channel, terminalId);
-            order.operator = operator;
+            // 创建支付订单（操作员在落库前写入，见 PaymentService.createPaymentOrder）
+            PaymentOrder order = PaymentService.createPaymentOrder(
+                transactionId, amount, channel, terminalId, operator);
             
             ctx.json(Map.of(
                 "success", true,

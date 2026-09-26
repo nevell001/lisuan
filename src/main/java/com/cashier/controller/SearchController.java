@@ -5,6 +5,7 @@ import com.cashier.i18n.I18nKeys;
 import com.cashier.i18n.I18nManager;
 import com.cashier.util.SearchManager;
 import com.cashier.util.SearchManager.SearchResult;
+import com.cashier.util.UIOptimizer;
 import javafx.application.Platform;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -21,6 +22,8 @@ import java.util.List;
  * 全局搜索控制器
  */
 public class SearchController {
+    private static final org.slf4j.Logger logger =
+        com.cashier.util.LoggerFactoryUtil.getLogger(SearchController.class);
     private final I18nManager i18n = I18nManager.getInstance();
 
     @FXML
@@ -35,6 +38,9 @@ public class SearchController {
     private Stage stage;
     private ObservableList<HBox> results = FXCollections.observableArrayList();
     private int selectedIndex = 0;
+    /** 搜索序号：连续输入时只允许最新一次结果上屏 */
+    private final java.util.concurrent.atomic.AtomicLong searchSequence =
+        new java.util.concurrent.atomic.AtomicLong();
 
     @FXML
     public void initialize() {
@@ -107,18 +113,23 @@ public class SearchController {
             return;
         }
 
-        List<SearchResult> searchResults = SearchManager.search(query, 10);
-
-        for (SearchResult result : searchResults) {
-            HBox item = createResultItem(result);
-            results.add(item);
-        }
-
-        resultCountLabel.setText(String.valueOf(searchResults.size()));
-
-        if (!results.isEmpty()) {
-            resultsList.getSelectionModel().select(0);
-        }
+        // 每次按键都会触发一次全库搜索：放后台，并用序号丢弃过期结果（与收银台搜索同一做法）
+        final long sequence = searchSequence.incrementAndGet();
+        UIOptimizer.runInBackground(
+            () -> SearchManager.search(query, 10),
+            searchResults -> {
+                if (sequence != searchSequence.get()) {
+                    return; // 已经有更新的输入，丢弃过期结果
+                }
+                for (SearchResult result : searchResults) {
+                    results.add(createResultItem(result));
+                }
+                resultCountLabel.setText(String.valueOf(searchResults.size()));
+                if (!results.isEmpty()) {
+                    resultsList.getSelectionModel().select(0);
+                }
+            },
+            e -> logger.error("搜索失败", e));
     }
 
     /**

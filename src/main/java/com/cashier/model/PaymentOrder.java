@@ -260,6 +260,7 @@ public class PaymentOrder {
     public static PaymentOrder createScanPayOrder(String transactionId, BigDecimal amount, 
                                                    PaymentChannel channel, String terminalId) {
         PaymentOrder order = new PaymentOrder();
+        order.paymentId = generatePaymentId();
         order.transactionId = transactionId;
         order.merchantOrderNo = generateMerchantOrderNo();
         order.paymentType = PaymentType.QRCODE_PAY;
@@ -273,6 +274,21 @@ public class PaymentOrder {
         
         return order;
     }
+    
+    /**
+     * 生成支付单号（PAY + 毫秒时间戳 + 4 位序号 + 6 位随机段）。
+     *
+     * <p>{@code payment_id} 是主键：裸毫秒时间戳在同毫秒（多终端并发扫码）时会撞主键、
+     * 支付单直接创建失败，因此与退款号/发票号一样追加序号与随机段。</p>
+     */
+    public static String generatePaymentId() {
+        return "PAY" + System.currentTimeMillis()
+            + String.format("%04d", paymentIdSequence.getAndIncrement() % 10000)
+            + String.format("%06x", SECURE_RANDOM.nextInt(0x1000000));
+    }
+
+    private static final java.util.concurrent.atomic.AtomicLong paymentIdSequence =
+        new java.util.concurrent.atomic.AtomicLong(0);
     
     /**
      * 生成商户订单号

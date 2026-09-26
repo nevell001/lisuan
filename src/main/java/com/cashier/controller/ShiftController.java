@@ -6,9 +6,11 @@ import com.cashier.dao.DAOFactory;
 import com.cashier.i18n.I18nManager;
 import com.cashier.model.Shift;
 import com.cashier.model.Transaction;
+import com.cashier.service.TransactionService;
 import com.cashier.util.CurrencyUtil;
 import com.cashier.util.DateTimeFormats;
 import com.cashier.util.StatusBarManager;
+import com.cashier.util.UIOptimizer;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
@@ -211,25 +213,39 @@ public class ShiftController {
      */
     private void loadShifts() {
         logger.info("ShiftController: 开始加载交接班数据...");
-        try {
-            allShifts = DAOFactory.getInstance().getShiftDAO().findRecent(SHIFT_HISTORY_LIMIT);
+        // 打开交接班页即查库：放后台，避免整屏冻结（过滤条件在 FX 线程取好）
+        final boolean cashierOnly = currentUser != null && "cashier".equals(currentUser.role);
+        final String username = currentUser != null ? currentUser.username : null;
+        UIOptimizer.runInBackground(
+            () -> {
+                List<Shift> shifts = DAOFactory.getInstance().getShiftDAO().findRecent(SHIFT_HISTORY_LIMIT);
+                // 收银员只能查看自己的班次
+                if (cashierOnly) {
+                    shifts = shifts.stream()
+                        .filter(s -> username != null && username.equals(s.username))
+                        .collect(java.util.stream.Collectors.toList());
+                    logger.info("收银员 {} 只能查看自己的班次，共 {} 条", username, shifts.size());
+                }
+                return shifts;
+            },
+            shifts -> {
+                allShifts = shifts;
+                renderShifts();
+                logger.info("ShiftController: 加载了 {} 条交接班记录", allShifts.size());
+            },
+            e -> {
+                logger.error("加载交接班数据失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
+                allShifts = new java.util.ArrayList<>();
+                renderShifts();
+            });
+    }
 
-            // 收银员只能查看自己的班次
-            if (currentUser != null && "cashier".equals(currentUser.role)) {
-                allShifts = allShifts.stream()
-                    .filter(s -> currentUser.username.equals(s.username))
-                    .collect(java.util.stream.Collectors.toList());
-                logger.info("收银员 {} 只能查看自己的班次，共 {} 条", currentUser.username, allShifts.size());
-            }
-        } catch (SQLException e) {
-            logger.error("加载交接班数据失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            allShifts = new java.util.ArrayList<>();
-        }
+    /** 把内存中的班次刷到表格与统计标签（仅 FX 线程调用） */
+    private void renderShifts() {
         shiftList = FXCollections.observableArrayList(allShifts);
         shiftTable.setItems(shiftList);
         updateStatistics();
-        logger.info("ShiftController: 加载了 {} 条交接班记录", allShifts.size());
     }
 
     /**
@@ -564,15 +580,19 @@ public class ShiftController {
      * 更新开班/交班按钮状态
      */
     private void updateShiftButtonStates() {
-        boolean hasActiveShift = false;
-        try {
-            hasActiveShift = DAOFactory.getInstance().getShiftDAO().hasActiveShift();
-        } catch (SQLException e) {
-            logger.error("检查活跃班次失败", e);
-            hasActiveShift = false;
-        }
-        startShiftButton.setDisable(hasActiveShift);
-        endShiftButton.setDisable(!hasActiveShift);
+        // 班次状态查询放后台，回 FX 线程再切换按钮可用性（TD-006）；
+        // 查询失败时按"没有活跃班次"处理（与改造前一致）
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getShiftDAO().hasActiveShift(),
+            hasActiveShift -> {
+                startShiftButton.setDisable(hasActiveShift);
+                endShiftButton.setDisable(!hasActiveShift);
+            },
+            e -> {
+                logger.error("检查活跃班次失败", e);
+                startShiftButton.setDisable(false);
+                endShiftButton.setDisable(true);
+            });
     }
 
     /**
@@ -695,13 +715,13 @@ public class ShiftController {
         }
 
         try {
-            // 只加载本班次开始后的交易记录。
-            List<Transaction> shiftTransactions = loadShiftTransactions(activeShift);
-            if (shiftTransactions == null) {
+            // 只加载本班次开始后的交易记录与已完成退货（净额口径）。
+            ShiftRevenueSource source = loadShiftTransactions(activeShift);
+            if (source == null) {
                 return;
             }
 
-            ShiftRevenueStats stats = categorizeShiftRevenue(shiftTransactions);
+            ShiftRevenueStats stats = categorizeShiftRevenue(source);
             BigDecimal cashRevenue = stats.cashRevenue;
             BigDecimal wechatRevenue = stats.wechatRevenue;
             BigDecimal alipayRevenue = stats.alipayRevenue;
@@ -711,7 +731,7 @@ public class ShiftController {
             // 结束班次
             // 计算班次结束时的累计总营业额和总交易数
             BigDecimal closingRevenue = activeShift.getOpeningRevenue().add(totalRevenue);
-            int closingTransactionCount = activeShift.openingTransactionCount + shiftTransactions.size();
+            int closingTransactionCount = activeShift.openingTransactionCount + source.transactions().size();
             activeShift.endShift(closingRevenue, closingTransactionCount, cashRevenue, wechatRevenue, alipayRevenue, cardRevenue);
 
             // 保存班次到数据库
@@ -753,15 +773,22 @@ public class ShiftController {
         }
     }
 
-    /** 加载本班次开始后的交易记录；失败返回 null（已提示用户） */
-    private List<Transaction> loadShiftTransactions(Shift activeShift) {
+    /** 班次取数结果：交易明细 + 该窗口内已完成的退货金额（按退款方式归一化，净额口径 TD-003） */
+    private record ShiftRevenueSource(List<Transaction> transactions,
+                                      Map<String, BigDecimal> returnsByMethod) {
+    }
+
+    /** 加载本班次开始后的交易记录与已完成退货；失败返回 null（已提示用户） */
+    private ShiftRevenueSource loadShiftTransactions(Shift activeShift) {
         try {
-            return DAOFactory.getInstance().getTransactionDAO().findByDateRange(
-                activeShift.startTime.atZone(java.time.ZoneId.systemDefault())
-                    .toLocalDateTime()
-                    .format(DateTimeFormats.STANDARD_DATE_TIME),
-                java.time.LocalDateTime.now().format(DateTimeFormats.STANDARD_DATE_TIME)
-            );
+            String start = activeShift.startTime.atZone(java.time.ZoneId.systemDefault())
+                .toLocalDateTime()
+                .format(DateTimeFormats.STANDARD_DATE_TIME);
+            String end = java.time.LocalDateTime.now().format(DateTimeFormats.STANDARD_DATE_TIME);
+            List<Transaction> transactions = DAOFactory.getInstance().getTransactionDAO().findByDateRange(start, end);
+            Map<String, BigDecimal> returnsByMethod = TransactionService.returnsByMethod(
+                DAOFactory.getInstance().getReturnOrderDAO().findCompletedReturnsBetween(start, end));
+            return new ShiftRevenueSource(transactions, returnsByMethod);
         } catch (SQLException e) {
             logger.error("加载交易记录失败", e);
             showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
@@ -774,25 +801,42 @@ public class ShiftController {
                                      BigDecimal alipayRevenue, BigDecimal cardRevenue, BigDecimal totalRevenue) {
     }
 
-    private ShiftRevenueStats categorizeShiftRevenue(List<Transaction> shiftTransactions) {
+    /**
+     * 按支付方式归类班次营收（净额口径，TD-003）：
+     * 已整单退款的交易不计入，再按退款方式扣掉本班次已完成的退货金额
+     * （现金退款减少现金桶，退回余额只影响总额）。
+     */
+    private ShiftRevenueStats categorizeShiftRevenue(ShiftRevenueSource source) {
         BigDecimal cashRevenue = BigDecimal.ZERO;
         BigDecimal wechatRevenue = BigDecimal.ZERO;
         BigDecimal alipayRevenue = BigDecimal.ZERO;
         BigDecimal cardRevenue = BigDecimal.ZERO;
         BigDecimal totalRevenue = BigDecimal.ZERO;
 
-        for (Transaction t : shiftTransactions) {
+        for (Transaction t : source.transactions()) {
+            if ("REFUNDED".equals(t.status) || t.getFinalAmount() == null) {
+                continue;
+            }
             totalRevenue = totalRevenue.add(t.getFinalAmount());
-            if ("现金".equals(t.paymentMethod) || "CASH".equals(t.paymentMethod)) {
-                cashRevenue = cashRevenue.add(t.getFinalAmount());
-            } else if ("微信".equals(t.paymentMethod) || "WECHAT".equals(t.paymentMethod)) {
-                wechatRevenue = wechatRevenue.add(t.getFinalAmount());
-            } else if ("支付宝".equals(t.paymentMethod) || "ALIPAY".equals(t.paymentMethod)) {
-                alipayRevenue = alipayRevenue.add(t.getFinalAmount());
-            } else if ("银行卡".equals(t.paymentMethod) || "CARD".equals(t.paymentMethod)) {
-                cardRevenue = cardRevenue.add(t.getFinalAmount());
+            // 归一化后再分桶：此前只认「现金」/CASH 等固定字面量，繁体或英文文案会落进"无桶"
+            // （总额里有、分项里没有，交班对不上账）
+            switch (com.cashier.util.I18nUiUtils.canonicalPaymentMethod(t.paymentMethod)) {
+                case "CASH" -> cashRevenue = cashRevenue.add(t.getFinalAmount());
+                case "WECHAT" -> wechatRevenue = wechatRevenue.add(t.getFinalAmount());
+                case "ALIPAY" -> alipayRevenue = alipayRevenue.add(t.getFinalAmount());
+                case "CARD" -> cardRevenue = cardRevenue.add(t.getFinalAmount());
+                default -> { /* 会员余额等其它方式计入总额，不分桶 */ }
             }
         }
+
+        Map<String, BigDecimal> returns = source.returnsByMethod();
+        BigDecimal refundedAmount = TransactionService.totalReturns(returns);
+        cashRevenue = cashRevenue.subtract(returns.getOrDefault("CASH", BigDecimal.ZERO));
+        wechatRevenue = wechatRevenue.subtract(returns.getOrDefault("WECHAT", BigDecimal.ZERO));
+        alipayRevenue = alipayRevenue.subtract(returns.getOrDefault("ALIPAY", BigDecimal.ZERO));
+        cardRevenue = cardRevenue.subtract(returns.getOrDefault("CARD", BigDecimal.ZERO));
+        totalRevenue = totalRevenue.subtract(refundedAmount);
+
         return new ShiftRevenueStats(cashRevenue, wechatRevenue, alipayRevenue, cardRevenue, totalRevenue);
     }
 

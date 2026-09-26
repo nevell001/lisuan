@@ -181,12 +181,14 @@ public class ApiServer {
     }
 
     private void registerProductRoutes() {
+        // 字面量路径必须排在 /{id} 之前：Javalin 取第一个匹配的路由，
+        // 否则 /api/products/low-stock 会落到 {id} 上、被当成 id="low-stock" 去 parseInt
         app.get("/api/products", ProductApiController::list);
+        app.get("/api/products/low-stock", ProductApiController::lowStock);
         app.get("/api/products/{id}", ProductApiController::get);
         app.post("/api/products", ProductApiController::create);
         app.put("/api/products/{id}", ProductApiController::update);
         app.delete("/api/products/{id}", ProductApiController::delete);
-        app.get("/api/products/low-stock", ProductApiController::lowStock);
     }
 
     private void registerMemberRoutes() {
@@ -231,14 +233,15 @@ public class ApiServer {
 
     private void registerInvoiceRoutes() {
         app.get("/api/invoices", InvoiceApiController::list);
+        // 字面量路径（stats / seller-info）同样必须排在 /{id} 之前
         app.get("/api/invoices/stats", InvoiceApiController::stats);
+        app.get("/api/invoices/seller-info", InvoiceApiController::getSellerInfo);
         app.get("/api/invoices/{id}", InvoiceApiController::get);
         app.get("/api/invoices/transaction/{transactionId}", InvoiceApiController::getByTransaction);
         app.post("/api/invoices/from-transaction", InvoiceApiController::createFromTransaction);
         app.post("/api/invoices/manual", InvoiceApiController::createManual);
         app.post("/api/invoices/{id}/void", InvoiceApiController::voidInvoice);
         app.post("/api/invoices/{id}/print", InvoiceApiController::recordPrint);
-        app.get("/api/invoices/seller-info", InvoiceApiController::getSellerInfo);
         app.put("/api/invoices/seller-info", InvoiceApiController::setSellerInfo);
     }
 

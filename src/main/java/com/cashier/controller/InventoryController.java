@@ -14,6 +14,7 @@ import com.cashier.util.CacheManager;
 import com.cashier.util.FXMLUtils;
 import com.cashier.util.StatusBarManager;
 import com.cashier.util.FormValidator;
+import com.cashier.util.UIOptimizer;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
@@ -160,19 +161,38 @@ public class InventoryController extends BaseController<Product> {
     /**
      * 加载分类列表到筛选下拉框
      */
+    /** 单位管理弹窗的数据加载：后台查库 + 回 FX 线程填表（TD-006）。 */
+    private void loadUnitManagementData(ObservableList<Unit> target) {
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getUnitDAO().findAll(),
+            target::setAll,
+            e -> logger.error("加载单位失败", e));
+    }
+
+    /** 分类管理弹窗的数据加载：后台查库 + 回 FX 线程填表（TD-006）。 */
+    private void loadCategoryManagementData(ObservableList<Category> target) {
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getCategoryDAO().findAll(),
+            target::setAll,
+            e -> logger.error("加载分类失败", e));
+    }
+
     private void loadCategories() {
-        ObservableList<String> categories = FXCollections.observableArrayList();
-        categories.add(i18n.get("inventory.all_categories")); // 全部分类
-        try {
-            List<Category> categoryList = DAOFactory.getInstance().getCategoryDAO().findAll();
-            for (Category c : categoryList) {
-                categories.add(c.name);
-            }
-        } catch (SQLException e) {
-            logger.error("加载分类列表失败", e);
-        }
-        categoryFilterComboBox.setItems(categories);
-        categoryFilterComboBox.getSelectionModel().select(0); // 默认选中"全部"
+        // 打开库存页还会查一次分类：同样放后台
+        UIOptimizer.runInBackground(
+            () -> {
+                List<String> categories = new java.util.ArrayList<>();
+                categories.add(i18n.get("inventory.all_categories")); // 全部分类
+                for (Category c : DAOFactory.getInstance().getCategoryDAO().findAll()) {
+                    categories.add(c.name);
+                }
+                return categories;
+            },
+            categories -> {
+                categoryFilterComboBox.setItems(FXCollections.observableArrayList(categories));
+                categoryFilterComboBox.getSelectionModel().select(0); // 默认选中"全部"
+            },
+            e -> logger.error("加载分类列表失败", e));
     }
 
     /**
@@ -332,16 +352,25 @@ public class InventoryController extends BaseController<Product> {
      */
     @Override
     protected void loadTableData() {
-        try {
-            PageResult<Product> products = productDAO.findAll(FIRST_PAGE, DESKTOP_PAGE_SIZE);
-            totalProducts = products.getTotal();
-            setLoadedProducts(products.getData());
-        } catch (SQLException e) {
-            logger.error("加载商品数据失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            inventoryMap = new HashMap<>();
-            totalProducts = 0;
-        }
+        // 打开库存页就是一次整表分页查询：放后台，否则数据量大时整屏冻结
+        UIOptimizer.runInBackground(
+            () -> productDAO.findAll(FIRST_PAGE, DESKTOP_PAGE_SIZE),
+            products -> {
+                totalProducts = products.getTotal();
+                setLoadedProducts(products.getData());
+                refreshInventoryTable();
+            },
+            e -> {
+                logger.error("加载商品数据失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
+                inventoryMap = new HashMap<>();
+                totalProducts = 0;
+                refreshInventoryTable();
+            });
+    }
+
+    /** 把内存中的商品映射刷到表格（仅 FX 线程调用） */
+    private void refreshInventoryTable() {
         inventoryList = FXCollections.observableArrayList(inventoryMap.values());
         inventoryTable.setItems(inventoryList);
         updateCountLabel();
@@ -616,14 +645,10 @@ public class InventoryController extends BaseController<Product> {
         categoryTable.getColumns().addAll(nameCol, descCol);
         categoryTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
-        // 加载分类数据
+        // 加载分类数据（后台查询，回 FX 线程填表）；categoryList 同时供编辑/删除分类弹窗使用
         ObservableList<Category> categoryList = FXCollections.observableArrayList();
-        try {
-            categoryList.addAll(DAOFactory.getInstance().getCategoryDAO().findAll());
-        } catch (SQLException e) {
-            logger.error("加载分类失败", e);
-        }
         categoryTable.setItems(categoryList);
+        loadCategoryManagementData(categoryList);
 
         // 创建按钮面板
         HBox buttonPanel = new HBox(10);
@@ -783,13 +808,10 @@ public class InventoryController extends BaseController<Product> {
         unitTable.getColumns().addAll(nameCol, descCol);
         unitTable.setColumnResizePolicy(TableView.CONSTRAINED_RESIZE_POLICY);
 
+        // 加载单位数据（后台查询，回 FX 线程填表）；unitList 同时供编辑/删除单位弹窗使用
         ObservableList<Unit> unitList = FXCollections.observableArrayList();
-        try {
-            unitList.addAll(DAOFactory.getInstance().getUnitDAO().findAll());
-        } catch (SQLException e) {
-            logger.error("加载单位失败", e);
-        }
         unitTable.setItems(unitList);
+        loadUnitManagementData(unitList);
 
         HBox buttonPanel = new HBox(10);
         buttonPanel.setAlignment(Pos.CENTER_RIGHT);

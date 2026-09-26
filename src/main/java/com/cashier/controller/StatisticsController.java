@@ -5,6 +5,7 @@ import com.cashier.i18n.I18nKeys;
 import com.cashier.i18n.I18nManager;
 import com.cashier.dao.DAOFactory;
 import com.cashier.model.Transaction;
+import com.cashier.service.TransactionService;
 import com.cashier.util.CurrencyUtil;
 import com.cashier.util.DateTimeFormats;
 import org.slf4j.Logger;
@@ -250,12 +251,15 @@ public class StatisticsController {
         Thread worker = new Thread(() -> {
             try {
                 final List<Transaction> transactions = DAOFactory.getInstance().getTransactionDAO().findByDateRange(start, end);
+                // 区间内已完成的退货（净额口径，TD-003）：与查库同在后台线程，不能放 FX 线程
+                final Map<String, BigDecimal> returnsByMethod = TransactionService.returnsByMethod(
+                    DAOFactory.getInstance().getReturnOrderDAO().findCompletedReturnsBetween(start, end));
                 javafx.application.Platform.runLater(() -> {
                     statisticsQueryInProgress = false;
                     allTransactions = transactions;
                     logger.info("StatisticsController: 加载了 {} 条交易记录", allTransactions.size());
                     // 计算统计数据（内存聚合，量级小，放 FX 更新 UI 安全）
-                    calculateStatistics(allTransactions);
+                    calculateStatistics(allTransactions, returnsByMethod);
                 });
             } catch (SQLException e) {
                 logger.error("加载交易数据失败", e);
@@ -263,7 +267,7 @@ public class StatisticsController {
                     statisticsQueryInProgress = false;
                     showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
                     allTransactions = new java.util.ArrayList<>();
-                    calculateStatistics(allTransactions);
+                    calculateStatistics(allTransactions, Map.of());
                 });
             }
         }, "statistics-query");
@@ -282,13 +286,25 @@ public class StatisticsController {
         logger.info("数据统计已刷新");
     }
 
+    /** 取某渠道（归一化代码）在区间内已完成的退货金额（元）。 */
+    private static double channelReturns(Map<String, BigDecimal> returnsByMethod, String channel) {
+        BigDecimal amount = returnsByMethod == null ? null : returnsByMethod.get(channel);
+        return amount == null ? 0.0 : amount.doubleValue();
+    }
+
     /**
-     * 计算统计数据
+     * 计算统计数据。
+     *
+     * <p>营业额为净额口径（TD-003）：已整单退款（{@code status='REFUNDED'}）的交易完全不计入
+     * （销售额/渠道桶/商品/分类/时段统计一并剔除），再按退款方式扣掉该区间已完成的退货金额。</p>
+     *
+     * @param returnsByMethod 区间内已完成退货金额（归一化支付方式 → 金额）
      */
-    private void calculateStatistics(List<Transaction> transactions) {
+    private void calculateStatistics(List<Transaction> transactions,
+                                     Map<String, BigDecimal> returnsByMethod) {
         // 总销售额
         double totalSales = 0.0;
-        int transactionCount = transactions.size();
+        int transactionCount = 0;
 
         // 按支付方式统计
         double cashSales = 0.0;
@@ -310,20 +326,25 @@ public class StatisticsController {
         Map<Integer, Double> hourAmountMap = new HashMap<>();
 
         for (Transaction t : transactions) {
+            // 已整单退款的交易不计营业额，也不再进商品/分类/时段统计（净额口径，TD-003）
+            if ("REFUNDED".equals(t.status)) {
+                continue;
+            }
+            transactionCount++;
             totalSales += t.getFinalAmount().doubleValue();
 
-            // 支付方式统计
-            switch (t.paymentMethod) {
-                case "现金":
+            // 支付方式统计：先归一化（历史/接口可能存 CASH 等代码形式），再分桶
+            switch (com.cashier.util.I18nUiUtils.canonicalPaymentMethod(t.paymentMethod)) {
+                case "CASH":
                     cashSales += t.getFinalAmount().doubleValue();
                     break;
-                case "微信":
+                case "WECHAT":
                     wechatSales += t.getFinalAmount().doubleValue();
                     break;
-                case "支付宝":
+                case "ALIPAY":
                     alipaySales += t.getFinalAmount().doubleValue();
                     break;
-                case "银行卡":
+                case "CARD":
                     cardSales += t.getFinalAmount().doubleValue();
                     break;
                 default:
@@ -362,6 +383,15 @@ public class StatisticsController {
                 // 解析失败，跳过
             }
         }
+
+        // 营业额净额口径（TD-003）：扣掉区间内已完成的退货，并按退款方式冲减对应渠道桶。
+        // 现金退款减少现金桶、退回余额只影响总额——与日报/交班同一口径。
+        BigDecimal refundedAmount = TransactionService.totalReturns(returnsByMethod);
+        totalSales -= refundedAmount.doubleValue();
+        cashSales -= channelReturns(returnsByMethod, "CASH");
+        wechatSales -= channelReturns(returnsByMethod, "WECHAT");
+        alipaySales -= channelReturns(returnsByMethod, "ALIPAY");
+        cardSales -= channelReturns(returnsByMethod, "CARD");
 
         // 更新UI
         totalSalesLabel.setText(CurrencyUtil.format(totalSales));

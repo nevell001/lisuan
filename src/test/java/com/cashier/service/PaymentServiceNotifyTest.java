@@ -64,7 +64,7 @@ class PaymentServiceNotifyTest extends DatabaseTestBase {
 
     private PaymentOrder createWechatOrder(BigDecimal amount) throws SQLException {
         PaymentOrder order = PaymentService.createPaymentOrder(
-            "NOTIFY-T-" + System.nanoTime(), amount, PaymentOrder.PaymentChannel.WECHAT, "POS-1");
+            "NOTIFY-T-" + System.nanoTime(), amount, PaymentOrder.PaymentChannel.WECHAT, "POS-1", "tester");
         assertNotNull(order);
         assertNotNull(order.merchantOrderNo);
         return order;

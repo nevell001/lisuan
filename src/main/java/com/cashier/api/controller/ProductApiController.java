@@ -147,7 +147,13 @@ public class ProductApiController {
             
             applyProductUpdates(product, request);
             
-            productDAO.update(product);
+            if (!productDAO.update(product)) {
+                // 乐观锁：version 不匹配说明并发修改已提交，不能回 success 让调用方以为写成功了
+                logger.warn("更新商品冲突（乐观锁未命中）: {} ({})", product.name, product.id);
+                ctx.status(HttpStatus.CONFLICT)
+                   .json(Map.of("success", false, "message", "商品已被其他操作修改，请重新获取后再试"));
+                return;
+            }
             
             logger.info("更新商品: {} ({})", product.name, product.id);
             ctx.json(Map.of("success", true, "data", product, "message", "商品更新成功"));

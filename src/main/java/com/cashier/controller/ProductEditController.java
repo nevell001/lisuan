@@ -13,6 +13,7 @@ import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import com.cashier.util.FormValidator;
+import com.cashier.util.UIOptimizer;
 import javafx.fxml.FXML;
 
 import java.math.BigDecimal;
@@ -135,57 +136,56 @@ public class ProductEditController {
      * 加载分类数据
      */
     private void loadCategories() {
-        List<String> categories = new ArrayList<>();
-        categories.add("默认分类"); // 添加默认分类
-
-        try {
-            List<Category> categoryList = DAOFactory.getInstance().getCategoryDAO().findAll();
-            for (Category category : categoryList) {
-                categories.add(category.name);
-            }
-        } catch (SQLException e) {
-            logger.error("加载分类数据失败", e);
-        }
-
-        categoryComboBox.setItems(javafx.collections.FXCollections.observableArrayList(categories));
+        // 打开商品编辑弹窗会连查分类/单位/供应商三张表：都放后台，避免弹窗卡顿
+        UIOptimizer.runInBackground(
+            () -> {
+                List<String> categories = new ArrayList<>();
+                categories.add("默认分类"); // 添加默认分类
+                for (Category category : DAOFactory.getInstance().getCategoryDAO().findAll()) {
+                    categories.add(category.name);
+                }
+                return categories;
+            },
+            categories -> categoryComboBox.setItems(
+                javafx.collections.FXCollections.observableArrayList(categories)),
+            e -> logger.error("加载分类数据失败", e));
     }
 
     /**
      * 加载单位数据
      */
     private void loadUnits() {
-        List<String> units = new ArrayList<>();
-        units.add("个"); // 添加默认单位
-
-        try {
-            List<Unit> unitList = DAOFactory.getInstance().getUnitDAO().findAll();
-            for (Unit unit : unitList) {
-                units.add(unit.name);
-            }
-        } catch (SQLException e) {
-            logger.error("加载单位数据失败", e);
-        }
-
-        unitComboBox.setItems(javafx.collections.FXCollections.observableArrayList(units));
+        UIOptimizer.runInBackground(
+            () -> {
+                List<String> units = new ArrayList<>();
+                units.add("个"); // 添加默认单位
+                for (Unit unit : DAOFactory.getInstance().getUnitDAO().findAll()) {
+                    units.add(unit.name);
+                }
+                return units;
+            },
+            units -> unitComboBox.setItems(
+                javafx.collections.FXCollections.observableArrayList(units)),
+            e -> logger.error("加载单位数据失败", e));
     }
 
     /**
      * 加载供应商数据
      */
     private void loadSuppliers() {
-        List<String> suppliers = new ArrayList<>();
-        // 不添加默认供应商，要求必须选择
-
-        try {
-            List<Supplier> supplierList = DAOFactory.getInstance().getSupplierDAO().findByStatus(true, PRODUCT_SUPPLIER_LIMIT);
-            for (Supplier supplier : supplierList) {
-                suppliers.add(supplier.name);
-            }
-        } catch (SQLException e) {
-            logger.error("加载供应商数据失败", e);
-        }
-
-        supplierComboBox.setItems(javafx.collections.FXCollections.observableArrayList(suppliers));
+        UIOptimizer.runInBackground(
+            () -> {
+                List<String> suppliers = new ArrayList<>();
+                // 不添加默认供应商，要求必须选择
+                List<Supplier> supplierList = DAOFactory.getInstance().getSupplierDAO().findByStatus(true, PRODUCT_SUPPLIER_LIMIT);
+                for (Supplier supplier : supplierList) {
+                    suppliers.add(supplier.name);
+                }
+                return suppliers;
+            },
+            suppliers -> supplierComboBox.setItems(
+                javafx.collections.FXCollections.observableArrayList(suppliers)),
+            e -> logger.error("加载供应商数据失败", e));
     }
 
     /**

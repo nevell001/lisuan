@@ -8,6 +8,7 @@ import com.cashier.model.PurchaseOrder;
 import com.cashier.model.PurchaseOrderItem;
 import com.cashier.model.Supplier;
 import com.cashier.util.CurrencyUtil;
+import com.cashier.util.UIOptimizer;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import javafx.collections.FXCollections;
@@ -243,30 +244,34 @@ public class PurchaseReportController {
      * 加载数据
      */
     private void loadData() {
-        try {
-            allOrders = new ArrayList<>();
-            allSuppliers = DAOFactory.getInstance().getSupplierDAO().findRecent(PURCHASE_REPORT_SUPPLIER_LIMIT);
-            orderItemsMap = new HashMap<>();
+        allOrders = new ArrayList<>();
+        orderItemsMap = new HashMap<>();
 
-            // 加载供应商列表到下拉框
-            javafx.collections.ObservableList<String> supplierList = javafx.collections.FXCollections.observableArrayList();
-            supplierList.add("全部供应商");
-            for (Supplier supplier : allSuppliers) {
-                supplierList.add(supplier.name);
-            }
-            supplierComboBox.setItems(supplierList);
-            com.cashier.util.I18nUiUtils.configureComboBox(supplierComboBox, value ->
-                "全部供应商".equals(value) ? I18nManager.getInstance().get("filter.all_suppliers") : value);
-            supplierComboBox.getSelectionModel().select(0);
+        // 供应商查询放后台：页面初始化时不阻塞界面，下拉框回 FX 线程再填充
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getSupplierDAO().findRecent(PURCHASE_REPORT_SUPPLIER_LIMIT),
+            suppliers -> {
+                allSuppliers = suppliers;
 
-            logger.info("成功加载 {} 个供应商", allSuppliers.size());
-        } catch (SQLException e) {
-            logger.error("加载数据失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            allOrders = new ArrayList<>();
-            allSuppliers = new ArrayList<>();
-            orderItemsMap = new HashMap<>();
-        }
+                // 加载供应商列表到下拉框
+                javafx.collections.ObservableList<String> supplierList = javafx.collections.FXCollections.observableArrayList();
+                supplierList.add("全部供应商");
+                for (Supplier supplier : suppliers) {
+                    supplierList.add(supplier.name);
+                }
+                supplierComboBox.setItems(supplierList);
+                com.cashier.util.I18nUiUtils.configureComboBox(supplierComboBox, value ->
+                    "全部供应商".equals(value) ? I18nManager.getInstance().get("filter.all_suppliers") : value);
+                supplierComboBox.getSelectionModel().select(0);
+
+                logger.info("成功加载 {} 个供应商", suppliers.size());
+            },
+            e -> {
+                logger.error("加载数据失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA)
+                    + ": " + e.getMessage());
+                allSuppliers = new ArrayList<>();
+            });
     }
 
     /**
@@ -336,27 +341,43 @@ public class PurchaseReportController {
 
         String selectedSupplier = supplierComboBox.getSelectionModel().getSelectedItem();
 
-        List<PurchaseOrder> filteredOrders;
-        try {
-            loadOrdersByDateRange(startDate, endDate);
-            filteredOrders = filterOrders(startDate, endDate, selectedSupplier);
-        } catch (SQLException e) {
-            logger.error("加载采购报表订单失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            return;
-        }
-
-        // 计算统计数据
-        calculateStatistics(filteredOrders);
+        // 订单 + 明细两个查询放后台（区间内全量订单）；筛选与统计回 FX 线程执行
+        UIOptimizer.runInBackground(
+            () -> loadReportData(startDate, endDate),
+            data -> {
+                if (data == null) {
+                    showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA));
+                    return;
+                }
+                allOrders = data.orders();
+                orderItemsMap = data.itemsByOrder();
+                calculateStatistics(filterOrders(startDate, endDate, selectedSupplier));
+            },
+            e -> {
+                logger.error("加载采购报表订单失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA)
+                    + ": " + e.getMessage());
+            });
     }
 
-    private void loadOrdersByDateRange(LocalDate startDate, LocalDate endDate) throws SQLException {
-        allOrders = DAOFactory.getInstance().getPurchaseOrderDAO().findByDateRange(startDate.toString(), endDate.toString());
-        orderItemsMap = DAOFactory.getInstance().getPurchaseOrderItemDAO().findByOrderIds(
-                allOrders.stream().map(order -> order.id).toList()
-            ).stream()
-            .collect(Collectors.groupingBy(item -> item.orderId));
-        logger.info("成功加载 {} 条采购订单记录", allOrders.size());
+    /** 后台线程用：只查库并返回数据（订单 + 明细分组），不碰界面。返回 {@code null} 表示查询失败。 */
+    private ReportData loadReportData(LocalDate startDate, LocalDate endDate) {
+        try {
+            List<PurchaseOrder> orders = DAOFactory.getInstance().getPurchaseOrderDAO().findByDateRange(startDate.toString(), endDate.toString());
+            Map<Integer, List<PurchaseOrderItem>> itemsByOrder = DAOFactory.getInstance().getPurchaseOrderItemDAO().findByOrderIds(
+                    orders.stream().map(order -> order.id).toList()
+                ).stream()
+                .collect(Collectors.groupingBy(item -> item.orderId));
+            logger.info("成功加载 {} 条采购订单记录", orders.size());
+            return new ReportData(orders, itemsByOrder);
+        } catch (SQLException e) {
+            logger.error("加载采购报表订单失败", e);
+            return null;
+        }
+    }
+
+    /** 后台查询结果：订单 + 按订单分组的明细。 */
+    private record ReportData(List<PurchaseOrder> orders, Map<Integer, List<PurchaseOrderItem>> itemsByOrder) {
     }
 
     /**

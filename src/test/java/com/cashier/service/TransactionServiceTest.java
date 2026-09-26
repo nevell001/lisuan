@@ -474,6 +474,98 @@ class TransactionServiceTest extends DatabaseTestBase {
         assertAmountEquals(new BigDecimal("1.81"), finalAmount);
     }
 
+    @Test
+    @Order(90)
+    @DisplayName("交易失败回滚后不得污染调用方持有的会员对象（等级/折扣/积分/余额/版本）")
+    void failedTransactionKeepsCallerMemberUntouched() throws Exception {
+        // 高价商品：若事务成功，本单积分会把会员从「普通」顶到「银卡」，折扣随之变 9.5
+        Product expensive = createProduct("回滚测试高价商品", 100.0, 50);
+        List<CartItem> items = new ArrayList<>();
+        items.add(new CartItem(expensive, 2));
+        Map<String, Product> stock = new HashMap<>();
+        stock.put(expensive.name, expensive);
+
+        // 先落一笔同号交易，让事务在 applyMemberInTransaction 之后、persist 时主键冲突
+        String duplicatedId = "ORD-DUP-ROLLBACK-1";
+        Transaction seed = new Transaction();
+        seed.transactionId = duplicatedId;
+        seed.timestamp = "2026-01-01 10:00:00";
+        seed.totalAmount = BigDecimal.ONE;
+        seed.tax = BigDecimal.ZERO;
+        seed.finalAmount = BigDecimal.ONE;
+        seed.paymentMethod = "现金";
+        seed.items = new ArrayList<>();
+        assertTrue(transactionDAO.insert(seed), "预置同号交易应成功");
+
+        Transaction tx = new Transaction();
+        tx.transactionId = duplicatedId;
+        tx.timestamp = "2026-01-01 10:00:01";
+        tx.paymentMethod = "现金";
+        tx.items = new ArrayList<>();
+        tx.totalAmount = TransactionService.calculateTotalAmount(items);
+        tx.finalAmount = TransactionService.calculateFinalAmount(items, testMember, null);
+        tx.tax = TransactionService.calculateTax(tx.finalAmount);
+        tx.operatorName = "测试收银员";
+        tx.memberPhone = testMember.phone;
+
+        String levelBefore = testMember.level;
+        BigDecimal discountBefore = testMember.discount;
+        BigDecimal pointsBefore = testMember.points;
+        BigDecimal balanceBefore = testMember.balance;
+        int versionBefore = testMember.version;
+
+        TransactionService.TransactionResult result =
+            TransactionService.executeTransaction(items, testMember, tx, stock, null);
+
+        assertFalse(result.isSuccess(), "同号交易应失败（主键冲突）");
+        assertEquals(levelBefore, testMember.level, "回滚后会员等级不得变成未成交的银卡");
+        assertEquals(0, discountBefore.compareTo(testMember.discount), "回滚后折扣不得变成未成交的 9.5");
+        assertEquals(0, pointsBefore.compareTo(testMember.points), "回滚后积分不得增加");
+        assertEquals(0, balanceBefore.compareTo(testMember.balance), "回滚后余额不得变化");
+        assertEquals(versionBefore, testMember.version, "回滚后版本号不得递增");
+    }
+
+    @Test
+    @Order(91)
+    @DisplayName("净额口径：退货按退款方式归一化分组、按完成日归集，未知方式归 UNKNOWN")
+    void returnsAreGroupedByNormalizedMethodAndCompletionDay() {
+        com.cashier.model.ReturnOrder cashReturn = returnOrder("现金", "4.00", "2026-09-10 12:00:00");
+        com.cashier.model.ReturnOrder codeReturn = returnOrder("CASH", "1.50", "2026-09-10 18:00:00");
+        com.cashier.model.ReturnOrder balanceReturn = returnOrder("MEMBER_BALANCE", "2.00", "2026-09-11 09:00:00");
+        com.cashier.model.ReturnOrder unknownReturn = returnOrder(null, "0.50", "2026-09-11 10:00:00");
+        // 金额缺失的脏数据必须跳过而不是 NPE
+        com.cashier.model.ReturnOrder broken = returnOrder("现金", null, "2026-09-11 11:00:00");
+
+        List<com.cashier.model.ReturnOrder> returns =
+            List.of(cashReturn, codeReturn, balanceReturn, unknownReturn, broken);
+
+        Map<String, BigDecimal> byMethod = TransactionService.returnsByMethod(returns);
+        assertEquals(0, new BigDecimal("5.50").compareTo(byMethod.get("CASH")),
+            "「现金」与 CASH 必须合并到同一渠道");
+        assertEquals(0, new BigDecimal("2.00").compareTo(byMethod.get("MEMBER_BALANCE")));
+        assertEquals(0, new BigDecimal("0.50").compareTo(byMethod.get("UNKNOWN")),
+            "未识别的退款方式应归 UNKNOWN 而不是丢掉");
+        assertEquals(0, new BigDecimal("8.00").compareTo(TransactionService.totalReturns(byMethod)),
+            "总退货金额 = 各渠道之和");
+
+        Map<String, BigDecimal> byDay = TransactionService.returnsByDay(returns);
+        assertEquals(0, new BigDecimal("5.50").compareTo(byDay.get("2026-09-10")));
+        assertEquals(0, new BigDecimal("2.50").compareTo(byDay.get("2026-09-11")));
+
+        assertEquals(BigDecimal.ZERO, TransactionService.totalReturns(null));
+        assertTrue(TransactionService.returnsByMethod(null).isEmpty());
+    }
+
+    private com.cashier.model.ReturnOrder returnOrder(String paymentMethod, String amount, String completedAt) {
+        com.cashier.model.ReturnOrder order = new com.cashier.model.ReturnOrder();
+        order.paymentMethod = paymentMethod;
+        order.totalAmount = amount == null ? null : new BigDecimal(amount);
+        order.completedDate = LocalDateTime.parse(completedAt,
+            com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME)
+            .atZone(java.time.ZoneId.systemDefault()).toInstant();
+        return order;
+    }
+
     private Promotion activePromotion(String name, String type, BigDecimal threshold, BigDecimal discount) {
         Promotion promotion = new Promotion();
         promotion.promotionCode = "PROMO_" + name.hashCode() + "_" + System.nanoTime();

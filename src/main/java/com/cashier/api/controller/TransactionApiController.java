@@ -19,7 +19,6 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
-import java.time.format.DateTimeFormatter;
 import java.util.*;
 
 /**
@@ -27,7 +26,6 @@ import java.util.*;
  */
 public class TransactionApiController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(TransactionApiController.class);
-    private static final DateTimeFormatter ID_FORMATTER = com.cashier.util.DateTimeFormats.COMPACT_DATE_TIME_MILLIS;
     private static final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
     private static final int DEFAULT_TRANSACTION_LIST_LIMIT = 100;
     private static final int MAX_TRANSACTION_LIST_LIMIT = 500;
@@ -111,6 +109,16 @@ public class TransactionApiController {
                    .json(Map.of("success", false, "message", "支付方式不能为空"));
                 return;
             }
+            // 落库前归一化为规范中文值（与桌面端一致）：否则库里会同时存在「现金」与 CASH，
+            // 报表/交班按其中一种分桶就会漏计；同时挡掉任意字符串与超长值（曾直接 500）
+            String paymentMethod = com.cashier.util.I18nUiUtils.storedPaymentMethod(request.paymentMethod);
+            if (paymentMethod == null) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of("success", false,
+                       "message", "不支持的支付方式: " + request.paymentMethod
+                           + "（可用：现金/微信/支付宝/银行卡/会员余额，或 CASH/WECHAT/ALIPAY/CARD/MEMBER_BALANCE）"));
+                return;
+            }
 
             // 明细只信任商品 ID 与数量：单价/小计/合计/税额一律按库中商品由服务端重算，
             // 避免客户端直接指定 finalAmount 少收款，也让库存与积分走与收银台相同的引擎。
@@ -141,7 +149,8 @@ public class TransactionApiController {
 
             // 操作员一律取认证用户，忽略请求体中的自报身份（防止审计归属被伪造）
             User operator = ctx.attribute("currentUser");
-            String transactionId = "T" + LocalDateTime.now().format(ID_FORMATTER);
+            // 单号带序号与随机段：裸毫秒时间戳并发时会撞 transactions 主键，整单失败
+            String transactionId = TransactionService.generateTransactionId("T");
 
             Transaction transaction = new Transaction();
             transaction.transactionId = transactionId;
@@ -155,7 +164,7 @@ public class TransactionApiController {
             transaction.finalAmount = TransactionService.calculateFinalAmount(cartItems, member, promotion);
             // 税额按实付金额计（与两个收银台同口径）；价内税，不影响应付金额
             transaction.tax = TransactionService.calculateTax(transaction.finalAmount);
-            transaction.paymentMethod = request.paymentMethod;
+            transaction.paymentMethod = paymentMethod;
             if (member != null) {
                 transaction.memberId = member.id;
                 transaction.memberPhone = member.phone;
@@ -397,6 +406,8 @@ public class TransactionApiController {
         returnOrder.operatorName = transaction.operatorName != null && !transaction.operatorName.isBlank()
             ? transaction.operatorName : "system";
         returnOrder.status = "COMPLETED"; // 直接完成，无需审批
+        // 完成时间必须落库：营业额净额按 completed_date 归属退款（见 ReturnOrderDAO.sumCompletedReturnsByMethod）
+        returnOrder.completedDate = java.time.Instant.now();
         returnOrder.returnOrderId = DAOFactory.getInstance().getReturnOrderDAO().generateNextReturnOrderId(conn);
         return returnOrder;
     }

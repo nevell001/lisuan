@@ -10,6 +10,7 @@ import com.cashier.model.Product;
 import com.cashier.model.Transaction;
 import com.cashier.util.CurrencyUtil;
 import com.cashier.util.DateTimeFormats;
+import com.cashier.util.UIOptimizer;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import com.cashier.util.FormValidator;
@@ -413,11 +414,56 @@ public class InventoryReportController {
      */
     private void calculateStatistics(LocalDate startDate, LocalDate endDate, String categoryName,
                                     double turnoverThreshold, int slowSalesThreshold, int inventoryDaysThreshold) {
-        if (!loadProductsForReport(categoryName)) {
-            return;
+        // 商品（最多 INVENTORY_REPORT_PRODUCT_LIMIT 条）与区间内全部交易两个查询都放后台：
+        // 点击"生成报表"时同步查库会让界面冻结。聚合与渲染回 FX 线程执行（只碰界面与内存数据）。
+        UIOptimizer.runInBackground(
+            () -> loadReportData(categoryName, startDate, endDate),
+            data -> {
+                if (data == null) {
+                    allProducts = new ArrayList<>();
+                    allTransactions = new ArrayList<>();
+                    return;
+                }
+                allProducts = data.products();
+                allTransactions = data.transactions();
+                renderStatistics(startDate, endDate, categoryName, turnoverThreshold,
+                    slowSalesThreshold, inventoryDaysThreshold);
+            },
+            e -> {
+                logger.error("生成库存报表失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA)
+                    + ": " + e.getMessage());
+            });
+    }
+
+    /** 后台线程用：只查库并返回数据，不碰界面。返回 {@code null} 表示查询失败。 */
+    private ReportData loadReportData(String categoryName, LocalDate startDate, LocalDate endDate) {
+        try {
+            List<Product> products;
+            if (categoryName != null && !"全部分类".equals(categoryName)) {
+                products = productDAO.findByCategory(categoryName, FIRST_PAGE, INVENTORY_REPORT_PRODUCT_LIMIT).getData();
+            } else {
+                products = productDAO.findAll(FIRST_PAGE, INVENTORY_REPORT_PRODUCT_LIMIT).getData();
+            }
+            logger.info("库存报表加载商品 {} 条，单次上限 {}", products.size(), INVENTORY_REPORT_PRODUCT_LIMIT);
+
+            List<Transaction> transactions = DAOFactory.getInstance().getTransactionDAO().findByDateRange(
+                startDate.atStartOfDay().format(DateTimeFormats.STANDARD_DATE_TIME),
+                endDate.plusDays(1).atStartOfDay().minusSeconds(1).format(DateTimeFormats.STANDARD_DATE_TIME));
+            return new ReportData(products, transactions);
+        } catch (SQLException e) {
+            logger.error("加载库存报表数据失败", e);
+            return null;
         }
-        loadTransactions(startDate, endDate);
-        Map<String, SalesStats> salesStatsMap = buildSalesStatsMap();
+    }
+
+    /** 后台查询结果：商品 + 区间内交易。 */
+    private record ReportData(List<Product> products, List<Transaction> transactions) {
+    }
+
+    /** FX 线程用：聚合 + 渲染（{@code allProducts}/{@code allTransactions} 已就绪）。 */
+    private void renderStatistics(LocalDate startDate, LocalDate endDate, String categoryName,
+                                  double turnoverThreshold, int slowSalesThreshold, int inventoryDaysThreshold) {        Map<String, SalesStats> salesStatsMap = buildSalesStatsMap();
 
         // 总商品数、总库存价值
         int totalProducts = 0;
@@ -541,40 +587,6 @@ public class InventoryReportController {
         updateSlowSalesTable(slowSalesRecords);
         updateOverstockTable(overstockRecords);
         updateCharts(productRecords, categoryQuantityMap, categoryAmountMap);
-    }
-
-    private boolean loadProductsForReport(String categoryName) {
-        try {
-            if (categoryName != null && !"全部分类".equals(categoryName)) {
-                allProducts = productDAO.findByCategory(
-                    categoryName,
-                    FIRST_PAGE,
-                    INVENTORY_REPORT_PRODUCT_LIMIT
-                ).getData();
-            } else {
-                allProducts = productDAO.findAll(FIRST_PAGE, INVENTORY_REPORT_PRODUCT_LIMIT).getData();
-            }
-            logger.info("库存报表加载商品 {} 条，单次上限 {}", allProducts.size(), INVENTORY_REPORT_PRODUCT_LIMIT);
-            return true;
-        } catch (SQLException e) {
-            logger.error("加载库存报表商品失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            allProducts = new ArrayList<>();
-            return false;
-        }
-    }
-
-    private void loadTransactions(LocalDate startDate, LocalDate endDate) {
-        try {
-            allTransactions = DAOFactory.getInstance().getTransactionDAO().findByDateRange(
-                startDate.atStartOfDay().format(DateTimeFormats.STANDARD_DATE_TIME),
-                endDate.plusDays(1).atStartOfDay().minusSeconds(1).format(DateTimeFormats.STANDARD_DATE_TIME)
-            );
-        } catch (SQLException e) {
-            logger.error("加载库存报表交易数据失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            allTransactions = new ArrayList<>();
-        }
     }
 
     private Map<String, SalesStats> buildSalesStatsMap() {

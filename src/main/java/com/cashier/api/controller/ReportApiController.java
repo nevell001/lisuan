@@ -2,6 +2,7 @@ package com.cashier.api.controller;
 
 import com.cashier.dao.DAOFactory;
 import com.cashier.model.Transaction;
+import com.cashier.service.TransactionService;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
@@ -13,11 +14,25 @@ import java.util.*;
 
 /**
  * 交易报表 REST API
+ *
+ * <p>营业额为净额口径（TD-003）：已整单退款（{@code status='REFUNDED'}）的交易不计入
+ * {@code totalAmount}，该期间已完成的退货按退款方式冲减对应渠道桶，另给
+ * {@code refundedAmount} / {@code netAmount} 供对账。</p>
  */
 public class ReportApiController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(ReportApiController.class);
     private static final int DEFAULT_TOP_PRODUCTS_LIMIT = 10;
     private static final int MAX_TOP_PRODUCTS_LIMIT = 100;
+
+    /** 该交易是否已被整单退款（不计营业额，但仍在明细里供对账）。 */
+    private static boolean isRefunded(Transaction transaction) {
+        return transaction != null && "REFUNDED".equals(transaction.status);
+    }
+
+    /** 从渠道桶里扣掉同渠道的退货金额；退货发生在收款之前（如退昨天的现金单）时允许为负。 */
+    private static BigDecimal subtractReturns(BigDecimal bucket, BigDecimal returns) {
+        return returns == null ? bucket : bucket.subtract(returns);
+    }
     
     /**
      * 销售日报
@@ -28,39 +43,60 @@ public class ReportApiController {
             String dateStr = ctx.queryParam("date");
             if (dateStr == null) dateStr = LocalDate.now().toString();
             LocalDate date = LocalDate.parse(dateStr);
-            List<Transaction> dayTransactions = DAOFactory.getInstance().getTransactionDAO().findByDateRange(
-                date.atStartOfDay().format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME),
-                date.plusDays(1).atStartOfDay().minusSeconds(1).format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME)
-            );
+            String dayStart = date.atStartOfDay().format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME);
+            String dayEnd = date.plusDays(1).atStartOfDay().minusSeconds(1)
+                .format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME);
+            List<Transaction> dayTransactions = DAOFactory.getInstance().getTransactionDAO().findByDateRange(dayStart, dayEnd);
             
             BigDecimal totalAmount = BigDecimal.ZERO;
             BigDecimal cashAmount = BigDecimal.ZERO;
             BigDecimal wechatAmount = BigDecimal.ZERO;
             BigDecimal alipayAmount = BigDecimal.ZERO;
             BigDecimal cardAmount = BigDecimal.ZERO;
+            int effectiveTransactions = 0;
             
             for (Transaction t : dayTransactions) {
+                // 已整单退款的交易不计营业额（净额口径，见 docs/TECH_DEBT.md 的 TD-003），
+                // 但仍出现在 transactions 明细里供对账/审计
+                if (isRefunded(t)) {
+                    continue;
+                }
                 if (t.finalAmount != null) {
+                    effectiveTransactions++;
                     totalAmount = totalAmount.add(t.finalAmount);
                     
-                    String payment = t.paymentMethod != null ? t.paymentMethod : "";
-                    if (payment.contains("现金")) {
+                    // 归一化后再分桶：库里可能同时存在「现金」与历史/导入的 CASH，
+                    // 裸 contains 会让代码形式的现金单计入 totalAmount 却不出现在任何桶里
+                    String payment = com.cashier.util.I18nUiUtils.canonicalPaymentMethod(t.paymentMethod);
+                    if ("CASH".equals(payment)) {
                         cashAmount = cashAmount.add(t.finalAmount);
-                    } else if (payment.contains("微信")) {
+                    } else if ("WECHAT".equals(payment)) {
                         wechatAmount = wechatAmount.add(t.finalAmount);
-                    } else if (payment.contains("支付宝")) {
+                    } else if ("ALIPAY".equals(payment)) {
                         alipayAmount = alipayAmount.add(t.finalAmount);
-                    } else if (payment.contains("银行卡")) {
+                    } else if ("CARD".equals(payment)) {
                         cardAmount = cardAmount.add(t.finalAmount);
                     }
                 }
             }
+
+            // 该日已完成的退货按退款方式冲减对应渠道：现金退款减少现金桶，退回余额只影响总额
+            java.util.Map<String, BigDecimal> returns = TransactionService.returnsByMethod(
+                DAOFactory.getInstance().getReturnOrderDAO().findCompletedReturnsBetween(dayStart, dayEnd));
+            BigDecimal refundedAmount = TransactionService.totalReturns(returns);
+            cashAmount = subtractReturns(cashAmount, returns.get("CASH"));
+            wechatAmount = subtractReturns(wechatAmount, returns.get("WECHAT"));
+            alipayAmount = subtractReturns(alipayAmount, returns.get("ALIPAY"));
+            cardAmount = subtractReturns(cardAmount, returns.get("CARD"));
             
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("date", dateStr);
-            result.put("totalTransactions", dayTransactions.size());
+            result.put("totalTransactions", effectiveTransactions);
+            // totalAmount = 有效销售（不含已退款交易）；netAmount = 再扣掉该日已完成的退货
             result.put("totalAmount", totalAmount);
+            result.put("refundedAmount", refundedAmount);
+            result.put("netAmount", totalAmount.subtract(refundedAmount));
             result.put("cashAmount", cashAmount);
             result.put("wechatAmount", wechatAmount);
             result.put("alipayAmount", alipayAmount);
@@ -85,17 +121,23 @@ public class ReportApiController {
             if (monthStr == null) monthStr = LocalDate.now().format(com.cashier.util.DateTimeFormats.MONTH);
             LocalDate monthStart = LocalDate.parse(monthStr + "-01", com.cashier.util.DateTimeFormats.DATE);
             LocalDate monthEnd = monthStart.plusMonths(1).minusDays(1);
-            List<Transaction> monthTransactions = DAOFactory.getInstance().getTransactionDAO().findByDateRange(
-                monthStart.atStartOfDay().format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME),
-                monthEnd.plusDays(1).atStartOfDay().minusSeconds(1).format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME)
-            );
+            String monthStartDateTime = monthStart.atStartOfDay()
+                .format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME);
+            String monthEndDateTime = monthEnd.plusDays(1).atStartOfDay().minusSeconds(1)
+                .format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME);
+            List<Transaction> monthTransactions = DAOFactory.getInstance().getTransactionDAO().findByDateRange(monthStartDateTime, monthEndDateTime);
             
             BigDecimal totalAmount = BigDecimal.ZERO;
             Map<String, BigDecimal> dailyAmounts = new TreeMap<>();
             Map<String, Integer> dailyCounts = new TreeMap<>();
+            int effectiveTransactions = 0;
             
             for (Transaction t : monthTransactions) {
-                if (t.finalAmount != null) {
+                if (isRefunded(t)) {
+                    continue; // 已整单退款不计营业额（净额口径，TD-003）
+                }
+                if (t.finalAmount != null && t.timestamp != null && t.timestamp.length() >= 10) {
+                    effectiveTransactions++;
                     totalAmount = totalAmount.add(t.finalAmount);
                     
                     String day = t.timestamp.substring(0, 10);
@@ -103,12 +145,22 @@ public class ReportApiController {
                     dailyCounts.merge(day, 1, Integer::sum);
                 }
             }
+
+            // 按退货完成日冲减日趋势，保证 ΣdailyAmounts == netAmount 可对账
+            List<com.cashier.model.ReturnOrder> monthReturns = DAOFactory.getInstance().getReturnOrderDAO()
+                .findCompletedReturnsBetween(monthStartDateTime, monthEndDateTime);
+            BigDecimal refundedAmount = TransactionService.totalReturns(TransactionService.returnsByMethod(monthReturns));
+            for (Map.Entry<String, BigDecimal> entry : TransactionService.returnsByDay(monthReturns).entrySet()) {
+                dailyAmounts.merge(entry.getKey(), entry.getValue().negate(), BigDecimal::add);
+            }
             
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
             result.put("month", monthStr);
-            result.put("totalTransactions", monthTransactions.size());
+            result.put("totalTransactions", effectiveTransactions);
             result.put("totalAmount", totalAmount);
+            result.put("refundedAmount", refundedAmount);
+            result.put("netAmount", totalAmount.subtract(refundedAmount));
             result.put("dayCount", dailyAmounts.size());
             result.put("dailyAmounts", dailyAmounts);
             result.put("dailyCounts", dailyCounts);

@@ -78,7 +78,7 @@ class PaymentServiceRefundTest extends DatabaseTestBase {
     private PaymentOrder paidOrder(String amount) throws SQLException {
         PaymentOrder order = PaymentService.createPaymentOrder(
             "REFUND-T-" + System.nanoTime(), new BigDecimal(amount),
-            PaymentOrder.PaymentChannel.WECHAT, "POS-1");
+            PaymentOrder.PaymentChannel.WECHAT, "POS-1", "tester");
 
         Map<String, String> notify = new HashMap<>();
         notify.put("out_trade_no", order.merchantOrderNo);

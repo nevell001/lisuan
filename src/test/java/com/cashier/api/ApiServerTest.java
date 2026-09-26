@@ -8,9 +8,13 @@ import org.junit.jupiter.api.Test;
 import java.lang.reflect.Field;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.Base64;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -149,5 +153,66 @@ class ApiServerTest {
         assertTrue(today < byId,
             "/api/transactions/today 必须注册在 /api/transactions/{id} 之前，"
                 + "否则 Javalin 会把它当成 id=\"today\" 交给详情接口、回一个 404");
+    }
+
+    @Test
+    @DisplayName("任何字面量路由都不得被更早注册的同方法占位路由遮蔽（通用门禁）")
+    void noLiteralRouteIsShadowedByEarlierPatternRoute() throws Exception {
+        String source = Files.readString(Path.of("src/main/java/com/cashier/api/ApiServer.java"));
+
+        // 按注册顺序解析全部 REST 路由（方法 + 路径）
+        List<String[]> routes = new ArrayList<>();
+        Matcher matcher = Pattern.compile("app\\.(get|post|put|delete|patch)\\(\"([^\"]+)\"")
+            .matcher(source);
+        while (matcher.find()) {
+            routes.add(new String[]{matcher.group(1), matcher.group(2)});
+        }
+        assertTrue(routes.size() > 50, "应解析出全部路由注册，实际只有: " + routes.size());
+
+        List<String> shadowed = new ArrayList<>();
+        for (int later = 0; later < routes.size(); later++) {
+            String method = routes.get(later)[0];
+            String laterPath = routes.get(later)[1];
+            if (laterPath.contains("{")) {
+                continue; // 占位路由本身就是兜底，不存在"被遮蔽"
+            }
+            for (int earlier = 0; earlier < later; earlier++) {
+                if (!routes.get(earlier)[0].equals(method)) {
+                    continue;
+                }
+                String earlierPath = routes.get(earlier)[1];
+                if (!earlierPath.contains("{")) {
+                    continue; // 两个字面量路径只有完全相同才冲突，注册顺序不影响
+                }
+                if (patternMatches(earlierPath, laterPath)) {
+                    shadowed.add(method.toUpperCase() + " " + laterPath
+                        + " 被更早注册的 " + earlierPath + " 遮蔽");
+                }
+            }
+        }
+
+        assertTrue(shadowed.isEmpty(),
+            "字面量路由必须注册在同方法同段数的占位路由之前：Javalin 取第一个匹配的路由，"
+                + "被遮蔽的端点永远执行不到（实测 /api/products/low-stock、/api/invoices/seller-info 均为该缺陷）。实际: "
+                + shadowed);
+    }
+
+    /** Javalin 的 {param} 匹配整段；字面量段必须逐段相等。 */
+    private static boolean patternMatches(String pattern, String literal) {
+        String[] patternSegments = pattern.split("/", -1);
+        String[] literalSegments = literal.split("/", -1);
+        if (patternSegments.length != literalSegments.length) {
+            return false;
+        }
+        for (int i = 0; i < patternSegments.length; i++) {
+            String segment = patternSegments[i];
+            if (segment.startsWith("{") && segment.endsWith("}")) {
+                continue;
+            }
+            if (!segment.equals(literalSegments[i])) {
+                return false;
+            }
+        }
+        return true;
     }
 }

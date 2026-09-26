@@ -78,6 +78,22 @@ class InventoryApiControllerTest extends DatabaseTestBase {
     }
 
     @Test
+    @DisplayName("更新库存：不得把库存调成负数（400）")
+    void updateStockRejectsNegativeQuantity() throws Exception {
+        Product saved = insertProduct("负库存商品", 10, 5);
+
+        InventoryApiController.StockRequest negative = new InventoryApiController.StockRequest();
+        negative.adjustment = -999;
+        TestContext ctx = new TestContext().withRequest(HandlerType.PUT, "/api/inventory/1")
+            .withPathParam("id", String.valueOf(saved.id))
+            .withBody(negative);
+        InventoryApiController.updateStock(ctx.context);
+
+        assertEquals(HttpStatus.BAD_REQUEST, ctx.status, "库存不得被调成负数");
+        assertEquals(10, DAOFactory.getInstance().getProductDAO().findById(saved.id).quantity);
+    }
+
+    @Test
     @DisplayName("更新不存在的库存返回 404")
     void updateStockMissingReturns404() {
         InventoryApiController.StockRequest request = new InventoryApiController.StockRequest();

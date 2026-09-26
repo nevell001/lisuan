@@ -13,6 +13,7 @@ import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.*;
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 
 /**
  * 交易服务类
@@ -118,11 +119,17 @@ public class TransactionService {
         BigDecimal payableAmount = transaction.finalAmount != null ? transaction.finalAmount : calculateFinalAmount(cartItems, member);
         List<Product> updatedProducts = new ArrayList<>();
 
+        // 会员在事务内被就地改写（等级/折扣/积分/余额，版本号也会被 updateWithConnection 递增）。
+        // 若直接在调用方对象上结算，事务后续步骤失败回滚后 currentMember 会保留未成交的等级与折扣，
+        // 收银台再用它重算应付金额就会少收钱、界面余额也是错的。因此结算在副本上进行，
+        // 只有提交成功才写回原对象。库存同理（见 deductInventoryInTransaction 的 updatedProducts）。
+        Member workingMember = member == null ? null : copyMember(member);
+
         try {
             boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
                 deductInventoryInTransaction(conn, cartItems, inventory, updatedProducts);
-                if (member != null) {
-                    applyMemberInTransaction(conn, member, transaction, payableAmount);
+                if (workingMember != null) {
+                    applyMemberInTransaction(conn, workingMember, transaction, payableAmount);
                 }
                 persistTransactionAndPromotion(conn, transaction, appliedPromotion, transactionId);
                 return true;
@@ -131,6 +138,10 @@ public class TransactionService {
             if (!success) {
                 logger.warn("Transaction not committed: transactionId={}", transactionId);
                 return new TransactionResult(false, null, I18nManager.getInstance().get("service.transaction_failed"), null);
+            }
+
+            if (workingMember != null) {
+                copyMemberFields(workingMember, member);
             }
 
             for (Product product : updatedProducts) {
@@ -195,6 +206,35 @@ public class TransactionService {
 
             updatedProducts.add(latestProduct);
         }
+    }
+
+    /**
+     * 复制会员的全部可变状态（含乐观锁 version），供"事务内结算、提交后回写"使用。
+     *
+     * <p>也供收银台在**切换线程前**取副本用：结账 worker 只能拿副本，不能让后台线程
+     * 直接改写 FX 线程持有的 {@code currentMember}。传入 {@code null} 返回 {@code null}。</p>
+     */
+    public static Member copyMember(Member source) {
+        if (source == null) {
+            return null;
+        }
+        Member copy = new Member();
+        copyMemberFields(source, copy);
+        return copy;
+    }
+
+    private static void copyMemberFields(Member source, Member target) {
+        target.id = source.id;
+        target.memberCode = source.memberCode;
+        target.phone = source.phone;
+        target.name = source.name;
+        target.points = source.points;
+        target.level = source.level;
+        target.discount = source.discount;
+        target.discountRate = source.discountRate;
+        target.balance = source.balance;
+        target.birthday = source.birthday;
+        target.version = source.version;
     }
 
     /**
@@ -401,10 +441,66 @@ public class TransactionService {
     private static final java.security.SecureRandom SECURE_RANDOM = new java.security.SecureRandom();
 
     public static String generateOrderNumber() {
+        return generateTransactionId("ORD");
+    }
+
+    /**
+     * 按指定前缀生成交易单号，供桌面收银台与 REST API 共用同一套加固规则。
+     *
+     * <p>不能再用裸毫秒时间戳当主键：同毫秒/跨进程生成会撞 {@code transactions.transaction_id}，
+     * 导致整单回滚（收银台侧还会连带留下未提交的会员等级/折扣，见 executeTransaction 的快照处理）。</p>
+     */
+    public static String generateTransactionId(String prefix) {
         String ts = com.cashier.util.DateTimeFormats.COMPACT_DATE_TIME_MILLIS.format(LocalDateTime.now());
         String seq = String.format("%04d", orderSequence.getAndIncrement() % 10000);
         String randomSuffix = String.format("%08x", SECURE_RANDOM.nextInt());
-        return "ORD" + ts + seq + randomSuffix;
+        return prefix + ts + seq + randomSuffix;
+    }
+
+    /**
+     * 营业额净额口径（TD-003）：按退款方式汇总已完成的退货单。
+     *
+     * <p>纯函数，便于单测。键是 {@link com.cashier.util.I18nUiUtils#canonicalPaymentMethod} 归一化后的
+     * 代码（CASH/WECHAT/ALIPAY/CARD/MEMBER_BALANCE 或原样值），值为该方式的退货金额。</p>
+     */
+    public static java.util.Map<String, BigDecimal> returnsByMethod(List<com.cashier.model.ReturnOrder> returns) {
+        java.util.Map<String, BigDecimal> byMethod = new java.util.LinkedHashMap<>();
+        if (returns == null) {
+            return byMethod;
+        }
+        for (com.cashier.model.ReturnOrder order : returns) {
+            if (order == null || order.totalAmount == null) {
+                continue;
+            }
+            String method = com.cashier.util.I18nUiUtils.canonicalPaymentMethod(order.paymentMethod);
+            byMethod.merge(method != null ? method : "UNKNOWN", order.totalAmount, BigDecimal::add);
+        }
+        return byMethod;
+    }
+
+    /** 已完成的退货金额合计（{@code yyyy-MM-dd} → 金额），用于按日冲减月报的日趋势。 */
+    public static java.util.Map<String, BigDecimal> returnsByDay(List<com.cashier.model.ReturnOrder> returns) {
+        java.util.Map<String, BigDecimal> byDay = new java.util.TreeMap<>();
+        if (returns == null) {
+            return byDay;
+        }
+        for (com.cashier.model.ReturnOrder order : returns) {
+            if (order == null || order.totalAmount == null || order.completedDate == null) {
+                continue;
+            }
+            String day = LocalDateTime.ofInstant(order.completedDate, ZoneId.systemDefault())
+                .format(com.cashier.util.DateTimeFormats.DATE);
+            byDay.merge(day, order.totalAmount, BigDecimal::add);
+        }
+        return byDay;
+    }
+
+    /** 退货金额合计（所有渠道）。 */
+    public static BigDecimal totalReturns(java.util.Map<String, BigDecimal> returnsByMethod) {
+        if (returnsByMethod == null) {
+            return BigDecimal.ZERO;
+        }
+        return returnsByMethod.values().stream().reduce(BigDecimal.ZERO, BigDecimal::add);
     }
 
     /**

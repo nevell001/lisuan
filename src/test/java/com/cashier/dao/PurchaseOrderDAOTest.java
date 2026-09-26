@@ -17,6 +17,9 @@ class PurchaseOrderDAOTest extends DatabaseTestBase {
     private final PurchaseOrderDAORefactored purchaseOrderDAO = DAOFactory.getInstance().getPurchaseOrderDAO();
 
     private PurchaseOrder insertOrder(String orderNo) throws Exception {
+        // supplier_id 有外键（TD-009）：每个用例先保证供应商 1 存在
+        executeSql("INSERT INTO suppliers (id, supplier_code, name) VALUES (1, 'S-FK-1', '外键供应商')");
+
         PurchaseOrder order = new PurchaseOrder();
         order.orderNo = orderNo;
         order.supplierId = 1;

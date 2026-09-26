@@ -97,6 +97,17 @@ public abstract class DatabaseTestBase {
         return testDataSource.getConnection();
     }
 
+    /** 直接执行一条 SQL（测试里补外键父行用，TD-009）。 */
+    protected static void executeSql(String sql, Object... params) throws SQLException {
+        try (Connection conn = getTestConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            for (int i = 0; i < params.length; i++) {
+                pstmt.setObject(i + 1, params[i]);
+            }
+            pstmt.executeUpdate();
+        }
+    }
+
     /**
      * 创建测试表结构（简化版，只包含必要的表）
      */
@@ -529,7 +540,57 @@ public abstract class DatabaseTestBase {
             )
             """);
 
+        // 外键必须与生产一致（TD-009），否则外键类缺陷在 CI 里不可见
+        createTestForeignKeys(stmt);
+
         stmt.close();
+    }
+
+    /**
+     * 测试库外键：与生产 DDL（{@code DatabaseManager}）保持一致，否则"悬空外键 / 删用户改历史"
+     * 这类问题在 CI 里永远测不出来（TD-009）。
+     *
+     * <p>放在所有建表语句之后用 {@code ALTER TABLE} 添加，避免建表顺序耦合。
+     * 刻意<b>不</b>包含 {@code transactions.operator_username} 与 {@code operation_logs.username}：
+     * 这两列是"当时是谁做的"审计归属，生产上也不挂外键（删用户/改名不得改写历史，
+     * 且审计日志历史上会写显示名）。</p>
+     */
+    private static final String[][] TEST_SCHEMA_FOREIGN_KEYS = {
+        {"fk_tx_member", "transactions", "member_phone", "members(phone)", "SET NULL"},
+        {"fk_txitem_tx", "transaction_items", "transaction_id", "transactions(transaction_id)", "CASCADE"},
+        {"fk_po_supplier", "purchase_orders", "supplier_id", "suppliers(id)", "RESTRICT"},
+        {"fk_poi_order", "purchase_order_items", "order_id", "purchase_orders(id)", "CASCADE"},
+        {"fk_poi_product", "purchase_order_items", "product_id", "products(id)", "RESTRICT"},
+        {"fk_pa_order", "purchase_approvals", "order_id", "purchase_orders(id)", "CASCADE"},
+        {"fk_pi_order", "purchase_inbound", "order_id", "purchase_orders(id)", "RESTRICT"},
+        {"fk_pii_inbound", "purchase_inbound_items", "inbound_id", "purchase_inbound(id)", "CASCADE"},
+        {"fk_pii_order_item", "purchase_inbound_items", "order_item_id", "purchase_order_items(id)", "RESTRICT"},
+        {"fk_pii_product", "purchase_inbound_items", "product_id", "products(id)", "RESTRICT"},
+        {"fk_ici_check", "inventory_check_items", "check_id", "inventory_check(id)", "CASCADE"},
+        {"fk_ici_product", "inventory_check_items", "product_id", "products(id)", "RESTRICT"},
+        {"fk_roi_return", "return_order_items", "return_order_id", "return_orders(return_order_id)", "CASCADE"},
+        {"fk_ii_invoice", "invoice_items", "invoice_id", "invoices(invoice_id)", "CASCADE"},
+    };
+
+    private static void createTestForeignKeys(Statement stmt) throws SQLException {
+        for (String[] fk : TEST_SCHEMA_FOREIGN_KEYS) {
+            String name = fk[0];
+            if (constraintExists(stmt, name)) {
+                continue;
+            }
+            stmt.execute("ALTER TABLE " + fk[1] + " ADD CONSTRAINT " + name
+                + " FOREIGN KEY (" + fk[2] + ") REFERENCES " + fk[3] + " ON DELETE " + fk[4]);
+        }
+    }
+
+    private static boolean constraintExists(Statement stmt, String constraintName) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM INFORMATION_SCHEMA.TABLE_CONSTRAINTS WHERE CONSTRAINT_NAME = ?";
+        try (PreparedStatement pstmt = stmt.getConnection().prepareStatement(sql)) {
+            pstmt.setString(1, constraintName);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() && rs.getInt(1) > 0;
+            }
+        }
     }
 
     /**

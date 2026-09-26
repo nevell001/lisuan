@@ -10,6 +10,7 @@ import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 import com.cashier.util.FormValidator;
+import com.cashier.util.UIOptimizer;
 
 import java.sql.SQLException;
 import java.math.BigDecimal;
@@ -147,34 +148,42 @@ public class PurchaseOrderController {
      * 加载供应商数据
      */
     private void loadSuppliers() {
-        try {
-            List<Supplier> supplierData = DAOFactory.getInstance().getSupplierDAO().findByStatus(true, PURCHASE_SUPPLIER_LIMIT);
-            suppliers = new HashMap<>();
-            for (Supplier supplier : supplierData) {
-                suppliers.put(supplier.id, supplier);
-            }
-        } catch (SQLException e) {
-            logger.error("加载供应商数据失败", e);
-            suppliers = new HashMap<>();
-        }
+        // 打开采购单页即查库：放后台，避免整屏冻结
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getSupplierDAO().findByStatus(true, PURCHASE_SUPPLIER_LIMIT),
+            supplierData -> {
+                suppliers = new HashMap<>();
+                for (Supplier supplier : supplierData) {
+                    suppliers.put(supplier.id, supplier);
+                }
+                // 供应商名解析依赖这张表：先渲染时可能还没到，到齐后再刷一次
+                filterOrders();
+            },
+            e -> {
+                logger.error("加载供应商数据失败", e);
+                suppliers = new HashMap<>();
+            });
     }
 
     /**
      * 加载采购订单数据
      */
     private void loadOrders() {
-        try {
-            List<PurchaseOrder> orderData = DAOFactory.getInstance().getPurchaseOrderDAO().findRecent(PURCHASE_ORDER_LIMIT);
-            orders = new HashMap<>();
-            for (PurchaseOrder order : orderData) {
-                orders.put(order.id, order);
-            }
-        } catch (SQLException e) {
-            logger.error("加载采购订单数据失败", e);
-            showError(I18nManager.getInstance().get("runtime.purchase_order_load_failed", e.getMessage()));
-            orders = new HashMap<>();
-        }
-        filterOrders();
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getPurchaseOrderDAO().findRecent(PURCHASE_ORDER_LIMIT),
+            orderData -> {
+                orders = new HashMap<>();
+                for (PurchaseOrder order : orderData) {
+                    orders.put(order.id, order);
+                }
+                filterOrders();
+            },
+            e -> {
+                logger.error("加载采购订单数据失败", e);
+                showError(I18nManager.getInstance().get("runtime.purchase_order_load_failed", e.getMessage()));
+                orders = new HashMap<>();
+                filterOrders();
+            });
     }
 
     /**

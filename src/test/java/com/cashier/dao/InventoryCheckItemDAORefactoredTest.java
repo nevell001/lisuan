@@ -32,6 +32,10 @@ class InventoryCheckItemDAORefactoredTest extends DatabaseTestBase {
     @Test
     @DisplayName("明细插入后可查、可更新、可删除")
     void itemCrudLifecycle() throws SQLException {
+        // 明细表有外键（TD-009）：先造父行——盘点单 1 与商品 10
+        executeSql("INSERT INTO inventory_check (id, check_no, check_date, status) VALUES (1, 'IC-FK-1', CURRENT_DATE, 'checking')");
+        executeSql("INSERT INTO products (id, product_code, name, price, quantity, cost) VALUES (10, 'P-FK-10', '盘点测试商品', 10, 5, 5)");
+
         InventoryCheckItem item = new InventoryCheckItem();
         item.checkId = 1;
         item.productId = 10;

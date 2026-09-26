@@ -11,6 +11,7 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("库存盘点数据访问对象测试")
@@ -90,6 +91,18 @@ class InventoryCheckDAOTest extends DatabaseTestBase {
 
         assertTrue(inventoryCheckDAO.delete(check.id));
         assertEquals(0, inventoryCheckDAO.findByStatus("completed").size());
+    }
+
+    @Test
+    @DisplayName("重复完成盘点不产生状态迁移（防止差额二次累加）")
+    void completeIsGuardedAgainstRepeatedCompletion() throws SQLException {
+        InventoryCheck check = createCheck("IC202608230099", "2026-08-23", 6_000L);
+        assertTrue(inventoryCheckDAO.insert(check));
+
+        assertTrue(inventoryCheckDAO.complete(check.id, "admin"), "首次完成应发生状态迁移");
+        assertFalse(inventoryCheckDAO.complete(check.id, "admin"),
+            "盘点单已是 completed 时不得再返回 true，否则调用方会把差额二次加到库存上");
+        assertEquals("completed", inventoryCheckDAO.findById(check.id).status);
     }
 
     private InventoryCheck createCheck(String checkNo, String checkDate, long createTimeMillis) {

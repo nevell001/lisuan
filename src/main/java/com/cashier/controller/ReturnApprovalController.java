@@ -8,6 +8,7 @@ import com.cashier.model.*;
 import com.cashier.service.ReturnService;
 import com.cashier.util.CurrencyUtil;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.UIOptimizer;
 import com.cashier.util.FormValidator;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -249,9 +250,12 @@ public class ReturnApprovalController {
     }
 
     private void loadOrderItems(String returnOrderId) {
+        // 点开一张待审批退货单就要查一次明细：放后台，回 FX 线程再填表（TD-006）
         itemList.clear();
-        List<ReturnOrderItem> items = DAOFactory.getInstance().getReturnOrderItemDAO().findByReturnOrderId(returnOrderId);
-        itemList.addAll(items);
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getReturnOrderItemDAO().findByReturnOrderId(returnOrderId),
+            itemList::addAll,
+            e -> logger.error("加载退货明细失败: {}", returnOrderId, e));
     }
 
     private void clearDetail() {

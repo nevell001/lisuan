@@ -11,6 +11,7 @@ import com.cashier.util.DateTimeFormats;
 import com.cashier.util.FXMLUtils;
 import com.cashier.util.StatusBarManager;
 import com.cashier.util.FormValidator;
+import com.cashier.util.UIOptimizer;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
@@ -194,28 +195,44 @@ public class TransactionController {
      */
     private void loadTransactions() {
         logger.info("TransactionController: 开始加载交易数据...");
-        try {
-            allTransactions = findTransactionsByCurrentDateRange();
-        } catch (SQLException e) {
-            logger.error("加载交易数据失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            allTransactions = new java.util.ArrayList<>();
-        }
-        transactionList = FXCollections.observableArrayList(allTransactions);
-        transactionTable.setItems(transactionList);
-        updateStatistics();
-        logger.info("TransactionController: 加载了 {} 条交易记录", allTransactions.size());
+        // 日期选择器只能在 FX 线程读：先取窗口，再把查库交给后台任务（此前整段在 FX 线程）
+        final DateRange range = findTransactionsByCurrentDateRange();
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getTransactionDAO().findByDateRange(range.start(), range.end()),
+            transactions -> {
+                allTransactions = transactions;
+                renderTransactions();
+                logger.info("TransactionController: 加载了 {} 条交易记录", allTransactions.size());
+            },
+            e -> {
+                logger.error("加载交易数据失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
+                allTransactions = new java.util.ArrayList<>();
+                renderTransactions();
+            });
     }
 
-    private List<Transaction> findTransactionsByCurrentDateRange() throws SQLException {
+    /** 交易查询窗口（{@code yyyy-MM-dd HH:mm:ss}，含端点） */
+    private record DateRange(String start, String end) {
+    }
+
+    /** 读取日期选择器得到当前查询窗口；只能在 FX 线程调用 */
+    private DateRange findTransactionsByCurrentDateRange() {
         LocalDate startDate = startDatePicker.getValue();
         LocalDate endDate = endDatePicker.getValue();
         LocalDate effectiveStart = startDate != null ? startDate : LocalDate.now().minusDays(30);
         LocalDate effectiveEnd = endDate != null ? endDate : LocalDate.now();
-        return DAOFactory.getInstance().getTransactionDAO().findByDateRange(
+        return new DateRange(
             effectiveStart.atStartOfDay().format(DateTimeFormats.STANDARD_DATE_TIME),
             effectiveEnd.plusDays(1).atStartOfDay().minusSeconds(1).format(DateTimeFormats.STANDARD_DATE_TIME)
         );
+    }
+
+    /** 把内存中的交易刷到表格与统计标签（仅 FX 线程调用） */
+    private void renderTransactions() {
+        transactionList = FXCollections.observableArrayList(allTransactions);
+        transactionTable.setItems(transactionList);
+        updateStatistics();
     }
 
     /**
@@ -413,31 +430,44 @@ public class TransactionController {
      * 应用筛选条件
      */
     private void applyFilters() {
-        try {
-            allTransactions = findTransactionsByCurrentDateRange();
-        } catch (SQLException e) {
-            logger.error("筛选交易记录失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            allTransactions = java.util.List.of();
-        }
+        // 筛选条件全部在 FX 线程取值：日期选择器/搜索框/下拉框都不能在后台线程读
+        final DateRange range = findTransactionsByCurrentDateRange();
+        final String searchText = searchField.getText().trim().toLowerCase();
+        final String paymentMethod = paymentMethodComboBox.getSelectionModel().getSelectedItem();
+        final LocalDate filterStart = startDatePicker.getValue();
+        final LocalDate filterEnd = endDatePicker.getValue();
 
-        String searchText = searchField.getText().trim().toLowerCase();
-        String paymentMethod = paymentMethodComboBox.getSelectionModel().getSelectedItem();
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getTransactionDAO().findByDateRange(range.start(), range.end()),
+            transactions -> {
+                allTransactions = transactions;
+                applyFiltersAndRender(searchText, paymentMethod, filterStart, filterEnd);
+            },
+            e -> {
+                logger.error("筛选交易记录失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
+                allTransactions = java.util.List.of();
+                applyFiltersAndRender(searchText, paymentMethod, filterStart, filterEnd);
+            });
+    }
 
+    /** 依据已在 FX 线程取好的筛选条件过滤并刷新表格；仅 FX 线程调用 */
+    private void applyFiltersAndRender(String searchText, String paymentMethod,
+                                       LocalDate filterStart, LocalDate filterEnd) {
         transactionList.setAll(allTransactions.stream()
             .filter(t -> {
                 // 日期筛选
-                if (startDatePicker.getValue() != null || endDatePicker.getValue() != null) {
+                if (filterStart != null || filterEnd != null) {
                     try {
                         java.time.LocalDate localDate = java.time.LocalDateTime.parse(t.timestamp,
                                 com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME)
                             .atZone(java.time.ZoneId.systemDefault())
                             .toLocalDate();
 
-                        if (startDatePicker.getValue() != null && localDate.isBefore(startDatePicker.getValue())) {
+                        if (filterStart != null && localDate.isBefore(filterStart)) {
                             return false;
                         }
-                        if (endDatePicker.getValue() != null && localDate.isAfter(endDatePicker.getValue())) {
+                        if (filterEnd != null && localDate.isAfter(filterEnd)) {
                             return false;
                         }
                     } catch (Exception e) {
@@ -447,7 +477,7 @@ public class TransactionController {
                 }
 
                 // 支付方式筛选：下拉框是代码（CASH/WECHAT/...），历史数据存中文，需归一化后比较
-                if (!"全部".equals(paymentMethod)) {
+                if (paymentMethod != null && !"全部".equals(paymentMethod)) {
                     String selectedMethod = com.cashier.util.I18nUiUtils.canonicalPaymentMethod(paymentMethod);
                     if (!selectedMethod.equals(com.cashier.util.I18nUiUtils.canonicalPaymentMethod(t.paymentMethod))) {
                         return false;

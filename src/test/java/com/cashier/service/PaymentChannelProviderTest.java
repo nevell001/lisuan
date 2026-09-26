@@ -31,7 +31,7 @@ class PaymentChannelProviderTest {
         assertFalse(PaymentService.isChannelAvailable(PaymentOrder.PaymentChannel.WECHAT));
         assertFalse(PaymentService.isChannelAvailable(PaymentOrder.PaymentChannel.ALIPAY));
         assertThrows(IllegalStateException.class, () -> PaymentService.createPaymentOrder(
-            "T-1", BigDecimal.TEN, PaymentOrder.PaymentChannel.WECHAT, "POS-1"));
+            "T-1", BigDecimal.TEN, PaymentOrder.PaymentChannel.WECHAT, "POS-1", "tester"));
     }
 
     @Test

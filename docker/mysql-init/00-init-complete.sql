@@ -123,7 +123,8 @@ CREATE TABLE IF NOT EXISTS transactions (
     INDEX idx_operator (operator_username),
     INDEX idx_member (member_phone),
     INDEX idx_payment_method (payment_method),
-    FOREIGN KEY (operator_username) REFERENCES users(username) ON DELETE SET NULL,
+    -- operator_username 是审计归属列，故意不挂外键：ON DELETE SET NULL 会在删用户时
+    -- 把历史交易的收银员抹成 NULL（改名/删用户都不得改写历史）。member_phone 保留外键。
     FOREIGN KEY (member_phone) REFERENCES members(phone) ON DELETE SET NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -234,8 +235,9 @@ CREATE TABLE IF NOT EXISTS operation_logs (
     INDEX idx_timestamp (timestamp),
     INDEX idx_log_level (log_level),
     INDEX idx_log_category (log_category),
-    INDEX idx_operation_result (operation_result),
-    FOREIGN KEY (username) REFERENCES users(username) ON DELETE SET NULL
+    INDEX idx_operation_result (operation_result)
+    -- username 是审计归属列，故意不挂外键：审计日志历史上会写"操作员姓名"（显示名），
+    -- 挂外键会让这些写入直接失败；ON DELETE SET NULL 又会在删用户时抹掉审计归属。
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 SELECT '=== 基础表创建完成 ===' AS status;

@@ -3,6 +3,7 @@ package com.cashier.service;
 import com.cashier.api.sync.SyncEventType;
 import com.cashier.api.sync.SyncManager;
 import com.cashier.dao.DAOFactory;
+import com.cashier.dao.PaymentDAORefactored;
 import com.cashier.exception.DatabaseException;
 import com.cashier.model.PaymentOrder;
 import com.cashier.model.RefundRecord;
@@ -145,13 +146,15 @@ public final class PaymentService {
 
     public static PaymentOrder createPaymentOrder(String transactionId, BigDecimal amount,
                                                    PaymentOrder.PaymentChannel channel,
-                                                   String terminalId) throws SQLException {
+                                                   String terminalId, String operator) throws SQLException {
         if (transactionId == null || transactionId.isBlank() || amount == null
                 || amount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException("支付订单参数无效");
         }
         PaymentChannelProvider provider = requireProvider(channel);
         PaymentOrder order = PaymentOrder.createScanPayOrder(transactionId, amount, channel, terminalId);
+        // 操作员必须在 insert 之前写入：此前接口层在 insert 之后赋值，payment_orders.operator 恒为 NULL
+        order.operator = operator != null && !operator.isBlank() ? operator : "system";
         order.expireTime = new Date(System.currentTimeMillis() + config.orderExpireMinutes * 60_000L);
         provider.createOrder(order);
         DAOFactory.getInstance().getPaymentDAO().insert(order);
@@ -302,16 +305,40 @@ public final class PaymentService {
             throw e;
         }
 
-        DAOFactory.getInstance().getPaymentDAO().updateRefundStatus(
-            refund.refundId, refund.status, refund.channelRefundNo);
-        // 终态只看已成功退款合计：申请中/处理中的预占不算已退
-        BigDecimal settled = DAOFactory.getInstance().getPaymentDAO().sumSettledRefundAmount(paymentId);
-        DAOFactory.getInstance().getPaymentDAO().updateStatus(paymentId,
-            settled.compareTo(refund.originalAmount) >= 0
-                ? PaymentOrder.PaymentStatus.REFUNDED : PaymentOrder.PaymentStatus.PARTIAL_REFUND);
+        // 渠道已受理退款：本地终态必须落库。APPLYING 预占会被 sumRefundedAmount 计入"已退"，
+        // 一旦这两处状态迁移失败而把预占留在库里，该支付单的可退额度就被永久占用、
+        // 界面上这笔已退成功的款会一直显示"申请中"。因此合并成一个事务并重试一次，
+        // 仍失败则留下可人工核对的日志（渠道侧已退，不能简单标记为失败）。
+        try {
+            settleRefund(refund, paymentId);
+        } catch (SQLException e) {
+            logger.error("渠道已受理退款但本地终态落库失败，需人工核对: refundId={}, paymentId={}, channelRefundNo={}",
+                refund.refundId, paymentId, refund.channelRefundNo, e);
+            settleRefund(refund, paymentId);
+        }
         AuditService.success(operator, "REFUND", "PAYMENT_REFUND",
             "退款单=" + refund.merchantRefundNo + ", 支付单=" + paymentId + ", 金额=" + refundAmount, 1);
         return refund;
+    }
+
+    /**
+     * 把退款单与其支付单的终态写在同一个事务里（退款状态 + 支付单 REFUNDED/PARTIAL_REFUND 必须一起生效）。
+     */
+    private static void settleRefund(RefundRecord refund, String paymentId) throws SQLException {
+        PaymentDAORefactored dao = DAOFactory.getInstance().getPaymentDAO();
+        boolean settled = DatabaseManager.executeBooleanTransaction(conn -> {
+            if (!dao.updateRefundStatusWithConnection(conn, refund.refundId, refund.status, refund.channelRefundNo)) {
+                throw new SQLException("退款单状态更新失败: " + refund.refundId);
+            }
+            // 终态只看已成功退款合计：申请中/处理中的预占不算已退
+            BigDecimal settledAmount = dao.sumSettledRefundAmountWithConnection(conn, paymentId);
+            return dao.updateStatusWithConnection(conn, paymentId,
+                settledAmount.compareTo(refund.originalAmount) >= 0
+                    ? PaymentOrder.PaymentStatus.REFUNDED : PaymentOrder.PaymentStatus.PARTIAL_REFUND);
+        });
+        if (!settled) {
+            throw new SQLException("退款终态落库失败: " + refund.refundId);
+        }
     }
 
     public static int closeExpiredOrders() throws SQLException {

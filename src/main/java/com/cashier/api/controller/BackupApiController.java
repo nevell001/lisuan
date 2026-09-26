@@ -33,7 +33,9 @@ public class BackupApiController {
     /**
      * 执行备份
      * POST /api/backup/execute
-     * Body: { "contentType": "FULL", "target": "LOCAL", "operator": "admin" }
+     * Body: { "contentType": "FULL", "target": "LOCAL" }
+     *
+     * <p>请求体里的 {@code operator} 一律忽略：备份记录的归属取认证用户，防止把备份算到别人名下。</p>
      */
     public static void executeBackup(Context ctx) {
         try {
@@ -48,7 +50,9 @@ public class BackupApiController {
             
             String contentTypeStr = getString(body, CONTENT_TYPE_FIELD, "FULL");
             String targetStr = getString(body, "target", "LOCAL");
-            String operator = getString(body, "operator", "system");
+            // 操作员一律取认证用户：此前取请求体，管理员可以把备份归属改到别人名下
+            com.cashier.model.User currentUser = ctx.attribute("currentUser");
+            String operator = currentUser != null ? currentUser.username : "system";
             
             BackupRecord.BackupContentType contentType = 
                 BackupRecord.BackupContentType.valueOf(contentTypeStr);

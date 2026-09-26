@@ -2,6 +2,8 @@ package com.cashier.dao;
 
 import com.cashier.model.InventoryCheckItem;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.List;
@@ -54,6 +56,29 @@ public class InventoryCheckItemDAORefactored extends BaseDAO {
     public List<InventoryCheckItem> findByCheckId(int checkId) throws SQLException {
         return queryList("SELECT " + SELECT_COLUMNS +
             " FROM inventory_check_items WHERE check_id = ? ORDER BY id", ITEM_MAPPER, checkId);
+    }
+
+    /**
+     * 在调用方事务内按盘点ID查找明细，供"完成盘点"一次性读取。
+     *
+     * @param conn    调用方事务连接
+     * @param checkId 盘点ID
+     * @return 库存盘点明细列表
+     * @throws SQLException 数据库操作异常
+     */
+    public List<InventoryCheckItem> findByCheckIdWithConnection(Connection conn, int checkId) throws SQLException {
+        String sql = "SELECT " + SELECT_COLUMNS +
+            " FROM inventory_check_items WHERE check_id = ? ORDER BY id";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setInt(1, checkId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                List<InventoryCheckItem> items = new java.util.ArrayList<>();
+                while (rs.next()) {
+                    items.add(ITEM_MAPPER.mapRow(rs, items.size()));
+                }
+                return items;
+            }
+        }
     }
 
     /**

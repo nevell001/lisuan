@@ -121,6 +121,41 @@ class CheckoutConsistencyPolicyTest {
     }
 
     @Test
+    @DisplayName("结账成功弹窗的金额必须取本单落库值，不得用结账后会员重算")
+    void successDialogUsesSettledAmount() throws Exception {
+        String cart = readMainSource("controller/CartController.java");
+        String body = methodBody(cart, "private void showSuccess(");
+
+        assertTrue(body.contains("transaction.finalAmount"),
+            "成功弹窗的金额应取本单落库的 final_amount");
+        assertFalse(body.contains("getFinalAmount()"),
+            "成功弹窗不得用 getFinalAmount() 重算：executeTransaction 成功后会把结账后的等级/折扣写回"
+                + " currentMember（普通会员跨 1000 分当场升银卡），重算出来的金额与实际收款、"
+                + "落库 final_amount、小票都不一致");
+    }
+
+    /** 取出指定方法（按大括号配对）的方法体，便于断言"某个方法里到底用了什么"。 */
+    private static String methodBody(String source, String signature) {
+        int start = source.indexOf(signature);
+        assertTrue(start >= 0, "找不到方法签名: " + signature);
+        int open = source.indexOf('{', start + signature.length());
+        assertTrue(open >= 0, "方法没有方法体: " + signature);
+        int depth = 0;
+        for (int i = open; i < source.length(); i++) {
+            char c = source.charAt(i);
+            if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return source.substring(open, i + 1);
+                }
+            }
+        }
+        throw new IllegalStateException("方法体未闭合: " + signature);
+    }
+
+    @Test
     @DisplayName("触屏收银台必须计算并落库促销优惠")
     void touchPosAppliesPromotions() throws Exception {
         String touch = readMainSource("controller/TouchCartController.java");
@@ -163,8 +198,11 @@ class CheckoutConsistencyPolicyTest {
 
         assertTrue(transactionController.contains("canonicalPaymentMethod"),
             "交易列表筛选必须归一化后再比较（历史数据存中文，下拉框用代码）");
-        assertTrue(transactionDAO.contains("IN ('现金', 'CASH')"),
-            "现金笔数统计必须同时匹配中文落库值与代码形式");
+        assertTrue(transactionDAO.contains("IN ('现金', '現金', 'CASH', 'Cash')"),
+            "现金笔数统计必须同时匹配中文落库值（含繁体）与代码形式");
+        // 支付方式统计必须按归一化后的方式合并，否则同一方式在报表里出现多行（TD-002）
+        assertTrue(transactionDAO.contains("canonicalPaymentMethod"),
+            "支付方式分组统计必须归一化后合并（「现金」与 CASH 不能算两种方式）");
         assertTrue(transactionApi.contains("canonicalPaymentMethod"),
             "REST 交易列表筛选同样必须归一化后再比较（否则 ?paymentMethod=CASH 查不到「现金」）");
     }

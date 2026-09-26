@@ -8,6 +8,7 @@ import com.cashier.model.*;
 import com.cashier.service.PurchaseService;
 import com.cashier.util.CurrencyUtil;
 import com.cashier.util.StatusBarManager;
+import com.cashier.util.UIOptimizer;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
@@ -119,54 +120,65 @@ public class PurchaseApprovalController {
      * 加载待审批订单
      */
     private void loadPendingOrders() {
-        try {
-            List<PurchaseOrder> orderData = DAOFactory.getInstance().getPurchaseOrderDAO().findByStatus("pending");
-            orders = new HashMap<>();
-            for (PurchaseOrder order : orderData) {
-                orders.put(order.id, order);
-            }
-        } catch (SQLException e) {
-            logger.error("加载待审批订单失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            orders = new HashMap<>();
-        }
-        orderList = FXCollections.observableArrayList(orders.values());
-        orderTable.setItems(orderList);
-        updateCountLabel();
+        // 打开审批页即查库：放后台，避免整屏冻结
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getPurchaseOrderDAO().findByStatus("pending"),
+            orderData -> {
+                orders = new HashMap<>();
+                for (PurchaseOrder order : orderData) {
+                    orders.put(order.id, order);
+                }
+                renderOrders();
+            },
+            e -> {
+                logger.error("加载待审批订单失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
+                orders = new HashMap<>();
+                renderOrders();
+            });
     }
 
     /**
      * 加载所有订单
      */
     private void loadAllOrders() {
-        try {
-            List<PurchaseOrder> orderData = DAOFactory.getInstance().getPurchaseOrderDAO().findRecent(APPROVAL_ORDER_LIMIT);
-            orders = new HashMap<>();
-            for (PurchaseOrder order : orderData) {
-                orders.put(order.id, order);
-            }
-        } catch (SQLException e) {
-            logger.error("加载订单失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            orders = new HashMap<>();
-        }
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getPurchaseOrderDAO().findRecent(APPROVAL_ORDER_LIMIT),
+            orderData -> {
+                orders = new HashMap<>();
+                for (PurchaseOrder order : orderData) {
+                    orders.put(order.id, order);
+                }
+                renderOrders();
+            },
+            e -> {
+                logger.error("加载订单失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
+                orders = new HashMap<>();
+                renderOrders();
+            });
+    }
+
+    /** 把内存中的订单刷到表格与计数标签（仅 FX 线程调用） */
+    private void renderOrders() {
         orderList = FXCollections.observableArrayList(orders.values());
         orderTable.setItems(orderList);
         updateCountLabel();
     }
 
     /**
-     * 更新订单数量标签
+     * 更新订单数量标签（"待审批"计数是一次数据库聚合，同样不能在 FX 线程查）
      */
     private void updateCountLabel() {
         countLabel.setText(I18nManager.getInstance().get("runtime.approval_showing", orderList.size()));
-        try {
-            int pendingCount = DAOFactory.getInstance().getPurchaseOrderDAO().countByStatus("pending");
-            pendingCountLabel.setText(I18nManager.getInstance().get("runtime.approval_pending", pendingCount));
-        } catch (SQLException e) {
-            logger.error("统计待审批订单失败", e);
-            pendingCountLabel.setText(I18nManager.getInstance().get("runtime.approval_pending", 0));
-        }
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getPurchaseOrderDAO().countByStatus("pending"),
+            pendingCount -> pendingCountLabel.setText(
+                I18nManager.getInstance().get("runtime.approval_pending", pendingCount)),
+            e -> {
+                logger.error("统计待审批订单失败", e);
+                pendingCountLabel.setText(I18nManager.getInstance().get("runtime.approval_pending", 0));
+            });
     }
 
     /**

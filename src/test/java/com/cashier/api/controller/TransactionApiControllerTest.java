@@ -37,6 +37,37 @@ class TransactionApiControllerTest extends DatabaseTestBase {
     }
 
     @Test
+    @DisplayName("支付方式落库前归一化为规范中文值；不支持的写法回 400")
+    void createNormalizesPaymentMethodForStorage() throws Exception {
+        Product product = insertProduct("API支付方式商品", "APIPAY001", new BigDecimal("10.00"), 50);
+
+        User operator = new User();
+        operator.username = "cashier01";
+        operator.name = "真实收银员";
+
+        // 代码形式 CASH 必须落库成「现金」，否则报表/交班按其中一种分桶就会漏计（TD-002）
+        TestContext normalized = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions")
+            .withAttribute("currentUser", operator)
+            .withBody(createRequest(product.id, 1, "CASH", null));
+        TransactionApiController.create(normalized.context);
+
+        assertEquals(HttpStatus.CREATED, normalized.status);
+        Transaction saved = transactionDAO.findById((String) response(normalized).get("transactionId"));
+        assertNotNull(saved);
+        assertEquals("现金", saved.paymentMethod, "落库值必须是规范中文值，不能原样存客户端代码");
+
+        // 任意字符串/超长值必须回 400（此前会原样落库，超 20 字符还会造成 500）
+        TestContext unknown = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions")
+            .withAttribute("currentUser", operator)
+            .withBody(createRequest(product.id, 1, "支付宝红包抵用券支付方式超长文本", null));
+        TransactionApiController.create(unknown.context);
+
+        assertEquals(HttpStatus.BAD_REQUEST, unknown.status, "不支持的支付方式必须回 400 而不是落库/500");
+    }
+
+    @Test
     @DisplayName("下单金额由服务端重算：客户端伪造的单价/应付被忽略，库存扣减、积分累计")
     void createRecomputesAmountsAndAppliesInventoryAndPoints() throws Exception {
         Product product = insertProduct("API下单商品", "APICREATE001", new BigDecimal("10.00"), 50);

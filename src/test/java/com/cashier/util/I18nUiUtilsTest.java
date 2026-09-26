@@ -16,6 +16,26 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 class I18nUiUtilsTest {
 
     @Test
+    @DisplayName("大小写折叠与语言环境无关（土耳其语环境也必须能识别代码）")
+    void caseFoldingIsLocaleIndependent() {
+        java.util.Locale original = java.util.Locale.getDefault();
+        try {
+            // tr_TR 的经典陷阱：'I'.toLowerCase() -> 'ı'、'i'.toUpperCase() -> 'İ'
+            java.util.Locale.setDefault(new java.util.Locale("tr", "TR"));
+
+            assertEquals("CASH", I18nUiUtils.canonicalPaymentMethod("CASH"));
+            assertEquals("现金", I18nUiUtils.storedPaymentMethod("Cash"));
+            assertEquals("已完成", I18nUiUtils.purchaseStatus("COMPLETED"));
+            assertEquals("盘点中", I18nUiUtils.inventoryCheckStatus("CHECKING"));
+
+            // 直接用默认 locale 折叠会变成 "ı" —— 固定住这个行为差异，防止回退
+            assertEquals("\u0131", "I".toLowerCase());
+        } finally {
+            java.util.Locale.setDefault(original);
+        }
+    }
+
+    @Test
     @DisplayName("中文名称与代码归一化为同一代码")
     void canonicalizesChineseNamesAndCodes() {
         assertEquals("CASH", I18nUiUtils.canonicalPaymentMethod("现金"));

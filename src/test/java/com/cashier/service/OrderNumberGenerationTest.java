@@ -3,6 +3,8 @@ package com.cashier.service;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
@@ -40,5 +42,32 @@ class OrderNumberGenerationTest {
             ids.add(TransactionService.generateOrderNumber());
         }
         assertEquals(count, ids.size(), "生成的单号不应重复");
+    }
+
+    @Test
+    @DisplayName("带前缀的单号生成器与 ORD 单号同一格式（含序号与随机段）")
+    void prefixedTransactionIdUsesSameHardening() {
+        String id = TransactionService.generateTransactionId("T");
+
+        assertTrue(id.matches("^T\\d{17}\\d{4}[0-9a-f]{8}$"), "带前缀单号格式应与 ORD 单号一致: " + id);
+        assertTrue(id.length() <= 50, "带前缀单号也应落在 VARCHAR(50) 内");
+    }
+
+    @Test
+    @DisplayName("桌面收银台与 REST API 都不得残留裸毫秒单号")
+    void allCheckoutPathsUseHardenedTransactionId() throws Exception {
+        String cartController = Files.readString(
+            Path.of("src/main/java/com/cashier/controller/CartController.java"));
+        String transactionApi = Files.readString(
+            Path.of("src/main/java/com/cashier/api/controller/TransactionApiController.java"));
+
+        assertTrue(cartController.contains("TransactionService.generateOrderNumber()"),
+            "标准收银台必须复用加固过的单号生成器，不能自建 ORD+毫秒 单号");
+        assertTrue(!cartController.contains("\"ORD\" + ts"),
+            "标准收银台残留裸毫秒单号：同毫秒/跨终端会撞 transactions 主键、整单回滚");
+        assertTrue(transactionApi.contains("TransactionService.generateTransactionId(\"T\")"),
+            "REST API 下单必须使用带序号与随机段的单号");
+        assertTrue(!transactionApi.contains("\"T\" + LocalDateTime.now()"),
+            "REST API 残留裸毫秒单号");
     }
 }

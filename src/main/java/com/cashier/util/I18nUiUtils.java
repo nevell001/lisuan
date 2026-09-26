@@ -67,6 +67,31 @@ public final class I18nUiUtils {
         };
     }
 
+    /**
+     * 归一化为**落库**用的规范值（中文），供对外接口写入前调用。
+     *
+     * <p>历史数据与桌面端落库都是中文（现金/微信/支付宝/银行卡/会员余额）。接口若把客户端传来的
+     * {@code "CASH"} 原样写库，库里就会出现「现金」与 {@code CASH} 两套值，报表/交班按其中一种
+     * 分桶就会漏计（详见 docs/TECH_DEBT.md 的 TD-002）。无法识别时返回 {@code null}，调用方应回 400。</p>
+     *
+     * @param value 中文名称 / 繁体 / 英文文案 / 代码
+     * @return 落库用的规范中文值；无法识别返回 null
+     */
+    public static String storedPaymentMethod(String value) {
+        String canonical = canonicalPaymentMethod(value);
+        if (canonical == null) {
+            return null;
+        }
+        return switch (canonical) {
+            case "CASH" -> "现金";
+            case "WECHAT" -> "微信";
+            case "ALIPAY" -> "支付宝";
+            case "CARD" -> "银行卡";
+            case "MEMBER_BALANCE" -> "会员余额";
+            default -> null;
+        };
+    }
+
     public static String paymentMethod(String value) {
         String canonical = canonicalPaymentMethod(value);
         String key = switch (canonical == null ? "" : canonical) {
@@ -80,8 +105,15 @@ public final class I18nUiUtils {
         return key == null ? value : I18nManager.getInstance().get(key);
     }
 
+    /**
+     * 下面几个状态/支付方式归一化都用 {@code Locale.ROOT} 做大小写折叠。
+     *
+     * <p>不能用平台默认 locale：土耳其语环境下 {@code "I".toLowerCase()} 会得到无点的 {@code "ı"}，
+     * {@code "i".toUpperCase()} 会得到 {@code "İ"}，于是落库值 {@code "CASH"}/{@code "PENDING"}
+     * 在 tr_TR 机器上永远匹配不上（界面回退成原始英文）。折叠的是一组 ASCII 常量，与语言无关。</p>
+     */
     public static String purchaseStatus(String value) {
-        String normalized = value == null ? "" : value.toLowerCase();
+        String normalized = value == null ? "" : value.toLowerCase(java.util.Locale.ROOT);
         String key = switch (normalized) {
             case "pending", "pending_approval", "待审批" -> I18nKeys.Runtime.STATUS_PENDING_APPROVAL;
             case "approved", "已审批", "已批准" -> I18nKeys.Runtime.STATUS_APPROVED;
@@ -104,7 +136,7 @@ public final class I18nUiUtils {
     }
 
     public static String inventoryCheckStatus(String value) {
-        String normalized = value == null ? "" : value.toLowerCase();
+        String normalized = value == null ? "" : value.toLowerCase(java.util.Locale.ROOT);
         String key = switch (normalized) {
             case "pending", "待盘点" -> "runtime.status.pending_check";
             case "checking", "盘点中" -> "runtime.status.checking";
@@ -115,7 +147,7 @@ public final class I18nUiUtils {
     }
 
     public static String inventoryCheckType(String value) {
-        String normalized = value == null ? "" : value.toLowerCase();
+        String normalized = value == null ? "" : value.toLowerCase(java.util.Locale.ROOT);
         String key = switch (normalized) {
             case "full", "全盘", "全盤" -> "runtime.check_type_full";
             case "partial", "部分盘点", "部分盤點" -> "runtime.check_type_partial";
@@ -125,7 +157,7 @@ public final class I18nUiUtils {
     }
 
     public static String itemCondition(String value) {
-        String normalized = value == null ? "" : value.toUpperCase();
+        String normalized = value == null ? "" : value.toUpperCase(java.util.Locale.ROOT);
         String key = switch (normalized) {
             case "GOOD", "完好" -> "runtime.condition_good";
             case "DAMAGED", "损坏" -> "runtime.condition_damaged";

@@ -75,6 +75,46 @@ class TransactionDAOTest extends DatabaseTestBase {
     }
 
     @Test
+    @DisplayName("支付方式统计按归一化合并：「现金」与 CASH 只出一行，现金笔数两种写法都算")
+    void paymentMethodStatsAndCashCountAreNormalized() throws Exception {
+        insertTransaction("T-NORM-001", "2026-08-23 10:00:00", "现金");
+        insertTransaction("T-NORM-002", "2026-08-23 11:00:00", "CASH");
+
+        List<Map<String, Object>> stats = transactionDAO.getPaymentMethodStats();
+        List<Map<String, Object>> cashRows = stats.stream()
+            .filter(row -> "现金".equals(row.get("method")))
+            .toList();
+        assertEquals(1, cashRows.size(),
+            "同一支付方式的不同写法必须合并成一行，否则报表里现金出现多行：" + stats);
+        assertEquals(2, ((Number) cashRows.get(0).get("count")).intValue(), "两笔现金都要合并计数");
+
+        assertEquals(2, transactionDAO.getStatistics(
+            "2026-08-23 00:00:00", "2026-08-23 23:59:59").getCashCount(),
+            "现金笔数必须兼容 CASH 等代码形式");
+    }
+
+    @Test
+    @DisplayName("已整单退款（REFUNDED）的交易不计入收入聚合与支付方式统计")
+    void refundedTransactionsAreExcludedFromRevenueAggregates() throws Exception {
+        insertTransaction("T-REF-001", "2026-08-24 10:00:00", "现金");
+        insertTransaction("T-REF-002", "2026-08-24 11:00:00", "现金");
+        assertTrue(com.cashier.util.DatabaseManager.executeBooleanTransaction(conn ->
+            transactionDAO.updateStatusWithConnection(conn, "T-REF-002", "REFUNDED")));
+
+        assertEquals(1, transactionDAO.getTransactionCount("2026-08-24 00:00:00", "2026-08-24 23:59:59"),
+            "已退款交易不计入交易数");
+        assertEquals(0, BigDecimal.TEN.compareTo(BigDecimal.valueOf(
+                transactionDAO.getTotalRevenue("2026-08-24 00:00:00", "2026-08-24 23:59:59"))),
+            "已退款交易不计入营业额");
+        assertEquals(1, transactionDAO.getStatistics(
+            "2026-08-24 00:00:00", "2026-08-24 23:59:59").getTotalTransactions());
+        assertEquals(1, transactionDAO.getPaymentMethodStats().stream()
+                .filter(row -> "现金".equals(row.get("method")))
+                .mapToInt(row -> ((Number) row.get("count")).intValue()).sum(),
+            "支付方式统计同样不得含已退款交易");
+    }
+
+    @Test
     @DisplayName("热销榜按商品ID归并改名后的历史销量")
     void topProductsMergeHistoryAfterRename() throws Exception {
         ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();

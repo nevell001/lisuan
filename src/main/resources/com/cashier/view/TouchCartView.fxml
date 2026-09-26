@@ -214,7 +214,10 @@
         <!-- 左下角：触屏版 POS 标识 -->
         <Label text="%tpos.brand_label" styleClass="tpos-status-text"/>
 
-        <Region HBox.hgrow="ALWAYS"/>
+        <!-- 状态提示：绑定 StatusBarManager（扫码结果、商品/分类加载失败等）。
+             此前底栏没有状态文本控件，只写状态栏的提示在触屏版界面上完全不可见 -->
+        <Label fx:id="statusLabel" text="%status.ready" styleClass="tpos-status-text"
+               HBox.hgrow="ALWAYS" maxWidth="Infinity"/>
 
         <!-- 右下角：班次 + 日期(含星期) + 时间，与 PC 版一致 -->
         <Label fx:id="shiftInfoLabel" text="%status.shift_not_started" styleClass="tpos-status-text"/>

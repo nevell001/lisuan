@@ -160,12 +160,53 @@ public class MemberApiController {
                 return;
             }
             
-            if (request.name != null) member.name = request.name;
-            if (request.phone != null) member.phone = request.phone;
-            if (request.level != null) member.level = request.level;
-            if (request.discount != null) member.discount = request.discount;
+            // 校验与桌面端（MemberEditController.isInputValid）保持一致：
+            // 此前接口可写入 discount=999/负数、任意等级、非法手机号，且手机号冲突会变成 500
+            if (request.name != null) {
+                if (request.name.isBlank()) {
+                    ctx.status(HttpStatus.BAD_REQUEST)
+                       .json(Map.of("success", false, "message", "会员姓名不能为空"));
+                    return;
+                }
+                member.name = request.name.trim();
+            }
+            if (request.phone != null) {
+                String phone = request.phone.trim();
+                if (!phone.matches("\\d{11}")) {
+                    ctx.status(HttpStatus.BAD_REQUEST)
+                       .json(Map.of("success", false, "message", "手机号必须是 11 位数字"));
+                    return;
+                }
+                member.phone = phone;
+            }
+            if (request.level != null) {
+                if (!com.cashier.service.MemberService.isKnownLevel(request.level)) {
+                    ctx.status(HttpStatus.BAD_REQUEST)
+                       .json(Map.of("success", false, "message", "会员等级不合法（可用：普通/银卡/金卡/钻石）"));
+                    return;
+                }
+                member.level = request.level;
+            }
+            if (request.discount != null) {
+                if (request.discount.compareTo(BigDecimal.ZERO) < 0
+                        || request.discount.compareTo(BigDecimal.TEN) > 0) {
+                    ctx.status(HttpStatus.BAD_REQUEST)
+                       .json(Map.of("success", false, "message", "折扣必须在 0 到 10 之间（10 = 不打折）"));
+                    return;
+                }
+                member.discount = request.discount;
+                member.discountRate = request.discount; // 桌面端同时维护 discountRate，接口此前只改 discount
+            }
             
-            DAOFactory.getInstance().getMemberDAO().update(member);
+            try {
+                DAOFactory.getInstance().getMemberDAO().update(member);
+            } catch (com.cashier.dao.MemberDAORefactored.OptimisticLockException e) {
+                // 乐观锁冲突是并发语义，回 409 而不是把它当服务器内部错误
+                logger.warn("更新会员冲突（乐观锁未命中）: {}", member.phone);
+                ctx.status(HttpStatus.CONFLICT)
+                   .json(Map.of("success", false, "message", "会员已被其他操作修改，请重新获取后再试"));
+                return;
+            }
             
             logger.info("更新会员: {}", member.phone);
             

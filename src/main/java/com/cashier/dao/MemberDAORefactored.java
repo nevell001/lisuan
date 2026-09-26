@@ -23,6 +23,18 @@ import java.util.Map;
 public class MemberDAORefactored extends BaseDAO {
     private static final Logger logger = LoggerFactoryUtil.getLogger(MemberDAORefactored.class);
 
+    /**
+     * 会员更新乐观锁冲突（{@code version} 未命中）。
+     *
+     * <p>继承 {@link SQLException}，既有调用方按 SQLException 捕获的行为不变；
+     * 对外接口可以单独捕获它并回 409，而不是把并发冲突伪装成 500。</p>
+     */
+    public static class OptimisticLockException extends SQLException {
+        public OptimisticLockException(String message) {
+            super(message);
+        }
+    }
+
     private static final String SELECT_COLUMNS =
         "id, member_code, phone, name, points, level, discount, balance, birthday, version ";
 
@@ -222,7 +234,7 @@ public class MemberDAORefactored extends BaseDAO {
             int affected = pstmt.executeUpdate();
             if (affected == 0) {
                 logger.warn("会员更新乐观锁冲突: id={}, 期望version={}", member.id, member.version);
-                throw new SQLException("会员数据已被其他操作修改，请重试 (id=" + member.id + ")");
+                throw new OptimisticLockException("会员数据已被其他操作修改，请重试 (id=" + member.id + ")");
             }
             member.version++;
             return true;

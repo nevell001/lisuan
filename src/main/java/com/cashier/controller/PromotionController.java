@@ -7,6 +7,7 @@ import com.cashier.service.DataService;
 import com.cashier.model.Promotion;
 import com.cashier.i18n.I18nManager;
 import com.cashier.util.StatusBarManager;
+import com.cashier.util.UIOptimizer;
 import javafx.beans.property.SimpleStringProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
@@ -173,11 +174,20 @@ public class PromotionController {
      */
     private void loadPromotions() {
         logger.info("PromotionController: 开始加载促销数据...");
-        allPromotions = DataService.loadPromotions();
-        promotionList = FXCollections.observableArrayList(allPromotions);
-        promotionTable.setItems(promotionList);
-        updateCountLabel();
-        logger.info("PromotionController: 加载了 {} 条促销记录", allPromotions.size());
+        // 打开促销页即查库：放后台，避免整屏冻结
+        UIOptimizer.runInBackground(
+            DataService::loadPromotions,
+            promotions -> {
+                allPromotions = promotions;
+                promotionList = FXCollections.observableArrayList(allPromotions);
+                promotionTable.setItems(promotionList);
+                updateCountLabel();
+                logger.info("PromotionController: 加载了 {} 条促销记录", allPromotions.size());
+            },
+            e -> {
+                logger.error("加载促销数据失败", e);
+                StatusBarManager.updateError(I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
+            });
     }
 
     /**

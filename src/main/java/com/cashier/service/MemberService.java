@@ -200,6 +200,17 @@ public class MemberService {
     }
 
     /**
+     * 是否为合法会员等级。
+     *
+     * <p>供对外接口校验入参：等级是业务枚举，写进库里的值必须能被
+     * {@link #calculateLevel(BigDecimal)} / {@link #getDiscountByLevelDecimal(String)} 识别，
+     * 否则后续升级与折扣计算都会落空。</p>
+     */
+    public static boolean isKnownLevel(String level) {
+        return level != null && LEVEL_DISCOUNTS.containsKey(level);
+    }
+
+    /**
      * 根据等级获取折扣
      * @param level 等级
      * @return 折扣值（0-10，10表示不打折）

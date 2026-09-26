@@ -405,13 +405,15 @@ public class ProfitReportController {
                 productNameMap = loadProductNameMap(allTransactions);
                 productActualCostMap = new HashMap<>();
                 loadProductActualCosts();
+                // 运营成本比例也是一次查库：必须在 worker 里取好，不能在 FX 线程渲染时再查
+                final double operatingCostRatio = loadOperatingCostRatio();
 
                 logger.info("利润报表加载完成: {} 条交易, {} 个商品, {} 个实际成本",
                     allTransactions.size(), productNameMap.size(), productActualCostMap.size());
                 javafx.application.Platform.runLater(() -> {
                     profitQueryInProgress = false;
                     // 计算统计数据（内存聚合 + UI 更新）
-                    calculateStatistics(startDate, endDate, selectedCategory);
+                    calculateStatistics(startDate, endDate, selectedCategory, operatingCostRatio);
                 });
             } catch (SQLException e) {
                 logger.error("加载利润报表交易记录失败", e);
@@ -441,11 +443,16 @@ public class ProfitReportController {
     /**
      * 计算统计数据
      */
-    private void calculateStatistics(LocalDate startDate, LocalDate endDate, String categoryName) {
+    /**
+     * 聚合 + 渲染（FX 线程）。{@code operatingCostRatio} 由 worker 预先查好传入，
+     * 避免在 FX 线程里做设置读取（TD-006）。
+     */
+    private void calculateStatistics(LocalDate startDate, LocalDate endDate, String categoryName,
+                                     double operatingCostRatio) {
         ProfitStatistics statistics = collectProfitStatistics(startDate, endDate, categoryName);
         double grossProfit = statistics.totalRevenue - statistics.totalCost;
         double grossMargin = statistics.totalRevenue > 0 ? grossProfit / statistics.totalRevenue : 0.0;
-        double operatingCost = statistics.totalRevenue * loadOperatingCostRatio();
+        double operatingCost = statistics.totalRevenue * operatingCostRatio;
         double netProfit = grossProfit - operatingCost;
         double avgMargin = calculateAverageMargin(statistics.productProfitMap);
 
@@ -489,6 +496,11 @@ public class ProfitReportController {
             String categoryName) {
 
         if (transaction.items == null) {
+            return;
+        }
+
+        // 已整单退款的交易不计利润/毛利（净额口径，与统计/日报/交班一致，见 TD-003）
+        if ("REFUNDED".equals(transaction.status)) {
             return;
         }
 
@@ -558,6 +570,7 @@ public class ProfitReportController {
         return item.getPrice().multiply(Product.DEFAULT_COST_RATE).doubleValue();
     }
 
+    /** 查库读运营成本比例。**只允许在后台线程调用**（FX 线程渲染路径请用已传入的比例参数）。 */
     private double loadOperatingCostRatio() {
         double costRatio = DEFAULT_OPERATING_COST_RATIO;
         try {

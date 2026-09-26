@@ -71,6 +71,19 @@ class PaymentDAOTest extends DatabaseTestBase {
         assertEquals(50, merchantRefundNos.size(), "merchant_refund_no 必须唯一");
     }
 
+    @Test
+    @DisplayName("payment_id 缺失时由 DAO 兜底生成加固单号（不是裸毫秒主键）")
+    void insertGeneratesHardenedPaymentIdWhenMissing() throws SQLException {
+        // 回归：payment_id 是主键，兜底曾用 "PAY" + System.currentTimeMillis()，
+        // 同毫秒两笔必然主键冲突；加固后长度与形状都可区分。
+        PaymentOrder order = createOrder(null, "ORDER-AUTO", 5_000L, PaymentOrder.PaymentStatus.CREATED);
+
+        assertTrue(paymentDAO.insert(order), "缺少 payment_id 时应能兜底生成并插入");
+        assertTrue(order.paymentId.matches("^PAY\\d{13}\\d{4}[0-9a-f]{6}$"),
+            "兜底生成的支付单号必须是加固格式（毫秒+序号+随机段），实际: " + order.paymentId);
+        assertEquals(order.paymentId, paymentDAO.findById(order.paymentId).paymentId, "落库的应是兜底生成的那个单号");
+    }
+
     private PaymentOrder createOrder(
             String paymentId,
             String merchantOrderNo,

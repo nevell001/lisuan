@@ -64,14 +64,18 @@ class PurchaseServiceTest extends DatabaseTestBase {
     @DisplayName("任一商品库存更新失败时整张入库单回滚")
     void inboundRollsBackEveryChangeWhenOneItemFails() throws Exception {
         int productId = createProduct("采购商品B", 10);
+        int secondProductId = createProduct("采购商品C", 10);
         int orderId = createOrder("PO-INBOUND-2", "approved");
         int firstOrderItemId = createOrderItem(orderId, productId, "采购商品B", 3);
-        int missingProductOrderItemId = createOrderItem(orderId, 999999, "不存在商品", 2);
+        // 第二个明细只采购了 2 件，却要入库 5 件 → increaseInboundQuantity 中途失败，触发整单回滚。
+        // （此前这里用一个不存在的 product_id 制造失败；补上外键后这种"悬空引用"已不可能，
+        //   改用业务上真实存在的失败条件，回滚断言不变。）
+        int overInboundOrderItemId = createOrderItem(orderId, secondProductId, "采购商品C", 2);
 
         PurchaseInbound inbound = createInbound("IB-2", orderId, 5);
         List<PurchaseInboundItem> items = List.of(
             createInboundItem(firstOrderItemId, productId, "采购商品B", 3),
-            createInboundItem(missingProductOrderItemId, 999999, "不存在商品", 2)
+            createInboundItem(overInboundOrderItemId, secondProductId, "采购商品C", 5)
         );
 
         assertThrows(SQLException.class, () -> PurchaseService.receiveInbound(inbound, items));

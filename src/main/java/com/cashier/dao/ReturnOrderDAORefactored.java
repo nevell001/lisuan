@@ -219,6 +219,42 @@ public class ReturnOrderDAORefactored extends BaseDAO {
             new Timestamp(startDate.getTime()), new Timestamp(endDate.getTime()), "根据日期范围查找退货订单失败");
     }
 
+    /**
+     * 列出期间内**已完成**的退货单（营业额净额口径，见 TD-003）。
+     *
+     * <p>只取 {@code completed_date} 落在窗口内的单：退货是在完成那一刻把钱退回去的，
+     * 按完成时间归属才与钱箱/交班对得上（{@code return_date} 是申请时间）。</p>
+     *
+     * <p>原交易已被整单标记 {@code REFUNDED} 的不返回：那种交易已从销售额里剔除，
+     * 若这里再减一次就是重复扣减（API 退款路径同时写 REFUNDED 与退货单）。</p>
+     *
+     * @param startDateTime 窗口起（{@code yyyy-MM-dd HH:mm:ss}，含）
+     * @param endDateTime   窗口止（同格式，含）
+     * @return 已完成的退货单（completedDate / paymentMethod / totalAmount 已填充）
+     */
+    public List<ReturnOrder> findCompletedReturnsBetween(String startDateTime, String endDateTime) {
+        String sql = "SELECT " + SELECT_COLUMNS + " FROM return_orders ro " +
+            "WHERE ro.status = 'COMPLETED' AND ro.completed_date BETWEEN ? AND ? " +
+            "AND NOT EXISTS (SELECT 1 FROM transactions t WHERE t.transaction_id = ro.original_transaction_id " +
+            "AND COALESCE(t.status, 'NORMAL') = 'REFUNDED') " +
+            "ORDER BY ro.completed_date";
+        try (Connection conn = getConnection();
+             PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setTimestamp(1, Timestamp.valueOf(startDateTime));
+            stmt.setTimestamp(2, Timestamp.valueOf(endDateTime));
+            try (ResultSet rs = stmt.executeQuery()) {
+                List<ReturnOrder> orders = new ArrayList<>();
+                while (rs.next()) {
+                    orders.add(mapRowToReturnOrder(rs));
+                }
+                return orders;
+            }
+        } catch (SQLException e) {
+            logger.error("查询已完成退货单失败", e);
+            throw new DatabaseException("查询已完成退货单失败", DatabaseException.DbErrorType.QUERY_FAILED, e);
+        }
+    }
+
     public Map<String, Object> getStatistics(Date startDate, Date endDate) {
         String sql = "SELECT COUNT(*) AS total_return_orders, COALESCE(SUM(total_amount), 0) AS total_return_amount, " +
             "SUM(CASE WHEN status = 'APPROVED' THEN 1 ELSE 0 END) AS approved_orders, " +

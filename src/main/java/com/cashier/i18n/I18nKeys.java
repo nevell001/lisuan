@@ -208,6 +208,7 @@ public final class I18nKeys {
         public static final String EXPORT_CONTENT_LABEL = "runtime.export_content_label";
         public static final String SELECT_EXPORT_CONTENT_HEADER = "runtime.select_export_content_header";
         public static final String SELECT_INVENTORY_CHECK = "runtime.select_inventory_check";
+        public static final String INVENTORY_CHECK_ALREADY_COMPLETED = "runtime.inventory_check_already_completed";
         public static final String SELECT_MEMBER = "runtime.select_member";
         public static final String SELECT_PRODUCT_FIRST = "runtime.select_product_first";
         public static final String SELECT_PROMOTION = "runtime.select_promotion";

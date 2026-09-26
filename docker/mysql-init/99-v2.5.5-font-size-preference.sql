@@ -14,8 +14,9 @@ SET @sql = IF(@table_exists = 0,
         username VARCHAR(50) PRIMARY KEY,
         font_size VARCHAR(20) DEFAULT ''medium'',
         updated_at BIGINT,
-        INDEX idx_username (username),
-        FOREIGN KEY (username) REFERENCES users(username) ON DELETE CASCADE
+        INDEX idx_username (username)
+        -- username 不挂外键：该表用字面量 'default' 存全局默认值（不是 users 里的真实用户），
+        -- 有外键时全局默认永远写不进去；应用启动时也会主动删掉这个外键（PREFERENCE_TABLES）。
     ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci',
     'SELECT "font_size_preferences table already exists" AS message'
 );

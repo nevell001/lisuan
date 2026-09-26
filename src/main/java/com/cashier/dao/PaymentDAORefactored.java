@@ -92,7 +92,8 @@ public class PaymentDAORefactored extends BaseDAO {
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
             """;
         if (order.paymentId == null) {
-            order.paymentId = "PAY" + System.currentTimeMillis();
+            // 主键不能只用毫秒时间戳：同毫秒两笔会撞主键、支付单丢失
+            order.paymentId = PaymentOrder.generatePaymentId();
         }
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -350,6 +351,17 @@ public class PaymentDAORefactored extends BaseDAO {
 
     public boolean updateRefundStatus(String refundId, RefundRecord.RefundStatus status,
                                       String channelRefundNo) throws SQLException {
+        try (Connection conn = getConnection()) {
+            return updateRefundStatusWithConnection(conn, refundId, status, channelRefundNo);
+        }
+    }
+
+    /**
+     * 在调用方事务内更新退款单状态。
+     */
+    public boolean updateRefundStatusWithConnection(Connection conn, String refundId,
+                                                    RefundRecord.RefundStatus status,
+                                                    String channelRefundNo) throws SQLException {
         String sql = """
             UPDATE refund_records SET
                 status = ?,
@@ -357,8 +369,7 @@ public class PaymentDAORefactored extends BaseDAO {
                 refund_time = ?
             WHERE refund_id = ?
             """;
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, status.name());
             pstmt.setString(2, channelRefundNo);
             pstmt.setTimestamp(3, status.isSuccess() ? new Timestamp(System.currentTimeMillis()) : null);
@@ -403,10 +414,18 @@ public class PaymentDAORefactored extends BaseDAO {
      * 不能算作已退款，否则并发场景下订单会被提前标成 REFUNDED。</p>
      */
     public BigDecimal sumSettledRefundAmount(String paymentId) throws SQLException {
+        try (Connection conn = getConnection()) {
+            return sumSettledRefundAmountWithConnection(conn, paymentId);
+        }
+    }
+
+    /**
+     * 统计某支付单**已成功**的退款金额，使用调用方事务连接。
+     */
+    public BigDecimal sumSettledRefundAmountWithConnection(Connection conn, String paymentId) throws SQLException {
         String sql = "SELECT COALESCE(SUM(refund_amount), 0) FROM refund_records "
             + "WHERE payment_id = ? AND status = 'SUCCESS'";
-        try (Connection conn = getConnection();
-             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, paymentId);
             try (ResultSet rs = pstmt.executeQuery()) {
                 BigDecimal total = rs.next() ? rs.getBigDecimal(1) : null;

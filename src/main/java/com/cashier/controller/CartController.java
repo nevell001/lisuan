@@ -1131,21 +1131,26 @@ public class CartController implements CartViewHost {
         }
         setPaymentInProgress(true);
 
+        // worker 只吃**不可变快照**：cartList / inventoryMap / currentMember 都归 FX 线程所有，
+        // 而 executeTransaction 会迭代明细、把扣减后的商品 put 回 inventoryMap、并就地改写会员状态。
+        // 此前这些活对象被直接交给 worker，结账期间 FX 线程可能读到"写了一半"的集合/对象
+        // （HashMap 并发写、等级折扣瞬间变化）。现在 worker 只碰副本，结果回到 FX 线程后再并回。
+        final List<CartItem> itemsAtSale = new ArrayList<>(cartList);
+        final Map<String, Product> inventoryForSale = new HashMap<>(inventoryMap);
+        final Member memberForSale = TransactionService.copyMember(currentMember);
+        final Member memberAtSale = currentMember;
+        final BigDecimal memberDiscountAtSale =
+            currentMember != null ? currentMember.getDiscount() : null;
+        final Promotion promotionToApply = appliedPromotion;
+
         Thread worker = new Thread(() -> {
             try {
-                // 小票所需快照必须在结账前取：executeTransaction 会就地改写 currentMember 的
-                // 等级/折扣/积分，且随后 clear() 会清空购物车
-                final Member memberAtSale = currentMember;
-                final BigDecimal memberDiscountAtSale =
-                    currentMember != null ? currentMember.getDiscount() : null;
-                final List<CartItem> itemsAtSale = new ArrayList<>(cartList);
-
                 TransactionService.TransactionResult result = TransactionService.executeTransaction(
-                    cartList,
-                    currentMember,
+                    itemsAtSale,
+                    memberForSale,
                     transaction,
-                    inventoryMap,
-                    appliedPromotion
+                    inventoryForSale,
+                    promotionToApply
                 );
 
                 if (!result.isSuccess() || result.getTransaction() == null) {
@@ -1168,6 +1173,7 @@ public class CartController implements CartViewHost {
 
                 javafx.application.Platform.runLater(() -> {
                     setPaymentInProgress(false);
+                    mergeSettledInventory(itemsAtSale, inventoryForSale);
                     showSuccess(paymentMethod, settled, receivedAmount.doubleValue(), changeAmount.doubleValue());
                     clear();
                 });
@@ -1226,7 +1232,8 @@ public class CartController implements CartViewHost {
             Transaction transaction = createTransaction(paymentMethod);
             String terminalId = currentUser != null ? currentUser.username : "desktop";
             PaymentOrder paymentOrder = PaymentService.createPaymentOrder(
-                transaction.transactionId, transaction.finalAmount, channel, terminalId);
+                transaction.transactionId, transaction.finalAmount, channel, terminalId,
+                currentUser != null ? currentUser.username : "system");
             showElectronicPaymentDialog(paymentOrder, transaction, paymentMethod);
         } catch (Exception e) {
             logger.error("创建电子支付订单失败", e);
@@ -1336,6 +1343,22 @@ public class CartController implements CartViewHost {
             logger.error("模拟支付回调失败", ex);
             status.setText(i18n.get("payment.mock.simulate_failed"));
             simulateBtn.setDisable(false);
+        }
+    }
+
+    /**
+     * 把结账 worker 在副本上算出的最新库存并回 FX 线程的 {@code inventoryMap}。
+     *
+     * <p>{@code executeTransaction} 会把扣减后的商品 put 回它拿到的 map，这是本次结账的"库存输出"；
+     * 由于 worker 现在只拿副本，必须在 FX 线程把本单涉及的商品并回去（只并这些，
+     * 避免覆盖 FX 线程在结账期间刚查到的更新数据）。</p>
+     */
+    private void mergeSettledInventory(List<CartItem> itemsAtSale, Map<String, Product> inventoryForSale) {
+        for (CartItem item : itemsAtSale) {
+            Product updated = inventoryForSale.get(item.product.name);
+            if (updated != null) {
+                inventoryMap.put(item.product.name, updated);
+            }
         }
     }
 
@@ -1451,11 +1474,14 @@ public class CartController implements CartViewHost {
 
     /**
      * 生成订单号
+     *
+     * <p>与触屏收银台/API 共用 {@link TransactionService#generateOrderNumber()}：
+     * 裸毫秒时间戳在同毫秒或跨进程（多终端）时会撞 transactions 主键，整单回滚。</p>
+     *
      * @return 订单号
      */
     private String generateOrderNumber() {
-        String ts = com.cashier.util.DateTimeFormats.COMPACT_DATE_TIME_MILLIS.format(LocalDateTime.now(ZoneId.systemDefault()));
-        return "ORD" + ts;
+        return TransactionService.generateOrderNumber();
     }
 
     /**
@@ -1646,10 +1672,13 @@ public class CartController implements CartViewHost {
      */
     private void showSuccess(String paymentMethod, Transaction transaction, double receivedAmount, double changeAmount) {
         I18nManager i18n = I18nManager.getInstance();
+        // 金额必须取**本单落库值**，不能用 getFinalAmount 重算：executeTransaction 成功后会把
+        // 结账后的等级/折扣写回 currentMember（普通会员跨 1000 分当场升银卡），重算会少显示 5%，
+        // 与实际收款、落库 final_amount、小票都不一致。
         String message = i18n.get("payment.success.details",
             transaction.transactionId,
             localizePaymentMethod(paymentMethod),
-            CurrencyUtil.format(getFinalAmount().doubleValue()),
+            CurrencyUtil.format(transaction.finalAmount.doubleValue()),
             cartList.size());
 
         // 如果是现金支付，显示实收和找零

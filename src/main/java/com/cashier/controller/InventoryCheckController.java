@@ -8,6 +8,7 @@ import com.cashier.dao.InventoryCheckDAORefactored;
 import com.cashier.dao.InventoryCheckItemDAORefactored;
 import com.cashier.dao.ProductDAORefactored;
 import com.cashier.model.*;
+import com.cashier.util.DatabaseManager;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
@@ -922,15 +923,30 @@ public class InventoryCheckController {
 
             if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
                 try {
-                    // 更新盘点单状态
-                    inventoryCheckDAO.complete(selected.id, currentUser);
-
-                    // 根据盘点结果调整库存
-                    List<InventoryCheckItem> items = inventoryCheckItemDAO.findByCheckId(selected.id);
-                    for (InventoryCheckItem item : items) {
-                        if (item.diffQuantity != 0) {
-                            productDAO.updateQuantity(item.productId, item.diffQuantity);
+                    // 状态迁移与库存调整必须同一事务：分开做时中途失败会留下
+                    // "盘点单已完成、库存只改了一半"的不可重做状态（canComplete 要求 checking），
+                    // 差额永久丢失；状态守卫则挡住重复点击/并发导致的差额二次累加。
+                    boolean applied = DatabaseManager.executeBooleanTransaction(conn -> {
+                        if (!inventoryCheckDAO.completeWithConnection(conn, selected.id, currentUser)) {
+                            return false;
                         }
+                        List<InventoryCheckItem> items =
+                            inventoryCheckItemDAO.findByCheckIdWithConnection(conn, selected.id);
+                        for (InventoryCheckItem item : items) {
+                            if (item.diffQuantity != 0
+                                    && !productDAO.updateQuantityWithConnection(
+                                        conn, item.productId, item.diffQuantity)) {
+                                throw new SQLException("盘点调整库存失败: productId=" + item.productId);
+                            }
+                        }
+                        return true;
+                    });
+
+                    if (!applied) {
+                        showWarning(I18nManager.getInstance().get(
+                            I18nKeys.Runtime.INVENTORY_CHECK_ALREADY_COMPLETED, selected.checkNo));
+                        loadChecks();
+                        return;
                     }
 
                     updateStatus(I18nManager.getInstance().get("runtime.inventory_check_completed", selected.checkNo));

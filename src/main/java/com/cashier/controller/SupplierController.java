@@ -6,6 +6,7 @@ import com.cashier.dao.DAOFactory;
 import com.cashier.i18n.I18nManager;
 import com.cashier.model.Supplier;
 import com.cashier.util.StatusBarManager;
+import com.cashier.util.UIOptimizer;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
 
@@ -116,16 +117,21 @@ public class SupplierController {
      * 加载供应商数据
      */
     private void loadSuppliers() {
-        try {
-            setSupplierData(DAOFactory.getInstance().getSupplierDAO().findRecent(SUPPLIER_LIST_LIMIT));
-        } catch (SQLException e) {
-            logger.error("加载供应商数据失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            suppliers = new HashMap<>();
-            supplierList = FXCollections.observableArrayList();
-            supplierTable.setItems(supplierList);
-        }
-        updateCountLabel();
+        // 打开供应商页即查库：放后台，避免整屏冻结
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getSupplierDAO().findRecent(SUPPLIER_LIST_LIMIT),
+            data -> {
+                setSupplierData(data);
+                updateCountLabel();
+            },
+            e -> {
+                logger.error("加载供应商数据失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
+                suppliers = new HashMap<>();
+                supplierList = FXCollections.observableArrayList();
+                supplierTable.setItems(supplierList);
+                updateCountLabel();
+            });
     }
 
     private void setSupplierData(List<Supplier> supplierData) {
@@ -306,7 +312,7 @@ public class SupplierController {
             form.rankCombo.setValue(supplier.rank);
             form.remarkArea.setText(supplier.remark);
         } else {
-            form.codeField.setText(generateSupplierCode());
+            applyGeneratedSupplierCode(form.codeField);
         }
     }
 
@@ -365,19 +371,19 @@ public class SupplierController {
     /**
      * 生成供应商编号
      */
-    private String generateSupplierCode() {
+    /**
+     * 生成并填入供应商编号。查库（统计已有编号数量）放后台，回 FX 线程再填输入框（TD-006）。
+     */
+    private void applyGeneratedSupplierCode(TextField codeField) {
         String dateStr = java.time.LocalDate.now(java.time.ZoneId.systemDefault())
             .format(com.cashier.util.DateTimeFormats.COMPACT_DATE);
         String prefix = "S" + dateStr;
 
-        int count = 0;
-        try {
-            count = DAOFactory.getInstance().getSupplierDAO().countBySupplierCodePrefix(prefix);
-        } catch (SQLException e) {
-            logger.warn("统计供应商编号前缀失败: {}", prefix, e);
-        }
-
-        return prefix + String.format("%04d", count + 1);
+        // runInBackground 接受 Callable，查库抛出的 SQLException 由 onError 统一处理
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getSupplierDAO().countBySupplierCodePrefix(prefix),
+            count -> codeField.setText(prefix + String.format("%04d", count + 1)),
+            e -> logger.warn("生成供应商编号失败: {}", prefix, e));
     }
 
     /**
@@ -415,15 +421,19 @@ public class SupplierController {
         String searchText = searchField.getText().trim().toLowerCase();
         if (searchText.isEmpty()) {
             loadSuppliers();
-        } else {
-            try {
-                setSupplierData(DAOFactory.getInstance().getSupplierDAO().search(searchText, SUPPLIER_LIST_LIMIT));
-            } catch (SQLException e) {
+            return;
+        }
+        // 搜索同样放后台；搜索框内容在提交前已取值，后台不再读界面
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getSupplierDAO().search(searchText, SUPPLIER_LIST_LIMIT),
+            data -> {
+                setSupplierData(data);
+                updateCountLabel();
+            },
+            e -> {
                 logger.error("搜索供应商失败", e);
                 showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            }
-        }
-        updateCountLabel();
+            });
     }
 
     /**

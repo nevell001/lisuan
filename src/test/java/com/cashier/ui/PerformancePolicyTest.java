@@ -105,7 +105,7 @@ class PerformancePolicyTest {
         assertTrue(controller.contains("getTransactionDAO().findByDateRange("));
         assertTrue(controller.contains("allProducts = new ArrayList<>()"));
         assertTrue(controller.contains("INVENTORY_REPORT_PRODUCT_LIMIT = 5000"));
-        assertTrue(controller.contains("loadProductsForReport(categoryName)"));
+        assertTrue(controller.contains("loadReportData(categoryName, startDate, endDate)"));
         assertTrue(controller.contains("productDAO.findByCategory("));
         assertTrue(controller.contains("FIRST_PAGE"));
         assertTrue(controller.contains("productDAO.findAll(FIRST_PAGE, INVENTORY_REPORT_PRODUCT_LIMIT)"));
@@ -765,7 +765,7 @@ class PerformancePolicyTest {
         ));
 
         assertTrue(purchaseReportController.contains("getPurchaseOrderDAO().findByDateRange("));
-        assertTrue(purchaseReportController.contains("loadOrdersByDateRange(startDate, endDate)"));
+        assertTrue(purchaseReportController.contains("loadReportData(startDate, endDate)"));
         assertTrue(purchaseReportController.contains("PURCHASE_REPORT_SUPPLIER_LIMIT = 500"));
         assertTrue(purchaseReportController.contains("getSupplierDAO().findRecent(PURCHASE_REPORT_SUPPLIER_LIMIT)"));
         assertFalse(purchaseReportController.contains("getPurchaseOrderDAO().findAll()"));

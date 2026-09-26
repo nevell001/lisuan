@@ -247,28 +247,45 @@ public class TransactionDAORefactored extends BaseDAO {
     public List<Map<String, Object>> getPaymentMethodStats() throws SQLException {
         String sql = "SELECT COALESCE(payment_method, '未知') AS method, COUNT(*) AS count, " +
             "COALESCE(SUM(final_amount), 0) AS amount FROM transactions " +
+            "WHERE COALESCE(status, 'NORMAL') <> 'REFUNDED' " +
             "GROUP BY COALESCE(payment_method, '未知') ORDER BY amount DESC";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql);
              ResultSet rs = pstmt.executeQuery()) {
-            List<Map<String, Object>> methods = new ArrayList<>();
+            // 同一支付方式的多种写法（「现金」/CASH/現金）必须合并成一行：
+            // 否则报表里一种方式出现多行，前端看到的"支付方式统计"直接翻倍（TD-002）
+            Map<String, Map<String, Object>> mergedByCanonical = new LinkedHashMap<>();
             while (rs.next()) {
-                Map<String, Object> item = new HashMap<>();
-                item.put("method", rs.getString("method"));
-                item.put("count", rs.getInt("count"));
-                item.put("amount", rs.getBigDecimal("amount"));
-                methods.add(item);
+                String raw = rs.getString("method");
+                String canonical = com.cashier.util.I18nUiUtils.canonicalPaymentMethod(raw);
+                Map<String, Object> item = mergedByCanonical.get(canonical);
+                if (item == null) {
+                    // 标签优先用落库规范中文值，保证已有的中文数据输出不变
+                    String label = com.cashier.util.I18nUiUtils.storedPaymentMethod(raw);
+                    item = new HashMap<>();
+                    item.put("method", label != null ? label : raw);
+                    item.put("count", 0);
+                    item.put("amount", BigDecimal.ZERO);
+                    mergedByCanonical.put(canonical, item);
+                }
+                item.put("count", ((Number) item.get("count")).intValue() + rs.getInt("count"));
+                BigDecimal groupAmount = rs.getBigDecimal("amount");
+                item.put("amount", ((BigDecimal) item.get("amount"))
+                    .add(groupAmount != null ? groupAmount : BigDecimal.ZERO));
             }
+            List<Map<String, Object>> methods = new ArrayList<>(mergedByCanonical.values());
+            methods.sort((a, b) -> ((BigDecimal) b.get("amount")).compareTo((BigDecimal) a.get("amount")));
             return methods;
         }
     }
 
     public TransactionStatistics getStatistics(String startDate, String endDate) throws SQLException {
         String sql = "SELECT COUNT(*) AS total_transactions, COALESCE(SUM(final_amount), 0) AS total_amount, " +
-            // 收银端写入的是中文支付方式，兼容旧数据/接口写入的代码形式
-            "SUM(CASE WHEN payment_method IN ('现金', 'CASH') THEN 1 ELSE 0 END) AS cash_count, " +
+            // 收银端写入的是中文支付方式，兼容旧数据/接口写入的代码与繁体形式
+            "SUM(CASE WHEN payment_method IN ('现金', '現金', 'CASH', 'Cash') THEN 1 ELSE 0 END) AS cash_count, " +
             "SUM(CASE WHEN member_phone IS NOT NULL THEN 1 ELSE 0 END) AS member_count " +
-            "FROM transactions WHERE timestamp BETWEEN ? AND ?";
+            // 已整单退款的交易不算营业额（营业额为净额口径，见 docs/TECH_DEBT.md 的 TD-003）
+            "FROM transactions WHERE timestamp BETWEEN ? AND ? AND COALESCE(status, 'NORMAL') <> 'REFUNDED'";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setString(1, startDate);
@@ -289,14 +306,17 @@ public class TransactionDAORefactored extends BaseDAO {
 
     public double getTotalRevenue(String startDate, String endDate) throws SQLException {
         Number total = (Number) queryScalar(
-            "SELECT COALESCE(SUM(final_amount), 0) as total FROM transactions WHERE timestamp BETWEEN ? AND ?",
+            "SELECT COALESCE(SUM(final_amount), 0) as total FROM transactions " +
+                "WHERE timestamp BETWEEN ? AND ? AND COALESCE(status, 'NORMAL') <> 'REFUNDED'",
             startDate, endDate);
         return total != null ? total.doubleValue() : 0.0;
     }
 
     public int getTransactionCount(String startDate, String endDate) throws SQLException {
         return queryInt(
-            "SELECT COUNT(*) as count FROM transactions WHERE timestamp BETWEEN ? AND ?", startDate, endDate);
+            "SELECT COUNT(*) as count FROM transactions " +
+                "WHERE timestamp BETWEEN ? AND ? AND COALESCE(status, 'NORMAL') <> 'REFUNDED'",
+            startDate, endDate);
     }
 
     public void batchInsert(List<Transaction> transactions) throws SQLException {

@@ -137,6 +137,9 @@ public class TouchCartController implements CartViewHost {
     @FXML private Label timeLabel;
     @FXML private Button shiftButton;
     @FXML private Label shiftInfoLabel;
+    @FXML private Label statusLabel;
+    /** StatusBarManager 级别监听：cleanup 时必须解除，否则静态单例强引用整棵触屏界面 */
+    private javafx.beans.value.ChangeListener<StatusBarManager.StatusLevel> statusLevelListener;
 
     private CashierSystemFXApplication application;
     private User currentUser;
@@ -168,6 +171,7 @@ public class TouchCartController implements CartViewHost {
     @FXML
     private void initialize() {
         logger.info("触屏版收银视图初始化");
+        bindStatusBar();
         startClock();
         // 分类加载完成后默认选中「热销推荐」，由选中事件驱动首次商品加载（见 loadCategories）
         loadCategories();
@@ -221,6 +225,44 @@ public class TouchCartController implements CartViewHost {
 
     // ===== 时钟更新 =====
 
+    /**
+     * 把底栏状态文本绑定到 {@link StatusBarManager} 并按级别切换颜色。
+     *
+     * <p>此前触屏版底栏没有状态文本控件、也不绑定级别（唯一绑定者在已删除且从未加载的
+     * PosModeController 里）：扫码加购成功、商品/分类加载失败等只写 StatusBarManager 的提示
+     * 在触屏界面上完全看不到，只有 {@code warn()}/{@code showInfo()} 附带弹窗的才可见。</p>
+     */
+    private void bindStatusBar() {
+        if (statusLabel == null) {
+            return;
+        }
+        statusLabel.textProperty().bind(StatusBarManager.statusProperty());
+        statusLevelListener = (obs, oldLevel, newLevel) -> applyStatusLevelStyle(newLevel);
+        StatusBarManager.statusLevelProperty().addListener(statusLevelListener);
+        applyStatusLevelStyle(StatusBarManager.getStatusLevel());
+        // 进场给一个中性文案，避免显示上一个界面残留的提示
+        StatusBarManager.updateStatus(i18n.get("status.ready"));
+    }
+
+    /** 照 MainController.applyStatusLevelStyle：同一套 text-success/warning/danger 样式类。 */
+    private void applyStatusLevelStyle(StatusBarManager.StatusLevel level) {
+        if (statusLabel == null) {
+            return;
+        }
+        statusLabel.getStyleClass().removeAll("text-success", "text-warning", "text-danger");
+
+        StatusBarManager.StatusLevel nextLevel = level != null ? level : StatusBarManager.StatusLevel.NORMAL;
+        switch (nextLevel) {
+            case SUCCESS -> statusLabel.getStyleClass().add("text-success");
+            case WARNING -> statusLabel.getStyleClass().add("text-warning");
+            case ERROR -> statusLabel.getStyleClass().add("text-danger");
+            case NORMAL -> {
+                // 默认状态不加颜色类
+            }
+            default -> logger.warn("未知状态栏级别: {}", nextLevel);
+        }
+    }
+
     private void startClock() {
         clockTimeline = new Timeline(new KeyFrame(Duration.seconds(1), event -> updateDateTime()));
         clockTimeline.setCycleCount(Timeline.INDEFINITE);
@@ -237,6 +279,14 @@ public class TouchCartController implements CartViewHost {
         if (searchDebounce != null) {
             searchDebounce.stop();
             searchDebounce = null;
+        }
+        // 解除对 StatusBarManager 静态单例的绑定与监听，否则登出后静态属性仍强引用整棵触屏界面
+        if (statusLabel != null) {
+            statusLabel.textProperty().unbind();
+        }
+        if (statusLevelListener != null) {
+            StatusBarManager.statusLevelProperty().removeListener(statusLevelListener);
+            statusLevelListener = null;
         }
     }
 
@@ -1458,7 +1508,8 @@ public class TouchCartController implements CartViewHost {
             Transaction transaction = createTransaction(paymentMethod);
             String terminalId = currentUser != null ? currentUser.username : "desktop";
             PaymentOrder paymentOrder = PaymentService.createPaymentOrder(
-                transaction.transactionId, transaction.finalAmount, channel, terminalId);
+                transaction.transactionId, transaction.finalAmount, channel, terminalId,
+                currentUser != null ? currentUser.username : "system");
             showElectronicPaymentDialog(paymentOrder, transaction, paymentMethod);
         } catch (Exception e) {
             logger.error("创建电子支付订单失败", e);
@@ -1650,12 +1701,20 @@ public class TouchCartController implements CartViewHost {
         paymentInProgress = true;
         // 在切换到工作线程前快照，保证结账落库与界面显示用的是同一个促销
         final Promotion promotionToApply = appliedPromotion;
+        // worker 只吃**不可变快照**：cartItems / inventoryMap / currentMember 都归 FX 线程所有，
+        // 而 executeTransaction 会迭代明细、把扣减后的商品 put 回 inventoryMap、并就地改写会员状态。
+        // 此前 worker 直接迭代 cartItems、对 inventoryMap 做 computeIfAbsent（普通 HashMap，
+        // FX 线程同时会读）、并把活 currentMember 交给事务，存在并发写与读到半成品的风险。
+        final List<CartItem> itemsAtSale = new ArrayList<>(cartItems);
+        final Map<String, Product> inventoryForSale = new HashMap<>(inventoryMap);
+        final Member memberForSale = TransactionService.copyMember(currentMember);
+        final ReceiptBuilder.MemberSnapshot memberAtSale = ReceiptBuilder.MemberSnapshot.of(currentMember);
 
         Thread worker = new Thread(() -> {
             try {
-                // 兜底:保证购物车所有商品都在 inventoryMap,避免 executeTransaction 内 inventory.get(name) 返回 null
-                for (CartItem ci : cartItems) {
-                    inventoryMap.computeIfAbsent(ci.product.name, n -> {
+                // 兜底:保证购物车所有商品都在结账用的库存快照里,避免 executeTransaction 内 inventory.get(name) 返回 null
+                for (CartItem ci : itemsAtSale) {
+                    inventoryForSale.computeIfAbsent(ci.product.name, n -> {
                         try {
                             return productDAO.findById(ci.product.id);
                         } catch (SQLException ex) {
@@ -1665,11 +1724,10 @@ public class TouchCartController implements CartViewHost {
                     });
                 }
 
-                // 结账会就地改写 currentMember（等级/折扣/积分），先留一份成交时的会员快照给小票
-                final ReceiptBuilder.MemberSnapshot memberAtSale = ReceiptBuilder.MemberSnapshot.of(currentMember);
-
+                // memberAtSale 是在切线程前取好的快照：executeTransaction 会在副本上结算，
+                // 且随后 resetAfterPayment() 会清空购物车与会员
                 TransactionService.TransactionResult result = TransactionService.executeTransaction(
-                    cartItems, currentMember, transaction, inventoryMap, promotionToApply);
+                    itemsAtSale, memberForSale, transaction, inventoryForSale, promotionToApply);
 
                 if (!result.isSuccess() || result.getTransaction() == null) {
                     final String message = result.getMessage();
@@ -1684,15 +1742,15 @@ public class TouchCartController implements CartViewHost {
                 logger.info("触屏版交易成功,交易ID: {}", settled.transactionId);
 
                 // 在购物车被清空前，先在后台准备好小票快照（settings/明细读取都在 worker 内完成）。
-                // memberAtSale 是在结账前取好的快照：executeTransaction 会就地改写 currentMember 的
-                // 等级/折扣/积分，直接读 currentMember 会把"结账后升级的等级"印在小票上。
-                final ReceiptData receipt = ReceiptBuilder.build(cartItems, memberAtSale,
+                // 明细用 itemsAtSale、会员用 memberAtSale，两者都是切线程前取的快照。
+                final ReceiptData receipt = ReceiptBuilder.build(itemsAtSale, memberAtSale,
                     currentUser != null ? currentUser.name : "", paymentMethod,
                     settled.finalAmount, receivedAmount, changeAmount,
                     com.cashier.service.DataService.loadSettings());
 
                 javafx.application.Platform.runLater(() -> {
                     paymentInProgress = false;
+                    mergeSettledInventory(itemsAtSale, inventoryForSale);
                     showPaymentSuccess(paymentMethod, changeAmount);
                     resetAfterPayment();
                 });
@@ -1745,6 +1803,22 @@ public class TouchCartController implements CartViewHost {
         alert.setHeaderText(null);
         alert.setContentText(msg);
         alert.showAndWait();
+    }
+
+    /**
+     * 把结账 worker 在副本上算出的最新库存并回 FX 线程的 {@code inventoryMap}。
+     *
+     * <p>{@code executeTransaction} 会把扣减后的商品 put 回它拿到的 map，这是本次结账的"库存输出"；
+     * 由于 worker 现在只拿副本，必须在 FX 线程把本单涉及的商品并回去（只并这些，
+     * 避免覆盖 FX 线程在结账期间刚查到的更新数据）。</p>
+     */
+    private void mergeSettledInventory(List<CartItem> itemsAtSale, Map<String, Product> inventoryForSale) {
+        for (CartItem item : itemsAtSale) {
+            Product updated = inventoryForSale.get(item.product.name);
+            if (updated != null) {
+                inventoryMap.put(item.product.name, updated);
+            }
+        }
     }
 
     private void resetAfterPayment() {

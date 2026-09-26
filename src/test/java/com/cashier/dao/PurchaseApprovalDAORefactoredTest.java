@@ -34,6 +34,11 @@ class PurchaseApprovalDAORefactoredTest extends DatabaseTestBase {
     @Test
     @DisplayName("插入审批记录后可按订单查询")
     void insertAndFindByOrderId() throws SQLException {
+        // 审批表 order_id 有外键（TD-009）：先造供应商 1 与采购单 101
+        executeSql("INSERT INTO suppliers (id, supplier_code, name) VALUES (1, 'S-FK-1', '外键供应商')");
+        executeSql("INSERT INTO purchase_orders (id, order_no, supplier_id, purchase_date, total_amount, status) "
+            + "VALUES (101, 'PO-FK-101', 1, CURRENT_DATE, 0, 'pending')");
+
         PurchaseApproval approval = new PurchaseApproval(101, "admin", "approve", "同意");
         approval.approvalTime = new Timestamp(System.currentTimeMillis());
 

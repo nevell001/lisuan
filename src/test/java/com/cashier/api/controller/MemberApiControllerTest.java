@@ -171,4 +171,52 @@ class MemberApiControllerTest extends DatabaseTestBase {
 
         assertEquals(HttpStatus.BAD_REQUEST, ctx.status);
     }
+
+    @Test
+    @DisplayName("更新会员：折扣/等级/手机号校验与桌面端一致（非法值回 400）")
+    void updateMemberValidatesFieldsLikeDesktop() throws Exception {
+        Member saved = insertMember("13800000008");
+
+        assertEquals(HttpStatus.BAD_REQUEST, updateWith(saved, "discount", new BigDecimal("999")).status,
+            "折扣超过 10 必须拒绝（此前会原样写库）");
+        assertEquals(HttpStatus.BAD_REQUEST, updateWith(saved, "discount", new BigDecimal("-1")).status,
+            "负折扣必须拒绝");
+        assertEquals(HttpStatus.BAD_REQUEST, updateWith(saved, "level", "超级VIP").status,
+            "等级必须是 普通/银卡/金卡/钻石 之一");
+        assertEquals(HttpStatus.BAD_REQUEST, updateWith(saved, "phone", "abc").status,
+            "手机号必须是 11 位数字");
+        assertEquals(HttpStatus.BAD_REQUEST, updateWith(saved, "name", "   ").status, "姓名不能是空白");
+
+        // 合法值应当成功，并同步 discountRate（此前接口只改 discount）
+        MemberApiController.MemberRequest ok = new MemberApiController.MemberRequest();
+        ok.level = "银卡";
+        ok.discount = new BigDecimal("9.5");
+        TestContext okCtx = new TestContext().withRequest(HandlerType.PUT, "/api/members/1")
+            .withPathParam("id", String.valueOf(saved.id))
+            .withBody(ok);
+        MemberApiController.update(okCtx.context);
+
+        assertEquals(HttpStatus.OK, okCtx.status);
+        Member reloaded = memberDAO.findById(saved.id);
+        assertEquals("银卡", reloaded.level);
+        assertEquals(0, new BigDecimal("9.5").compareTo(reloaded.discount));
+        assertEquals(0, new BigDecimal("9.5").compareTo(reloaded.discountRate), "discountRate 必须同步");
+    }
+
+    /** 只改一个字段发一次 PUT，返回 TestContext。 */
+    private <T> TestContext updateWith(Member saved, String field, T value) throws Exception {
+        MemberApiController.MemberRequest request = new MemberApiController.MemberRequest();
+        switch (field) {
+            case "name" -> request.name = (String) value;
+            case "phone" -> request.phone = (String) value;
+            case "level" -> request.level = (String) value;
+            case "discount" -> request.discount = (BigDecimal) value;
+            default -> throw new IllegalArgumentException(field);
+        }
+        TestContext ctx = new TestContext().withRequest(HandlerType.PUT, "/api/members/1")
+            .withPathParam("id", String.valueOf(saved.id))
+            .withBody(request);
+        MemberApiController.update(ctx.context);
+        return ctx;
+    }
 }

@@ -80,8 +80,19 @@ public class InventoryApiController {
             } else if (request.adjustment != null) {
                 product.quantity += request.adjustment;
             }
+            if (product.quantity < 0) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of("success", false, "message", "库存数量不能为负数"));
+                return;
+            }
             
-            productDAO.update(product);
+            if (!productDAO.update(product)) {
+                // 乐观锁：version 不匹配说明并发修改已提交（如收银台扣减），不能回 success
+                logger.warn("更新库存冲突（乐观锁未命中）: {} ({})", product.name, product.id);
+                ctx.status(HttpStatus.CONFLICT)
+                   .json(Map.of("success", false, "message", "库存已被其他操作修改，请重新获取后再试"));
+                return;
+            }
             
             logger.info("更新库存: {} -> {}", product.name, product.quantity);
             ctx.json(Map.of("success", true, "data", product, "message", "库存更新成功"));

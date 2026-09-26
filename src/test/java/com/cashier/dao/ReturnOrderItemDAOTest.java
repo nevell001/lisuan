@@ -28,6 +28,10 @@ class ReturnOrderItemDAOTest extends DatabaseTestBase {
     @Test
     @DisplayName("按退货单号查询明细应正确读取商品状态")
     void findByReturnOrderIdShouldReadCondition() throws Exception {
+        // 明细表 return_order_id 有外键（TD-009）：先造退货单
+        executeSql("INSERT INTO return_orders (return_order_id, return_date, total_amount, status, operator_name) "
+            + "VALUES ('R202606170001', CURRENT_TIMESTAMP, 0, 'APPROVED', 'test')");
+
         ReturnOrderItem item = new ReturnOrderItem();
         item.returnOrderId = "R202606170001";
         item.productId = 1;

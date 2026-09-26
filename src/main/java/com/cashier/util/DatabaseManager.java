@@ -560,7 +560,10 @@ public class DatabaseManager {
                     INDEX idx_operator (operator_username),
                     INDEX idx_member (member_phone),
                     INDEX idx_payment_method (payment_method),
-                    FOREIGN KEY (operator_username) REFERENCES users(username) ON DELETE SET NULL,
+                    -- operator_username 是"成交时是谁"的审计归属，故意不挂外键：
+                    -- 外键 ON DELETE SET NULL 会在删除用户时把历史交易的收银员抹成 NULL，
+                    -- 改名/删除用户都不该改写历史（见 dropAuditAttributionForeignKeys 的说明）。
+                    -- member_phone 保留外键：会员注销后本单不再归属会员，这是可接受语义。
                     FOREIGN KEY (member_phone) REFERENCES members(phone) ON DELETE SET NULL
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);
@@ -701,8 +704,11 @@ public class DatabaseManager {
                     INDEX idx_timestamp (timestamp),
                     INDEX idx_username (username),
                     INDEX idx_category (log_category),
-                    INDEX idx_result (operation_result),
-                    FOREIGN KEY (username) REFERENCES users(username) ON DELETE SET NULL
+                    INDEX idx_result (operation_result)
+                    -- username 不挂外键：审计日志的操作人可能被删/改名，也可能写的是显示名
+                    -- （历史实现有若干处直接写操作员姓名）。挂 FOREIGN KEY 会让这些写入直接失败，
+                    -- 而 ON DELETE SET NULL 又会在删用户时抹掉审计归属——两头都不对，
+                    -- 故与 transactions.operator_username 一样按纯文本归属处理。
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
                 """);
 
@@ -1174,6 +1180,9 @@ public class DatabaseManager {
         // 偏好表用 'default' 伪用户存全局默认值，不能对 username 加指向 users 的外键
         dropPreferenceUsernameForeignKeys(stmt);
 
+        // 审计归属列（谁做的这一单）不挂外键：删除/改名用户不得改写历史
+        dropAuditAttributionForeignKeys(stmt);
+
         // 为 promotions 表添加 promotion_code 字段（如果不存在）
         if (columnMissing(stmt, "promotions", "promotion_code")) {
             logger.info("正在为 promotions 表添加 promotion_code 字段...");
@@ -1228,27 +1237,62 @@ public class DatabaseManager {
      * 不是 users 里的真实用户，外键会让全局默认永远写不进去，因此这里把历史库上的外键删掉。</p>
      */
     private static void dropPreferenceUsernameForeignKeys(Statement stmt) throws SQLException {
-        String sql = "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
-                     "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? " +
-                     "AND COLUMN_NAME = 'username' AND REFERENCED_TABLE_NAME = 'users'";
         for (String table : PREFERENCE_TABLES) {
             if (tableMissing(stmt, table)) {
                 continue;
             }
-            List<String> constraints = new ArrayList<>();
-            try (PreparedStatement pstmt = stmt.getConnection().prepareStatement(sql)) {
-                pstmt.setString(1, table);
-                try (ResultSet rs = pstmt.executeQuery()) {
-                    while (rs.next()) {
-                        constraints.add(rs.getString("CONSTRAINT_NAME"));
-                    }
-                }
-            }
-            for (String constraint : constraints) {
+            for (String constraint : foreignKeysOnColumn(stmt, table, "username")) {
                 logger.info("正在移除 {} 表的 username 外键 {}（偏好表需要存放 default 全局默认值）", table, constraint);
                 stmt.execute("ALTER TABLE `" + table + "` DROP FOREIGN KEY `" + constraint + "`");
             }
         }
+    }
+
+    /**
+     * 移除审计归属列上的外键（老库迁移）。
+     *
+     * <p>{@code transactions.operator_username} 与 {@code operation_logs.username} 记录的是
+     * <b>当时是谁做的</b>：</p>
+     * <ul>
+     *   <li>外键 {@code ON DELETE SET NULL} 会在删除用户时把历史交易/审计日志的操作人抹成 NULL
+     *       ——审计归属被系统自己销毁，且 {@code operation_logs} 还有多处直接写"操作员姓名"
+     *       （显示名），有外键时这些写入会直接失败；</li>
+     *   <li>用户改名也不该改写历史记录。</li>
+     * </ul>
+     * <p>因此这两列按纯文本归属处理（列长度 50 与原 {@code users.username} 对齐，改名审计仍可追溯）。
+     * 新库在 {@code CREATE TABLE} 里就不声明这两个外键，本方法只负责把老库上的删掉。</p>
+     */
+    private static void dropAuditAttributionForeignKeys(Statement stmt) throws SQLException {
+        if (!tableMissing(stmt, "transactions")) {
+            for (String constraint : foreignKeysOnColumn(stmt, "transactions", "operator_username")) {
+                logger.info("正在移除 transactions.operator_username 外键 {}（审计归属不得被删用户改写）", constraint);
+                stmt.execute("ALTER TABLE `transactions` DROP FOREIGN KEY `" + constraint + "`");
+            }
+        }
+        if (!tableMissing(stmt, "operation_logs")) {
+            for (String constraint : foreignKeysOnColumn(stmt, "operation_logs", "username")) {
+                logger.info("正在移除 operation_logs.username 外键 {}（审计归属不得被删用户改写）", constraint);
+                stmt.execute("ALTER TABLE `operation_logs` DROP FOREIGN KEY `" + constraint + "`");
+            }
+        }
+    }
+
+    /** 查某列上指向 users 的外键约束名（可能多条）。 */
+    private static List<String> foreignKeysOnColumn(Statement stmt, String table, String column) throws SQLException {
+        String sql = "SELECT CONSTRAINT_NAME FROM INFORMATION_SCHEMA.KEY_COLUMN_USAGE " +
+                     "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? " +
+                     "AND COLUMN_NAME = ? AND REFERENCED_TABLE_NAME = 'users'";
+        List<String> constraints = new ArrayList<>();
+        try (PreparedStatement pstmt = stmt.getConnection().prepareStatement(sql)) {
+            pstmt.setString(1, table);
+            pstmt.setString(2, column);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    constraints.add(rs.getString("CONSTRAINT_NAME"));
+                }
+            }
+        }
+        return constraints;
     }
 
     private static boolean columnMissing(Statement stmt, String table, String column) throws SQLException {

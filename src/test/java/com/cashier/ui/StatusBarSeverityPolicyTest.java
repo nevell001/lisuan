@@ -30,16 +30,32 @@ class StatusBarSeverityPolicyTest {
     }
 
     @Test
-    @DisplayName("主窗口状态栏应按级别切换颜色类")
+    @DisplayName("主窗口与触屏收银台状态栏都应按级别切换颜色类")
     void shellControllersApplySeverityStyleClasses() throws Exception {
         String mainController = Files.readString(Path.of(
             "src/main/java/com/cashier/controller/MainController.java"
         ));
 
         assertSeverityBinding(mainController);
-        // 注：触屏收银台（TouchCartView）底部没有状态栏文本控件，也不绑定 statusLevelProperty，
-        // 因此 StatusBarManager 的级别提示在触屏版界面上不显示（只有弹窗类提示可见）。
-        // 详见 CLAUDE.md 的待修项；补上状态栏后应在此处同时断言 TouchCartController。
+
+        // 触屏收银台：此前底栏没有状态文本控件、也不绑定 statusLevelProperty，
+        // 于是 StatusBarManager 的提示（扫码成功、商品/分类加载失败）在触屏版界面上完全不可见
+        String touchController = Files.readString(Path.of(
+            "src/main/java/com/cashier/controller/TouchCartController.java"
+        ));
+        assertSeverityBinding(touchController);
+        assertTrue(touchController.contains("statusLabel.textProperty().bind(StatusBarManager.statusProperty())"),
+            "触屏底栏状态文本必须绑定 StatusBarManager.statusProperty()");
+        assertTrue(touchController.contains("bindStatusBar();"),
+            "initialize() 必须调用 bindStatusBar()，否则绑定代码永不执行");
+        assertTrue(touchController.contains("statusLabel.textProperty().unbind()"),
+            "cleanup 必须解除绑定，否则静态单例会强引用整棵旧触屏界面");
+
+        String touchView = Files.readString(Path.of(
+            "src/main/resources/com/cashier/view/TouchCartView.fxml"
+        ));
+        assertTrue(touchView.contains("fx:id=\"statusLabel\""),
+            "TouchCartView 底栏必须有状态文本控件，否则状态提示无处显示");
     }
 
     @Test

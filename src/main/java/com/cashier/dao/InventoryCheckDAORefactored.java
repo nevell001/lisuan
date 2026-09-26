@@ -2,6 +2,8 @@ package com.cashier.dao;
 
 import com.cashier.model.InventoryCheck;
 
+import java.sql.Connection;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
@@ -237,9 +239,32 @@ public class InventoryCheckDAORefactored extends BaseDAO {
      * @throws SQLException 数据库操作异常
      */
     public boolean complete(int id, String checker) throws SQLException {
-        return executeUpdate(
-            "UPDATE inventory_check SET status = 'completed', checker = ?, update_time = ? WHERE id = ?",
-            checker, new Timestamp(System.currentTimeMillis()), id) > 0;
+        try (Connection conn = getConnection()) {
+            return completeWithConnection(conn, id, checker);
+        }
+    }
+
+    /**
+     * 在调用方事务内把盘点单置为已完成后返回是否真的发生了状态迁移。
+     *
+     * <p>{@code AND status <> 'completed'} 是并发/重复点击的守卫：没有它时重复完成会再返回 true，
+     * 调用方就会把盘点差额**二次**加到库存上。</p>
+     *
+     * @param conn    调用方事务连接
+     * @param id      盘点ID
+     * @param checker 审核人
+     * @return 状态确实从非 completed 迁移到 completed 时返回 true
+     * @throws SQLException 数据库操作异常
+     */
+    public boolean completeWithConnection(Connection conn, int id, String checker) throws SQLException {
+        String sql = "UPDATE inventory_check SET status = 'completed', checker = ?, update_time = ? "
+            + "WHERE id = ? AND status <> 'completed'";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, checker);
+            pstmt.setTimestamp(2, new Timestamp(System.currentTimeMillis()));
+            pstmt.setInt(3, id);
+            return pstmt.executeUpdate() > 0;
+        }
     }
 
     /**
