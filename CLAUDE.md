@@ -1151,15 +1151,27 @@ worker 迭代 `cartItems`（`ObservableList`）、对 `inventoryMap`（普通 `H
   `InventoryController` 分类/单位管理弹窗（抽出 `loadCategoryManagementData` / `loadUnitManagementData`）、
   `MemberController.handleSearch`（会员搜索）、`ShiftController.updateShiftButtonStates`（活跃班次）
   全部改为后台查询 + 回 FX 线程填表/切换状态
-- 门禁（均已变异验证）：`nonPosPageLoadsRunOffTheFxThread` 表扩到 **27 条**；
+- 门禁（均已变异验证）：`nonPosPageLoadsRunOffTheFxThread` 登记表 **28 条**（此前文档写的 27 是漏数，已订正）；
   新增 `reportLoadersAreOnlyCalledAsBackgroundTask`（loader 里必须有查库语句、且只能以
   `() -> loadXxx(...)` 形式提交一次）与 `profitReportDoesNotQuerySettingsOnTheFxThread`
   （渲染方法不得出现 `loadOperatingCostRatio()`，且 worker 必须先取好比例）
-- **仍待办**（约 6 处）：`PurchaseInboundController`/`PurchaseOrderController` 的明细与选择器弹窗、
-  `PromotionController` 弹窗循环、`UserController` 搜索/停用等处理器、
-  `ShiftController.handleEndShift` + `loadShiftTransactions`（**交互流程**：查活跃班次 → 确认框 → 落库，
-  后台化需把整条流程改成回调链）、会员/用户的**写操作**（单行写 + 紧随刷新，收益低）；
-  清单见 `docs/TECH_DEBT.md` 的 TD-006；改的时候一并往上述门禁表里加行
+- **交班结算（2026-09 第四批，TD-006 最后一条无界查询）**：`ShiftController.handleEndShift` 原来在
+  FX 线程跑"查活跃班次 → 确认框 → `loadShiftTransactions`（**拉整班交易**，忙时上千笔）→ 聚合 → 落库"，
+  点"交班"会冻结界面。现拆为：`handleEndShift` 只提交后台任务（活跃班次查询也进后台）→
+  `confirmEndShift`（FX，确认框）→ `endShiftInBackground`（后台：取数 + 聚合 + `shiftDao.update`，
+  **不得触碰 UI**）→ `renderShiftEnded`（FX：置位 → 刷新 → 提示 → 关窗）。
+  **顺序契约**：`shiftEnded = true` 必须早于 `closeWindow();` —— `TouchCartController` 是
+  `showAndWait()` 返回后**同步**读 `isShiftEnded()` 决定是否自动退出登录的，顺序调换会让该流程永不退出。
+  门禁 `FxThreadDbPolicyTest.endShiftSettlementRunsOffTheFxThread`（11 条断言，含"FX 侧确认方法不得查库"
+  这条堵漏 + 上述顺序）；3 处变异（顺序调换 / 后台碰 UI / FX 侧查库）均确认变红
+- **明确接受、不再修（2026-09 复核）**：TD-006 剩余条目都有界——`PurchaseInbound`/`PurchaseOrder` 弹窗、
+  `UserController` 搜索/停用、`PromotionController` 批量写、会员/用户单行写；每条在
+  `docs/TECH_DEBT.md` 里写明**实测开销 / 接受理由 / 何时重新评估**（如"分页被去掉""促销数量级变大"）。
+  同类：打包向导 `PackageWizardController` **明确不译** i18n（开发者工具，
+  由 `-Ppackager` profile 构建、POS 界面零引用）
+- **验证方法教训**：变异测试"没变红"时**先确认变异代码编译通过**——有一次我把直接调用会抛受检异常的
+  方法塞进去，Maven 在编译期就失败、日志里没有测试失败行，看起来与"门禁通过"完全一样；
+  判断依据是输出里有没有 `Tests run:` 行（或 `COMPILATION ERROR`）
 
 **启动期数据库阶段（v2.6.0 补强）**
 

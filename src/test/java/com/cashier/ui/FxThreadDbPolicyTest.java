@@ -347,6 +347,50 @@ class FxThreadDbPolicyTest {
         throw new IllegalStateException("方法体未闭合: " + signature);
     }
 
+    @Test
+    @DisplayName("交班结算（无界查询）整体在后台，且 shiftEnded 先于关窗置位")
+    void endShiftSettlementRunsOffTheFxThread() throws Exception {
+        String shift = readMainSource("controller/ShiftController.java");
+
+        String handler = methodBody(shift, "public void handleEndShift()");
+        assertTrue(handler.contains("UIOptimizer.runInBackground(") && handler.contains("findActiveShift()"),
+            "交班入口必须把活跃班次查询也放后台（本仓库口径：单行查库同样不得留在 FX 线程）");
+        assertFalse(handler.contains("catch (SQLException"),
+            "交班入口不得再有同步 try/catch 查库");
+
+        // FX 侧的确认方法只负责弹确认框与提交后台任务，不得自己查库（否则后台化被绕过）
+        String confirm = methodBody(shift, "private void confirmEndShift(Shift activeShift)");
+        assertFalse(confirm.contains("DAOFactory.getInstance()"),
+            "交班确认（FX 线程）里不得再出现查库调用：查库必须在后台任务内");
+
+        // 取数在 loadShiftTransactions（被后台方法调用），落库在同一后台任务里
+        String loader = methodBody(shift, "private ShiftRevenueSource loadShiftTransactions(Shift activeShift)");
+        assertTrue(loader.contains("findByDateRange(start, end)"),
+            "本班次交易是无界查询（忙时上千笔），必须在后台取数方法里取——交班是每天都做的操作");
+        assertTrue(loader.contains("findCompletedReturnsBetween(start, end)"),
+            "同窗口的已完成退货也要一起在后台取（净额口径，不能回 FX 线程补查）");
+        assertFalse(loader.contains("showError("),
+            "后台取数方法不得触碰 UI：它原来在这里弹错误提示，必须改为抛给后台任务的错误回调");
+
+        String work = methodBody(shift, "private ShiftEndOutcome endShiftInBackground(Shift activeShift)");
+        assertTrue(work.contains("loadShiftTransactions(activeShift)"),
+            "后台结算必须调用后台取数方法，不得自己同步查库");
+        assertTrue(work.contains("getShiftDAO().update(activeShift)"),
+            "落库同样放后台，避免确认后界面再冻一次");
+        assertFalse(work.contains("showError(") || work.contains("new Alert("),
+            "后台方法不得触碰 UI：弹窗与提示必须在 FX 回调（confirmEndShift / renderShiftEnded）里");
+
+        String render = methodBody(shift, "private void renderShiftEnded(ShiftEndOutcome outcome)");
+        int flag = render.indexOf("shiftEnded = true");
+        // 用调用形式匹配：注释里也会写 closeWindow()（本轮就被自己的注释骗过一次）
+        int close = render.indexOf("closeWindow();");
+        assertTrue(flag >= 0 && close > flag,
+            "shiftEnded = true 必须在 closeWindow() **之前**：TouchCartController 是等模态窗关闭后"
+                + "**同步**读 isShiftEnded() 决定是否自动退出登录的，顺序调换会破坏该契约");
+        assertTrue(render.contains("loadShifts()") && render.contains("updateShiftButtonStates()"),
+            "交班完成后仍要刷新列表与按钮状态（后台化不应改变用户可见行为）");
+    }
+
     private static int countOccurrences(String text, String needle) {
         int count = 0;
         int idx = text.indexOf(needle);

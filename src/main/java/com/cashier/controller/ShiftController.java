@@ -690,88 +690,89 @@ public class ShiftController {
     @FXML
     public void handleEndShift() {
         logger.info("执行交班操作");
-        // 检查是否有活跃班次
-        Shift activeShift = null;
-        try {
-            activeShift = DAOFactory.getInstance().getShiftDAO().findActiveShift();
-        } catch (SQLException e) {
-            logger.error("获取活跃班次失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED) + ": " + e.getMessage());
-            return;
-        }
+        // 交班是每天都做的操作，而"本班次交易"是无界查询（忙时上千笔），同步跑会把界面冻住。
+        // 整条流程（查活跃班次 → 拉本班次交易/退货 → 聚合 → 落库）都放后台，UI 一律走回调回 FX 线程。
+        UIOptimizer.runInBackground(
+            () -> DAOFactory.getInstance().getShiftDAO().findActiveShift(),
+            this::confirmEndShift,
+            e -> {
+                logger.error("获取活跃班次失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED)
+                    + ": " + e.getMessage());
+            });
+    }
 
+    /** FX 线程：没有活跃班次就提示；否则确认后把结算交给后台。 */
+    private void confirmEndShift(Shift activeShift) {
         if (activeShift == null) {
             showError(com.cashier.i18n.I18nManager.getInstance().get("runtime.no_active_shift_short"));
             return;
         }
 
-        // 确认交班
         Alert alert = new Alert(Alert.AlertType.CONFIRMATION);
         alert.setTitle(I18nManager.getInstance().get(I18nKeys.Common.CONFIRM));
         alert.setHeaderText(null);
         alert.setContentText(com.cashier.i18n.I18nManager.getInstance().get("runtime.shift_end_confirm"));
-
         if (alert.showAndWait().orElse(ButtonType.CANCEL) != ButtonType.OK) {
             return;
         }
 
-        try {
-            // 只加载本班次开始后的交易记录与已完成退货（净额口径）。
-            ShiftRevenueSource source = loadShiftTransactions(activeShift);
-            if (source == null) {
-                return;
-            }
+        UIOptimizer.runInBackground(
+            () -> endShiftInBackground(activeShift),
+            this::renderShiftEnded,
+            e -> {
+                logger.error("交班失败", e);
+                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED)
+                    + ": " + e.getMessage());
+            });
+    }
 
-            ShiftRevenueStats stats = categorizeShiftRevenue(source);
-            BigDecimal cashRevenue = stats.cashRevenue;
-            BigDecimal wechatRevenue = stats.wechatRevenue;
-            BigDecimal alipayRevenue = stats.alipayRevenue;
-            BigDecimal cardRevenue = stats.cardRevenue;
-            BigDecimal totalRevenue = stats.totalRevenue;
+    /** 后台线程：加载本班次交易与已完成退货 → 聚合 → 结束班次并落库。**不得触碰 UI**。 */
+    private ShiftEndOutcome endShiftInBackground(Shift activeShift) throws SQLException {
+        ShiftRevenueSource source = loadShiftTransactions(activeShift);
+        ShiftRevenueStats stats = categorizeShiftRevenue(source);
 
-            // 结束班次
-            // 计算班次结束时的累计总营业额和总交易数
-            BigDecimal closingRevenue = activeShift.getOpeningRevenue().add(totalRevenue);
-            int closingTransactionCount = activeShift.openingTransactionCount + source.transactions().size();
-            activeShift.endShift(closingRevenue, closingTransactionCount, cashRevenue, wechatRevenue, alipayRevenue, cardRevenue);
+        BigDecimal closingRevenue = activeShift.getOpeningRevenue().add(stats.totalRevenue);
+        int closingTransactionCount = activeShift.openingTransactionCount + source.transactions().size();
+        activeShift.endShift(closingRevenue, closingTransactionCount, stats.cashRevenue, stats.wechatRevenue,
+            stats.alipayRevenue, stats.cardRevenue);
 
-            // 保存班次到数据库
-            try {
-                DAOFactory.getInstance().getShiftDAO().update(activeShift);
-            } catch (SQLException e) {
-                logger.error("更新班次失败", e);
-                showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.SAVE_DATA) + ": " + e.getMessage());
-                return;
-            }
+        DAOFactory.getInstance().getShiftDAO().update(activeShift);
+        return new ShiftEndOutcome(activeShift, stats);
+    }
 
-            // 标记交班已完成，供调用方（如触屏版退出流程）判断是否需要自动退出
-            shiftEnded = true;
+    /** FX 线程：置位交班标志 → 刷新列表 → 提示交班详情 → 关窗（顺序不可调换）。 */
+    private void renderShiftEnded(ShiftEndOutcome outcome) {
+        Shift activeShift = outcome.shift();
+        ShiftRevenueStats stats = outcome.stats();
 
-            // 刷新列表
-            loadShifts();
-            updateShiftButtonStates();
+        // 必须在 closeWindow() 之前置位：TouchCartController 是等模态窗关闭后**同步**读 isShiftEnded()
+        // 来决定是否自动退出登录（见 TouchCartController 的退出流程），顺序调换会破坏该契约。
+        shiftEnded = true;
 
-            // 显示交班详情
-            I18nManager i18n = I18nManager.getInstance();
-            String detail = buildShiftEndDetail(activeShift, cashRevenue, wechatRevenue, alipayRevenue, cardRevenue);
+        loadShifts();
+        updateShiftButtonStates();
 
-            Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
-            successAlert.setTitle(i18n.get(I18nKeys.Success.SHIFT_END));
-            successAlert.setHeaderText(null);
-            successAlert.setContentText(detail);
-            successAlert.getDialogPane().setPrefWidth(500);
-            successAlert.showAndWait();
+        I18nManager i18n = I18nManager.getInstance();
+        String detail = buildShiftEndDetail(activeShift, stats.cashRevenue, stats.wechatRevenue,
+            stats.alipayRevenue, stats.cardRevenue);
 
-            // 更新主界面的班次信息
-            MainController.updateShiftInfoGlobal();
+        Alert successAlert = new Alert(Alert.AlertType.INFORMATION);
+        successAlert.setTitle(i18n.get(I18nKeys.Success.SHIFT_END));
+        successAlert.setHeaderText(null);
+        successAlert.setContentText(detail);
+        successAlert.getDialogPane().setPrefWidth(500);
+        successAlert.showAndWait();
 
-            // 关闭窗口
-            closeWindow();
+        // 更新主界面的班次信息
+        MainController.updateShiftInfoGlobal();
 
-        } catch (Exception e) {
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED) + ": " + e.getMessage());
-            logger.error("交班失败", e);
-        }
+        // 关闭窗口
+        closeWindow();
+    }
+
+    /** 交班结算结果：已结束并落库的班次 + 营收聚合（跨线程传递，故用 record）。 */
+    private record ShiftEndOutcome(Shift shift, ShiftRevenueStats stats) {
     }
 
     /** 班次取数结果：交易明细 + 该窗口内已完成的退货金额（按退款方式归一化，净额口径 TD-003） */
@@ -779,22 +780,16 @@ public class ShiftController {
                                       Map<String, BigDecimal> returnsByMethod) {
     }
 
-    /** 加载本班次开始后的交易记录与已完成退货；失败返回 null（已提示用户） */
-    private ShiftRevenueSource loadShiftTransactions(Shift activeShift) {
-        try {
-            String start = activeShift.startTime.atZone(java.time.ZoneId.systemDefault())
-                .toLocalDateTime()
-                .format(DateTimeFormats.STANDARD_DATE_TIME);
-            String end = java.time.LocalDateTime.now().format(DateTimeFormats.STANDARD_DATE_TIME);
-            List<Transaction> transactions = DAOFactory.getInstance().getTransactionDAO().findByDateRange(start, end);
-            Map<String, BigDecimal> returnsByMethod = TransactionService.returnsByMethod(
-                DAOFactory.getInstance().getReturnOrderDAO().findCompletedReturnsBetween(start, end));
-            return new ShiftRevenueSource(transactions, returnsByMethod);
-        } catch (SQLException e) {
-            logger.error("加载交易记录失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-            return null;
-        }
+    /** 加载本班次开始后的交易记录与已完成退货；失败抛给后台任务的错误回调（此处**不得触碰 UI**）。 */
+    private ShiftRevenueSource loadShiftTransactions(Shift activeShift) throws SQLException {
+        String start = activeShift.startTime.atZone(java.time.ZoneId.systemDefault())
+            .toLocalDateTime()
+            .format(DateTimeFormats.STANDARD_DATE_TIME);
+        String end = java.time.LocalDateTime.now().format(DateTimeFormats.STANDARD_DATE_TIME);
+        List<Transaction> transactions = DAOFactory.getInstance().getTransactionDAO().findByDateRange(start, end);
+        Map<String, BigDecimal> returnsByMethod = TransactionService.returnsByMethod(
+            DAOFactory.getInstance().getReturnOrderDAO().findCompletedReturnsBetween(start, end));
+        return new ShiftRevenueSource(transactions, returnsByMethod);
     }
 
     /** 班次营收分类统计 */
