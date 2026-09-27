@@ -816,6 +816,11 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `AppConstants`/`pom.xml`/`installer/Installer.java`/`.env.example`；
   两份"当前事实"文档**不得写死测试数量**（改版本/加测试时最容易漂移，一律指向构建输出的 `Tests run:`；
   README 的历史更新日志不在此限）。改版本号时除了四处代码来源，记得同步这两份文档里的同步句
+- **发票文件路径（TD-001）**：`invoices.pdf_path` / `image_path` 目前**故意不校验**——全仓库没有任何地方
+  把它们当文件路径读取（只由 `POST /api/invoices/{id}/print` 原样落库），此时定白名单属于为不存在的能力
+  做防御，且合法路径范围取决于尚未确定的发票预览/下载设计。`InvoicePathGuardPolicyTest` 把这个
+  "触发条件"变成了 CI 红灯：一旦有人把这两个字段当文件系统路径解引用（读写都算）而没有同批实现校验，
+  测试立即失败，并要求把校验过的站点登记进 `VALIDATED_READ_SITES`（目前为空，实现时登记一行）
 - 启动入口：可执行 JAR 的 Main-Class 为 `com.cashier.Launcher`（不继承 `Application`），
   使 `java -jar lisuan-fx-*-jar-with-dependencies.jar` 无需 module-path 即可启动
 

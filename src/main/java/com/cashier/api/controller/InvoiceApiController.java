@@ -204,6 +204,12 @@ public class InvoiceApiController {
                 return;
             }
             
+            // Deliberate: pdfPath/imagePath are stored as opaque strings and never dereferenced as
+            // filesystem paths today, so no whitelist is applied (see docs/TECH_DEBT.md TD-001).
+            // If you start reading/writing these paths (invoice preview/download), implement the
+            // path validation in the SAME change: relative path + fixed root + extension whitelist
+            // + normalized prefix check (see ExportUtil / BackupService) and register the site in
+            // InvoicePathGuardPolicyTest.VALIDATED_READ_SITES.
             DAOFactory.getInstance().getInvoiceDAO().updatePrintInfo(invoiceId, request.pdfPath, request.imagePath);
             
             logger.info("发票打印记录: {}", invoiceId);
