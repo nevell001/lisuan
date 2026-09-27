@@ -181,7 +181,7 @@ private Button shiftBtn;
         applyStatusLevelStyle(StatusBarManager.getStatusLevel());
 
         // 更新状态
-        StatusBarManager.updateStatus("就绪");
+        StatusBarManager.updateStatus(I18nManager.getInstance().get(I18nKeys.Runtime.STATUS_READY));
         updateDate();
         updateShiftInfo();
 
@@ -304,16 +304,16 @@ private Button shiftBtn;
 
     private void handleControlActionShortcut(KeyEvent event) {
         switch (event.getCode()) {
-            case S -> consumeShortcut(event, () -> updateStatus("数据已保存"));
+            case S -> consumeShortcut(event, () -> updateStatus(I18nManager.getInstance().get(I18nKeys.Runtime.STATUS_DATA_SAVED)));
             case F -> consumeShortcut(event, event.isShiftDown()
                 ? this::handleGlobalSearch
-                : () -> showPlaceholder("搜索", "🔍", "搜索功能正在开发中..."));
+                : () -> showPlaceholder(I18nManager.getInstance().get(I18nKeys.Common.SEARCH), "🔍", I18nManager.getInstance().get(I18nKeys.Runtime.FEATURE_SEARCH_IN_DEVELOPMENT)));
             case D -> consumeShortcut(event, this::handleExportData);
-            case R -> consumeShortcut(event, () -> updateStatus("已刷新"));
+            case R -> consumeShortcut(event, () -> updateStatus(I18nManager.getInstance().get(I18nKeys.Runtime.STATUS_REFRESHED)));
             case Q -> consumeShortcut(event, this::handleExit);
             case A -> event.consume();
-            case E -> consumeShortcut(event, () -> showPlaceholder("编辑", "✏️", "编辑功能正在开发中..."));
-            case B -> consumeShortcut(event, () -> showPlaceholder("批量操作", "📋", "批量操作功能正在开发中..."));
+            case E -> consumeShortcut(event, () -> showPlaceholder(I18nManager.getInstance().get(I18nKeys.Common.EDIT), "✏️", I18nManager.getInstance().get(I18nKeys.Runtime.FEATURE_EDIT_IN_DEVELOPMENT)));
+            case B -> consumeShortcut(event, () -> showPlaceholder(I18nManager.getInstance().get(I18nKeys.Common.BATCH_OPERATION), "📋", I18nManager.getInstance().get(I18nKeys.Runtime.FEATURE_BATCH_IN_DEVELOPMENT)));
             case SLASH -> consumeShortcut(event, this::handleShortcutHelp);
             default -> {
             }
@@ -620,23 +620,25 @@ private Button shiftBtn;
     @FXML
     public void handleDataBackup() {
         if (!requirePermission(User.PERMISSION_BACKUP_RESTORE)) return;
-        updateStatus("数据备份");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Runtime.STATUS_DATA_BACKUP));
 
         // 创建备份目录（快速文件操作留在 FX 线程）
         String timestamp = LocalDateTime.now(ZoneId.systemDefault()).format(com.cashier.util.DateTimeFormats.BACKUP_TIMESTAMP);
         final String backupPath = "backup_" + timestamp;
 
-        StatusBarManager.updateWarning("正在备份数据…请稍候，完成后会有提示");
+        StatusBarManager.updateWarning(I18nManager.getInstance().get(I18nKeys.Runtime.BACKUP_IN_PROGRESS));
         // 整库 dump 可能耗时较长，放到 daemon 线程执行，避免冻结 UI
         Thread worker = new Thread(() -> {
             try {
                 DataService.backupData(backupPath);
                 javafx.application.Platform.runLater(() ->
-                    FXUtils.showInfoAlert("备份成功", "数据备份成功！\n备份位置: " + backupPath));
+                    FXUtils.showInfoAlert(I18nManager.getInstance().get(I18nKeys.Runtime.BACKUP_SUCCESS_TITLE),
+                        I18nManager.getInstance().get(I18nKeys.Runtime.BACKUP_FILE_SUCCESS, backupPath)));
             } catch (Exception e) {
                 logger.error("数据备份失败", e);
                 javafx.application.Platform.runLater(() ->
-                    FXUtils.showErrorAlert("备份失败", "数据备份失败: " + e.getMessage()));
+                    FXUtils.showErrorAlert(I18nManager.getInstance().get(I18nKeys.Runtime.BACKUP_FAILED_TITLE),
+                            I18nManager.getInstance().get(I18nKeys.Runtime.BACKUP_FAILED, e.getMessage())));
             }
         }, "data-backup");
         worker.setDaemon(true);
@@ -646,7 +648,7 @@ private Button shiftBtn;
     @FXML
     public void handleDataRestore() {
         if (!requirePermission(User.PERMISSION_BACKUP_RESTORE)) return;
-        updateStatus("数据恢复");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Runtime.STATUS_DATA_RESTORE));
         
         // 列出可用的备份目录
         File projectDir = new File(System.getProperty(SystemPropertyKeys.USER_DIR));
@@ -655,7 +657,8 @@ private Button shiftBtn;
         );
         
         if (backupDirs == null || backupDirs.length == 0) {
-            FXUtils.showErrorAlert("无备份", "未找到任何备份目录！\n请先进行数据备份。");
+            FXUtils.showErrorAlert(I18nManager.getInstance().get(I18nKeys.Runtime.BACKUP_FAILED_TITLE),
+                    I18nManager.getInstance().get(I18nKeys.Runtime.BACKUP_NONE_FOUND));
             return;
         }
         
@@ -691,7 +694,7 @@ private Button shiftBtn;
                 
                 if (confirmAlert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
                     final String restoreDir = backupDirName;
-                    StatusBarManager.updateWarning("正在恢复数据…请稍候");
+                    StatusBarManager.updateWarning(I18nManager.getInstance().get(I18nKeys.Runtime.RESTORE_IN_PROGRESS));
                     // 整库恢复可能耗时较长，放到 daemon 线程执行，避免冻结 UI
                     Thread worker = new Thread(() -> {
                         try {
@@ -702,21 +705,24 @@ private Button shiftBtn;
                         } catch (Exception e) {
                             logger.error("数据恢复失败", e);
                             javafx.application.Platform.runLater(() ->
-                                FXUtils.showErrorAlert("恢复失败", "数据恢复失败: " + e.getMessage()));
+                                FXUtils.showErrorAlert(I18nManager.getInstance().get(I18nKeys.Runtime.RESTORE_FAILED_TITLE),
+                                    I18nManager.getInstance().get(I18nKeys.Runtime.RESTORE_FAILED, e.getMessage())));
                         }
                     }, "data-restore");
                     worker.setDaemon(true);
                     worker.start();
                 }
             } catch (Exception e) {
-                FXUtils.showErrorAlert("恢复失败", "数据恢复失败: " + e.getMessage());
+                FXUtils.showErrorAlert(I18nManager.getInstance().get(I18nKeys.Runtime.RESTORE_FAILED_TITLE),
+                    I18nManager.getInstance().get(I18nKeys.Runtime.RESTORE_FAILED, e.getMessage()));
             }
         });
     }    @FXML
     public void handleExportData() {
         if (!requirePermission(User.PERMISSION_EXPORT_DATA)) return;
         updateStatus("导出数据");
-        FXUtils.showInfoAlert("开发中", "导出数据功能正在开发中...");
+        FXUtils.showInfoAlert(I18nManager.getInstance().get(I18nKeys.Runtime.IN_DEVELOPMENT_TITLE),
+            I18nManager.getInstance().get(I18nKeys.Runtime.FEATURE_EXPORT_IN_DEVELOPMENT));
     }
 
     /**
@@ -736,7 +742,7 @@ private Button shiftBtn;
             Stage dialogStage = new Stage();
             dialogStage.initModality(Modality.NONE);
             dialogStage.initOwner(tabPane.getScene().getWindow());
-            dialogStage.setTitle(i18n.get("快捷键.title"));
+            dialogStage.setTitle(I18nManager.getInstance().get("快捷键.title"));
             dialogStage.setResizable(false);
 
             Scene scene = new Scene(root, 700, 600);
@@ -769,7 +775,7 @@ private Button shiftBtn;
             Stage dialogStage = new Stage();
             dialogStage.initModality(Modality.NONE);
             dialogStage.initOwner(tabPane.getScene().getWindow());
-            dialogStage.setTitle(i18n.get("search.title"));
+            dialogStage.setTitle(I18nManager.getInstance().get("search.title"));
             dialogStage.setResizable(false);
 
             Scene scene = new Scene(root, 600, 500);
@@ -1596,15 +1602,15 @@ private Button shiftBtn;
     private Runnable resolveRefreshAction(String title) {
         I18nManager i18n = I18nManager.getInstance();
         java.util.Map<String, Runnable> actions = new java.util.HashMap<>();
-        actions.put(i18n.get(I18nKeys.Nav.USER_MANAGEMENT), this::handleUserManagement);
-        actions.put(i18n.get(I18nKeys.Nav.INVENTORY), this::handleInventory);
-        actions.put(i18n.get(I18nKeys.Nav.CART), this::handleCheckout);
-        actions.put(i18n.get(I18nKeys.Nav.TRANSACTIONS), this::handleTransactions);
-        actions.put(i18n.get(I18nKeys.Nav.MEMBERS), this::handleMembers);
-        actions.put(i18n.get(I18nKeys.Nav.STATISTICS), this::handleStatistics);
-        actions.put(i18n.get(I18nKeys.Nav.PROMOTIONS), this::handlePromotions);
-        actions.put(i18n.get(I18nKeys.Nav.SHIFT), this::handleShift);
-        actions.put(i18n.get(I18nKeys.Nav.SETTINGS), this::handleSettings);
+        actions.put(I18nManager.getInstance().get(I18nKeys.Nav.USER_MANAGEMENT), this::handleUserManagement);
+        actions.put(I18nManager.getInstance().get(I18nKeys.Nav.INVENTORY), this::handleInventory);
+        actions.put(I18nManager.getInstance().get(I18nKeys.Nav.CART), this::handleCheckout);
+        actions.put(I18nManager.getInstance().get(I18nKeys.Nav.TRANSACTIONS), this::handleTransactions);
+        actions.put(I18nManager.getInstance().get(I18nKeys.Nav.MEMBERS), this::handleMembers);
+        actions.put(I18nManager.getInstance().get(I18nKeys.Nav.STATISTICS), this::handleStatistics);
+        actions.put(I18nManager.getInstance().get(I18nKeys.Nav.PROMOTIONS), this::handlePromotions);
+        actions.put(I18nManager.getInstance().get(I18nKeys.Nav.SHIFT), this::handleShift);
+        actions.put(I18nManager.getInstance().get(I18nKeys.Nav.SETTINGS), this::handleSettings);
         // 兼容历史中文字面量
         actions.put("商品管理", this::handleInventory);
         actions.put("pos/结账", this::handleCheckout);

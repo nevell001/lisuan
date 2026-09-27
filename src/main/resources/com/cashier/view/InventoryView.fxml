@@ -84,7 +84,7 @@
             <Separator orientation="VERTICAL"/>
 
             <Label text="%product.category"/>
-            <ComboBox fx:id="categoryFilterComboBox" prefWidth="150" promptText="全部"/>
+            <ComboBox fx:id="categoryFilterComboBox" prefWidth="150" promptText="%inventory.all_categories"/>
 
             <Region HBox.hgrow="ALWAYS"/>
 

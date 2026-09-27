@@ -291,9 +291,9 @@ public class CashierSystemFXApplication extends Application {
      */
     private void showStartupFailure(Throwable t) {
         Alert alert = new Alert(Alert.AlertType.ERROR);
-        alert.setTitle("启动失败");
+        alert.setTitle(I18nManager.getInstance().get(I18nKeys.Runtime.STARTUP_FAILED_TITLE));
         alert.setHeaderText(null);
-        alert.setContentText("应用初始化失败：" + t.getMessage());
+        alert.setContentText(I18nManager.getInstance().get(I18nKeys.Runtime.STARTUP_FAILED_DETAIL, t.getMessage()));
         alert.showAndWait();
         Platform.exit();
     }
@@ -429,11 +429,9 @@ public class CashierSystemFXApplication extends Application {
      */
     private void warnUiFontMissing() {
         Alert alert = new Alert(Alert.AlertType.WARNING);
-        alert.setTitle("界面字体缺失");
+        alert.setTitle(I18nManager.getInstance().get(I18nKeys.Runtime.UI_FONT_MISSING_TITLE));
         alert.setHeaderText(null);
-        alert.setContentText("未能加载随包内置的界面字体 \"" + UI_FONT_FAMILY + "\"。\n\n"
-            + "界面已回退到系统默认字体，中文或符号可能显示异常。\n"
-            + "请确认安装包完整（fonts/*.ttc 未被裁剪）。");
+        alert.setContentText(I18nManager.getInstance().get(I18nKeys.Runtime.UI_FONT_MISSING_DETAIL, UI_FONT_FAMILY));
         alert.showAndWait();
     }
 

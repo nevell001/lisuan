@@ -6,6 +6,8 @@ import javafx.scene.control.*;
 import javafx.scene.layout.*;
 import javafx.stage.Modality;
 import javafx.stage.Stage;
+import com.cashier.i18n.I18nKeys;
+import com.cashier.i18n.I18nManager;
 
 /**
  * 打印预览对话框
@@ -38,7 +40,7 @@ public class PrintPreviewDialog {
         titleLabel.getStyleClass().add("title-sm");
         
         // 预览区域
-        Label previewLabel = new Label("打印预览:");
+        Label previewLabel = new Label(I18nManager.getInstance().get(I18nKeys.Runtime.PRINT_PREVIEW));
         previewArea = new TextArea();
         previewArea.setPrefWidth(400);
         previewArea.setPrefHeight(400);
@@ -50,7 +52,7 @@ public class PrintPreviewDialog {
         HBox buttonBox = new HBox(10);
         buttonBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
         
-        Button printButton = new Button("打印");
+        Button printButton = new Button(I18nManager.getInstance().get(I18nKeys.Runtime.PRINT_BUTTON));
         printButton.getStyleClass().add("title-xs");
         printButton.setPrefWidth(100);
         printButton.setOnAction(e -> {
@@ -58,7 +60,7 @@ public class PrintPreviewDialog {
             dialogStage.close();
         });
         
-        Button cancelButton = new Button("取消");
+        Button cancelButton = new Button(I18nManager.getInstance().get(I18nKeys.Common.CANCEL));
         cancelButton.getStyleClass().add("text-lg");
         cancelButton.setPrefWidth(100);
         cancelButton.setOnAction(e -> {

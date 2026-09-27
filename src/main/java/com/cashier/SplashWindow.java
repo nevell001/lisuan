@@ -10,6 +10,8 @@ import javafx.scene.layout.VBox;
 import javafx.stage.Stage;
 import javafx.stage.StageStyle;
 import org.slf4j.Logger;
+import com.cashier.i18n.I18nKeys;
+import com.cashier.i18n.I18nManager;
 
 /**
  * 轻量启动窗口。
@@ -28,7 +30,7 @@ public final class SplashWindow {
 
     private final Stage stage = new Stage();
     private final ProgressBar progress = new ProgressBar();
-    private final Label statusLabel = new Label("正在启动...");
+    private final Label statusLabel = new Label(I18nManager.getInstance().get(I18nKeys.Runtime.SPLASH_STARTING));
 
     public SplashWindow() {
         ImageView logo = new ImageView();
@@ -52,7 +54,7 @@ public final class SplashWindow {
 
         stage.setScene(new Scene(root, 400, 280));
         stage.initStyle(StageStyle.UNDECORATED);
-        stage.setTitle("狸算(LiSuan)收银系统");
+        stage.setTitle(I18nManager.getInstance().get(I18nKeys.Common.APP_NAME));
         stage.setResizable(false);
         stage.centerOnScreen();
     }
@@ -89,13 +91,13 @@ public final class SplashWindow {
 
     private void updateStatusText(double value) {
         if (value < 0.3) {
-            statusLabel.setText("正在初始化...");
+            statusLabel.setText(I18nManager.getInstance().get(I18nKeys.Runtime.SPLASH_INITIALIZING));
         } else if (value < 0.6) {
-            statusLabel.setText("正在加载数据...");
+            statusLabel.setText(I18nManager.getInstance().get(I18nKeys.Runtime.SPLASH_LOADING_DATA));
         } else if (value < 0.9) {
-            statusLabel.setText("正在启动服务...");
+            statusLabel.setText(I18nManager.getInstance().get(I18nKeys.Runtime.SPLASH_STARTING_SERVICES));
         } else {
-            statusLabel.setText("即将完成...");
+            statusLabel.setText(I18nManager.getInstance().get(I18nKeys.Runtime.SPLASH_FINISHING));
         }
     }
 }

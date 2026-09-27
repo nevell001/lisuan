@@ -18,7 +18,7 @@
 | TD-011 | Windows 启动脚本把未匹配的 JAR 通配符当路径，静默跳过构建 | 发布 | 待处理 | Windows 启动 |
 | TD-012 | install.sh / docker-init.sh 静默成功与占位口令 | 运维 | **已修复（2026-09）**：失败可见 + 口令硬守卫 + 容器名同源 + 删未实现开关，4 项门禁 | 安装脚本 |
 | TD-013 | 版本号门禁只覆盖 4 处中的 2 处 | 发布 | **已修复（2026-09）** | 版本管理 |
-| TD-014 | i18n 硬编码与文档中的测试数过期 | 文档/体验 | **部分修复（2026-09）**：文档数字与 locale 折叠已修，可见文案硬编码待办 | — |
+| TD-014 | i18n 硬编码与文档中的测试数过期 | 文档/体验 | **部分修复（2026-09）**：运行时可见文案已迁移（30 key，4 项门禁）；主界面状态栏 28 处与打包向导待办 | — |
 | TD-015 | `String.format` 用默认 locale 格式化金额（73 处） | 正确性 | **已修复（2026-09）**：73+5 处固定 `Locale.ROOT`，3 项门禁 + 德语 locale 全量验证 | 非中文 locale 部署 |
 
 > 本节条目来自 2026-09 的全量审计（`mvn verify` 三关全绿的前提下，逐条回读代码 + 真实
@@ -70,6 +70,11 @@
 > `Locale.ROOT`（小票、CSS `rgba()`、金额工具等），加 `LocaleFormatPolicyTest`（2 项）与
 > `LocaleIndependenceBehaviorTest`（德语默认 locale 下走真实代码路径），
 > 并额外验证整套 713 用例在德语 locale 下全绿。
+>
+> **已修（第十二批）**：TD-014 剩余——审计点名的可见文案全部迁入语言包（30 个新 key，四份语言包同步，
+> I18nKeys 补常量），含备份/恢复对话框、充值支付方式显示层本地化（落库值不变）、打印预览、
+> 启动画面、启动失败/字体缺失弹窗、`InventoryView.fxml` 的 `promptText`；
+> 加 `HardcodedUiTextPolicyTest`（4 项，含变异验证），FXML 的两处运行时覆盖占位走带理由的白名单。
 
 ---
 
@@ -574,31 +579,65 @@ Windows 干净机器首次运行脚本、或发布前验证脚本门禁时。
 
 ## TD-014 i18n 硬编码与文档中的测试数过期
 
-**类别**：文档 / 体验　**状态**：**部分修复（2026-09）**
+**类别**：文档 / 体验　**状态**：**部分修复（2026-09）**——运行时可见文案已迁移，主界面状态栏文案待办
 **提出来源**：2026-09 全量审计（UI/i18n + 文档）
 
-### 已修复（2026-09）
+### 已修复
 
-- **文档里的测试数不再写死**：README 头部与正文、`AGENTS.md` 原来写死 `589 / 606 / 647`，
-  实际早已不同。现在统一改成"`mvn -q clean verify` 全绿 + 数量以构建输出 `Tests run:` 为准"
-  （写死数字必然过期，是每批修复都会踩的坑）。
-- **`I18nUiUtils` 的大小写折叠改用 `Locale.ROOT`**（`I18nUiUtils.java` 4 处
-  `toLowerCase()/toUpperCase()`）：土耳其语环境下 `"CHECKING".toLowerCase()` 会得到
-  `checkıng`（无点 ı），落库值 `CASH`/`PENDING`/`CHECKING` 永远匹配不上、界面回退成英文原值。
-  门禁 `I18nUiUtilsTest.caseFoldingIsLocaleIndependent`（把默认 locale 切成 `tr_TR` 再断言；
-  改回默认 locale 即变红，实测返回 `CHECKING` 而不是 `盘点中`）。
-- **澄清一条误报**：审计说"`CurrencyUtil` 小数分隔符随默认 locale"——实际它显式用
-  `DecimalFormatSymbols(Locale.SIMPLIFIED_CHINESE)`，不受默认 locale 影响。
+**第一批（文档与 locale）**
+
+- **文档里的测试数不再写死**：README 头部与正文、`AGENTS.md` 原有 `589 / 606 / 647`，
+  实际早已不同。改为"`mvn -q clean verify` 全绿 + 数量以构建输出 `Tests run:` 为准"。
+- **`I18nUiUtils` 的大小写折叠改用 `Locale.ROOT`**：土耳其语环境下 `"CHECKING".toLowerCase()`
+  会得到 `checkıng`，落库值匹配失败、界面回退成英文原值。门禁
+  `I18nUiUtilsTest.caseFoldingIsLocaleIndependent`（切 `tr_TR` 后断言）。
+- 澄清一条误报：`CurrencyUtil` 已显式用 `DecimalFormatSymbols(Locale.SIMPLIFIED_CHINESE)`，
+  不受默认 locale 影响（真正的 locale 问题见 TD-015）。
+
+**第二批（运行时可见文案迁移）**
+
+把审计点名的硬编码文案全部迁到语言包（新增 30 个 key，`I18nKeys.Runtime` 补常量，
+四份语言包同步；能复用的都复用了，如 `common.cancel`、`app.name`、`runtime.backup_file_success`）：
+
+- `MainController` 备份/恢复对话框（成功/失败/无备份 → 标题 + 正文，`{0}` 占位）、
+  状态栏文案（就绪/数据已保存/已刷新/数据备份/数据恢复）与"功能开发中"占位弹窗（搜索/编辑/批量操作/导出）；
+  顺带把该文件里误用的 `i18n.get(...)`（本来没有这个字段）统一为 `I18nManager.getInstance().get(...)`
+- `RechargeController` 支付方式下拉框：**下拉项仍是规范中文落库值**（TD-002 口径），
+  通过 `StringConverter` 只把**显示层**本地化（`I18nUiUtils.paymentMethod`）——
+  既让 en/zh_TW 用户看到母语，又保证落库/筛选值不变
+- `PrintPreviewDialog`：标题、预览标签、打印/取消按钮
+- `SplashWindow`：启动/初始化/加载数据/启动服务/即将完成五段进度文案 + 窗口标题（复用 `app.name`）
+- `CashierSystemFXApplication`：启动失败、界面字体缺失两个弹窗的标题与正文
+- `InventoryView.fxml`：`promptText="全部"` → `%inventory.all_categories`（沿用既有 key）
+- `TouchCartView.fxml` 的两处设计期占位（`便利店`、`2026-08-23 星期日`）**保持硬编码**并登记白名单：
+  它们都有 `fx:id`，运行时必被覆盖（`TouchCartController` 用设置里的店名与当前日期 `setText`），
+  改成语言包只会增加无意义的 key——白名单里逐条注明覆盖它的代码位置
+
+### 门禁（4 项，全部做过变异验证）
+
+`com.cashier.security.HardcodedUiTextPolicyTest`：
+
+1. `migratedFilesHaveNoHardcodedChineseUiText`：已迁移文件里，
+   `setTitle/setHeaderText/setContentText/setText/setPromptText/setTooltipText/show*Alert/showPlaceholder`
+   以及 `new Label/Button/...("中文")` 不得含中文（**日志与注释里的中文不算**——项目本来就用中文写日志）；
+2. `fxmlVisibleTextUsesResourceKeys`：视图目录内 `text/promptText/title/headerText` 要么是 `%key`、
+   要么不含中文（运行时覆盖的占位走白名单，白名单必须逐条注明理由）；
+3. `migratedKeysExistInEveryBundle`：本次迁移的 key 必须在四份语言包里都存在；
+4. `printPreviewButtonsUseI18n`：打印预览按钮不得回退成字面量。
+
+变异验证：① 打印预览按钮改回 `new Button("打印")` → 1、4 变红；
+② 英文包删掉 `runtime.splash_finishing` → 3 变红（`I18nBundleConsistencyTest` 同时变红）；
+③ `InventoryView.fxml` 写回 `promptText="全部"` → 2 变红。均确认后还原。
 
 ### 仍待处理
 
-- **可见文案硬编码**：`MainController` 备份/恢复对话框、`RechargeController` 支付方式与校验文案、
-  `PrintPreviewDialog`、`SplashWindow`、`PackageWizardController`、`CashierSystemFXApplication`
-  的错误弹窗标题、`InventoryView.fxml` 的 `promptText="全部"`。
-  ⚠️ 改 `RechargeController` 时注意：`"现金"/"微信"…` **同时是落库的支付方式规范值**，只能改显示层。
-  门禁可参照 `TouchCashDialogI18nTest` 对 `TouchCartViewFactory` 的做法（指定文件不得出现中文 UI 字面量）。
-- 159 个无人引用的 bundle key（清理需先确认没有 FXML/反射引用）。
-- `AGENTS.md` 未被 git 跟踪（`.gitignore:38`）——本机使用没问题，但换机器就丢；是否入库待定。
+- **`MainController` 的 28 处 `updateStatus("中文")`**：菜单导航状态提示（用户管理/商品管理/交易记录/
+  主题切换…）。它们是同一类问题但数量多、且都属于"状态栏一句话"，本轮先只做审计点名的对话框与占位弹窗；
+  门禁的调用清单里暂未包含 `updateStatus`，迁移时请连同类一起加进 `UI_CALL`
+- `PackageWizardController`（89 处中文字面量）与 `SplashWindow` 品牌名以外的文案：打包向导是**维护者工具**
+  （不是终端用户界面），优先级低；若要让向导也支持英文，需单独一批
+- 159 个无人引用的 bundle key（清理需先确认没有 FXML/反射引用）
+- `AGENTS.md` 未被 git 跟踪（`.gitignore:38`）——本机可用，换机器就丢；是否入库待定
 
 ---
 

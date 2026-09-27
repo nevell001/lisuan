@@ -85,7 +85,19 @@ public class RechargeController {
     @FXML
     private void initialize() {
         // 初始化支付方式下拉框
+        // 下拉项仍是**规范中文落库值**（TD-002），只是显示层按当前语言本地化
         paymentMethodComboBox.getItems().addAll("现金", "微信", "支付宝", "银行卡");
+        paymentMethodComboBox.setConverter(new javafx.util.StringConverter<String>() {
+            @Override
+            public String toString(String value) {
+                return value == null ? "" : com.cashier.util.I18nUiUtils.paymentMethod(value);
+            }
+
+            @Override
+            public String fromString(String text) {
+                return text;
+            }
+        });
         paymentMethodComboBox.getSelectionModel().select("现金");
 
         // 设置历史记录表格列
