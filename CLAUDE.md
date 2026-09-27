@@ -356,8 +356,17 @@ productDAO.update(product);
 - `payment_records` - electronic payment records (v2.5.0)
 - `invoices` - invoice management (v2.5.0)
 
+**历史遗留表（2026-09 澄清）**
+- `specifications` / `specification_values` / `product_specifications`（v2.4.4 规格）、
+  `export_history` / `export_templates`（v2.4.0 导出）：**当前 Java 侧已无任何代码引用**
+  （规格功能下线、`SpecificationDAORefactored` 已删除；导出直接写文件）。这 5 张表只存在于
+  初始化脚本里，保留仅为兼容仍在使用它们的旧库/BI 取数；新装部署不需要。
+  它们登记在 `InitSchemaParityTest.LEGACY_TABLES` 白名单里——**新增"Java 侧不建的表"必须显式登记**，
+  否则门禁会失败
+
 **Initialization:**
-- Full init: `docker/mysql-init/00-init-complete.sql`
+- Full init: `docker/mysql-init/00-init-complete.sql`（表/列/类型与 Java 建表一致，
+  由 `InitSchemaParityTest` 守着；DDL 取自 `DatabaseManager` 与各 DAO 的 `createTable()`，勿手改）
 - v2.4.3: `08-v2.4.3-product-name-unique.sql` - Product name UNIQUE constraint
 - v2.4.4: `10-v2.4.4-specification-management.sql` - Specification management tables
 - Version management: `docker/mysql-init/DATABASE_VERSIONS.md`
@@ -436,7 +445,7 @@ public class YourControllerUITest extends DatabaseTestBase {
 - Excel: Apache POI 5.2.5
 - PDF: Apache PDFBox 3.0.4
 - Chinese font: `NotoSansSC-Regular.ttc`
-- Export history tracked in `export_history` table
+- 导出直接写文件（`ExportUtil`），**不再写 `export_history` 表**——该表已无引用，见上"历史遗留表"
 
 **Notification System (v2.4.1)**
 - `NotificationManager` singleton
@@ -1234,7 +1243,8 @@ worker 迭代 `cartItems`（`ObservableList`）、对 `inventoryMap`（普通 `H
   TD-008（成功弹窗金额）、TD-009（测试库外键/审计归属）、TD-013（版本号四处一致）**已修复**，
   TD-006 仅剩约 6 处（含交互流程与写操作），
   TD-014 部分（文档测试数不再写死、locale 折叠已修，可见文案硬编码待办）；
-  其余（初始化脚本漂移、Windows 启动、安装脚本、`String.format` 默认 locale 等）仍待处理
+  TD-010（初始化脚本与 Java 建表对齐）**已修复**；
+  其余（Windows 启动、安装脚本、`String.format` 默认 locale、可见文案硬编码等）仍待处理
 
 **数据库密码来源（v2.6.0 补强）**
 

@@ -187,18 +187,16 @@ CREATE TABLE IF NOT EXISTS promotions (
 -- 创建分类表
 CREATE TABLE IF NOT EXISTS categories (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(100) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL UNIQUE,
     description TEXT,
-    created_at BIGINT,
     INDEX idx_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- 创建单位表
 CREATE TABLE IF NOT EXISTS units (
     id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(20) NOT NULL UNIQUE,
+    name VARCHAR(50) NOT NULL UNIQUE,
     description TEXT,
-    created_at BIGINT,
     INDEX idx_name (name)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -478,6 +476,10 @@ DEALLOCATE PREPARE stmt;
 -- ============================================
 
 -- 创建商品规格类型表
+-- ---- 历史遗留表：规格（v2.4.4）----
+-- 当前 Java 侧已无任何代码引用 specifications / specification_values / product_specifications
+-- （规格功能已下线，'SpecificationDAORefactored' 亦已删除）。保留建表语句只为兼容仍在使用这些表的旧库/BI 取数；
+-- 新装部署不再需要，可由 InitSchemaParityTest 的 LEGACY_TABLES 白名单追溯到此处。
 CREATE TABLE IF NOT EXISTS specifications (
     id INT AUTO_INCREMENT PRIMARY KEY COMMENT '规格类型ID',
     name VARCHAR(100) NOT NULL COMMENT '规格名称',
@@ -808,19 +810,19 @@ SET @sql = IF(@table_exists = 0,
         original_transaction_id VARCHAR(50) COMMENT ''原交易ID'',
         member_id INT COMMENT ''会员ID'',
         member_name VARCHAR(100) COMMENT ''会员名称'',
-        return_date DATETIME NOT NULL COMMENT ''退货日期'',
-        return_reason VARCHAR(500) COMMENT ''退货原因'',
+        return_date TIMESTAMP NOT NULL COMMENT ''退货日期'',
+        return_reason TEXT COMMENT ''退货原因'',
         total_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT ''退货总金额'',
         status VARCHAR(20) NOT NULL DEFAULT ''PENDING'' COMMENT ''状态：PENDING、APPROVED、REJECTED、COMPLETED'',
         payment_method VARCHAR(20) COMMENT ''退款方式：CASH、WECHAT、ALIPAY、CARD'',
         operator_name VARCHAR(50) NOT NULL COMMENT ''操作员'',
         approver_name VARCHAR(50) COMMENT ''审批人'',
-        approval_date DATETIME COMMENT ''审批日期'',
-        approval_comment VARCHAR(500) COMMENT ''审批意见'',
-        completed_date DATETIME COMMENT ''完成日期'',
+        approval_date TIMESTAMP COMMENT ''审批日期'',
+        approval_comment TEXT COMMENT ''审批意见'',
+        completed_date TIMESTAMP COMMENT ''完成日期'',
         notes TEXT COMMENT ''备注'',
-        create_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT ''创建时间'',
-        update_time DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT ''更新时间'',
+        create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT ''创建时间'',
+        update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT ''更新时间'',
         INDEX idx_return_order_id (return_order_id),
         INDEX idx_status (status),
         INDEX idx_member_id (member_id),
@@ -847,14 +849,15 @@ SET @sql = IF(@table_exists = 0,
         return_order_id VARCHAR(50) NOT NULL COMMENT ''退货单号'',
         product_id INT NOT NULL COMMENT ''商品ID'',
         product_code VARCHAR(50) COMMENT ''商品编号'',
-        product_name VARCHAR(200) NOT NULL COMMENT ''商品名称'',
+        product_name VARCHAR(100) NOT NULL COMMENT ''商品名称'',
         barcode VARCHAR(100) COMMENT ''条形码'',
-        category VARCHAR(100) COMMENT ''分类'',
+        category VARCHAR(50) COMMENT ''分类'',
         return_quantity INT NOT NULL DEFAULT 0 COMMENT ''退货数量'',
         unit_price DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT ''单价'',
         return_amount DECIMAL(10,2) NOT NULL DEFAULT 0.00 COMMENT ''退货金额'',
-        reason VARCHAR(500) COMMENT ''退货原因'',
+        reason TEXT COMMENT ''退货原因'',
         `condition` VARCHAR(20) NOT NULL DEFAULT ''GOOD'' COMMENT ''商品状态：GOOD、DAMAGED、OPENED'',
+        create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         INDEX idx_return_order_id (return_order_id),
         INDEX idx_product_id (product_id),
         FOREIGN KEY (return_order_id) REFERENCES return_orders(return_order_id) ON DELETE CASCADE,
@@ -867,7 +870,10 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- ============================================
--- v2.4.0 新增表：导出历史和模板
+-- 历史遗留表：导出历史与模板（v2.4.0）
+-- 当前 Java 侧已无代码引用 export_history / export_templates（导出走 ExportUtil 直接写文件），
+-- 保留仅为兼容旧库/BI 取数；新装部署不再需要。
+-- ============================================
 -- ============================================
 
 -- 创建导出历史表
@@ -948,6 +954,184 @@ INSERT IGNORE INTO users (username, password, name, role, active, force_password
 VALUES ('admin', '$2a$10$EVvVqIyQ7Ve2dZb9DKnv/u8JVIyfsp6flS1q9qTVaDB1X4SUTywsu', '系统管理员', 'admin', 1, 1, UNIX_TIMESTAMP() * 1000, NULL);
 
 -- ============================================
+-- v2.5+ 表（补建）：发票 / 备份 / 支付 / 挂单 / 登录尝试 / 系统设置
+-- 说明：这些表此前只在应用启动时由 Java 侧创建，按本脚本初始化出来的库结构不完整；
+--       下面内容直接取自 Java 侧 DDL（DatabaseManager 与各 DAO 的 createTable），
+--       请勿手改——"SQL 表/列集合 == Java 建表集合"由 InitSchemaParityTest 守着。
+-- ============================================
+
+CREATE TABLE IF NOT EXISTS backup_config (
+    id INT PRIMARY KEY,
+    auto_backup_enabled BOOLEAN,
+    target VARCHAR(20),
+    content_type VARCHAR(20),
+    backup_interval_hours INT,
+    retention_days INT,
+    max_backup_count INT,
+    last_backup_time DATETIME,
+    next_backup_time DATETIME,
+    aliyun_endpoint VARCHAR(100),
+    aliyun_bucket VARCHAR(50),
+    aliyun_access_key VARCHAR(100),
+    aliyun_secret_key VARCHAR(100),
+    local_backup_path VARCHAR(100),
+    create_time DATETIME,
+    update_time DATETIME
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS backup_records (
+    backup_id VARCHAR(50) PRIMARY KEY,
+    backup_type VARCHAR(20),
+    target VARCHAR(20),
+    file_name VARCHAR(100),
+    local_path VARCHAR(200),
+    remote_path VARCHAR(200),
+    file_size BIGINT,
+    status VARCHAR(20),
+    create_time DATETIME,
+    start_time DATETIME,
+    finish_time DATETIME,
+    duration_seconds INT,
+    content_type VARCHAR(20),
+    scope VARCHAR(20),
+    operator VARCHAR(50),
+    remark VARCHAR(200),
+    error_message VARCHAR(500),
+    checksum VARCHAR(50),
+    auto_backup BOOLEAN,
+    INDEX idx_status (status),
+    INDEX idx_create_time (create_time)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS hold_orders (
+    id INT PRIMARY KEY AUTO_INCREMENT,
+    order_number VARCHAR(50) UNIQUE NOT NULL,
+    user_id INT NOT NULL,
+    member_id INT,
+    member_name VARCHAR(100),
+    member_phone VARCHAR(20),
+    total_amount DECIMAL(10,2) DEFAULT 0,
+    discount_amount DECIMAL(10,2) DEFAULT 0,
+    final_amount DECIMAL(10,2) DEFAULT 0,
+    item_count INT DEFAULT 0,
+    items_json TEXT,
+    hold_date DATE NOT NULL,
+    hold_time TIME NOT NULL,
+    notes VARCHAR(500),
+    status INT DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_user_id (user_id),
+    INDEX idx_status (status),
+    INDEX idx_hold_date (hold_date)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS invoice_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id VARCHAR(50),
+    product_name VARCHAR(100),
+    specification VARCHAR(100),
+    unit VARCHAR(20),
+    quantity INT,
+    unit_price DECIMAL(10,2),
+    amount DECIMAL(10,2),
+    tax_rate DECIMAL(5,4),
+    tax_amount DECIMAL(10,2),
+    total_amount DECIMAL(10,2),
+    FOREIGN KEY (invoice_id) REFERENCES invoices(invoice_id) ON DELETE CASCADE,
+    INDEX idx_invoice (invoice_id)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS invoices (
+    invoice_id VARCHAR(50) PRIMARY KEY,
+    invoice_code VARCHAR(20),
+    invoice_number VARCHAR(20),
+    transaction_id VARCHAR(50),
+    buyer_name VARCHAR(100),
+    buyer_tax_id VARCHAR(30),
+    buyer_address VARCHAR(200),
+    buyer_phone VARCHAR(50),
+    buyer_bank VARCHAR(100),
+    seller_name VARCHAR(100),
+    seller_tax_id VARCHAR(30),
+    seller_address VARCHAR(200),
+    seller_phone VARCHAR(50),
+    seller_bank VARCHAR(100),
+    total_amount DECIMAL(10,2),
+    tax_amount DECIMAL(10,2),
+    final_amount DECIMAL(10,2),
+    tax_rate DECIMAL(5,4),
+    create_time DATETIME,
+    print_time DATETIME,
+    create_by VARCHAR(50),
+    status VARCHAR(20),
+    void_reason VARCHAR(200),
+    void_time DATETIME,
+    remark VARCHAR(500),
+    payee VARCHAR(50),
+    checker VARCHAR(50),
+    print_count INT DEFAULT 0,
+    pdf_path VARCHAR(200),
+    image_path VARCHAR(200),
+    INDEX idx_transaction (transaction_id),
+    INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS login_attempts (
+    username VARCHAR(50) PRIMARY KEY,
+    attempt_count INT DEFAULT 0,
+    lockout_until BIGINT DEFAULT NULL,
+    last_attempt_time BIGINT DEFAULT NULL,
+    INDEX idx_username (username)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS payment_orders (
+    payment_id VARCHAR(50) PRIMARY KEY,
+    transaction_id VARCHAR(50),
+    merchant_order_no VARCHAR(50) UNIQUE,
+    payment_type VARCHAR(20),
+    channel VARCHAR(20),
+    amount DECIMAL(10,2),
+    status VARCHAR(20),
+    qr_code_url VARCHAR(500),
+    qr_code_content VARCHAR(500),
+    paid_amount DECIMAL(10,2),
+    discount_amount DECIMAL(10,2),
+    create_time DATETIME,
+    pay_time DATETIME,
+    expire_time DATETIME,
+    channel_transaction_id VARCHAR(100),
+    channel_user_id VARCHAR(100),
+    remark VARCHAR(200),
+    terminal_id VARCHAR(50),
+    operator VARCHAR(50),
+    notify_time DATETIME,
+    notify_content TEXT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS refund_records (
+    refund_id VARCHAR(50) PRIMARY KEY,
+    payment_id VARCHAR(50),
+    transaction_id VARCHAR(50),
+    merchant_refund_no VARCHAR(50) UNIQUE,
+    channel_refund_no VARCHAR(100),
+    refund_amount DECIMAL(10,2),
+    original_amount DECIMAL(10,2),
+    reason VARCHAR(200),
+    status VARCHAR(20),
+    channel VARCHAR(20),
+    create_time DATETIME,
+    refund_time DATETIME,
+    operator VARCHAR(50)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+CREATE TABLE IF NOT EXISTS settings (
+    `key` VARCHAR(100) PRIMARY KEY,
+    value TEXT NOT NULL,
+    description TEXT,
+    updated_at BIGINT
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
 -- 验证初始化完成
 -- ============================================
 
@@ -958,13 +1142,6 @@ SELECT COUNT(*) as 数据表总数 FROM INFORMATION_SCHEMA.TABLES WHERE TABLE_SC
 -- ============================================
 -- 初始化脚本信息
 -- ============================================
-SELECT CONCAT('脚本版本: v2.5.9') AS script_version;
-SELECT CONCAT('更新日期: 2026-07-05') AS script_date;
-SELECT '支持 MySQL 版本: 8.0、8.3、8.4 LTS' AS mysql_compatibility;
-
--- ============================================
--- 初始化脚本信息
--- ============================================
-SELECT CONCAT('脚本版本: v2.5.9') AS script_version;
-SELECT CONCAT('更新日期: 2026-07-05') AS script_date;
+SELECT CONCAT('脚本版本: v2.6.0') AS script_version;
+SELECT CONCAT('更新日期: 2026-09-26') AS script_date;
 SELECT '支持 MySQL 版本: 8.0、8.3、8.4 LTS' AS mysql_compatibility;

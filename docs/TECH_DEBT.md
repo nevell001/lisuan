@@ -14,7 +14,7 @@
 | TD-007 | 结账 worker 线程改 FX 侧共享集合 | 并发 | **已修复（2026-09）** | 收银台线程纪律 |
 | TD-008 | 标准收银台成功弹窗用结账后会员重算金额 | 正确性 | **已修复（2026-09）** | 结账口径 |
 | TD-009 | H2 测试库无外键（生产 14 个），外键类缺陷测不出 | 测试基建 | **已修复（2026-09）** | 回归门禁 |
-| TD-010 | docker/mysql-init 的「完整初始化」与 Java 建表漂移 | 运维 | 待处理 | 数据库初始化 |
+| TD-010 | docker/mysql-init 的「完整初始化」与 Java 建表漂移 | 运维 | **已修复（2026-09）**：补 9 表、对齐列与类型、5 张遗留表标注，5 项门禁 | 数据库初始化 |
 | TD-011 | Windows 启动脚本把未匹配的 JAR 通配符当路径，静默跳过构建 | 发布 | 待处理 | Windows 启动 |
 | TD-012 | install.sh / docker-init.sh 静默成功与占位口令 | 运维 | 待处理 | 安装脚本 |
 | TD-013 | 版本号门禁只覆盖 4 处中的 2 处 | 发布 | **已修复（2026-09）** | 版本管理 |
@@ -56,6 +56,10 @@
 > TD-014 部分——文档测试数不再写死、`I18nUiUtils` 大小写折叠改 `Locale.ROOT`
 > （土耳其语环境会把 `CHECKING` 折成 `checkıng` 导致状态匹配失败），并澄清 `CurrencyUtil`
 > 那条是误报；新登记 TD-015（73 处 `String.format` 默认 locale）。
+>
+> **已修（第九批）**：TD-010——`docker/mysql-init` 补齐 Java 侧会建的 9 张表（DDL 从源码原样提取）、
+> 对齐 3 处列集合与 12 处列类型、把 5 张无引用的历史表显式标注为遗留，
+> 并加 `InitSchemaParityTest`（表/列/类型/白名单/核心表 5 项，含变异验证）。
 
 ---
 
@@ -368,33 +372,62 @@ CLAUDE.md 的"查库统一后台化"只覆盖两个收银台（`FxThreadDbPolicy
 
 ## TD-010 docker/mysql-init 的「完整初始化」与 Java 建表漂移
 
-**类别**：运维　**状态**：待处理
+**类别**：运维　**状态**：**已修复（2026-09）**
 **提出来源**：2026-09 全量审计（表级对比）
 
-### 现状
+### 现状（修复前）
 
-`docker/mysql-init/00-init-complete.sql` 被 AGENTS.md 描述为"完整初始化"，但它
+`docker/mysql-init/00-init-complete.sql` 被当作"完整初始化"给 DBA/BI 用，但实际（用脚本逐表比对
+`DatabaseManager` + 各 DAO 的 `createTable()`）差异比审计当时描述的更精确：
 
-- **缺** Java 侧会建的 7 张表：`invoices`、`invoice_items`、`backup_config`、`backup_records`、
-  `login_attempts`、`settings`、`payment_orders`/`refund_records`/`hold_orders` 等 v2.5+ 表；
-- **多** 5 张全仓库无 Java 引用的表：`specifications`、`specification_values`、`product_specifications`、
-  `export_history`、`export_templates`（CLAUDE.md 仍把它们当现行功能描述）。
+- **缺 9 张表**：`invoices`、`invoice_items`、`backup_config`、`backup_records`、
+  `login_attempts`、`settings`、`payment_orders`、`refund_records`、`hold_orders`；
+- **多 5 张全仓库无 Java 引用的表**：`specifications`、`specification_values`、
+  `product_specifications`、`export_history`、`export_templates`；
+- **3 处列集合不同**：`categories.created_at`、`units.created_at`（脚本有、Java 无）、
+  `return_order_items.create_time`（Java 有、脚本无）；
+- **12 处列类型不同**（脚本普遍偏窄）：`units.name` VARCHAR(20) vs 50、
+  `return_orders.reason/approval_comment` VARCHAR(500) vs TEXT、
+  `return_orders` 的 5 个时间列 DATETIME vs TIMESTAMP 等；
+- 脚本尾部还有一段重复的"初始化脚本信息"块，脚本自述版本停在 v2.5.9（应用已是 2.6.0）。
 
-由于应用启动会 `CREATE TABLE IF NOT EXISTS`，功能上能自愈，所以只是"文档/脚本与事实不符"。
+### 修复（2026-09）
 
-### 为什么现在不修
+以 Java 侧为唯一可执行事实来源（应用启动时 `CREATE TABLE IF NOT EXISTS` 才是真正定义）：
 
-是一次性的文档与 SQL 对齐工作，优先级低于正确性缺陷；且需要决定这些历史表是删除还是保留以兼容老库。
+- **补建 9 张表**：DDL 由脚本从 `DatabaseManager` / `PaymentDAORefactored` /
+  `HoldOrderDAORefactored` 的建表语句**原样提取**（不手抄），插入到脚本的
+  "v2.5+ 表（补建）"区段，并在区段头注明"请勿手改，一致性由 `InitSchemaParityTest` 守着"；
+- **列集合对齐**：删掉 `categories/units` 的 `created_at`，给 `return_order_items` 补 `create_time`；
+- **12 处列类型对齐到 Java**（`units.name` → 50、`return_orders.reason` → TEXT、时间列 → TIMESTAMP 等）——
+  只改初始化脚本，不影响既有库；
+- **5 张历史遗留表显式标注**：在脚本里加注释说明"当前 Java 侧已无引用，保留只为兼容旧库/BI 取数"，
+  并与门禁的 `LEGACY_TABLES` 白名单互相印证；
+- 顺带删除尾部重复的"初始化脚本信息"块，脚本自述版本更新为 v2.6.0。
 
-### 触发条件
+### 门禁（5 项，全部做过变异验证）
 
-DBA 需要按随包 SQL 复制库结构、做数据迁移/BI 对接，或新同事按 SQL 理解数据模型时。
+`com.cashier.util.InitSchemaParityTest`（解析 Java 源码与 `docker/mysql-init/*.sql` 的建表语句）：
 
-### 建议方案
+1. `initScriptCreatesEveryJavaTable`：Java 侧会建的每张表脚本里都必须有；
+2. `commonTablesHaveSameColumnsAndTypes`：共有表的列集合**与列类型**都必须一致
+   （类型比较前做大写/去空格规范化）；
+3. `legacyWhitelistMatchesReality`：脚本里"Java 侧没有的表"必须与 `LEGACY_TABLES` 白名单完全一致
+   （新增无引用表必须显式登记）；
+4. `legacyTablesHaveNoJavaReference`：白名单里的表确实没有任何 Java 引用（`FROM/JOIN/INTO/UPDATE/TABLE`）；
+5. `initScriptStillContainsCoreTables`：15 张核心表必须在（防止脚本被截断或回退成旧版本）。
 
-以 `DatabaseManager` 为唯一可执行事实来源，重新生成 `00-init-complete.sql`（含 payment/invoice/backup/
-settings/login_attempts），并把无引用的规格/导出表标注为历史遗留或删除；补一条"SQL 脚本表集合 ==
-Java 建表集合"的门禁。
+变异验证：① 删掉脚本里的 `settings` 表 → 1、5 变红；② 删掉 `payment_orders.terminal_id` 列 →
+2 变红；③ 加一张未登记的 `legacy_undocumented` 表 → 3 变红；④ 在 Java 里引用 `specifications` →
+4 变红；⑤ 把 `units.name` 类型改回 VARCHAR(20) → 2 报出类型不一致。五处均确认后还原。
+
+### 剩余
+
+- **6 处索引命名/二级索引差异**（不影响列结构与约束语义，未对齐）：
+  `categories`/`units`（脚本多 `idx_name`）、`operation_logs`（索引名不同且脚本多 `idx_log_level`）、
+  `return_orders`/`return_order_items`（各多对方没有的二级索引，如 Java 的 `idx_original_transaction`）、
+  `products`（Java 用命名约束 `uk_product_name`、脚本用内联 `UNIQUE`，**语义相同**）。
+  这些只影响索引命名与个别查询的索引可用性；如需完全一致再逐个对齐索引定义。
 
 ---
 
