@@ -119,15 +119,17 @@ echo ----------------------------------------
 echo This may take a while on first run...
 echo.
 
-REM Check for any existing compiled JAR
+REM 检测是否已有 fat JAR。
+REM 不能用 for %%f in (通配符)：无匹配时 cmd 会把通配符原样当成一项，于是这里永远"检测到已有 JAR"、
+REM 干净机器上会跳过构建，装完启动时才报 Unable to access jarfile。
 set "EXISTING_JAR="
-for %%f in (target\lisuan-fx-*-jar-with-dependencies.jar) do (
-    set "EXISTING_JAR=%%f"
+for /f "delims=" %%f in ('dir /b /o-d "target\lisuan-fx-*-jar-with-dependencies.jar" 2^>nul') do (
+    set "EXISTING_JAR=target\%%f"
     goto :jar_check_done
 )
 :jar_check_done
 
-if not "%EXISTING_JAR%"=="" (
+if defined EXISTING_JAR (
     echo [SKIP] Detected existing compiled JAR: %EXISTING_JAR%
     echo [TIP] Run 'mvn clean package -DskipTests' to rebuild
     goto :build_done
@@ -138,6 +140,21 @@ call mvn clean package -DskipTests
 
 if errorlevel 1 (
     echo [ERROR] Build failed
+    pause
+    exit /b 1
+)
+
+REM 构建"成功"也可能没产出 fat JAR（例如 packaging 被改过），这里必须真的校验一次
+set "EXISTING_JAR="
+for /f "delims=" %%f in ('dir /b /o-d "target\lisuan-fx-*-jar-with-dependencies.jar" 2^>nul') do (
+    set "EXISTING_JAR=target\%%f"
+    goto :jar_check_done2
+)
+:jar_check_done2
+
+if not defined EXISTING_JAR (
+    echo [ERROR] Build finished but no fat JAR found in target\
+    echo Please run: mvn clean package -DskipTests
     pause
     exit /b 1
 )
@@ -182,16 +199,17 @@ echo [INFO] Creating database configuration tool...
     echo echo [INFO] Launching database configuration tool...
     echo echo.
     echo REM Find executable fat JAR. It contains the installer and all runtime dependencies.
+    echo REM for /f + dir /b：无匹配时不会像 for %%%%f in ^(通配符^) 那样把通配符原样当成路径。
     echo set "JAR_FILE="
-    echo for %%%%f in ^(target\lisuan-fx-*-jar-with-dependencies.jar^) do ^(
-    echo     set "JAR_FILE=%%%%f"
+    echo for /f "delims=" %%%%f in ^('dir /b /o-d "target\lisuan-fx-*-jar-with-dependencies.jar"'^) do ^(
+    echo     set "JAR_FILE=target\%%%%f"
     echo     goto :jar_found
     echo ^)
     echo :jar_found
     echo.
-    echo if "%%JAR_FILE%%"=="" ^(
-    echo     echo [ERROR] Application JAR not found!
-    echo     echo Please run: mvn clean package
+    echo if not defined JAR_FILE ^(
+    echo     echo [ERROR] Application JAR not found in target\
+    echo     echo Please run: mvn clean package -DskipTests
     echo     pause
     echo     exit /b 1
     echo ^)

@@ -717,6 +717,17 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `xvfb-run -a mvn -B -ntp verify`（与本地一致：测试 + SpotBugs + JaCoCo），
   失败时上传 `target/surefire-reports` 便于定位；`sync.yaml` 同步时会备份并恢复
   `.github/workflows`，故本文件不会被 Gitee 覆盖
+- **Windows 批处理脚本门禁**（TD-011）：`WindowsScriptPolicyTest` 钉住四条不变量——
+  ① 任何 `.bat` 不得用 `for %%x in (<通配符>)` 判断文件存在（cmd 在无匹配时会把通配符**原样当成一项**，
+  于是"没找到"的分支永远不可达；本机**无法执行也无法语法检查** `.bat`，只能靠静态规则挡）；
+  正确写法是 `for /f "delims=" %%f in ('dir /b /o-d "<模式>" 2^>nul') do ...` + `if not defined VAR`；
+  ② 查 JAR 的脚本必须用 `dir /b` 检测且 `java` 命令行不得带通配符；
+  ③ `start.bat` **不得自动跑 maven**（产品决定：缺 JAR 就报错提示用户自己构建并 `exit /b 1`），
+  而 `install.bat` 的显式构建后必须校验 fat JAR 真的产出；
+  ④ 跟踪的 `.bat` 工作区必须是 **CRLF**（`.gitattributes` 的 `eol=crlf` 只在 checkout 生效，
+  被工具写过 LF 后 `git status` 看不出来，但 Windows 上 `goto`/`if` 块会直接解析失败；
+  修复用 `git checkout -- <文件>`）。改 `.bat` 时记得 `install.bat` 里**生成的** `DataConfig.bat` heredoc
+  要同步改（门禁会比对两处写法）
 - 安装/运维脚本门禁：`InstallScriptPolicyTest`（`com.cashier.security`）钉住三条不变量——
   ① `install.sh` 的建库/SQL 导入失败必须报错并 `exit 1`（不得再用 `2>/dev/null || true` 静默成功，
   失败时要打印 mysql 的真实输出）；② `docker/docker-init.sh` 必须先 `. ./.env`，且空/占位口令
@@ -1270,7 +1281,8 @@ worker 迭代 `cartItems`（`ObservableList`）、对 `inventoryMap`（普通 `H
   TD-010（初始化脚本与 Java 建表对齐）、TD-012（安装脚本失败可见与口令守卫）、
   TD-015（`String.format` 默认 locale）**已修复**；
   TD-014 终端用户可见文案已迁完（对话框/占位弹窗/打印预览/启动画面/字体提示/InventoryView、  以及主界面 26 处状态栏文案，均为复用既有 key）；
-  其余（Windows 启动脚本 TD-011、TD-014 剩余：其它控制器 17 处状态栏文案与打包向导）仍待处理
+  TD-011 静态部分已修（Windows 脚本检测/行尾/不自动构建 + 7 项门禁），**实机验收清单见该条目**；
+  其余（TD-014 剩余：其它控制器 17 处状态栏文案与打包向导）仍待处理
 
 **数据库密码来源（v2.6.0 补强）**
 

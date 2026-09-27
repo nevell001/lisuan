@@ -22,16 +22,17 @@ echo [INFO] ENVIRONMENT: %ENVIRONMENT%
 echo [INFO] Launching database configuration tool...
 echo.
 REM Find executable fat JAR. It contains the installer and all runtime dependencies.
+REM 不能用 for %%f in (通配符)：无匹配时 cmd 会把通配符原样赋给变量，错误分支永远不会触发。
 set "JAR_FILE="
-for %%f in (target\lisuan-fx-*-jar-with-dependencies.jar) do (
-    set "JAR_FILE=%%f"
+for /f "delims=" %%f in ('dir /b /o-d "target\lisuan-fx-*-jar-with-dependencies.jar" 2^>nul') do (
+    set "JAR_FILE=target\%%f"
     goto :jar_found
 )
 :jar_found
 
-if "%JAR_FILE%"=="" (
-    echo [ERROR] Application JAR not found
-    echo Please run: mvn clean package
+if not defined JAR_FILE (
+    echo [ERROR] Application JAR not found in target\
+    echo Please run: mvn clean package -DskipTests
     pause
     exit /b 1
 )

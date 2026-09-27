@@ -15,7 +15,7 @@
 | TD-008 | 标准收银台成功弹窗用结账后会员重算金额 | 正确性 | **已修复（2026-09）** | 结账口径 |
 | TD-009 | H2 测试库无外键（生产 14 个），外键类缺陷测不出 | 测试基建 | **已修复（2026-09）** | 回归门禁 |
 | TD-010 | docker/mysql-init 的「完整初始化」与 Java 建表漂移 | 运维 | **已修复（2026-09）**：补 9 表、对齐列与类型、5 张遗留表标注，5 项门禁 | 数据库初始化 |
-| TD-011 | Windows 启动脚本把未匹配的 JAR 通配符当路径，静默跳过构建 | 发布 | 待处理 | Windows 启动 |
+| TD-011 | Windows 启动脚本把未匹配的 JAR 通配符当路径，静默跳过构建 | 发布 | **静态已修复（2026-09）**：检测改 `for /f + dir /b`、`start.bat` 不再自动构建、行尾规范化为 CRLF、7 项门禁；**待 Windows 实机跑验收清单** | Windows 启动 |
 | TD-012 | install.sh / docker-init.sh 静默成功与占位口令 | 运维 | **已修复（2026-09）**：失败可见 + 口令硬守卫 + 容器名同源 + 删未实现开关，4 项门禁 | 安装脚本 |
 | TD-013 | 版本号门禁只覆盖 4 处中的 2 处 | 发布 | **已修复（2026-09）** | 版本管理 |
 | TD-014 | i18n 硬编码与文档中的测试数过期 | 文档/体验 | **主要部分已修复（2026-09）**：终端用户可见文案已迁完（净新增 25 key + 复用既有 key，4 项门禁含状态栏）；剩打包向导与其它 17 处状态栏文案 | — |
@@ -75,6 +75,12 @@
 > I18nKeys 补常量），含备份/恢复对话框、充值支付方式显示层本地化（落库值不变）、打印预览、
 > 启动画面、启动失败/字体缺失弹窗、`InventoryView.fxml` 的 `promptText`；
 > 加 `HardcodedUiTextPolicyTest`（4 项，含变异验证），FXML 的两处运行时覆盖占位走带理由的白名单。
+>
+> **已修（第十四批）**：TD-011 静态部分——`start.bat`/`install.bat`/`DataConfig.bat`（含 install.bat
+> 生成的 heredoc）的 JAR 检测从"for 迭代通配符 + 空串判断"改为 `for /f + dir /b` + `if not defined`；
+> `start.bat` 按产品决定不再自动构建而是报错退出；install.bat 构建后补产出校验；
+> 4 个 `.bat` 的工作区行尾从 LF 规范化回 CRLF；加 `WindowsScriptPolicyTest`（7 项，含变异验证）
+> 与 cmd 语义的模型复现。**实机验收清单见该条目**（需 Windows）。
 >
 > **已修（第十三批）**：TD-014 状态栏收尾——`MainController` 的 26 处 `updateStatus("中文")`
 > 与 2 处带参刷新提示全部迁走（**复用**导航与既有状态 key，净新增 0 个 key），
@@ -452,30 +458,100 @@ CLAUDE.md 的"查库统一后台化"只覆盖两个收银台（`FxThreadDbPolicy
 
 ## TD-011 Windows 启动脚本把未匹配的 JAR 通配符当路径，静默跳过构建
 
-**类别**：发布　**状态**：待处理
+**类别**：发布　**状态**：**静态部分已修复（2026-09），待 Windows 实机验收**
 **提出来源**：2026-09 全量审计（脚本）
 
-### 现状
+### 根因
 
-`start.bat` / `install.bat`（以及 install.bat 生成的 DataConfig.bat）用
-`for %%f in (target\lisuan-fx-*-jar-with-dependencies.jar) do set "JAR_FILE=%%f"`，
-cmd 在**无匹配**时会把通配符原样当成一项 → `JAR_FILE` 非空 → `if "%JAR_FILE%"==""` 永远为假
-→ 跳过 `mvn clean package`，最终 `java -jar "target\...*..."` 报 `Unable to access jarfile`。
-`start.sh` 用 `[ ! -f "$JAR_FILE" ]` 判断，是对的（Windows/Linux 行为不一致）。
+`start.bat` / `install.bat` / `DataConfig.bat` 用
+`for %%f in (target\lisuan-fx-*-jar-with-dependencies.jar) do set "JAR_FILE=%%f"` 检测 JAR，
+再用 `if "%JAR_FILE%"==""` 判断"没找到"。
 
-### 为什么现在不修
+cmd 的语义是：**带通配符的集合在无匹配时会把该模式原样当成一项**——于是 `JAR_FILE` 变成
+`target\lisuan-fx-*-jar-with-dependencies.jar`（非空），"没找到"的分支**永远不可达**：
 
-需要一台 Windows 实测（本轮在 macOS 上只能按 cmd 语义推断），且要先确定"自动构建"在 Windows
-上是否是期望行为（有些用户希望脚本不要偷偷跑 maven）。
+- `start.bat`：跳过 `mvn clean package`，最后 `java -jar "target\...*..."` 报 `Unable to access jarfile`；
+- `install.bat`：在**干净机器**上打印 `[SKIP] Detected existing compiled JAR: target\lisuan-fx-*-...`，
+  于是从不构建，装完启动不了（这是"装完不能用"的一类）；
+- `DataConfig.bat`：友好的"JAR not found"提示写了但走不到，用户看到的是 Java 的原始报错。
 
-### 触发条件
+### 修复（2026-09，静态部分）
 
-Windows 干净机器首次运行脚本、或发布前验证脚本门禁时。
+- 检测统一改为 **`for /f "delims=" %%f in ('dir /b /o-d "<模式>" 2^>nul') do ...`**：
+  无匹配时 `dir` 不输出任何行 → 变量保持未定义 → 判断可靠；`/o-d` 保证多版本时取最新的。
+- 判空统一改为 **`if not defined JAR_FILE`**（不再用 `if "%VAR%"==""`，免去引号坑），
+  并补 `if not exist "%JAR_FILE%"` 二次校验。
+- **按产品决定：`start.bat` 不再自动构建**——缺 JAR 时打印
+  `[ERROR] Application JAR not found in target\` + `mvn clean package -DskipTests` + `pause` + `exit /b 1`。
+  理由：启动脚本偷偷跑一次 5 分钟且依赖本机 Maven/网络的构建，失败面大且难排查。
+  `install.bat` 的构建是**显式安装步骤**，保留；但构建后新增"真的产出 fat JAR"校验，
+  否则同样 `exit /b 1`。
+- `install.bat` **生成的** `DataConfig.bat`（heredoc，`%%%%` 转义）同步改用同一套检测写法——
+  否则同一个 bug 会在生成物里复活。
+- **行尾**：`git ls-files --eol` 显示 `DataConfig.bat`、`diagnose.bat`、`release.bat`、
+  `docker/start-mysql.bat` 的**工作区是 LF**（`.gitattributes` 虽写了 `*.bat eol=crlf`，
+  但 eol 只在 checkout 生效，这些文件是被工具写过 LF 后一直没重新 checkout）。
+  `git clone` 到 Windows 没问题，但**任何不走 git checkout 的分发方式**（zip 工作区、从 mac 拷给客户）
+  会带着 LF 的 `.bat`，在 Windows 上 `goto :label` 与 `if (...)` 块**解析失败**。
+  已用 `git checkout --` 全部重写为 CRLF（索引仍是 LF 归一化形态）。
+  注：`release.sh` 并不打包 `.bat`（已核实），所以这条风险目前只存在于手工分发场景。
+- 不动 `chcp`：`start.bat` / `install.bat` / `DataConfig.bat` 的**控制台输出全是英文**
+  （`install.bat` 里两处中文只出现在写入文件的 `echo REM` 中，不进控制台），
+  而会打印中文的 `release.bat` / `docker/start-mysql.bat` 本来就设了 `chcp 65001`。
 
-### 建议方案
+### 门禁（7 项，全部做过变异验证）
 
-匹配后用 `if exist "%%f"` 校验（或 `for /f` + `dir /b` 判断是否真的存在），再决定构建；
-并补一条"脚本必须执行到构建/启动分支"的回归门禁（参照 release.bat 的 `[3/3]` 思路）。
+`com.cashier.security.WindowsScriptPolicyTest`：
+
+1. `noBatchScriptIteratesWildcardInForSet`：扫描**全部跟踪的 `.bat`**，任何
+   `for %%x in (<含通配符的集合>)` 即失败（`REM` 注释里为说明问题而写出坏写法不计）；
+2. `jarDetectionUsesDirBAndDefinedCheck`：`start.bat`/`install.bat`/`DataConfig.bat` 必须有
+   `for /f + dir /b` 检测、必须用 `if not defined`，且不得再出现 `if "%JAR_FILE%"==""`；
+3. `startBatReportsMissingJarInsteadOfBuilding`：`start.bat` 不得有真正的 maven 调用
+   （行首 `mvn`/`call mvn`；错误提示里的 `echo mvn ...` 不算），缺 JAR 必须报错 + `exit /b 1`，
+   且启动语句 `-jar "%JAR_FILE%"` 必须排在该退出之后；
+4. `javaNeverReceivesWildcardPath`：`java` 命令行不得出现通配符（cmd 不为外部命令展开通配符）；
+5. `generatedDataConfigKeepsSameDetectionIdiom`：`install.bat` 生成的 `DataConfig.bat` 必须与
+   随包版本用同一套检测写法，防止两处漂移；
+6. `installVerifiesJarAfterBuild`：显式构建之后必须再校验一次 fat JAR 产出并退出非零；
+7. `batchFilesAreStoredWithCrlfLineEndings`：跟踪的 `.bat` 工作区必须是 CRLF（或混合行尾即失败）。
+
+变异验证：① `start.bat` 检测改回通配符 `for` → 1、2 变红；② `start.bat` 加回 `call mvn` → 3 变红；
+③ `release.bat` 写回 LF → 7 变红；④ `install.bat` 生成段改回通配符 → 5 变红。均确认后还原。
+
+### 证据：cmd 语义的**模型复现**（不是实机验证）
+
+本机没有 `wine`/`cmd`/`powershell`/`dosbox`（已实测），`.bat` **既不能执行也不能语法检查**。
+因此用一个按 cmd 文档语义建模的脚本复现了错误链（两种场景：干净机器 / 已构建）：
+
+- 旧写法・干净机器 → `JAR_FILE` = `lisuan-fx-*-jar-with-dependencies.jar`（字面量）→ **跳过构建** →
+  `java -jar` 得到 `Unable to access jarfile lisuan-fx-*-jar-with-dependencies.jar`；
+- 新写法・干净机器 → `JAR_FILE` 未定义 → **报错退出 `exit /b 1`**，不再走到 `java`；
+- 两种写法在"已有 JAR"时行为相同（都能正常启动）。
+
+**这只能证明我对 cmd 语义的理解与修复方向自洽，不能替代实机验收。** 下面是实机清单。
+
+### Windows 实机验收清单（需要你在 Windows 上跑）
+
+前置：用 `git clone`（不要用 zip 拷贝 mac 工作区），`cmd` 里先 `cd /d` 到项目根目录。
+
+| # | 命令 | 期望 |
+|---|---|---|
+| 1 | `findstr /C:"for /f" start.bat` | 有输出（说明拿到的是新版脚本） |
+| 2 | `del /q target\lisuan-fx-*-jar-with-dependencies.jar` 然后 `start.bat < nul & echo EXIT=%ERRORLEVEL%` | 打印 `[ERROR] Application JAR not found in target\`、`mvn clean package -DskipTests`；`EXIT=1`；**不得**出现 `Unable to access jarfile` |
+| 3 | `mvn clean package -DskipTests` 然后 `start.bat` | 打印 `[OK] JAR file found: target\lisuan-fx-2.6.0-jar-with-dependencies.jar` 并打开收银界面 |
+| 4 | `del /q target\lisuan-fx-*-jar-with-dependencies.jar` 然后 `install.bat` | `[4/4]` 段**真的执行** `mvn clean package -DskipTests`（不再打印 `[SKIP] Detected existing compiled JAR`），完成后生成 `DataConfig.bat` 并能打开数据库配置界面 |
+| 5 | `findstr /C:"for %%" DataConfig.bat` | **无输出**（生成物已不含坏写法）；`findstr /C:"for /f" DataConfig.bat` 有输出 |
+
+失败时请把这些发我：**完整命令输出**（含 `EXIT=` 那行的值）、`echo %ERRORLEVEL%`、
+以及 `target` 目录下的实际文件名（`dir /b target\*jar-with-dependencies.jar`）。
+
+### 剩余
+
+- 上表 5 步未跑之前，TD-011 不能算完全关闭：静态门禁能挡住"写法回退"，但挡不住
+  cmd 的解析细节（`for /f` 的引号规则、`^` 转义、路径含空格或中文、`%ERRORLEVEL%` 传播）。
+- `diagnose.bat` 的 `dir /b ... 2>nul || echo ...` 经核对是**正确写法**（`dir` 无匹配返回非零，
+  `||` 分支正是"没找到"的提示），不是静默吞错，无需改动。
 
 ---
 

@@ -80,38 +80,34 @@ echo.
 echo [4/5] Checking application files...
 echo ----------------------------------------
 
-REM Auto-detect JAR file (works for any version)
+REM 查找已构建的 fat JAR。
+REM 注意：不能写 for %%f in (target\lisuan-fx-*.jar)——cmd 在没有匹配时会把通配符**原样当成一项**，
+REM 于是 "%JAR_FILE%"=="" 永远为假、错误分支永远走不到，最后 java -jar 才报 Unable to access jarfile。
+REM for /f 配合 dir /b：无匹配时 dir 返回非零且不输出任何行，变量保持未定义。
 set "JAR_FILE="
-for %%f in (target\lisuan-fx-*-jar-with-dependencies.jar) do (
-    set "JAR_FILE=%%f"
+for /f "delims=" %%f in ('dir /b /o-d "target\lisuan-fx-*-jar-with-dependencies.jar" 2^>nul') do (
+    set "JAR_FILE=target\%%f"
     goto :jar_found
 )
 :jar_found
 
-if "%JAR_FILE%"=="" (
-    echo [WARNING] JAR file not found, building project...
+if not defined JAR_FILE (
+    echo [ERROR] Application JAR not found in target\
     echo.
-    call mvn clean package -DskipTests
-    if errorlevel 1 (
-        echo [ERROR] Build failed
-        pause
-        exit /b 1
-    )
-    REM Retry detection after build
-    for %%f in (target\lisuan-fx-*-jar-with-dependencies.jar) do (
-        set "JAR_FILE=%%f"
-        goto :jar_found_built
-    )
-    :jar_found_built
-    if "!JAR_FILE!"=="" (
-        echo [ERROR] Build completed but JAR still not found
-        pause
-        exit /b 1
-    )
-    echo [OK] Build completed: %JAR_FILE%
-) else (
-    echo [OK] JAR file found: %JAR_FILE%
+    echo Please build it first:
+    echo     mvn clean package -DskipTests
+    echo.
+    pause
+    exit /b 1
 )
+
+if not exist "%JAR_FILE%" (
+    echo [ERROR] JAR file not accessible: %JAR_FILE%
+    pause
+    exit /b 1
+)
+
+echo [OK] JAR file found: %JAR_FILE%
 
 echo.
 echo [Done] Application files ready
