@@ -179,6 +179,14 @@ REM ============================================
 REM   Generate DataConfig.bat
 REM ============================================
 
+REM The repository already ships a working DataConfig.bat. Regenerating it would overwrite that
+REM tracked file (dirtying git status) and keep two copies of the same logic in sync by hand --
+REM which is how the wildcard-detection bug survived here before. Only create it when missing.
+if exist "DataConfig.bat" (
+    echo [SKIP] DataConfig.bat already exists - keeping the shipped version
+    goto :dataconfig_ready
+)
+
 echo [INFO] Creating database configuration tool...
 
 (
@@ -240,7 +248,7 @@ echo [INFO] Creating database configuration tool...
     echo pause
 ) > DataConfig.bat
 
-echo [OK] Created DataConfig.bat
+:dataconfig_ready
 
 echo [INFO] Launching GUI database configuration...
 call DataConfig.bat

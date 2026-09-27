@@ -151,6 +151,20 @@ class WindowsScriptPolicyTest {
     }
 
     @Test
+    @DisplayName("install.bat 不得无条件覆盖已跟踪的 DataConfig.bat")
+    void installKeepsShippedDataConfig() throws Exception {
+        String text = read("install.bat");
+        assertTrue(text.contains("if exist \"DataConfig.bat\""),
+            "仓库已随包提供可用的 DataConfig.bat；无条件重新生成会把它改脏（git status 出现改动），"
+                + "而且同一份逻辑在两处维护——正是通配符检测 bug 曾在这两处只修了一处的原因");
+        int guard = text.indexOf("if exist \"DataConfig.bat\"");
+        int generate = text.indexOf(") > DataConfig.bat");
+        assertTrue(generate > guard, "跳过判断必须排在生成语句之前");
+        assertTrue(text.contains(":dataconfig_ready"),
+            "跳过与生成两条路都要汇到同一个启动标签");
+    }
+
+    @Test
     @DisplayName("start.bat 切换代码页后必须恢复，不能把用户的窗口留在 65001")
     void startBatRestoresCodePageAfterLaunch() throws Exception {
         String text = read("start.bat");

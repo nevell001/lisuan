@@ -525,7 +525,9 @@ cmd 的语义是：**带通配符的集合在无匹配时会把该模式原样�
    这条正是为上面那处回归补的；**第一版只查子串 `chcp`，被变异文本里自带的 "chcp" 字样骗过
    （变异测试当场发现），已收紧为必须匹配真正的代码页切换行**；
 9. `startBatRestoresCodePageAfterLaunch`：`start.bat` 切了代码页就必须恢复（含纯数字校验），
-   且恢复子过程要在 `java` 返回后与 GUI 模式提前返回前各调用一次。
+   且恢复子过程要在 `java` 返回后与 GUI 模式提前返回前各调用一次；
+10. `installKeepsShippedDataConfig`：`install.bat` 必须先 `if exist "DataConfig.bat"` 跳过、
+   再考虑生成，两条路汇到 `:dataconfig_ready`。
 
 变异验证：① `start.bat` 检测改回通配符 `for` → 1、2 变红；② `start.bat` 加回 `call mvn` → 3 变红；
 ③ `release.bat` 写回 LF → 7 变红；④ `install.bat` 生成段改回通配符 → 5 变红；
@@ -587,6 +589,20 @@ cmd 的语义是：**带通配符的集合在无匹配时会把该模式原样�
 - 门禁第 9 条钉住这个配对：`start.bat` 出现 `chcp 65001` 就必须出现 `chcp %ORIGINAL_CODE_PAGE%`
   与 `:restore_code_page`；`release.bat`/`docker/start-mysql.bat` 自身输出就是中文，保留 65001 是有意的，不在规则内。
 - 变异验证：删掉恢复行 → 第 9 条变红。
+
+**第四轮实机（代码页切换/恢复）**：
+
+- `start.bat` 打印 `[INFO] Console switched to UTF-8 (65001); it will be restored to 65001 on exit`
+  与退出时的 `[INFO] Console code page restored to 65001` —— **解析与恢复逻辑都生效**
+  （该窗口本来就是 65001，所以恢复值等于原值；936 → 恢复 936 的路径需在**新窗口**里再看一眼）。
+- 缺 JAR 路径：打印 `[ERROR] Application JAR not found in target\` + 构建提示，**未出现**
+  `Unable to access jarfile`，且没有走到 `java` —— 功能上通过；用户侧看到的 `EXIT=0` 是**测量方式**问题
+  （`cmd /c "start.bat" < nul & echo EXIT=%ERRORLEVEL%` 让 PowerShell 展开了 `%ERRORLEVEL%`，
+  PowerShell 要用 `$LASTEXITCODE`）。正确写法：`cmd /c "start.bat < nul"; "EXIT=$LASTEXITCODE"`。
+- **`install.bat` 不再无条件覆盖已跟踪的 `DataConfig.bat`**：仓库随包提供的那份就是可用的，
+  重新生成会把它改脏（`git status` 出现改动）而且让同一份逻辑在两处维护——通配符检测 bug 当初正是
+  只在其中一处被修。现在 `if exist "DataConfig.bat"` → `[SKIP]` + `goto :dataconfig_ready`，
+  缺失时才生成；门禁第 10 条钉住这个顺序（变异验证：去掉跳过判断 → 变红）。
 
 **同一轮实机发现的另一个 bug（已修）**：`[2/4]` 打印的
 `Version: C:\Users\nevell\scoop\apps\maven\current` —— 版本行显示成了路径。
