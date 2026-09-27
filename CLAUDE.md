@@ -783,7 +783,13 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   门禁 `UiStateInitializationPolicyTest`（2 项：全量扫描 + 崩溃字段回归锚点）。
   注意：FXML 注入的控件（`TableView`/`ListView`）不是集合字段，不在规则内
 - i18n 门禁：`I18nBundleConsistencyTest` 断言三份语言包 key 集合一致、`I18nKeys` 常量齐全、
-  源码字面量 i18n 调用 key 齐全（缺 key 时界面会直接显示 key，属 UI 缺陷）
+  源码字面量 i18n 调用 key 齐全（缺 key 时界面会直接显示 key，属 UI 缺陷）；
+  另有 `I18nUnusedKeyPolicyTest`（2 项）：**语言包不得残留无人引用的 key**，
+  且 `I18nKeys`/`I18n` 两套常量的值都必须存在于语言包。清理/新增 key 时注意：
+  判定"在用"的口径是"精确字面量 / 常量引用 / FXML `%key` / `"前缀." + 变量` 拼接"，
+  **动态拼接的 key 必须写成 `"前缀." + 变量` 形式**，否则会被判为无用；
+  两套常量持有者都要算上（`/api/i18n/messages/all` 用的是 `I18n`）。
+  历史坑：静态导入 `I18nKeys.*` 后短名引用会让门禁解析不了——它现在会显式报"门禁需要更新"。
 - 并发安全：`ConcurrentDeductionTest` 多线程验证乐观锁防库存超卖、防会员余额超扣
 - token 过期：`ApiServerTest.expiredTokensAreRejected` 注入短过期验证过期 token 被拒
 - 连接泄漏：`HealthController.detail` 已改为 try-with-resources（健康检查不再泄漏连接池连接），
