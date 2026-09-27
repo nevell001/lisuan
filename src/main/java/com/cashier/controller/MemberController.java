@@ -120,9 +120,9 @@ public class MemberController extends BaseController<Member> {
         pointsColumn.setCellValueFactory(cellData ->
             new SimpleStringProperty(String.valueOf(cellData.getValue().getPoints().intValue())));
         balanceColumn.setCellValueFactory(cellData ->
-            new SimpleStringProperty(String.format("%.2f", cellData.getValue().balance)));
+            new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().balance)));
         discountColumn.setCellValueFactory(cellData ->
-                    new SimpleStringProperty(String.format("%.1f折", cellData.getValue().discount)));
+                    new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.1f折", cellData.getValue().discount)));
         birthdayColumn.setCellValueFactory(new PropertyValueFactory<>("birthday"));
     }
 

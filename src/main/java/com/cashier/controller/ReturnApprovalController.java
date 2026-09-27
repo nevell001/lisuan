@@ -378,7 +378,7 @@ public class ReturnApprovalController {
                         ? transaction.operatorName
                         : I18nManager.getInstance().get(I18nKeys.Common.NONE),
                     com.cashier.util.I18nUiUtils.paymentMethod(transaction.paymentMethod),
-                    String.format("%.2f", transaction.totalAmount),
+                    String.format(java.util.Locale.ROOT, "%.2f", transaction.totalAmount),
                     transaction.memberName != null ? transaction.memberName : I18nManager.getInstance().get(I18nKeys.Statistics.NO_DATA));
                 showInformationOnlyAlert(com.cashier.i18n.I18nManager.getInstance().get("runtime.original_transaction"), details);
             } else {

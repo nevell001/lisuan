@@ -149,7 +149,7 @@ public class MemberEditController {
             pointsField.setText(String.valueOf(member.getPoints().intValue()));
             levelComboBox.getSelectionModel().select(member.level);
             discountField.setText(String.valueOf(member.getDiscount()));
-            balanceField.setText(String.format("%.2f", member.getBalance()));
+            balanceField.setText(String.format(java.util.Locale.ROOT, "%.2f", member.getBalance()));
             birthdayField.setText(member.birthday);
         } else {
             // 添加模式

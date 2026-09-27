@@ -64,7 +64,7 @@ public final class ReceiptBuilder {
         for (CartItem ci : cartItems) {
             items.append(ci.product.name)
                 .append(" x").append(ci.quantity)
-                .append("  ").append(String.format("%.2f", ci.subtotal.doubleValue()))
+                .append("  ").append(String.format(java.util.Locale.ROOT, "%.2f", ci.subtotal.doubleValue()))
                 .append("\n");
             totalQty += ci.quantity;
         }

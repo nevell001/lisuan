@@ -521,7 +521,7 @@ public class StatisticsController {
             for (StatisticsRecord record : categoryTable.getItems()) {
                 data.add(new String[]{
                     "  " + record.name,
-                    String.format("%d 笔, ¥%.2f", record.count, record.amount)
+                    String.format(java.util.Locale.ROOT, "%d 笔, ¥%.2f", record.count, record.amount)
                 });
             }
             data.add(new String[]{"", ""}); // 空行分隔
@@ -531,7 +531,7 @@ public class StatisticsController {
             for (StatisticsRecord record : hourlyTable.getItems()) {
                 data.add(new String[]{
                     "  " + record.name,
-                    String.format("%d 笔, ¥%.2f", record.count, record.amount)
+                    String.format(java.util.Locale.ROOT, "%d 笔, ¥%.2f", record.count, record.amount)
                 });
             }
 
@@ -614,7 +614,7 @@ public class StatisticsController {
         for (PieChart.Data data : pieChartData) {
             double total = cashSales + wechatSales + alipaySales + cardSales;
             double percentage = (data.getPieValue() / total) * 100;
-            data.setName(String.format("%s (%.1f%%)", data.getName(), percentage));
+            data.setName(String.format(java.util.Locale.ROOT, "%s (%.1f%%)", data.getName(), percentage));
         }
     }
 

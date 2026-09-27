@@ -210,7 +210,7 @@ public class ProductEditController {
             autoCodeCheckBox.setSelected(false);
             productCodeField.setDisable(false);
             nameField.setText(product.name);
-            priceField.setText(String.format("%.2f", product.price));
+            priceField.setText(String.format(java.util.Locale.ROOT, "%.2f", product.price));
             minStockField.setText(String.valueOf(product.minStock));
             categoryComboBox.getSelectionModel().select(product.category);
             barcodeField.setText(product.barcode);
@@ -219,7 +219,7 @@ public class ProductEditController {
             brandField.setText(product.brand);
             supplierComboBox.getSelectionModel().select(product.supplier);
             specField.setText(product.spec);
-            costField.setText(String.format("%.2f", product.cost));
+            costField.setText(String.format(java.util.Locale.ROOT, "%.2f", product.cost));
         } else {
             // 添加模式
             titleLabel.setText(com.cashier.i18n.I18nManager.getInstance().get("product.edit.title"));

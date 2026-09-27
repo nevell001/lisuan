@@ -181,7 +181,7 @@ public class CurrencyUtil {
             return cachedSymbol + getThreadLocalFormat().format(amount);
         } catch (Exception e) {
             logger.error("货币格式化失败: {}", amount, e);
-            return cachedSymbol + String.format("%.2f", amount);
+            return cachedSymbol + String.format(java.util.Locale.ROOT, "%.2f", amount);
         }
     }
 

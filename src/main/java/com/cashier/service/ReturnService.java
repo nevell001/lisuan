@@ -152,7 +152,7 @@ public class ReturnService {
                 OperationLog log = new OperationLog();
                 log.username = approverName;
                 log.operation = "RETURN_APPROVAL";
-                log.details = String.format("审批退货单: %s, 金额: %.2f",
+                log.details = String.format(java.util.Locale.ROOT, "审批退货单: %s, 金额: %.2f",
                     returnOrderId, returnOrder.totalAmount);
                 log.ipAddress = "localhost";
                 log.timestamp = java.time.Instant.now();
@@ -216,7 +216,7 @@ public class ReturnService {
             OperationLog log = new OperationLog();
             log.username = returnOrder.operatorName;
             log.operation = "RETURN_REFUND_CASH";
-            log.details = String.format("现金退款: %s, 金额: %.2f (原交易 %s)",
+            log.details = String.format(java.util.Locale.ROOT, "现金退款: %s, 金额: %.2f (原交易 %s)",
                 returnOrderId, refundAmount, returnOrder.originalTransactionId);
             log.ipAddress = "localhost";
             log.timestamp = java.time.Instant.now();

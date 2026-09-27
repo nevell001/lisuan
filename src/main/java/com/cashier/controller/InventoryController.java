@@ -262,7 +262,7 @@ public class InventoryController extends BaseController<Product> {
         barcodeColumn.setCellValueFactory(new PropertyValueFactory<>("barcode"));
         nameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         priceColumn.setCellValueFactory(cellData ->
-            new SimpleStringProperty(String.format("%.2f", cellData.getValue().price)));
+            new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().price)));
         quantityColumn.setCellValueFactory(new PropertyValueFactory<>("quantity"));
         minStockColumn.setCellValueFactory(new PropertyValueFactory<>("minStock"));
         categoryColumn.setCellValueFactory(new PropertyValueFactory<>("category"));

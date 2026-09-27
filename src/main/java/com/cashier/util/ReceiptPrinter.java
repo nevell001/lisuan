@@ -130,7 +130,7 @@ public class ReceiptPrinter {
             if (name.length() > 18) {
                 name = name.substring(0, 17) + "~";
             }
-            sb.append(String.format("%-20s %5d %8.2f %10.2f\n",
+            sb.append(String.format(java.util.Locale.ROOT, "%-20s %5d %8.2f %10.2f\n",
                 name,
                 item.quantity,
                 item.product.price,
@@ -140,16 +140,16 @@ public class ReceiptPrinter {
         sb.append(THIN_SEPARATOR);
 
         // 金额汇总
-        sb.append(String.format("%35s %10.2f\n", "商品总额:", transaction.totalAmount));
+        sb.append(String.format(java.util.Locale.ROOT, "%35s %10.2f\n", "商品总额:", transaction.totalAmount));
         BigDecimal discount = receiptDiscount(transaction);
         if (discount != null) {
-            sb.append(String.format("%35s %10.2f\n", "优惠:", discount));
+            sb.append(String.format(java.util.Locale.ROOT, "%35s %10.2f\n", "优惠:", discount));
         }
         if (transaction.tax.compareTo(BigDecimal.ZERO) > 0) {
-            sb.append(String.format("%35s %10.2f\n", "税费:", transaction.tax));
+            sb.append(String.format(java.util.Locale.ROOT, "%35s %10.2f\n", "税费:", transaction.tax));
         }
         sb.append(THIN_SEPARATOR);
-        sb.append(String.format("%35s %10.2f\n", "实付金额:", transaction.finalAmount));
+        sb.append(String.format(java.util.Locale.ROOT, "%35s %10.2f\n", "实付金额:", transaction.finalAmount));
         sb.append(THICK_SEPARATOR);
 
         // 支付方式
@@ -159,7 +159,7 @@ public class ReceiptPrinter {
         // 会员折扣（如果有）：用结账前取好的折扣，避免印出本单成交后升级的折扣
         BigDecimal discountRate = memberDiscountAtSale(member, memberDiscountAtSale);
         if (discountRate != null) {
-            sb.append(String.format("会员折扣: %.1f折\n", discountRate));
+            sb.append(String.format(java.util.Locale.ROOT, "会员折扣: %.1f折\n", discountRate));
         }
 
         sb.append("\n");
@@ -410,7 +410,7 @@ public class ReceiptPrinter {
         sb.append(THIN_SEPARATOR);
 
         for (ReturnOrderItem item : returnItems) {
-            sb.append(String.format("%-20s %8d %8.2f %10.2f %10s\n",
+            sb.append(String.format(java.util.Locale.ROOT, "%-20s %8d %8.2f %10.2f %10s\n",
                 abbreviateReturnItemName(item.productName),
                 item.returnQuantity,
                 item.unitPrice,
@@ -425,7 +425,7 @@ public class ReceiptPrinter {
     }
 
     private static void appendReturnSummary(StringBuilder sb, ReturnOrder returnOrder) {
-        sb.append(String.format("%35s %10.2f\n", "退货总额:", returnOrder.totalAmount));
+        sb.append(String.format(java.util.Locale.ROOT, "%35s %10.2f\n", "退货总额:", returnOrder.totalAmount));
         sb.append(THICK_SEPARATOR);
         sb.append(String.format("退款方式: %s\n", returnOrder.getPaymentMethodText()));
         if (returnOrder.returnReason != null && !returnOrder.returnReason.isEmpty()) {
@@ -586,7 +586,7 @@ public class ReceiptPrinter {
             // 会员折扣（用结账前取好的折扣）
             BigDecimal discountRate = memberDiscountAtSale(member, memberDiscountAtSale);
             if (discountRate != null) {
-                content.append(String.format("会员折扣: %.1f折\n", discountRate));
+                content.append(String.format(java.util.Locale.ROOT, "会员折扣: %.1f折\n", discountRate));
             }
 
             content.append("\n");

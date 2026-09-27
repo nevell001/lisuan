@@ -485,7 +485,7 @@ public class ReturnOrderController {
                         ? transaction.operatorName
                         : com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Common.NONE),
                     com.cashier.util.I18nUiUtils.paymentMethod(transaction.paymentMethod),
-                    String.format("%.2f", transaction.totalAmount),
+                    String.format(java.util.Locale.ROOT, "%.2f", transaction.totalAmount),
                     transaction.memberName != null ? transaction.memberName
                         : com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Common.NONE)
                 );
@@ -555,7 +555,7 @@ public class ReturnOrderController {
         confirmAlert.setContentText(com.cashier.i18n.I18nManager.getInstance().get(
             "runtime.return_complete_confirm_details",
             selectedReturnOrder.returnOrderId,
-            String.format("%.2f", selectedReturnOrder.totalAmount),
+            String.format(java.util.Locale.ROOT, "%.2f", selectedReturnOrder.totalAmount),
             selectedReturnOrder.memberName != null ? selectedReturnOrder.memberName
                 : com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Common.NONE)
         ));
@@ -576,7 +576,7 @@ public class ReturnOrderController {
         if (result) {
             showAlert(Alert.AlertType.INFORMATION, com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Label.SUCCESS),
                 com.cashier.i18n.I18nManager.getInstance().get("runtime.return_complete_success",
-                    selectedReturnOrder.returnOrderId, String.format("%.2f", selectedReturnOrder.totalAmount)));
+                    selectedReturnOrder.returnOrderId, String.format(java.util.Locale.ROOT, "%.2f", selectedReturnOrder.totalAmount)));
             
             // 刷新列表
             loadReturnOrders();

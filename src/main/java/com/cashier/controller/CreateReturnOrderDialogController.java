@@ -512,7 +512,7 @@ public class CreateReturnOrderDialogController {
         submitted = true;
         showAlert(Alert.AlertType.INFORMATION, com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Label.SUCCESS),
             com.cashier.i18n.I18nManager.getInstance().get("runtime.return_create_success",
-                returnOrder.returnOrderId, String.format("%.2f", returnOrder.totalAmount)));
+                returnOrder.returnOrderId, String.format(java.util.Locale.ROOT, "%.2f", returnOrder.totalAmount)));
         logger.info("退货订单创建成功: {}", returnOrder.returnOrderId);
 
         if (dialogStage != null) {

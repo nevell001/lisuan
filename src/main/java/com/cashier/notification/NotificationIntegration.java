@@ -108,7 +108,7 @@ public class NotificationIntegration {
                 shift.operatorName, shift.shiftId);
         } else if ("end".equals(action)) {
             type = NotificationType.INFO;
-            message = String.format("操作员【%s】已完成交班，班次ID：%s，营业额：¥%.2f",
+            message = String.format(java.util.Locale.ROOT, "操作员【%s】已完成交班，班次ID：%s，营业额：¥%.2f",
                 shift.operatorName, shift.shiftId, shift.shiftRevenue);
         } else {
             return;
@@ -220,7 +220,7 @@ public class NotificationIntegration {
      * 会员充值通知
      */
     public static void notifyMemberRecharge(String memberName, double amount) {
-        String message = String.format("会员【%s】充值成功，金额：¥%.2f", memberName, amount);
+        String message = String.format(java.util.Locale.ROOT, "会员【%s】充值成功，金额：¥%.2f", memberName, amount);
         
         Map<String, Object> data = new HashMap<>();
         data.put("memberName", memberName);

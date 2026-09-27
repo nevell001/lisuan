@@ -206,7 +206,7 @@ public class ProfitReportController {
         salesProfitColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().profit)));
         salesMarginColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format(PERCENT_FORMAT, cellData.getValue().margin * 100)));
+            new javafx.beans.property.SimpleStringProperty(String.format(java.util.Locale.ROOT, PERCENT_FORMAT, cellData.getValue().margin * 100)));
     }
 
     /**
@@ -222,7 +222,7 @@ public class ProfitReportController {
         categoryProfitColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().profit)));
         categoryMarginColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format(PERCENT_FORMAT, cellData.getValue().margin * 100)));
+            new javafx.beans.property.SimpleStringProperty(String.format(java.util.Locale.ROOT, PERCENT_FORMAT, cellData.getValue().margin * 100)));
     }
 
     /**
@@ -238,7 +238,7 @@ public class ProfitReportController {
         dailyProfitColumn.setCellValueFactory(cellData ->
             new javafx.beans.property.SimpleStringProperty(CurrencyUtil.format(cellData.getValue().profit)));
         dailyMarginColumn.setCellValueFactory(cellData ->
-            new javafx.beans.property.SimpleStringProperty(String.format(PERCENT_FORMAT, cellData.getValue().margin * 100)));
+            new javafx.beans.property.SimpleStringProperty(String.format(java.util.Locale.ROOT, PERCENT_FORMAT, cellData.getValue().margin * 100)));
     }
 
     /**
@@ -604,9 +604,9 @@ public class ProfitReportController {
         totalRevenueLabel.setText(CurrencyUtil.format(totalRevenue));
         totalCostLabel.setText(CurrencyUtil.format(totalCost));
         grossProfitLabel.setText(CurrencyUtil.format(grossProfit));
-        grossMarginLabel.setText(String.format(PERCENT_FORMAT, grossMargin * 100));
+        grossMarginLabel.setText(String.format(java.util.Locale.ROOT, PERCENT_FORMAT, grossMargin * 100));
         netProfitLabel.setText(CurrencyUtil.format(netProfit));
-        avgMarginLabel.setText(String.format(PERCENT_FORMAT, avgMargin * 100));
+        avgMarginLabel.setText(String.format(java.util.Locale.ROOT, PERCENT_FORMAT, avgMargin * 100));
     }
 
     private void logCostSourceStats(Map<String, ProductProfit> productProfitMap) {
@@ -831,7 +831,7 @@ public class ProfitReportController {
                         CurrencyUtil.format(record.revenue),
                         CurrencyUtil.format(record.cost),
                         CurrencyUtil.format(record.profit),
-                        String.format("%.2f", profitMargin)
+                        String.format(java.util.Locale.ROOT, "%.2f", profitMargin)
                     });
                 }
 
@@ -900,7 +900,7 @@ public class ProfitReportController {
                         CurrencyUtil.format(record.revenue),
                         CurrencyUtil.format(record.cost),
                         CurrencyUtil.format(record.profit),
-                        String.format("%.2f", profitMargin)
+                        String.format(java.util.Locale.ROOT, "%.2f", profitMargin)
                     });
                 }
 
@@ -969,7 +969,7 @@ public class ProfitReportController {
                         CurrencyUtil.format(record.revenue),
                         CurrencyUtil.format(record.cost),
                         CurrencyUtil.format(record.profit),
-                        String.format("%.2f", profitMargin),
+                        String.format(java.util.Locale.ROOT, "%.2f", profitMargin),
                         CurrencyUtil.format(record.profit * 0.95) // 假设净利润为毛利润的95%
                     });
                 }

@@ -424,11 +424,11 @@ public class CartController implements CartViewHost {
         nameColumn.setCellValueFactory(cellData -> 
             new SimpleStringProperty(cellData.getValue().product.name));
         priceColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(String.format("%.2f", cellData.getValue().product.price)));
+            new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().product.price)));
         quantityColumn.setCellValueFactory(cellData -> 
             new SimpleStringProperty(String.valueOf(cellData.getValue().quantity)));
         subtotalColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(String.format("%.2f", cellData.getValue().subtotal)));
+            new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().subtotal)));
     }
 
     /**
@@ -437,7 +437,7 @@ public class CartController implements CartViewHost {
     private void setupProductTableColumns() {
         productNameColumn.setCellValueFactory(new PropertyValueFactory<>("name"));
         productPriceColumn.setCellValueFactory(cellData -> 
-            new SimpleStringProperty(String.format("%.2f", cellData.getValue().price)));
+            new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().price)));
         productStockColumn.setCellValueFactory(cellData -> {
             Product p = cellData.getValue();
             String stockText = String.valueOf(p.quantity);
@@ -2149,7 +2149,7 @@ public class CartController implements CartViewHost {
                 if (currentMember != null) {
                     memberPhoneField.setText(currentMember.phone);
                     memberInfoLabel.setText(currentMember.name + " - " +
-                        String.format("%.1f折", currentMember.discount));
+                        String.format(java.util.Locale.ROOT, "%.1f折", currentMember.discount));
                 }
 
                 updateStatistics();

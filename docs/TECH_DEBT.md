@@ -19,7 +19,7 @@
 | TD-012 | install.sh / docker-init.sh 静默成功与占位口令 | 运维 | **已修复（2026-09）**：失败可见 + 口令硬守卫 + 容器名同源 + 删未实现开关，4 项门禁 | 安装脚本 |
 | TD-013 | 版本号门禁只覆盖 4 处中的 2 处 | 发布 | **已修复（2026-09）** | 版本管理 |
 | TD-014 | i18n 硬编码与文档中的测试数过期 | 文档/体验 | **部分修复（2026-09）**：文档数字与 locale 折叠已修，可见文案硬编码待办 | — |
-| TD-015 | `String.format` 用默认 locale 格式化金额（73 处） | 正确性 | 待处理 | 非中文 locale 部署 |
+| TD-015 | `String.format` 用默认 locale 格式化金额（73 处） | 正确性 | **已修复（2026-09）**：73+5 处固定 `Locale.ROOT`，3 项门禁 + 德语 locale 全量验证 | 非中文 locale 部署 |
 
 > 本节条目来自 2026-09 的全量审计（`mvn verify` 三关全绿的前提下，逐条回读代码 + 真实
 > Javalin 最小复现验证）。
@@ -65,6 +65,11 @@
 > 真实错误 + 退出非零），`docker-init.sh` 先读 `.env` 且占位口令硬失败（不再"答 y 继续"），
 > `start-mysql.sh` 容器名统一走 `MYSQL_CONTAINER_NAME`，删掉无人实现的 `DB_USE_SSL`；
 > 加 `InstallScriptPolicyTest`（4 项，含变异验证）并用桩脚本做了真跑行为验证。
+>
+> **已修（第十一批）**：TD-015——73 处字面量 + 5 处常量格式串的浮点格式化统一固定
+> `Locale.ROOT`（小票、CSS `rgba()`、金额工具等），加 `LocaleFormatPolicyTest`（2 项）与
+> `LocaleIndependenceBehaviorTest`（德语默认 locale 下走真实代码路径），
+> 并额外验证整套 713 用例在德语 locale 下全绿。
 
 ---
 
@@ -599,28 +604,55 @@ Windows 干净机器首次运行脚本、或发布前验证脚本门禁时。
 
 ## TD-015 `String.format` 用默认 locale 格式化金额（73 处）
 
-**类别**：正确性（潜在）　**状态**：待处理
+**类别**：正确性（潜在）　**状态**：**已修复（2026-09）**
 **提出来源**：2026-09 全量审计（TD-014 顺带发现）
 
-### 现状
+### 现状（修复前）
 
-主源码里有 73 处 `String.format("...%.2f...", ...)` 未指定 `Locale`，`String.format` 默认用
-`Locale.getDefault(FORMAT)`。目标环境是中文（`.` 作小数分隔符）所以**当前不会出问题**；
-但在德语/法语等默认 locale 的机器上，小票、弹窗、导出的金额会打成 `1,50`——
-小票是给人看也用于核对的，导出文件更可能被再次解析（`Double.parseDouble("1,50")` 直接抛异常）。
+主源码里有 **73 处** `String.format("...%.2f...", ...)` 未指定 `Locale`（另有 5 处用常量格式串
+`PERCENT_FORMAT = "%.2f%%"`）。`String.format` 默认用 `Locale.getDefault(FORMAT)`：目标环境是中文
+（`.` 作小数分隔符）所以当时不会出问题，但在德语/法语等默认 locale 的机器上：
 
-### 为什么现在不修
+- **小票**（`ReceiptPrinter`/`PrintUtil`，共 19 处）会打出 `1,50`，与收款金额、落库值对不上；
+- **CSS 颜色**（`FXConstants.toCssColor` → `rgba(%d, %d, %d, %.2f)`）会变成 `rgba(18, 52, 86, 0,50)`，
+  JavaFX 直接**静默丢弃整条样式**（这类错误最难点查：没有报错，只是样式不生效）；
+- 任何会被再次解析的字符串（`Double.parseDouble("1,50")` 直接抛异常）。
 
-73 处一次性替换是机械但面广的改动，且要看每处用途（小票/详情/导出/日志风格各不相同），
-适合单独一批做；`CurrencyUtil` 已经显式锁定了 `Locale.SIMPLIFIED_CHINESE`，主要路径（界面金额）
-本身是安全的。
+### 修复（2026-09）
 
-### 触发条件
+- **73 处字面量格式串**统一改为 `String.format(java.util.Locale.ROOT, ...)`（25 个文件），
+  另外 5 处用常量的（`ProfitReportController.PERCENT_FORMAT`）同样补上。
+  选 `Locale.ROOT` 而不是某个语言：这些是数据/机器字符串（小票行、CSS、消息、金额），
+  而面向用户的货币符号与千分位由 `CurrencyUtil` 负责——它本来就固定了
+  `DecimalFormatSymbols(Locale.SIMPLIFIED_CHINESE)`，不受默认 locale 影响。
+- 复核：`grep 'String\.format([^"]' | grep -v Locale.ROOT` 归零；含浮点转换的未固定点归零。
 
-部署到非中文默认 locale 的机器、或导出文件需要跨语言环境解析。
+### 门禁（3 项，全部做过变异验证）
 
-### 建议方案
+- `com.cashier.security.LocaleFormatPolicyTest.floatFormattingAlwaysPinsLocale`：
+  扫描 `src/main/java` 所有 `String.format(...)`，**按引号配对解析第一个实参**（格式串内部含逗号时
+  用字符类截断会漏判——第一版门禁就栽在这里，变异测试当场发现），字面量含浮点转换
+  （`%f`/`%.2f`/`%e`/`%g`）而未带 `Locale.ROOT` 即失败；**常量格式串会在全仓库范围内解析**
+  （`PERCENT_FORMAT = "%.2f%%"` 这类也能抓住）。
+- `LocaleFormatPolicyTest.receiptAndStyleFormattingPinnedLocale`：小票三件套 +
+  `FXConstants` + `CurrencyUtil` 这几个"错了就静默失效"的文件单独再守一遍（失败信息更直白）。
+- `LocaleIndependenceBehaviorTest`（**行为级**）：把 JVM 默认 locale 真的切成 `de_DE`，
+  先断言参照系（该 locale 下 `String.format("%.2f", 1.5)` 确实是 `1,50`），
+  再走真实代码路径断言金额工具仍是 `1.50`、千分位仍是 `1,234.50`、
+  小票金额行是 `180.00`、`FXConstants.toCssColor` 是 `rgba(18, 52, 86, 0.50)`、
+  支付方式归一化仍是 `CASH`。
 
-统一走 `String.format(Locale.ROOT, ...)`（或已有的 `CurrencyUtil.format`），
-优先改 `ReceiptPrinter`、导出工具与被再解析的字符串；配套一条"`src/main` 内不得出现
-未指定 Locale 的 `%f` 格式化"的门禁。
+变异验证：① 把 `FXConstants.toCssColor` 的 `Locale.ROOT` 去掉 → 三项全红
+（行为级测试给出 `实际: rgba(18, 52, 86, 0,50)`）；② 把 `PERCENT_FORMAT` 的 5 处 `Locale.ROOT` 去掉 →
+全局门禁靠常量解析抓住。均确认后还原。
+
+### 额外验证：整套测试在德语 locale 下跑
+
+`mvn test -DargLine="-Duser.language=de -Duser.country=DE"` → **713 个用例全绿**，
+说明除金额/CSS 外，其余依赖默认 locale 的假设也已不存在（测试里原本就可能断言格式化结果）。
+
+### 剩余
+
+- 无（`String.format` 的浮点格式化已全部固定 Locale）。
+  注：纯 `%d`/`%s` 的格式化不强制带 Locale——它们不受 locale 影响。
+

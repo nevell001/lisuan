@@ -112,7 +112,7 @@ public class PurchaseApprovalController {
         supplierColumn.setCellValueFactory(new PropertyValueFactory<>("supplierName"));
         purchaseDateColumn.setCellValueFactory(new PropertyValueFactory<>("purchaseDate"));
         totalAmountColumn.setCellValueFactory(cellData ->
-            new SimpleStringProperty(String.format("%.2f", cellData.getValue().totalAmount)));
+            new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().totalAmount)));
         purchaserColumn.setCellValueFactory(new PropertyValueFactory<>("purchaser"));
     }
 
@@ -385,7 +385,7 @@ public class PurchaseApprovalController {
 
             TableColumn<PurchaseOrderItem, String> totalCol = new TableColumn<>(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Runtime.SUBTOTAL));
             totalCol.setCellValueFactory(cellData ->
-                new SimpleStringProperty(String.format("%.2f", cellData.getValue().totalPrice)));
+                new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().totalPrice)));
 
             itemTable.getColumns().addAll(nameCol, qtyCol, priceCol, totalCol);
 

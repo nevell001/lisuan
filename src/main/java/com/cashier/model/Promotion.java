@@ -125,13 +125,13 @@ public class Promotion {
 
         switch (type) {
             case "满减":
-                return String.format("%s - 满%.2f减%.2f [%s] [%s] 使用:%d/%d",
+                return String.format(java.util.Locale.ROOT, "%s - 满%.2f减%.2f [%s] [%s] 使用:%d/%d",
                     name, threshold.doubleValue(), discount.doubleValue(), status, validity, usageCount, maxUsage == -1 ? -1 : maxUsage);
             case "打折":
-                return String.format("%s - 满%.2f打%.0f折 [%s] [%s] 使用:%d/%d",
+                return String.format(java.util.Locale.ROOT, "%s - 满%.2f打%.0f折 [%s] [%s] 使用:%d/%d",
                     name, threshold.doubleValue(), discount.multiply(BigDecimal.TEN).doubleValue(), status, validity, usageCount, maxUsage == -1 ? -1 : maxUsage);
             case "优惠券":
-                return String.format("%s - 面额%.2f元 [%s] [%s] 使用:%d/%d",
+                return String.format(java.util.Locale.ROOT, "%s - 面额%.2f元 [%s] [%s] 使用:%d/%d",
                     name, discount.doubleValue(), status, validity, usageCount, maxUsage == -1 ? -1 : maxUsage);
             default:
                 return name;

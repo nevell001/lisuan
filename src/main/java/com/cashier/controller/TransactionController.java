@@ -287,7 +287,7 @@ public class TransactionController {
         if (transaction.items != null && !transaction.items.isEmpty()) {
             for (int i = 0; i < transaction.items.size(); i++) {
                 var item = transaction.items.get(i);
-                detail.append(String.format("  %d. %s x%d = ¥%.2f\n",
+                detail.append(String.format(java.util.Locale.ROOT, "  %d. %s x%d = ¥%.2f\n",
                     i + 1,
                     item.name,
                     item.quantity,

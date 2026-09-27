@@ -138,7 +138,7 @@ public class PurchaseOrderController {
         supplierColumn.setCellValueFactory(new PropertyValueFactory<>("supplierName"));
         purchaseDateColumn.setCellValueFactory(new PropertyValueFactory<>("purchaseDate"));
         totalAmountColumn.setCellValueFactory(cellData ->
-            new SimpleStringProperty(String.format("%.2f", cellData.getValue().totalAmount)));
+            new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().totalAmount)));
         statusColumn.setCellValueFactory(cellData ->
             new SimpleStringProperty(cellData.getValue().getStatusDisplayName()));
         purchaserColumn.setCellValueFactory(new PropertyValueFactory<>("purchaser"));
@@ -594,7 +594,7 @@ public class PurchaseOrderController {
         column.setPrefWidth(100);
         column.getStyleClass().add("font-bold");
         column.setCellValueFactory(cellData ->
-            new SimpleStringProperty(String.format("%.2f", cellData.getValue().totalPrice)));
+            new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().totalPrice)));
         return column;
     }
 
@@ -1120,7 +1120,7 @@ public class PurchaseOrderController {
 
             TableColumn<PurchaseOrderItem, String> totalCol = new TableColumn<>(I18nManager.getInstance().get(I18nKeys.Runtime.SUBTOTAL));
             totalCol.setCellValueFactory(cellData ->
-                new SimpleStringProperty(String.format("%.2f", cellData.getValue().totalPrice)));
+                new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().totalPrice)));
 
             itemTable.getColumns().addAll(nameCol, qtyCol, priceCol, totalCol);
 

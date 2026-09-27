@@ -362,7 +362,7 @@ public class TransactionApiController {
             OperationLog log = new OperationLog();
             log.username = returnOrder.operatorName;
             log.operation = "RETURN_REFUND_CASH";
-            log.details = String.format("现金退款: %s, 金额: %.2f (原交易 %s)",
+            log.details = String.format(java.util.Locale.ROOT, "现金退款: %s, 金额: %.2f (原交易 %s)",
                 returnOrder.returnOrderId, refundAmount, returnOrder.originalTransactionId);
             log.ipAddress = "api";
             log.timestamp = java.time.Instant.now();

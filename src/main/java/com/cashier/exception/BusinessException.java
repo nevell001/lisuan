@@ -69,7 +69,7 @@ public class BusinessException extends CashierException {
      */
     public static BusinessException insufficientBalance(String memberName, double required, double available) {
         return new BusinessException(
-            String.format("会员「%s」余额不足，需要 %.2f，可用 %.2f", memberName, required, available),
+            String.format(java.util.Locale.ROOT, "会员「%s」余额不足，需要 %.2f，可用 %.2f", memberName, required, available),
             BusinessErrorType.INSUFFICIENT_BALANCE
         );
     }

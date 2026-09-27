@@ -730,6 +730,13 @@ When working on files that still use the old `ProductDAO`, consider migrating th
 - 状态/支付方式归一化的大小写折叠一律用 `Locale.ROOT`（`I18nUiUtils`）：平台默认 locale 在土耳其语下
   会把 `CHECKING` 折成 `checkıng`、`CASH` 折成 `cash` 之外的值，导致落库值匹配失败、界面回退成英文原值；
   门禁 `I18nUiUtilsTest.caseFoldingIsLocaleIndependent`（切 `tr_TR` 默认 locale 后断言，改回即变红）
+- **金额/百分比格式化必须显式固定 `Locale`**（TD-015）：`String.format("%.2f", x)` 跟随平台默认
+  locale，德语/法语机器会打出 `1,50`——小票对不上账、CSS `rgba(...,0,50)` 被 JavaFX 静默丢弃；
+  统一用 `String.format(java.util.Locale.ROOT, ...)`（纯 `%d`/`%s` 不受影响，无需强制）。
+  门禁：`LocaleFormatPolicyTest`（扫 `src/main`，**按引号配对解析第一个实参**，常量格式串如
+  `PERCENT_FORMAT = "%.2f%%"` 也会跨文件解析）+ `LocaleIndependenceBehaviorTest`
+  （把默认 locale 切成 `de_DE` 再走金额/CSS 真实代码路径）。另建议整套测试在德语 locale 下跑一遍：
+  `mvn test -DargLine="-Duser.language=de -Duser.country=DE"`
 - i18n 门禁：`I18nBundleConsistencyTest` 断言三份语言包 key 集合一致、`I18nKeys` 常量齐全、
   源码字面量 i18n 调用 key 齐全（缺 key 时界面会直接显示 key，属 UI 缺陷）
 - 并发安全：`ConcurrentDeductionTest` 多线程验证乐观锁防库存超卖、防会员余额超扣
@@ -1249,8 +1256,9 @@ worker 迭代 `cartItems`（`ObservableList`）、对 `inventoryMap`（普通 `H
   TD-008（成功弹窗金额）、TD-009（测试库外键/审计归属）、TD-013（版本号四处一致）**已修复**，
   TD-006 仅剩约 6 处（含交互流程与写操作），
   TD-014 部分（文档测试数不再写死、locale 折叠已修，可见文案硬编码待办）；
-  TD-010（初始化脚本与 Java 建表对齐）、TD-012（安装脚本失败可见与口令守卫）**已修复**；
-  其余（Windows 启动脚本 TD-011、`String.format` 默认 locale TD-015、可见文案硬编码 TD-014 剩余）仍待处理
+  TD-010（初始化脚本与 Java 建表对齐）、TD-012（安装脚本失败可见与口令守卫）、
+  TD-015（`String.format` 默认 locale）**已修复**；
+  其余（Windows 启动脚本 TD-011、可见文案硬编码 TD-014 剩余）仍待处理
 
 **数据库密码来源（v2.6.0 补强）**
 

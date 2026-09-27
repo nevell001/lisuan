@@ -216,7 +216,7 @@ public class FXConstants {
      * @return CSS 颜色字符串
      */
     public static String toCssColor(Color color) {
-        return String.format("rgba(%d, %d, %d, %.2f)",
+        return String.format(java.util.Locale.ROOT, "rgba(%d, %d, %d, %.2f)",
             (int) (color.getRed() * 255),
             (int) (color.getGreen() * 255),
             (int) (color.getBlue() * 255),

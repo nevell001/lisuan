@@ -57,11 +57,11 @@ public class PrintUtil {
             template.setVariable("transactionTime", formatNow());
             template.setVariable("items", items);
             template.setVariable("totalQuantity", String.valueOf(totalQuantity));
-            template.setVariable("totalAmount", String.format("%.2f", totalAmount));
-            template.setVariable("discountAmount", String.format("%.2f", discountAmount));
-            template.setVariable("finalAmount", String.format("%.2f", finalAmount));
-            template.setVariable("paidAmount", String.format("%.2f", paidAmount));
-            template.setVariable("changeAmount", String.format("%.2f", changeAmount));
+            template.setVariable("totalAmount", String.format(java.util.Locale.ROOT, "%.2f", totalAmount));
+            template.setVariable("discountAmount", String.format(java.util.Locale.ROOT, "%.2f", discountAmount));
+            template.setVariable("finalAmount", String.format(java.util.Locale.ROOT, "%.2f", finalAmount));
+            template.setVariable("paidAmount", String.format(java.util.Locale.ROOT, "%.2f", paidAmount));
+            template.setVariable("changeAmount", String.format(java.util.Locale.ROOT, "%.2f", changeAmount));
             template.setVariable("paymentMethod", paymentMethod);
             template.setVariable("memberInfo", memberInfo != null ? memberInfo : "非会员");
             
@@ -99,7 +99,7 @@ public class PrintUtil {
             template.setVariable("operator", operator);
             template.setVariable("items", items);
             template.setVariable("totalQuantity", String.valueOf(totalQuantity));
-            template.setVariable("totalAmount", String.format("%.2f", totalAmount));
+            template.setVariable("totalAmount", String.format(java.util.Locale.ROOT, "%.2f", totalAmount));
             template.setVariable("remark", remark != null ? remark : "");
             
             PrintTask task = PrintTask.createInboundTask(template.generate());
@@ -139,10 +139,10 @@ public class PrintUtil {
             template.setVariable("memberName", memberName);
             template.setVariable("memberPhone", memberPhone);
             template.setVariable("memberLevel", memberLevel);
-            template.setVariable("rechargeAmount", String.format("%.2f", rechargeAmount));
+            template.setVariable("rechargeAmount", String.format(java.util.Locale.ROOT, "%.2f", rechargeAmount));
             template.setVariable("bonusPoints", String.valueOf(bonusPoints));
             template.setVariable("paymentMethod", paymentMethod);
-            template.setVariable("newBalance", String.format("%.2f", newBalance));
+            template.setVariable("newBalance", String.format(java.util.Locale.ROOT, "%.2f", newBalance));
             template.setVariable("newPoints", String.valueOf((int)newPoints));
             
             PrintTask task = PrintTask.createMemberReceiptTask(template.generate());
@@ -210,10 +210,10 @@ public class PrintUtil {
             
             template.setVariable("reportTime", formatNow());
             template.setVariable("timeRange", timeRange);
-            template.setVariable("totalRevenue", String.format("%.2f", totalRevenue));
+            template.setVariable("totalRevenue", String.format(java.util.Locale.ROOT, "%.2f", totalRevenue));
             template.setVariable("totalQuantity", String.valueOf(totalQuantity));
             template.setVariable("transactionCount", String.valueOf(transactionCount));
-            template.setVariable("avgTicket", String.format("%.2f", avgTicket));
+            template.setVariable("avgTicket", String.format(java.util.Locale.ROOT, "%.2f", avgTicket));
             template.setVariable("details", details);
             
             PrintTask task = PrintTask.createSalesReportTask(template.generate());

@@ -113,7 +113,7 @@ public class PurchaseInboundController {
         supplierColumn.setCellValueFactory(new PropertyValueFactory<>("supplierName"));
         purchaseDateColumn.setCellValueFactory(new PropertyValueFactory<>("purchaseDate"));
         totalAmountColumn.setCellValueFactory(cellData ->
-            new SimpleStringProperty(String.format("%.2f", cellData.getValue().totalAmount)));
+            new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().totalAmount)));
         purchaserColumn.setCellValueFactory(new PropertyValueFactory<>("purchaser"));
     }
 
@@ -318,11 +318,11 @@ public class PurchaseInboundController {
 
         TableColumn<InboundItemWrapper, String> unitPriceCol = new TableColumn<>(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.ReturnApproval.UNIT_PRICE));
         unitPriceCol.setCellValueFactory(cellData ->
-            new SimpleStringProperty(String.format("%.2f", cellData.getValue().getUnitPrice())));
+            new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().getUnitPrice())));
 
         TableColumn<InboundItemWrapper, String> totalCol = new TableColumn<>(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Runtime.SUBTOTAL));
         totalCol.setCellValueFactory(cellData ->
-            new SimpleStringProperty(String.format("%.2f",
+            new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f",
                 cellData.getValue().getUnitPrice().multiply(BigDecimal.valueOf(cellData.getValue().thisInboundQuantity.get())))));
 
         itemTable.getColumns().addAll(productNameCol, orderQtyCol, inboundedQtyCol, inboundQtyCol, unitPriceCol, totalCol);
@@ -485,11 +485,11 @@ public class PurchaseInboundController {
 
             TableColumn<PurchaseOrderItem, String> priceCol = new TableColumn<>(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.ReturnApproval.UNIT_PRICE));
             priceCol.setCellValueFactory(cellData ->
-                new SimpleStringProperty(String.format("%.2f", cellData.getValue().unitPrice)));
+                new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().unitPrice)));
 
             TableColumn<PurchaseOrderItem, String> totalCol = new TableColumn<>(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Runtime.SUBTOTAL));
             totalCol.setCellValueFactory(cellData ->
-                new SimpleStringProperty(String.format("%.2f", cellData.getValue().totalPrice)));
+                new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().totalPrice)));
 
             itemTable.getColumns().addAll(nameCol, qtyCol, inboundedCol, priceCol, totalCol);
 
@@ -577,7 +577,7 @@ public class PurchaseInboundController {
             amountCol.setMinWidth(140);
             amountCol.setPrefWidth(170);
             amountCol.setCellValueFactory(cellData ->
-                new SimpleStringProperty(String.format("%.2f", cellData.getValue().totalAmount)));
+                new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().totalAmount)));
 
             TableColumn<PurchaseInbound, String> operatorCol = new TableColumn<>(I18nManager.getInstance().get("purchase_inbound.operator"));
             operatorCol.setMinWidth(130);
@@ -667,11 +667,11 @@ public class PurchaseInboundController {
 
             TableColumn<PurchaseInboundItem, String> unitPriceCol = new TableColumn<>(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.ReturnApproval.UNIT_PRICE));
             unitPriceCol.setCellValueFactory(cellData ->
-                new SimpleStringProperty(String.format("%.2f", cellData.getValue().unitPrice)));
+                new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().unitPrice)));
 
             TableColumn<PurchaseInboundItem, String> totalCol = new TableColumn<>(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Runtime.SUBTOTAL));
             totalCol.setCellValueFactory(cellData ->
-                new SimpleStringProperty(String.format("%.2f", cellData.getValue().totalPrice)));
+                new SimpleStringProperty(String.format(java.util.Locale.ROOT, "%.2f", cellData.getValue().totalPrice)));
 
             itemTable.getColumns().addAll(productNameCol, quantityCol, unitPriceCol, totalCol);
 
