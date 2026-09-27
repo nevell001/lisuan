@@ -38,6 +38,17 @@ if ! command -v docker &> /dev/null; then
     exit 1
 fi
 
+# 容器名与 install.sh / docker-compose 用同一个变量：
+# 此前这里硬编码 "lisuan-mysql"，自定义 MYSQL_CONTAINER_NAME 时会误报"启动失败"。
+MYSQL_CONTAINER_NAME="${MYSQL_CONTAINER_NAME:-lisuan-mysql}"
+if [ -f ".env" ]; then
+    # shellcheck disable=SC1091
+    set -a
+    . ./.env
+    set +a
+    MYSQL_CONTAINER_NAME="${MYSQL_CONTAINER_NAME:-lisuan-mysql}"
+fi
+
 # 创建必要的目录
 echo -e "${YELLOW}创建必要的目录...${NC}"
 mkdir -p docker/mysql-init
@@ -53,7 +64,7 @@ if [ ! -f "config/database.properties" ]; then
 fi
 
 # 检查是否已存在容器
-if docker ps -a | grep -q "lisuan-mysql"; then
+if docker ps -a --format '{{.Names}}' | grep -qx "${MYSQL_CONTAINER_NAME}"; then
     echo -e "${YELLOW}检测到已存在的 MySQL 容器${NC}"
     read -p "是否删除旧容器并重新创建？(y/N): " -n 1 -r
     echo
@@ -79,7 +90,7 @@ echo -e "${YELLOW}等待 MySQL 启动...${NC}"
 sleep 10
 
 # 检查容器状态
-if docker ps | grep -q "lisuan-mysql"; then
+if docker ps --format '{{.Names}}' | grep -qx "${MYSQL_CONTAINER_NAME}"; then
     echo -e "${GREEN}========================================${NC}"
     echo -e "${GREEN}✓ MySQL 启动成功！${NC}"
     echo -e "${GREEN}========================================${NC}"

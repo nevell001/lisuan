@@ -36,6 +36,23 @@ MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-""}
 CASHIER_DB_PASSWORD=${CASHIER_DB_PASSWORD:-${MYSQL_PASSWORD:-""}}
 MYSQL_CONTAINER_NAME=${MYSQL_CONTAINER_NAME:-"lisuan-mysql"}
 
+# SQL 导入失败时的统一处理：报出 mysql 的真实错误并退出非零。
+# 此前本地/远程路径用 "2>/dev/null || true" 把失败吃掉了，脚本照样打印
+# "[Done] Database initialization completed"，用户看到成功但库里是空的。
+fail_db_import() {
+    local label="$1"
+    local err_file="$2"
+    [ -n "$err_file" ] && [ -f "$err_file" ] && {
+        echo "--- mysql 输出（末尾 5 行） ---"
+        tail -5 "$err_file"
+        rm -f "$err_file"
+    }
+    echo "[Error] ${label}"
+    echo "请检查：MySQL 是否可访问、账号是否有建库/建表权限，以及 .env 中的 CASHIER_DB_PASSWORD 是否正确；"
+    echo "确认后重跑本脚本：./install.sh"
+    exit 1
+}
+
 # 环境类型：development 或 production
 ENVIRONMENT=${ENVIRONMENT:-"development"}
 
@@ -215,11 +232,19 @@ if [ "$DB_TYPE" == "docker" ]; then
         DB_NAME_SQL=$(printf "%s" "$DB_NAME" | sed 's/`/``/g')
         MYSQL_USER_SQL=$(printf "%s" "$MYSQL_USER" | sed "s/'/''/g")
         CASHIER_DB_PASSWORD_SQL=$(printf "%s" "$CASHIER_DB_PASSWORD" | sed "s/'/''/g")
-        docker exec "${MYSQL_CONTAINER_NAME}" mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME_SQL}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null
-        docker exec "${MYSQL_CONTAINER_NAME}" mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "CREATE USER IF NOT EXISTS '${MYSQL_USER_SQL}'@'%' IDENTIFIED BY '${CASHIER_DB_PASSWORD_SQL}'; ALTER USER '${MYSQL_USER_SQL}'@'%' IDENTIFIED BY '${CASHIER_DB_PASSWORD_SQL}'; GRANT ALL PRIVILEGES ON \`${DB_NAME_SQL}\`.* TO '${MYSQL_USER_SQL}'@'%'; FLUSH PRIVILEGES;" 2>/dev/null
+        if ! docker exec "${MYSQL_CONTAINER_NAME}" mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "CREATE DATABASE IF NOT EXISTS \`${DB_NAME_SQL}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null; then
+            fail_db_import "[Docker] 创建数据库 ${DB_NAME} 失败（容器 ${MYSQL_CONTAINER_NAME} 是否就绪？）" ""
+        fi
+        if ! docker exec "${MYSQL_CONTAINER_NAME}" mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" -e "CREATE USER IF NOT EXISTS '${MYSQL_USER_SQL}'@'%' IDENTIFIED BY '${CASHIER_DB_PASSWORD_SQL}'; ALTER USER '${MYSQL_USER_SQL}'@'%' IDENTIFIED BY '${CASHIER_DB_PASSWORD_SQL}'; GRANT ALL PRIVILEGES ON \`${DB_NAME_SQL}\`.* TO '${MYSQL_USER_SQL}'@'%'; FLUSH PRIVILEGES;" 2>/dev/null; then
+            fail_db_import "[Docker] 创建应用用户 ${MYSQL_USER} 失败" ""
+        fi
 
         echo "[Docker] Initializing database with complete schema..."
-        docker exec "${MYSQL_CONTAINER_NAME}" mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" --default-character-set=utf8mb4 "${DB_NAME}" < docker/mysql-init/00-init-complete.sql 2>/dev/null
+        DB_IMPORT_ERR=$(mktemp)
+        if ! docker exec "${MYSQL_CONTAINER_NAME}" mysql -uroot -p"${MYSQL_ROOT_PASSWORD}" --default-character-set=utf8mb4 "${DB_NAME}" < docker/mysql-init/00-init-complete.sql 2>"$DB_IMPORT_ERR"; then
+            fail_db_import "[Docker] 导入 00-init-complete.sql 失败（数据库可能只有空结构）" "$DB_IMPORT_ERR"
+        fi
+        rm -f "$DB_IMPORT_ERR"
 
         echo "[Done] Database initialization completed (v${APP_VERSION})"
         echo "[Note] Tables will be created automatically when you start the application"
@@ -255,10 +280,16 @@ if [ "$DB_TYPE" == "local" ]; then
             echo ""
 
             echo "[Local MySQL] Creating database if not exists..."
-            mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null || true
+            if ! mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null; then
+                fail_db_import "[Local MySQL] 创建数据库 ${DB_NAME} 失败" ""
+            fi
 
             echo "[Local MySQL] Initializing database with complete schema..."
-            mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null || true
+            DB_IMPORT_ERR=$(mktemp)
+            if ! mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>"$DB_IMPORT_ERR"; then
+                fail_db_import "[Local MySQL] 导入 00-init-complete.sql 失败（数据库可能只有空结构）" "$DB_IMPORT_ERR"
+            fi
+            rm -f "$DB_IMPORT_ERR"
 
         echo "[Done] Database initialization completed (v${APP_VERSION})"
             echo ""
@@ -307,10 +338,16 @@ if [ "$DB_TYPE" == "remote" ]; then
             echo ""
 
             echo "[Remote MySQL] Creating database if not exists..."
-            mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null || true
+            if ! mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} -e "CREATE DATABASE IF NOT EXISTS ${DB_NAME} CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;" 2>/dev/null; then
+                fail_db_import "[Remote MySQL] 创建数据库 ${DB_NAME} 失败" ""
+            fi
 
             echo "[Remote MySQL] Initializing database with complete schema..."
-            mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>/dev/null || true
+            DB_IMPORT_ERR=$(mktemp)
+            if ! mysql -h${DB_HOST} -P${DB_PORT} -u${DB_USERNAME} -p${DB_PASSWORD} --default-character-set=utf8mb4 ${DB_NAME} < docker/mysql-init/00-init-complete.sql 2>"$DB_IMPORT_ERR"; then
+                fail_db_import "[Remote MySQL] 导入 00-init-complete.sql 失败（数据库可能只有空结构）" "$DB_IMPORT_ERR"
+            fi
+            rm -f "$DB_IMPORT_ERR"
 
         echo "[Done] Database initialization completed (v${APP_VERSION})"
             echo ""

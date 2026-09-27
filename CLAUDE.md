@@ -717,6 +717,12 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `xvfb-run -a mvn -B -ntp verify`（与本地一致：测试 + SpotBugs + JaCoCo），
   失败时上传 `target/surefire-reports` 便于定位；`sync.yaml` 同步时会备份并恢复
   `.github/workflows`，故本文件不会被 Gitee 覆盖
+- 安装/运维脚本门禁：`InstallScriptPolicyTest`（`com.cashier.security`）钉住三条不变量——
+  ① `install.sh` 的建库/SQL 导入失败必须报错并 `exit 1`（不得再用 `2>/dev/null || true` 静默成功，
+  失败时要打印 mysql 的真实输出）；② `docker/docker-init.sh` 必须先 `. ./.env`，且空/占位口令
+  （`YOUR_*_HERE`/`changeme`/空值等）**硬失败**并早于第一条 `ALTER USER`（不再提供"确认后继续"）；
+  ③ 容器名只能来自 `MYSQL_CONTAINER_NAME`（`docker/start-mysql.sh` 不得硬编码 `lisuan-mysql`）；
+  另外 `.env.example`/凭证清单不得出现无人实现的 `DB_USE_SSL`（SSL 由 `db.url` 的 `sslMode` 决定）
 - 版本号四处同步（`AppConstants`/`pom.xml`/`installer/Installer.java`/`.env.example`）当前均为 `2.6.0`；
   **不变量由 JUnit 门禁守着**（`com.cashier.constant.VersionConsistencyTest`，随 `mvn verify` 在 CI 跑）：
   四处必须相等，失败时报出四处实际值；同时断言 `release.sh`/`release.bat` 的**比对清单**确实包含
@@ -1243,8 +1249,8 @@ worker 迭代 `cartItems`（`ObservableList`）、对 `inventoryMap`（普通 `H
   TD-008（成功弹窗金额）、TD-009（测试库外键/审计归属）、TD-013（版本号四处一致）**已修复**，
   TD-006 仅剩约 6 处（含交互流程与写操作），
   TD-014 部分（文档测试数不再写死、locale 折叠已修，可见文案硬编码待办）；
-  TD-010（初始化脚本与 Java 建表对齐）**已修复**；
-  其余（Windows 启动、安装脚本、`String.format` 默认 locale、可见文案硬编码等）仍待处理
+  TD-010（初始化脚本与 Java 建表对齐）、TD-012（安装脚本失败可见与口令守卫）**已修复**；
+  其余（Windows 启动脚本 TD-011、`String.format` 默认 locale TD-015、可见文案硬编码 TD-014 剩余）仍待处理
 
 **数据库密码来源（v2.6.0 补强）**
 

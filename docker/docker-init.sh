@@ -33,6 +33,15 @@ else
     exit 1
 fi
 
+# 先读工作目录的 .env：只做了 cp .env.example .env 的机器应当用这里的口令。
+# 旧版本从不读 .env，于是"以为配置好了"的机器会退化成脚本里的占位常量。
+if [ -f ".env" ]; then
+    # shellcheck disable=SC1091
+    set -a
+    . ./.env
+    set +a
+fi
+
 # 检查容器是否已运行
 if ! $DOCKER_COMPOSE ps mysql | grep -q "Up"; then
     echo -e "${YELLOW}MySQL 容器未运行，正在启动...${NC}"
@@ -66,20 +75,27 @@ MYSQL_USER="lisuan"
 # 统一的应用用户密码（兼容旧版 MYSQL_PASSWORD）
 CASHIER_DB_PASSWORD="${CASHIER_DB_PASSWORD:-${MYSQL_PASSWORD:-YOUR_CASHIER_PASSWORD_HERE}}"
 
-# 检查是否使用了默认密码
-if [[ "$MYSQL_ROOT_PASSWORD" == "YOUR_ROOT_PASSWORD_HERE" ]] || [[ "$CASHIER_DB_PASSWORD" == "YOUR_CASHIER_PASSWORD_HERE" ]]; then
+# 空口令 / 占位口令一律拒绝：此前只警告，用户答 y 就会把
+# 'YOUR_CASHIER_PASSWORD_HERE' 真的 ALTER USER 进 MySQL 并写回 .env。
+is_placeholder_password() {
+    case "$1" in
+        ""|YOUR_ROOT_PASSWORD_HERE|YOUR_CASHIER_PASSWORD_HERE|YOUR_*_HERE|changeme|password|123456)
+            return 0 ;;
+        *)
+            return 1 ;;
+    esac
+}
+
+if is_placeholder_password "$MYSQL_ROOT_PASSWORD" || is_placeholder_password "$CASHIER_DB_PASSWORD"; then
     echo ""
-    echo -e "${YELLOW}⚠️  安全警告：您正在使用默认密码占位符！${NC}"
-    echo -e "${YELLOW}   请设置环境变量或在脚本中修改密码：${NC}"
-    echo "   export MYSQL_ROOT_PASSWORD='your_secure_password'"
-    echo "   export CASHIER_DB_PASSWORD='your_secure_password'"
-    echo ""
-    read -p "是否继续？(y/N) " -n 1 -r
-    echo
-    if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-        echo "已取消操作"
-        exit 1
-    fi
+    echo -e "${RED}错误：数据库口令为空或仍是占位符，已停止初始化${NC}"
+    echo "请先在工作目录的 .env 里填真实口令（cp .env.example .env 后编辑）："
+    echo "  MYSQL_ROOT_PASSWORD=<root 口令>"
+    echo "  CASHIER_DB_PASSWORD=<应用用户口令>"
+    echo "或用环境变量临时提供："
+    echo "  export MYSQL_ROOT_PASSWORD='...' CASHIER_DB_PASSWORD='...'"
+    echo "（不再支持「确认后继续」：那会把占位口令真的写进 MySQL 与 .env）"
+    exit 1
 fi
 
 echo ""

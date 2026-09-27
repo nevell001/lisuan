@@ -16,7 +16,7 @@
 | TD-009 | H2 测试库无外键（生产 14 个），外键类缺陷测不出 | 测试基建 | **已修复（2026-09）** | 回归门禁 |
 | TD-010 | docker/mysql-init 的「完整初始化」与 Java 建表漂移 | 运维 | **已修复（2026-09）**：补 9 表、对齐列与类型、5 张遗留表标注，5 项门禁 | 数据库初始化 |
 | TD-011 | Windows 启动脚本把未匹配的 JAR 通配符当路径，静默跳过构建 | 发布 | 待处理 | Windows 启动 |
-| TD-012 | install.sh / docker-init.sh 静默成功与占位口令 | 运维 | 待处理 | 安装脚本 |
+| TD-012 | install.sh / docker-init.sh 静默成功与占位口令 | 运维 | **已修复（2026-09）**：失败可见 + 口令硬守卫 + 容器名同源 + 删未实现开关，4 项门禁 | 安装脚本 |
 | TD-013 | 版本号门禁只覆盖 4 处中的 2 处 | 发布 | **已修复（2026-09）** | 版本管理 |
 | TD-014 | i18n 硬编码与文档中的测试数过期 | 文档/体验 | **部分修复（2026-09）**：文档数字与 locale 折叠已修，可见文案硬编码待办 | — |
 | TD-015 | `String.format` 用默认 locale 格式化金额（73 处） | 正确性 | 待处理 | 非中文 locale 部署 |
@@ -60,6 +60,11 @@
 > **已修（第九批）**：TD-010——`docker/mysql-init` 补齐 Java 侧会建的 9 张表（DDL 从源码原样提取）、
 > 对齐 3 处列集合与 12 处列类型、把 5 张无引用的历史表显式标注为遗留，
 > 并加 `InitSchemaParityTest`（表/列/类型/白名单/核心表 5 项，含变异验证）。
+>
+> **已修（第十批）**：TD-012——`install.sh` 的建库/导入失败不再被 `|| true` 吃掉（改为报出 mysql
+> 真实错误 + 退出非零），`docker-init.sh` 先读 `.env` 且占位口令硬失败（不再"答 y 继续"），
+> `start-mysql.sh` 容器名统一走 `MYSQL_CONTAINER_NAME`，删掉无人实现的 `DB_USE_SSL`；
+> 加 `InstallScriptPolicyTest`（4 项，含变异验证）并用桩脚本做了真跑行为验证。
 
 ---
 
@@ -462,32 +467,72 @@ Windows 干净机器首次运行脚本、或发布前验证脚本门禁时。
 
 ## TD-012 install.sh / docker-init.sh 静默成功与占位口令
 
-**类别**：运维　**状态**：待处理
+**类别**：运维　**状态**：**已修复（2026-09）**
 **提出来源**：2026-09 全量审计（脚本）
 
-### 现状
+### 现状（修复前，四项）
 
-- `install.sh:261` `mysql ... < 00-init-complete.sql 2>/dev/null || true` 之后直接打印
-  `[Done] Database initialization completed` → 导入失败也报成功（`set -e` 被 `|| true` 吃掉）；
-- `docker/docker-init.sh` 从不读 `.env`，会在只做了 `cp .env.example .env` 的机器上退化成
-  占位口令，并在用户答 y 后 `ALTER USER ... IDENTIFIED BY 'YOUR_CASHIER_PASSWORD_HERE'` 且写回 `.env`；
-- `docker/start-mysql.sh` 硬编码容器名 `lisuan-mysql`，与 compose 的可配
-  `MYSQL_CONTAINER_NAME` 不一致 → 自定义名时误报"启动失败"；
-- `.env.example`/`docs/CREDENTIALS_CHECKLIST.md` 里的 `DB_USE_SSL` 无人实现（实际由 `db.url` 的
-  `sslMode` 决定）。
+1. `install.sh` 本地/远程两条路径的建库与 SQL 导入用 `2>/dev/null || true` 吞掉失败，
+   之后照样打印 `[Done] Database initialization completed` → **装完报成功但库是空的**；
+   Docker 路径虽受 `set -e` 保护，但 stderr 被丢进 `/dev/null`，报错没有任何指向。
+2. `docker/docker-init.sh` **从不读 `.env`**：只做了 `cp .env.example .env` 的机器会退化成脚本里的
+   占位常量；而且占位口令只警告，用户答 `y` 就会 `ALTER USER ... IDENTIFIED BY 'YOUR_CASHIER_PASSWORD_HERE'`
+   并把它写回 `.env`。
+3. `docker/start-mysql.sh` 硬编码容器名 `lisuan-mysql`，与 compose/install.sh 的可配
+   `MYSQL_CONTAINER_NAME` 不一致 → 自定义名时误报"启动失败"。
+4. `.env.example` 与 `docs/CREDENTIALS_CHECKLIST.md` 提到 `DB_USE_SSL`，但**没有任何代码读它**
+   （SSL 实际由 `db.url` 的 `sslMode` 决定）。
 
-### 为什么现在不修
+### 修复（2026-09）
 
-属安装/运维脚本批次，需在 Linux + Docker 环境实测；本轮聚焦应用侧正确性。
+- **失败可见**：`install.sh` 新增统一的 `fail_db_import()`：建库/导入的 **7 个失败分支**
+  （Docker 3 + 本地 2 + 远程 2）都改为 `if ! ... ; then fail_db_import ...`，
+  失败时打印 mysql 的真实输出（末尾 5 行，stderr 收进临时文件而非 `/dev/null`）、
+  说明后果（"数据库可能只有空结构"）与可操作提示，然后 `exit 1`。
+- **口令守卫**：`docker-init.sh` 开头 `set -a; . ./.env; set +a` 先读工作目录的 `.env`；
+  新增 `is_placeholder_password()`（空值、`YOUR_*_HERE`、`changeme`、`password`、`123456`），
+  命中即**硬失败**（删除原来的"是否继续？(y/N)"分支），并把口令检查放在第一条 `ALTER USER` 之前。
+- **容器名同源**：`start-mysql.sh` 读 `MYSQL_CONTAINER_NAME`（默认 `lisuan-mysql`，与 install.sh 一致），
+  并在读 `.env` 后再取一次；容器存在性判断改用 `docker ps [-a] --format '{{.Names}}' | grep -qx "${MYSQL_CONTAINER_NAME}"`
+  （精确匹配，不再子串误命中）。
+- **删掉未实现的开关**：`.env.example` 与凭证清单里的 `DB_USE_SSL` 改为指向真实机制
+  （`config/database.properties` 的 `db.url` 里的 `sslMode`）。
 
-### 触发条件
+### 门禁（4 项，全部做过变异验证）
 
-新环境部署、或出现"装完报成功但库是空的/连不上"的工单。
+`com.cashier.security.InstallScriptPolicyTest`：
 
-### 建议方案
+1. `installFailsLoudlyWhenDatabaseImportFails`：不得再出现 `00-init-complete.sql 2>/dev/null || true`；
+   7 处失败分支必须调用 `fail_db_import`；3 条路径的导入必须把 stderr 收进临时文件；3 处成功提示仍在；
+2. `dockerInitReadsEnvAndRejectsPlaceholderPasswords`：必须 `. ./.env`；必须有 `is_placeholder_password`；
+   **不得**再出现"是否继续？"；守卫必须是可执行判断（`if is_placeholder_password ...`）且早于第一条 `ALTER USER`
+   （第一版门禁只查"文本存在"，被 `if false && ...` 短路后照样通过 —— 变异测试当场发现，已收紧）；
+3. `containerNameComesFromOneSource`：start-mysql 不得硬编码容器名，两处判断必须精确匹配变量，
+   变量默认值要与 install.sh 一致；
+4. `noUnimplementedDeploymentSwitches`：`.env.example` 与凭证清单不得再提 `DB_USE_SSL`。
 
-去掉 `|| true` 并对导入结果判错；`docker-init.sh` 先 `source .env`；容器名统一读同一变量；
-删除或实现 `DB_USE_SSL`。
+变异验证：① 本地路径导入改回 `|| true` → 1 变红；② 守卫改成 `if false && ...` → 2 变红；
+③ 容器名改回硬编码 → 3 变红；④ `.env.example` 恢复 `DB_USE_SSL` → 4 变红。
+
+### 行为验证（本机真跑，不只静态检查）
+
+用桩 `docker`/`docker compose`（记录每次调用）在临时目录跑 `docker/docker-init.sh`：
+
+- `.env` 里是占位口令 → **退出码 1**、打印"数据库口令为空或仍是占位符，已停止初始化"，
+  且调用日志里 **`ALTER USER` 出现 0 次**（旧版本答 y 后会真的写库）；
+- `.env` 里是真实口令 → 退出码 0、`ALTER USER` 用的是 `.env` 里的口令（证明脚本确实读了 `.env`，
+  旧版本从不读）、口令按原值写回 `.env` 且权限 600。
+
+用桩 `mvn`/`mysql` 跑 `install.sh` 的本地 MySQL 路径（`mysql` 桩让 `SELECT 1` 与建库成功、导入失败）：
+
+- 退出码 **1**，输出里能看到 mysql 的真实错误 `ERROR 1045 (28000): Access denied ...`、
+  `[Error] [Local MySQL] 导入 00-init-complete.sql 失败（数据库可能只有空结构）` 与修复建议；
+- 且**不再打印** `Database initialization completed`。
+
+### 剩余
+
+- `install.bat`（Windows）里若存在同类"静默成功"写法，需在 Windows 上核对——本轮未改 `.bat`，
+  也没有 Windows 环境做行为验证（见 TD-011）。
 
 ---
 

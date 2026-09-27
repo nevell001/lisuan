@@ -19,7 +19,7 @@
 | MySQL root 密码 | `.env` `MYSQL_ROOT_PASSWORD` | 自行生成 | ≥16 位强随机，仅用于初始化 | `.env`（gitignored） |
 | 应用用户密码（lisuan） | `.env` `CASHIER_DB_PASSWORD` | 自行生成 | ≥16 位强随机，与 root 不同 | 仅 `.env`（方案A：不写入 `config/database.properties`） |
 | 数据库主机/端口 | `DB_HOST` / `DB_PORT` / `db.url` | 部署环境 | 生产内网或 SSH 隧道 | `.env` + `config/database.properties` |
-| 数据库 SSL | `DB_USE_SSL=true`（建议） | 部署环境 | 生产启用 SSL/TLS | `.env` |
+| 数据库 SSL | `db.url` 里的 `sslMode`（`config/database.properties`，建议生产用 `REQUIRED`） | 部署环境 | 生产启用 SSL/TLS | `config/database.properties` |
 
 验证：`mysql -h <host> -P <port> -u lisuan -p -e "SELECT 1"`；启动应用观察连接池日志。
 
