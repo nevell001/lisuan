@@ -389,7 +389,9 @@ public class InventoryController extends BaseController<Product> {
      * 更新商品数量标签
      */
     private void updateCountLabel() {
-        countLabel.setText(i18n.get("inventory.count") + ": " + inventoryList.size() + "/" + totalProducts);
+        // inventory.count 的值本身是 "商品数量: {0}"，必须把 "当前/总数" 作为参数传入；
+        // 以前是 get(key) 不传参再拼 ": 94/94"，界面上会露出未替换的 {0}
+        countLabel.setText(i18n.get("inventory.count", inventoryList.size() + "/" + totalProducts));
     }
 
     /**

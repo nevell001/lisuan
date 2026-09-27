@@ -1466,8 +1466,16 @@
  * 否则交班页在深色主题下会残留白色区域。
  */
 /* 深色主题主色 #C96A24 上白字只有 3.77:1，压深一档后 4.58:1（按钮同步受益） */
+/* 交班页顶部栏：浅色主题用品牌橙（-lisuan-primary）是有意的页面识别色，
+   但深色主题下 -lisuan-primary-muted(#B85C1B) 在近黑背景上会变成一条刺眼的亮橙横条（2026-09 用户反馈），
+   改用深品牌色 -lisuan-primary-darker(#5A2D0C)：保留品牌味道，不再抢眼，白字对比度也足够 */
 .shift-toolbar {
-    -fx-background-color: -lisuan-primary-muted;
+    -fx-background-color: -lisuan-primary-darker;
+}
+
+/* 分隔条同理：基础样式用的是品牌边框色（#A3571E），深色下就是一条橙线，改为中性分隔色 */
+.shift-separator {
+    -fx-background-color: -lisuan-border-strong;
 }
 
 .shift-filter-bar {

@@ -830,6 +830,17 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `LEGACY_STATUS_KEYS`/`PREFIXED_STATUS_KEYS` 兼容映射会把中文串兜底翻译成 key——
   它让硬编码**在运行时被掩盖**，所以调用方一律直接传 key。另：断言"某操作使用成功级别"要按
   **文案 key** 判级别（测试助手 `StatusBarAssertions`），不要钉中文文案，否则文案迁 i18n 时门禁会误红
+- **i18n 占位符必须传参**（TD-019，用户实测发现）：`get(key)` 漏传参会让界面直接显示 `{0}`
+  （实测：商品管理页 `商品数量: {0}: 94/94`）。门禁 `I18nPlaceholderArgsPolicyTest` 扫全部
+  `get("<key>"…)`/`get(I18nKeys.X…)` 调用，用语言包值里的最大占位符序号对比**实参个数（不含 key）**；
+  防空转要求识别到的调用数 > 1000。写这类门禁注意：统计实参时**别把 key 算进去**——
+  第一版就这么错了，`get(key)` 恰好通过，是变异测试抓出来的
+- **深色主题的大面积用色要降饱和**（TD-020，用户实测发现）：品牌色铺在大面积背景上，
+  浅色主题好看，深色主题会变成刺眼的亮条。已修：交班页 `shift-toolbar` 深色下用
+  `-lisuan-primary-darker`（原来被覆盖成饱和橙 `-lisuan-primary-muted`），
+  `shift-separator` 深色下必须覆盖为中性色（基础样式用的是品牌边框色）。
+  门禁 `DarkThemeSurfacePolicyTest` 钉住这两条。**改自定义 surface 样式类时，
+  记得给深色主题补覆盖规则**——共享类（如 `toolbar`）有覆盖，自建类容易漏
 - **说明文档一致性**（`InstructionsDocPolicyTest`）：`AGENTS.md`（速查，已入库）与 `CLAUDE.md`（权威细节）
   都必须被 git 跟踪；两份文档里**讲"版本号四处同步"的那一句**必须列全
   `AppConstants`/`pom.xml`/`installer/Installer.java`/`.env.example`；
