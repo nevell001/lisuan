@@ -398,7 +398,7 @@ public class PurchaseInboundController {
             inbound.totalAmount = totalAmount;
             PurchaseService.receiveInbound(inbound, inboundItems);
 
-            updateStatus("入库成功: " + inboundNo);
+            updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.INBOUND_SUCCESS, inboundNo));
             com.cashier.service.AuditService.success(currentUser, "PURCHASE", "PURCHASE_INBOUND",
                 "入库单=" + inboundNo + ", 采购单=" + order.orderNo + ", 数量=" + totalQty,
                 totalQty);
@@ -726,7 +726,7 @@ public class PurchaseInboundController {
     @FXML
     public void handleRefresh() {
         loadApprovedOrders();
-        updateStatus("已刷新可入库订单");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.INBOUND_ORDERS_REFRESHED));
     }
 
     /**

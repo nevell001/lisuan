@@ -762,8 +762,13 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `setTitle/setContentText/setText/setPromptText/show*Alert/showPlaceholder` 与 `new Label/Button("中文")`
   不得含中文（**日志与注释里的中文不算**）；FXML 的 `text/promptText/title` 必须是 `%key`
   （运行时会被覆盖的设计期占位走白名单，且白名单每一条都要注明覆盖它的代码位置）；
-  `updateStatus`/`updateWarning` 也在守卫范围内——状态栏文案应**复用** `nav.*` 等既有 key，
-  别新建同值 key。迁移新文件时把路径加进该测试的 `MIGRATED_FILES`。
+  `updateStatus`/`updateWarning` 也在守卫范围内（现已覆盖 13 个文件，全仓库状态栏硬编码为 0）——
+  状态栏文案应**复用** `status_message.*`/`nav.*` 等既有 key，别新建同值 key。
+  迁移新文件时把路径加进该测试的 `MIGRATED_FILES`。
+  **写 i18n 调用时要顺着门禁的形状写**：`I18nManager.get(...)` 的首参必须是字面量或常量
+  （`get(cond ? A : B, x)` 会让 `I18nBundleConsistencyTest` 把条件里的字面量当成 key）；
+  用户可见文案也可能不在 `updateStatus` 里——`showError`/`showWarning` 同样是文案出口，
+  按调用形式筛会漏（第四批就这样漏过一处）。
   注意 `RechargeController` 的支付方式：**下拉项仍需保留规范中文落库值**（TD-002），
   只能通过 `StringConverter` 本地化显示层
 - `I18nKeys.java` 里有**嵌套类**（`Menu.Help`、`Menu.Theme`、`Nav`、`Runtime`、`StatusMessage`…）：

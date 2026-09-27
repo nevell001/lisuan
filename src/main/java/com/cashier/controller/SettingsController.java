@@ -978,7 +978,7 @@ public class SettingsController {
     @FXML
     public void handleBackupNow() {
         if (backupInProgress) {
-            showError("备份正在进行中，请稍候…");
+            showError(I18nManager.getInstance().get(I18nKeys.Runtime.BACKUP_ALREADY_RUNNING));
             return;
         }
         try {
@@ -993,7 +993,8 @@ public class SettingsController {
             }
             
             backupInProgress = true;
-            com.cashier.util.StatusBarManager.updateWarning("正在备份…请稍候，完成后会有提示");
+            com.cashier.util.StatusBarManager.updateWarning(
+                I18nManager.getInstance().get(I18nKeys.Runtime.BACKUP_IN_PROGRESS));
             // 整库 dump 可能耗时较长，放到 daemon 线程执行，避免冻结 UI
             Thread worker = new Thread(() -> {
                 try {
@@ -1104,7 +1105,8 @@ public class SettingsController {
                     }
                     final String password = entered.get();
                     final String restoreFilePath = backupFile.getAbsolutePath();
-                    com.cashier.util.StatusBarManager.updateWarning("正在恢复数据…请稍候，完成后会有提示");
+                    com.cashier.util.StatusBarManager.updateWarning(
+                I18nManager.getInstance().get(I18nKeys.Runtime.RESTORE_IN_PROGRESS));
                     // 整库恢复可能耗时较长，放到 daemon 线程执行，避免冻结 UI
                     Thread worker = new Thread(() -> {
                         try {

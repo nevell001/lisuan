@@ -543,7 +543,7 @@ public class ShiftController {
                 successAlert.setHeaderText(null);
                 successAlert.setContentText(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Runtime.EXPORT_SUCCESS_PATH) + "\n" + filePath);
                 successAlert.showAndWait();
-                updateStatus("导出成功");
+                updateStatus(I18nManager.getInstance().get(I18nKeys.Success.EXPORT));
             } else {
                 showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.EXPORT_FAILED));
             }
@@ -559,7 +559,7 @@ public class ShiftController {
     @FXML
     public void handleRefresh() {
         loadShifts();
-        updateStatus("已刷新");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.REFRESHED));
     }
 
     /**

@@ -18,7 +18,7 @@
 | TD-011 | Windows 启动脚本把未匹配的 JAR 通配符当路径，静默跳过构建 | 发布 | **已关闭（2026-09）**：检测/构建/版本显示/代码页/退出码五项均 Windows 实机验证通过 | Windows 启动 |
 | TD-012 | install.sh / docker-init.sh 静默成功与占位口令 | 运维 | **已修复（2026-09）**：失败可见 + 口令硬守卫 + 容器名同源 + 删未实现开关，4 项门禁 | 安装脚本 |
 | TD-013 | 版本号门禁只覆盖 4 处中的 2 处 | 发布 | **已修复（2026-09）** | 版本管理 |
-| TD-014 | i18n 硬编码与文档中的测试数过期 | 文档/体验 | **主要部分已修复（2026-09）**：终端用户可见文案已迁完（净新增 25 key + 复用既有 key，4 项门禁含状态栏）；剩打包向导与其它 17 处状态栏文案 | — |
+| TD-014 | i18n 硬编码与文档中的测试数过期 | 文档/体验 | **终端用户可见文案已全部迁完（2026-09）**：状态栏全仓库 0 处硬编码、门禁覆盖 13 个文件；剩打包向导（维护者工具）与 159 个无用 key | — |
 | TD-015 | `String.format` 用默认 locale 格式化金额（73 处） | 正确性 | **已修复（2026-09）**：73+5 处固定 `Locale.ROOT`，3 项门禁 + 德语 locale 全量验证 | 非中文 locale 部署 |
 | TD-016 | 界面集合字段未初始化，异步回调顺序一变就 NPE | UI 正确性 | **已修复（2026-09）**：14 个控制器 / 25 个字段改为声明即初始化 + 2 项门禁（Windows 实测发现） | 异步加载页面 |
 
@@ -76,6 +76,10 @@
 > I18nKeys 补常量），含备份/恢复对话框、充值支付方式显示层本地化（落库值不变）、打印预览、
 > 启动画面、启动失败/字体缺失弹窗、`InventoryView.fxml` 的 `promptText`；
 > 加 `HardcodedUiTextPolicyTest`（4 项，含变异验证），FXML 的两处运行时覆盖占位走带理由的白名单。
+>
+> **已修（第十七批）**：TD-014 状态栏清零——7 个控制器 / 17 处 `updateStatus("中文")` 全部迁走，
+> 全部复用既有 key（新增 0 个同值 key）；门禁 `MIGRATED_FILES` 扩到 13 个文件，
+> 并当场又抓出 `SettingsController` 一处 `showError("…")` 漏网与一处"首参是三元表达式"的写法。
 >
 > **已修（第十五批）**：TD-016——Windows 实机跑出来的两次 NPE（库存页、采购订单页）根因是两个异步
 > 加载器互相依赖、读字段时另一个还没赋值；14 个控制器 / 25 个集合字段统一改为"声明即初始化"，
@@ -760,8 +764,8 @@ cmd 的语义是：**带通配符的集合在无匹配时会把该模式原样�
 
 ## TD-014 i18n 硬编码与文档中的测试数过期
 
-**类别**：文档 / 体验　**状态**：**主要部分已修复（2026-09）**——终端用户可见文案已迁移完毕；
-剩余是打包向导（维护者工具）与无用 key 清理
+**类别**：文档 / 体验　**状态**：**终端用户可见文案已全部迁完（2026-09）**——含对话框、打印预览、
+启动画面、状态栏（全仓库 0 处硬编码）；剩余仅为打包向导（维护者工具）与无用 key 清理
 **提出来源**：2026-09 全量审计（UI/i18n + 文档）
 
 ### 已修复
@@ -825,16 +829,25 @@ cmd 的语义是：**带通配符的集合在无匹配时会把该模式原样�
 3. `migratedKeysExistInEveryBundle`：本次迁移的 key 必须在四份语言包里都存在；
 4. `printPreviewButtonsUseI18n`：打印预览按钮不得回退成字面量。
 
+**第四批（状态栏清零）**把门禁扩到 7 个采购/设置/交班/供应商/交易控制器后，它**又当场抓出两处**：
+
+- `SettingsController:981` 的 `showError("备份正在进行中，请稍候…")` —— 人工枚举时漏掉了（我按
+  `updateStatus/updateWarning` 筛的，它用的是 `showError`）→ 已迁（新增 `runtime.backup_already_running`）；
+- `PurchaseApprovalController` 里 `get("approve".equals(action) ? ... : ..., order.no)` 这种
+  **首参是表达式**的写法骗过了 i18n key 扫描（它把字面量 `"approve"` 当成 key）→ 改为先把 key
+  提取成局部变量再传。**教训**：源码级门禁只认它假定的语法形状，写代码时要顺着门禁的形状写，
+  否则会得到"假失败"或"假绿灯"。
+
 变异验证：① 打印预览按钮改回 `new Button("打印")` → 1、4 变红；
 ② 英文包删掉 `runtime.splash_finishing` → 3 变红（`I18nBundleConsistencyTest` 同时变红）；
 ③ `InventoryView.fxml` 写回 `promptText="全部"` → 2 变红。均确认后还原。
 
 ### 仍待处理
 
-- **其它控制器里还有 17 处**硬编码的 `updateStatus/updateWarning` 文案
-  （`SupplierController`、`ShiftController`、`PurchaseInboundController`、`PurchaseOrderController`、
-  `TransactionController` 等）。这些文件尚未纳入 `MIGRATED_FILES`，
-  门禁目前只在已迁移文件上生效——把文件加进列表即可让门禁指出剩余位置（迁移方式同上：优先复用 `nav.*`）
+- ~~其它控制器里的 17 处状态栏文案~~ **已清零（2026-09，第四批）**：7 个文件 / 17 处全部迁走，
+  **全部复用既有 `status_message.*` / `success.export` / `runtime.*_in_progress` key（新增 0 个同值 key，
+  只新增 1 个真正不同的文案 `runtime.backup_already_running`）**；门禁 `MIGRATED_FILES` 扩到 13 个文件，
+  全仓库 `updateStatus/updateWarning("中文")` 扫描结果为 **0**。
 - `PackageWizardController`（89 处中文字面量）与 `SplashWindow` 品牌名以外的文案：打包向导是**维护者工具**
   （不是终端用户界面），优先级低；若要让向导也支持英文，需单独一批
 - 159 个无人引用的 bundle key（清理需先确认没有 FXML/反射引用）

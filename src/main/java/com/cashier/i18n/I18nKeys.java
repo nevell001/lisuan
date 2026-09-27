@@ -190,6 +190,7 @@ public final class I18nKeys {
         public static final String AMOUNT_DUE = "runtime.amount_due";
         public static final String AMOUNT_PAID = "runtime.amount_paid";
         public static final String AMOUNT_REMAINING = "runtime.amount_remaining";
+        public static final String BACKUP_ALREADY_RUNNING = "runtime.backup_already_running";
         public static final String BACKUP_FAILED = "runtime.backup_failed";
         public static final String BACKUP_FAILED_TITLE = "runtime.backup_failed_title";
         public static final String BACKUP_FILE_SUCCESS = "runtime.backup_file_success";
@@ -261,13 +262,26 @@ public final class I18nKeys {
 
     /** 状态栏提示文案（status_message.*）；这些 key 此前只有字面量引用，常量集中在这里。 */
     public static final class StatusMessage {
+        public static final String APPROVAL_ORDERS_REFRESHED = "status_message.approval_orders_refreshed";
         public static final String DATA_SAVED = "status_message.data_saved";
         public static final String EXPORT_DATA = "status_message.export_data";
+        public static final String INBOUND_ORDERS_REFRESHED = "status_message.inbound_orders_refreshed";
+        public static final String INBOUND_SUCCESS = "status_message.inbound_success";
         public static final String INVENTORY_ALERT = "status_message.inventory_alert";
         public static final String NO_REFRESH_NEEDED = "status_message.no_refresh_needed";
+        public static final String ORDER_APPROVED = "status_message.order_approved";
+        public static final String ORDER_REJECTED = "status_message.order_rejected";
+        public static final String ORDER_SUBMITTED = "status_message.order_submitted";
+        public static final String PURCHASE_ORDER_CREATED = "status_message.purchase_order_created";
+        public static final String PURCHASE_ORDER_DELETED = "status_message.purchase_order_deleted";
+        public static final String PURCHASE_ORDER_UPDATED = "status_message.purchase_order_updated";
         public static final String REFRESHED = "status_message.refreshed";
         public static final String REFRESHED_ITEM = "status_message.refreshed_item";
         public static final String REFRESH_FAILED = "status_message.refresh_failed";
+        public static final String SUPPLIER_CREATED = "status_message.supplier_created";
+        public static final String SUPPLIER_CREATED_NAMED = "status_message.supplier_created_named";
+        public static final String SUPPLIER_DELETED = "status_message.supplier_deleted";
+        public static final String SUPPLIER_UPDATED = "status_message.supplier_updated";
         public static final String THEME_DARK = "status_message.theme_dark";
         public static final String THEME_LIGHT = "status_message.theme_light";
         public static final String THEME_LISUAN = "status_message.theme_lisuan";

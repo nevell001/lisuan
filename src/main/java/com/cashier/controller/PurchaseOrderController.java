@@ -706,13 +706,13 @@ public class PurchaseOrderController {
             DAOFactory.getInstance().getPurchaseOrderDAO().update(newOrder);
             DAOFactory.getInstance().getPurchaseOrderItemDAO().deleteByOrderId(existingOrder.id);
             savePurchaseOrderItems(items, existingOrder.id);
-            updateStatus("采购订单更新成功");
+            updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.PURCHASE_ORDER_UPDATED));
             return;
         }
 
         DAOFactory.getInstance().getPurchaseOrderDAO().insert(newOrder);
         savePurchaseOrderItems(items, newOrder.id);
-        updateStatus("采购订单创建成功");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.PURCHASE_ORDER_CREATED));
     }
 
     private void savePurchaseOrderItems(ObservableList<PurchaseOrderItem> items, int orderId) throws SQLException {
@@ -1060,7 +1060,7 @@ public class PurchaseOrderController {
                     DAOFactory.getInstance().getPurchaseOrderDAO().delete(selected.id);
                     orders.remove(selected.id);
                     filterOrders();
-                    updateStatus("采购订单删除成功");
+                    updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.PURCHASE_ORDER_DELETED));
                 } catch (SQLException e) {
                     logger.error("删除采购订单失败", e);
                     showError(I18nManager.getInstance().get("runtime.purchase_order_delete_failed", e.getMessage()));
@@ -1167,7 +1167,7 @@ public class PurchaseOrderController {
             if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
                 try {
                     // 订单状态已经是pending，不需要改变
-                    updateStatus("订单已提交审批: " + selected.orderNo);
+                    updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.ORDER_SUBMITTED, selected.orderNo));
                 } catch (Exception e) {
                     logger.error("提交审批失败", e);
                     showError(I18nManager.getInstance().get("runtime.purchase_order_submit_failed", e.getMessage()));
@@ -1347,7 +1347,7 @@ public class PurchaseOrderController {
                             supplierCombo.setValue(newSupplier);
                         }
                         
-                        updateStatus("供应商添加成功");
+                        updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.SUPPLIER_CREATED));
                         
                     } catch (SQLException e) {
                         logger.error("添加供应商失败", e);

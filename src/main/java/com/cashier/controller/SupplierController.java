@@ -356,11 +356,11 @@ public class SupplierController {
                 newSupplier.id = supplier.id;
                 DAOFactory.getInstance().getSupplierDAO().update(newSupplier);
                 loadSuppliers();
-                updateStatus("供应商更新成功: " + newSupplier.name);
+                updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.SUPPLIER_UPDATED, newSupplier.name));
             } else {
                 DAOFactory.getInstance().getSupplierDAO().insert(newSupplier);
                 loadSuppliers();
-                updateStatus("供应商添加成功: " + newSupplier.name);
+                updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.SUPPLIER_CREATED_NAMED, newSupplier.name));
             }
             dialogStage.close();
         } catch (SQLException ex) {
@@ -405,7 +405,7 @@ public class SupplierController {
                     suppliers.remove(selected.id);
                     supplierList.remove(selected);
                     updateCountLabel();
-                    updateStatus("供应商删除成功: " + selected.name);
+                    updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.SUPPLIER_DELETED, selected.name));
                 } catch (SQLException e) {
                     logger.error("删除供应商失败", e);
                     showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.DELETE_DATA) + ": " + e.getMessage());

@@ -35,6 +35,13 @@ class HardcodedUiTextPolicyTest {
         "src/main/java/com/cashier/printer/PrintPreviewDialog.java",
         "src/main/java/com/cashier/SplashWindow.java",
         "src/main/java/com/cashier/CashierSystemFXApplication.java",
+        "src/main/java/com/cashier/controller/PurchaseApprovalController.java",
+        "src/main/java/com/cashier/controller/PurchaseInboundController.java",
+        "src/main/java/com/cashier/controller/PurchaseOrderController.java",
+        "src/main/java/com/cashier/controller/SettingsController.java",
+        "src/main/java/com/cashier/controller/ShiftController.java",
+        "src/main/java/com/cashier/controller/SupplierController.java",
+        "src/main/java/com/cashier/controller/TransactionController.java",
         "src/main/resources/com/cashier/view/InventoryView.fxml");
 
     private static final Pattern CJK = Pattern.compile("[\\u4e00-\\u9fff]");

@@ -272,7 +272,9 @@ public class PurchaseApprovalController {
                     
                     PurchaseService.approveOrder(order.id, currentUser, action, remark);
 
-                    updateStatus("订单" + ("approve".equals(action) ? "通过" : "拒绝") + ": " + order.orderNo);
+                    String resultKey = "approve".equals(action)
+            ? I18nKeys.StatusMessage.ORDER_APPROVED : I18nKeys.StatusMessage.ORDER_REJECTED;
+        updateStatus(I18nManager.getInstance().get(resultKey, order.orderNo));
                     com.cashier.service.AuditService.success(currentUser, "PURCHASE", "PURCHASE_APPROVAL",
                         "采购单=" + order.orderNo + ", 结果=" + statusValue, 1);
                     loadPendingOrders();
@@ -447,7 +449,7 @@ public class PurchaseApprovalController {
     @FXML
     public void handleRefresh() {
         loadPendingOrders();
-        updateStatus("已刷新待审批订单");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.APPROVAL_ORDERS_REFRESHED));
     }
 
     /**

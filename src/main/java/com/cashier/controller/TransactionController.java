@@ -615,7 +615,7 @@ public class TransactionController {
     @FXML
     public void handleRefresh() {
         loadTransactions();
-        updateStatus("已刷新");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.REFRESHED));
     }
 
     /**
