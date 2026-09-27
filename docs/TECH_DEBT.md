@@ -25,7 +25,7 @@
 | TD-018 | 会员充值的角色口径两侧不一致 | 权限/产品策略 | **已修复（2026-09）**：按"收银员可充值"统一（充值有 RechargeRecord 流水留痕），金额类字段仍限 finance/admin；2 项门禁 + 变异验证；余"PUT 字段级"待定（API 更严，无害） | 充值权限策略 |
 | TD-019 | 商品管理页数量显示露出未替换的 `{0}` | 正确性/体验 | **已修复（2026-09，用户实测发现）**：`get(key)` 漏传参；新增"占位符必须传参"门禁（1 项 + 变异验证） | 界面文案 |
 | TD-020 | 深色模式下硬编码亮色背景的块 | 体验/主题 | **已修复（2026-09）**：交班页橙色横条（顶部栏被覆盖成饱和橙 + 分隔条无覆盖）→ 深品牌色/中性色；随后做通用排查又修 `.error-label`/`.validation-error`/`.product-info-card` 等 6 处；门禁改为"硬编码亮色背景的简单类必须被深色主题覆盖"（+变异验证） | 深色主题 |
-| TD-021 | FXML 的 `%key` 引用了带占位符的 key，界面显示 `{0}` | 正确性/体验 | **已修复（2026-09，由 TD-019 顺藤摸瓜发现）**：13 个标签（商品数量/交易数量/总金额…）在控制器填值前显示 `{0}`；改为空文本 + 删掉 10 个随之无用的 key；新增门禁（+变异验证） | 界面文案 |
+| TD-021 | FXML 的 `%key` 引用了带占位符的 key，界面显示 `{0}` | 正确性/体验 | **已修复（2026-09，由 TD-019 顺藤摸瓜发现）**：13 个标签改为空文本 + 删掉 10 个无用 key；门禁 4 项（含"变量 key"与兼容映射表两个盲区，均变异验证） | 界面文案 |
 
 > 本节条目来自 2026-09 的全量审计（`mvn verify` 三关全绿的前提下，逐条回读代码 + 真实
 > Javalin 最小复现验证）。
@@ -727,6 +727,20 @@ countLabel.setText(i18n.get("inventory.count") + ": " + inventoryList.size() + "
   防空转要求引用数 > 200。变异验证：把 `InventoryView` 的 countLabel 改回 `%inventory.count` → 变红。
 - 教训：**FXML 的 `%key` 与 Java 的 `get(key, args)` 不是同一套能力**——前者不能传参，
   所以"带占位符的 key"只能出现在 Java 调用里。
+
+### 顺带补掉的两个盲区（2026-09）
+
+1. **首参是变量的 `get(var)`**：门禁原本只能判定字面量/常量键，变量键是盲区。
+   现补保守推断：若该变量**在同一文件里被赋成字面量**（`var = "key"`），就按那个 key 检查占位符；
+   参数/字段/动态拼接仍跳过（无法静态判定）。全仓库此类调用 **101 处**，推断结果 **0 处违规**
+   （`SearchManager` 的 `SearchType` key、`ProductEditController`/`CartController`/`MemberEditController`
+   的 messageKey 等都不是带占位符的文案）。变异验证：注入
+   `String probeKey = "status_message.product_deleted"; get(probeKey);` → 变红。
+2. **`StatusBarManager` 兼容映射表**（中文串 → key）里不少 key 是带占位符的
+   （`status_message.product_deleted=商品删除成功: {0}` 等），它是用
+   `get(key, status.substring(prefix.length()))` 把后缀当参数传的——**若被"简化"成 `get(key)`，
+   所有走该表的旧调用点会直接显示 `{0}`**。已加门禁断言这一条（变异验证：改成 `get(key)` → 变红）。
+   另外此检查过程中确认过：该映射表的兜底逻辑本身正确（不是潜在 bug）。
 
 ---
 

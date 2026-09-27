@@ -115,6 +115,69 @@ class I18nPlaceholderArgsPolicyTest {
                 + String.join("\n  ", violations));
     }
 
+    @Test
+    @DisplayName("变量作为 key 的调用点：同文件赋值字面量不得是带占位符的文案")
+    void dynamicKeyCallSitesDoNotDropArguments() throws Exception {
+        Map<String, String> values = bundleValues();
+        List<String> violations = new ArrayList<>();
+        int examined = 0;
+        int resolved = 0;
+
+        for (Path file : javaSources()) {
+            String text = stripComments(Files.readString(file));
+            Matcher call = Pattern.compile("\\.get\\(\\s*([a-z]\\w*)\\s*\\)").matcher(text);
+            while (call.find()) {
+                examined++;
+                String variable = call.group(1);
+                // 保守推断：只看"同文件里这个变量被赋成字面量"的情况（参数/字段/动态拼接跳过）
+                Matcher assigned = Pattern.compile("\\b" + variable + "\\s*=\\s*\"([^\"]+)\"")
+                    .matcher(text);
+                List<String> literals = new ArrayList<>();
+                while (assigned.find()) {
+                    literals.add(assigned.group(1));
+                }
+                if (literals.isEmpty()) {
+                    continue;
+                }
+                resolved++;
+                for (String literal : literals) {
+                    String value = values.get(literal);
+                    if (value != null && PLACEHOLDER.matcher(value).find()) {
+                        int line = text.substring(0, call.start()).split("\n", -1).length;
+                        violations.add(relative(file) + ":" + line + "  get(" + variable + ")  key=" + literal
+                            + "  值=\"" + value.trim() + "\"");
+                    }
+                }
+            }
+        }
+
+        assertTrue(examined > 50,
+            "只扫到 " + examined + " 处 \"变量作 key\" 的 get 调用（2026-09 实际 101 处），识别规则可能失效");
+        assertTrue(violations.isEmpty(),
+            "以下调用把 key 放在变量里、且该变量在本文件里被赋成**带占位符**的文案，却不传参——"
+                + "界面会显示 {0}（这是 I18nPlaceholderArgsPolicyTest 首参为字面量时覆盖不到的盲区）：\n  "
+                + String.join("\n  ", violations)
+                + "\n  已推断 " + resolved + " 处可判定的变量键。");
+    }
+
+    @Test
+    @DisplayName("状态栏兼容映射表必须把后缀作为参数传给 get")
+    void legacyStatusShimKeepsTheSuffixArgument() throws Exception {
+        String source = stripComments(Files.readString(
+            Path.of("src/main/java/com/cashier/util/StatusBarManager.java")));
+        int start = source.indexOf("private static String localizePrefixedStatus(");
+        assertTrue(start > 0, "找不到 StatusBarManager.localizePrefixedStatus —— 若改名请同步本门禁");
+        int open = source.indexOf('{', start);
+        int close = matchingBrace(source, open);          // 方法体是**花括号**，别用匹配括号的助手
+        assertTrue(open > 0 && close > open, "方法体没找到（请检查本门禁的解析方式）");
+        String body = source.substring(open, close);
+
+        assertTrue(body.contains(".get(key,") && body.contains("substring(prefix.length())"),
+            "兼容映射表把中文串映射到**带占位符**的 key（如 status_message.product_deleted=商品删除成功: {0}），"
+                + "所以必须把前缀之后的后缀作为参数传给 get；改成 get(key) 会让所有走这张表的旧调用点"
+                + "把 {0} 直接显示出来。实际实现：\n" + body.trim());
+    }
+
     // ---------- 解析辅助 ----------
 
     private static Map<String, String> bundleValues() throws IOException {
@@ -208,6 +271,30 @@ class I18nPlaceholderArgsPolicyTest {
             }
         }
         return commas + 1;
+    }
+
+    /** 配对花括号（跳过字符串与行注释），用于切方法体。 */
+    private static int matchingBrace(String text, int open) {
+        int depth = 0;
+        for (int i = open; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '"') {
+                i = skipString(text, i);
+            } else if (c == '/' && i + 1 < text.length() && text.charAt(i + 1) == '/') {
+                i = text.indexOf('\n', i);
+                if (i < 0) {
+                    return -1;
+                }
+            } else if (c == '{') {
+                depth++;
+            } else if (c == '}') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
     }
 
     private static int matchingParen(String text, int open) {

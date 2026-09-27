@@ -841,6 +841,10 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `shift-separator` 深色下必须覆盖为中性色（基础样式用的是品牌边框色）。
   门禁 `DarkThemeSurfacePolicyTest` 钉住这两条。**改自定义 surface 样式类时，
   记得给深色主题补覆盖规则**——共享类（如 `toolbar`）有覆盖，自建类容易漏
+- **i18n 占位符门禁的两个盲区也已覆盖**（TD-021）：① `get(<变量>)` 无法静态判定时，
+  门禁会做保守推断（变量在同文件内被赋成字面量 → 按该 key 检查）；② `StatusBarManager` 的
+  中文串→key 兼容映射表里含带占位符的 key，必须把后缀作为参数传给 `get`
+  （`get(key, status.substring(prefix.length()))`）——门禁守着，改成 `get(key)` 会让旧调用点显示 `{0}`
 - **FXML 的 `%key` 不能传参**（TD-021）：它由 ResourceBundle 直接解析，引用带 `{0}` 的 key
   会把占位符原文显示出来（实测 13 个"数量/总金额"标签如此）。FXML 里只放**不带占位符**的文本
   （这类标签一律 `text=""`，由控制器用 `runtime.*` key 带参写入）；门禁
