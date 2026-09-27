@@ -59,7 +59,7 @@
         <Region HBox.hgrow="ALWAYS"/>
 
         <!-- 统计信息 -->
-        <Label fx:id="countLabel" text="%supplier.count" styleClass="text-muted"/>
+        <Label fx:id="countLabel" text="" styleClass="text-muted"/>
     </HBox>
 
     <!-- 供应商表格 -->

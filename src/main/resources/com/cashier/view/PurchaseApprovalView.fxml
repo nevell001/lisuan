@@ -60,8 +60,8 @@
         <Region HBox.hgrow="ALWAYS"/>
 
         <!-- 统计信息 -->
-        <Label fx:id="countLabel" text="%purchase_approval.current_display" styleClass="text-muted"/>
-        <Label fx:id="pendingCountLabel" text="%purchase_approval.pending_count" styleClass="text-danger, font-bold"/>
+        <Label fx:id="countLabel" text="" styleClass="text-muted"/>
+        <Label fx:id="pendingCountLabel" text="" styleClass="text-danger, font-bold"/>
     </HBox>
 
     <!-- 待审批订单表格 -->

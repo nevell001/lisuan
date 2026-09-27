@@ -42,7 +42,7 @@
                 styleClass="info-button"/>
 
         <Region HBox.hgrow="ALWAYS"/>
-        <Label fx:id="countLabel" text="%member.count" styleClass="text-muted"/>
+        <Label fx:id="countLabel" text="" styleClass="text-muted"/>
         </HBox>
 
         <HBox spacing="10" alignment="CENTER_LEFT">

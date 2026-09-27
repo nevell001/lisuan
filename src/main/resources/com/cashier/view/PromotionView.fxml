@@ -50,7 +50,7 @@
 
             <Region HBox.hgrow="ALWAYS"/>
 
-            <Label fx:id="countLabel" text="%promotion.count" styleClass="text-muted"/>
+            <Label fx:id="countLabel" text="" styleClass="text-muted"/>
         </HBox>
 
         <!-- 第二行：筛选和搜索 -->

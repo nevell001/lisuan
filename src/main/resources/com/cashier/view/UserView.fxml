@@ -31,7 +31,7 @@
             <Button fx:id="deactivateButton" text="%user.deactivate" onAction="#handleDeactivateUser"
                     minWidth="90" styleClass="warning-button"/>
             <Region HBox.hgrow="ALWAYS"/>
-            <Label fx:id="countLabel" text="%user.count" styleClass="text-muted"/>
+            <Label fx:id="countLabel" text="" styleClass="text-muted"/>
         </HBox>
 
         <HBox spacing="10" alignment="CENTER_LEFT">

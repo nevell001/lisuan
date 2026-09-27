@@ -86,8 +86,8 @@
         <padding>
             <Insets top="5" right="10" bottom="5" left="10"/>
         </padding>
-        <Label fx:id="countLabel" text="%transaction.count" styleClass="text-muted, text-md"/>
-        <Label fx:id="totalAmountLabel" text="%transaction.total_amount" styleClass="text-success, text-md, font-bold"/>
+        <Label fx:id="countLabel" text="" styleClass="text-muted, text-md"/>
+        <Label fx:id="totalAmountLabel" text="" styleClass="text-success, text-md, font-bold"/>
     </HBox>
 
     <!-- 交易记录表格 -->

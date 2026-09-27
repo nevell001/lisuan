@@ -841,6 +841,15 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `shift-separator` 深色下必须覆盖为中性色（基础样式用的是品牌边框色）。
   门禁 `DarkThemeSurfacePolicyTest` 钉住这两条。**改自定义 surface 样式类时，
   记得给深色主题补覆盖规则**——共享类（如 `toolbar`）有覆盖，自建类容易漏
+- **FXML 的 `%key` 不能传参**（TD-021）：它由 ResourceBundle 直接解析，引用带 `{0}` 的 key
+  会把占位符原文显示出来（实测 13 个"数量/总金额"标签如此）。FXML 里只放**不带占位符**的文本
+  （这类标签一律 `text=""`，由控制器用 `runtime.*` key 带参写入）；门禁
+  `I18nPlaceholderArgsPolicyTest.fxmlDoesNotReferencePlaceholderKeys` 守着
+- **硬编码亮色背景的类必须给深色主题补覆盖**（TD-020）：基础样式里的字面量颜色不随主题变，
+  深色下就是近黑背景上的亮块（实测：交班页顶部栏/分隔条、`.error-label`、`.validation-error`、
+  `.product-info-card`）。门禁 `DarkThemeSurfacePolicyTest` 两项：交班页两处 + 通用规则
+  （"简单类 + 硬编码亮色背景"都必须在 `dark-theme.css` 出现，2026-09 候选 55 条）。
+  新增此类样式时记得同步深色覆盖
 - **说明文档一致性**（`InstructionsDocPolicyTest`）：`AGENTS.md`（速查，已入库）与 `CLAUDE.md`（权威细节）
   都必须被 git 跟踪；两份文档里**讲"版本号四处同步"的那一句**必须列全
   `AppConstants`/`pom.xml`/`installer/Installer.java`/`.env.example`；

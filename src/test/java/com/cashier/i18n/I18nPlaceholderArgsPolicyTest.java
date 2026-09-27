@@ -86,6 +86,35 @@ class I18nPlaceholderArgsPolicyTest {
                 + "或改用不带占位符的 key：\n  " + String.join("\n  ", violations));
     }
 
+    @Test
+    @DisplayName("FXML 不得引用带占位符的 key（FXML 不做参数替换，会显示 {0}）")
+    void fxmlDoesNotReferencePlaceholderKeys() throws Exception {
+        Map<String, String> values = bundleValues();
+        List<String> violations = new ArrayList<>();
+        int checked = 0;
+        try (Stream<Path> walk = Files.walk(Path.of("src/main/resources"))) {
+            for (Path file : walk.filter(p -> p.toString().endsWith(".fxml")).toList()) {
+                String text = Files.readString(file);
+                Matcher matcher = Pattern.compile("\"%([\\w.]+)\"").matcher(text);
+                while (matcher.find()) {
+                    checked++;
+                    String value = values.get(matcher.group(1));
+                    if (value != null && PLACEHOLDER.matcher(value).find()) {
+                        int line = text.substring(0, matcher.start()).split("\n", -1).length;
+                        violations.add(file.getFileName() + ":" + line + "  %" + matcher.group(1)
+                            + "  ->  \"" + value.trim() + "\"");
+                    }
+                }
+            }
+        }
+        assertTrue(checked > 200, "只扫到 " + checked + " 处 FXML %key 引用（2026-09 实际 900），识别规则可能失效");
+        assertTrue(violations.isEmpty(),
+            "FXML 的 %key 由 ResourceBundle 直接解析，**不做 {0} 参数替换**——这些标签会在控制器填值前"
+                + "（页面加载已后台化，慢库上可见）显示占位符原文，加载失败则一直是它。"
+                + "请把 FXML 文本改为空（控制器会填），或用不带占位符的 key：\n  "
+                + String.join("\n  ", violations));
+    }
+
     // ---------- 解析辅助 ----------
 
     private static Map<String, String> bundleValues() throws IOException {

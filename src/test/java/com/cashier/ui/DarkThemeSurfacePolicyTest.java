@@ -5,6 +5,8 @@ import org.junit.jupiter.api.Test;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -53,5 +55,42 @@ class DarkThemeSurfacePolicyTest {
     private static String ruleBody(String css, String selector) {
         Matcher matcher = Pattern.compile("(?s)" + Pattern.quote(selector) + "\\s*\\{([^}]*)}").matcher(css);
         return matcher.find() ? matcher.group(1) : "";
+    }
+
+    /**
+     * 基础样式里凡是"简单类选择器 + 硬编码亮色背景"的规则，深色主题都必须覆盖。
+     *
+     * <p>这类规则用的是字面量（不是主题变量），所以不会随主题变化：浅色主题下是浅底提示块，
+     * 深色主题下就是近黑背景上的一块亮色——正是交班页橙色横条那类问题的通用形式。
+     * 2026-09 按此规则扫出 6 条（`.error-label`/`.validation-error`/`.validation-warning`/
+     * `.product-info-card`/`.bg-warning`/`.bg-danger`），前三个还有页面在用（登录页错误提示、
+     * 表单校验、补货页信息卡），已全部补上深色覆盖。</p>
+     */
+    @Test
+    @DisplayName("硬编码亮色背景的类都必须在深色主题里有覆盖")
+    void brightBackgroundClassesHaveDarkOverrides() throws Exception {
+        String base = Files.readString(Path.of("src/main/resources/css/styles.css"));
+        String dark = Files.readString(DARK);
+        Pattern simpleRule = Pattern.compile("(?m)^(\\.[\\w-]+)\\s*\\{([^}]*)}");
+        Pattern bright = Pattern.compile(
+            "-fx-background-color:\\s*(white|#(?:fff|ffffff|f[0-9a-f]{5}))", Pattern.CASE_INSENSITIVE);
+        List<String> missing = new ArrayList<>();
+        int candidates = 0;
+        Matcher rule = simpleRule.matcher(base);
+        while (rule.find()) {
+            if (!bright.matcher(rule.group(2)).find()) {
+                continue;
+            }
+            candidates++;
+            String selector = rule.group(1);
+            if (!dark.contains(selector)) {
+                missing.add(selector);
+            }
+        }
+        assertTrue(candidates > 20,
+            "只找到 " + candidates + " 条\"简单类 + 硬编码亮色背景\"规则（2026-09 实际 55 条），识别规则可能失效");
+        assertTrue(missing.isEmpty(),
+            "以下类的背景是硬编码亮色（不随主题变），深色主题里没有覆盖规则——在近黑背景上会是一块亮色，"
+                + "请像 .shift-toolbar 那样加深色覆盖：\n  " + String.join("\n  ", missing));
     }
 }

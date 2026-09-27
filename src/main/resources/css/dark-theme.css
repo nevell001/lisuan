@@ -1473,6 +1473,32 @@
     -fx-background-color: -lisuan-primary-darker;
 }
 
+/* 基础样式里这几类是"浅底提示块"（浅粉/浅黄/浅灰），深色主题下在近黑背景上会变成一块亮色
+   —— 与交班页橙色横条同一类问题（2026-09）。凡是"硬编码浅色背景"的简单类，深色主题都要覆盖，
+   由 DarkThemeSurfacePolicyTest 守着。 */
+.error-label,
+.validation-error {
+    -fx-background-color: #3A1F1F;
+    -fx-text-fill: -lisuan-danger;
+}
+
+.validation-warning {
+    -fx-background-color: #3A2E14;
+}
+
+.product-info-card {
+    -fx-background-color: -lisuan-surface;
+    -fx-border-color: -lisuan-border;
+}
+
+.bg-warning {
+    -fx-background-color: #7A4A00;
+}
+
+.bg-danger {
+    -fx-background-color: #7A2E28;
+}
+
 /* 分隔条同理：基础样式用的是品牌边框色（#A3571E），深色下就是一条橙线，改为中性分隔色 */
 .shift-separator {
     -fx-background-color: -lisuan-border-strong;

@@ -25,7 +25,7 @@
         </HBox>
 
         <HBox spacing="12" alignment="CENTER_LEFT">
-            <Label fx:id="countLabel" text="%cart.product_count" styleClass="count-label"/>
+            <Label fx:id="countLabel" text="" styleClass="count-label"/>
             <Region HBox.hgrow="ALWAYS"/>
             <Button fx:id="clearButton" text="%cart.clear" onAction="#handleClearCart"
                     styleClass="warning-button, button-action"/>

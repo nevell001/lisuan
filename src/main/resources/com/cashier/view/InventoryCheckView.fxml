@@ -76,7 +76,7 @@
         <Region HBox.hgrow="ALWAYS"/>
 
         <!-- 统计信息 -->
-        <Label fx:id="countLabel" text="%inventory_check.count" styleClass="text-muted"/>
+        <Label fx:id="countLabel" text="" styleClass="text-muted"/>
     </HBox>
 
     <!-- 库存盘点表格 -->
