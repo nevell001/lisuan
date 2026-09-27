@@ -35,7 +35,7 @@ docker/create-cashier-user.sql
 .iflow/
 .claude/
 .workbuddy/
-AGENTS.md
+# AGENTS.md 与 CLAUDE.md 都是跟踪的说明文档（2026-09 起入库）；不要重新忽略它们
 
 # 日志文件
 *.log

@@ -811,6 +811,11 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   税额基数都是实付金额、触屏收银台必须计算并落库促销、支付方式筛选
   必须归一化后再比较；`TransactionServiceTest` 覆盖税率小数语义、促销按原价总额计算、
   `selectBestPromotion` 选优；`I18nUiUtilsTest` 覆盖中文/代码支付方式归一化
+- **说明文档一致性**（`InstructionsDocPolicyTest`）：`AGENTS.md`（速查，已入库）与 `CLAUDE.md`（权威细节）
+  都必须被 git 跟踪；两份文档里**讲"版本号四处同步"的那一句**必须列全
+  `AppConstants`/`pom.xml`/`installer/Installer.java`/`.env.example`；
+  两份"当前事实"文档**不得写死测试数量**（改版本/加测试时最容易漂移，一律指向构建输出的 `Tests run:`；
+  README 的历史更新日志不在此限）。改版本号时除了四处代码来源，记得同步这两份文档里的同步句
 - 启动入口：可执行 JAR 的 Main-Class 为 `com.cashier.Launcher`（不继承 `Application`），
   使 `java -jar lisuan-fx-*-jar-with-dependencies.jar` 无需 module-path 即可启动
 
@@ -1314,7 +1319,8 @@ worker 迭代 `cartItems`（`ObservableList`）、对 `inventoryMap`（普通 `H
   TD-011 **已关闭**（Windows 实机 5 步验收全通过；实机过程另修掉三处相关问题：中文注释破坏批处理解析、
    `chcp` 影响同窗口后续命令、`install.bat` 覆盖已跟踪的 `DataConfig.bat`）；
   TD-016 已修（Windows 实机暴露的异步顺序 NPE，14 个控制器 / 25 个字段 + 2 项门禁）；
-  其余（TD-014 剩余：其它控制器 17 处状态栏文案与打包向导）仍待处理
+  TD-014 已收口（可见文案、无用 key、说明文档入库 + 一致性门禁），**仅剩打包向导**（维护者工具，是否 i18n 化属产品选择）；
+  其它 TODO 见 `docs/TECH_DEBT.md`
 
 **数据库密码来源（v2.6.0 补强）**
 

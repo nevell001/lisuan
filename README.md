@@ -427,7 +427,7 @@ src/main/resources/
 - 修复 DatabaseManager JDBC 资源泄漏问题（ResultSet 未关闭）
 - 依赖更新：Jackson 2.18.2, SLF4J 2.0.16, Mockito 5.15.2, JUnit 5.11.3, H2 2.3.232
 - 测试增强：新增 FormValidatorTest (33 个测试) 和 LoginControllerUITest (17 个测试)
-- 380 个测试用例全部通过，测试覆盖率持续提升
+- 当时 380 个测试用例全部通过，测试覆盖率持续提升
 
 ### v2.5.9-maintenance (2026-07-05)
 - 修复了 API Token 的安全测试失败问题
