@@ -727,7 +727,14 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   ④ 跟踪的 `.bat` 工作区必须是 **CRLF**（`.gitattributes` 的 `eol=crlf` 只在 checkout 生效，
   被工具写过 LF 后 `git status` 看不出来，但 Windows 上 `goto`/`if` 块会直接解析失败；
   修复用 `git checkout -- <文件>`）。改 `.bat` 时记得 `install.bat` 里**生成的** `DataConfig.bat` heredoc
-  要同步改（门禁会比对两处写法）
+  要同步改（门禁会比对两处写法）；
+  ⑤ **含非 ASCII 字节的 `.bat` 必须自己切代码页**（行首 `chcp 65001`）——cmd 用当前 OEM 代码页读批处理，
+  中文 Windows 是 936/GBK，UTF-8 中文会变乱码并**让字节错位**，把 `REM` 后的空格或 `^(` 的 `^` 吞掉，
+  于是注释被当成命令执行（`不是内部或外部命令`）或块解析失败（`此时不应有`）。
+  2026-09 已在 Windows 上实测撞到：我给 `start.bat`/`install.bat` 加的中文 `REM` 注释直接把
+  `install.bat` 跑崩。**结论：这几个脚本的注释一律写英文**（`start.bat`/`install.bat`/`DataConfig.bat`/
+  `create-shortcut.bat`/`diagnose.bat` 现为纯 ASCII；`release.bat`/`docker/start-mysql.bat` 是中文文案 +
+  `chcp 65001` 的既有做法，不要再往里加需要转义的 `^(` 之类）
 - 安装/运维脚本门禁：`InstallScriptPolicyTest`（`com.cashier.security`）钉住三条不变量——
   ① `install.sh` 的建库/SQL 导入失败必须报错并 `exit 1`（不得再用 `2>/dev/null || true` 静默成功，
   失败时要打印 mysql 的真实输出）；② `docker/docker-init.sh` 必须先 `. ./.env`，且空/占位口令
@@ -1282,6 +1289,8 @@ worker 迭代 `cartItems`（`ObservableList`）、对 `inventoryMap`（普通 `H
   TD-015（`String.format` 默认 locale）**已修复**；
   TD-014 终端用户可见文案已迁完（对话框/占位弹窗/打印预览/启动画面/字体提示/InventoryView、  以及主界面 26 处状态栏文案，均为复用既有 key）；
   TD-011 静态部分已修（Windows 脚本检测/行尾/不自动构建 + 7 项门禁），**实机验收清单见该条目**；
+  TD-011 已过首轮 Windows 实机（发现并修掉本批引入的"中文注释破坏批处理解析"回归，
+  另修 scoop 下 Maven 版本显示成路径的问题），**验收第 4 步待重跑**；
   其余（TD-014 剩余：其它控制器 17 处状态栏文案与打包向导）仍待处理
 
 **数据库密码来源（v2.6.0 补强）**

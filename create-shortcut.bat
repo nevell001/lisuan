@@ -12,7 +12,7 @@ set SCRIPT_DIR=%~dp0
 set SHORTCUT_NAME=%APP_NAME%.lnk
 set WORKING_DIR=%SCRIPT_DIR%
 
-REM 检查启动器优先级：Quick Start > Run CashierSystem > start.bat
+REM Launcher priority: Quick Start > Run CashierSystem > start.bat
 if exist "%SCRIPT_DIR%Quick Start.bat" (
     set TARGET_SCRIPT=%SCRIPT_DIR%Quick Start.bat
     echo [Info] Using Quick Start launcher ^(recommended^)
@@ -55,10 +55,10 @@ echo [Info] Target: %TARGET_SCRIPT%
 echo [Info] Working directory: %WORKING_DIR%
 echo.
 
-REM 确保桌面目录存在
+REM Make sure the Desktop directory exists
 if not exist "%DESKTOP_PATH%" mkdir "%DESKTOP_PATH%"
 
-REM 使用 PowerShell 创建快捷方式（使用转义的路径）
+REM Create the shortcut via PowerShell (escaped path)
 set "PS_SHORTCUT_PATH=%DESKTOP_PATH%\%SHORTCUT_NAME%"
 set "PS_TARGET=%TARGET_SCRIPT%"
 set "PS_WORKING=%WORKING_DIR%"
@@ -100,7 +100,7 @@ goto :done
 :create_startmenu
 set STARTMENU_PATH=%APPDATA%\Microsoft\Windows\Start Menu\Programs\%APP_NAME%
 
-REM 确保开始菜单目录存在
+REM Make sure the Start Menu directory exists
 if not exist "%STARTMENU_PATH%" (
     echo [Create] Creating start menu directory: %STARTMENU_PATH%
     mkdir "%STARTMENU_PATH%"
@@ -109,7 +109,7 @@ if not exist "%STARTMENU_PATH%" (
 REM Delete existing shortcut if it exists
 if exist "%STARTMENU_PATH%\%SHORTCUT_NAME%" del "%STARTMENU_PATH%\%SHORTCUT_NAME%" 2>nul
 
-REM 使用 PowerShell 创建快捷方式（使用转义的路径）
+REM Create the shortcut via PowerShell (escaped path)
 set "PS_SHORTCUT_PATH=%STARTMENU_PATH%\%SHORTCUT_NAME%"
 
 powershell -NoProfile -ExecutionPolicy Bypass -Command "& {$WshShell = New-Object -ComObject WScript.Shell; $Shortcut = $WshShell.CreateShortcut('%PS_SHORTCUT_PATH%'); $Shortcut.TargetPath = '%PS_TARGET%'; $Shortcut.WorkingDirectory = '%PS_WORKING%'; $Shortcut.Description = '%PS_DESC%'; $Shortcut.Save(); if (Test-Path '%PS_SHORTCUT_PATH%') { Write-Host 'Success' } else { Write-Host 'Failed'; exit 1 }}"

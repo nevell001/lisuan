@@ -3,16 +3,16 @@ setlocal enabledelayedexpansion
 
 REM ============================================
 REM   LiSuan Installation Script (Windows)
-REM   简化版 - 环境检查 + 构建 + 生成配置工具
+REM   Simplified installer: environment check + build + config tool
 REM ============================================
 
 cd /d "%~dp0"
 
-REM 加载 .env 文件（如果存在）
+REM Load .env if present
 if exist ".env" (
     echo [INFO] Loading configuration from .env file...
     for /f "usebackq tokens=1,2 delims==" %%a in (".env") do (
-        REM 跳过注释行
+        REM Skip comment lines
         echo %%a | findstr /r "^[#]" >nul
         if errorlevel 1 (
             set "%%a=%%b"
@@ -30,7 +30,7 @@ for /f "tokens=3 delims=<>" %%a in ('findstr /R "<version>[0-9]" pom.xml 2^>nul 
 REM Fallback version if pom.xml not found or unreadable
 if "%APP_VERSION%"=="" set "APP_VERSION=2.6.0"
 
-REM 环境类型：development 或 production
+REM Environment: development or production
 if "%ENVIRONMENT%"=="" set "ENVIRONMENT=development"
 
 cls
@@ -80,8 +80,15 @@ if errorlevel 1 (
     exit /b 1
 )
 
-for /f "usebackq tokens=3" %%a in (`mvn -version 2^>^&1 ^| findstr /i "Apache Maven"`) do set "MAVEN_VERSION=%%a"
-echo       Version: %MAVEN_VERSION%
+REM Anchor the match to the real banner line: scoop/shim wrappers may print other lines
+REM that merely contain "Apache Maven" (e.g. a path), which used to be shown as the version.
+set "MAVEN_VERSION="
+for /f "tokens=1,2,3" %%a in ('mvn -version 2^>^&1 ^| findstr /r /c:"^Apache Maven [0-9]"') do set "MAVEN_VERSION=%%c"
+if defined MAVEN_VERSION (
+    echo       Version: %MAVEN_VERSION%
+) else (
+    echo       Version: could not parse - run "mvn -version" to check manually
+)
 echo [OK] Maven check passed
 echo.
 
@@ -119,9 +126,9 @@ echo ----------------------------------------
 echo This may take a while on first run...
 echo.
 
-REM 检测是否已有 fat JAR。
-REM 不能用 for %%f in (通配符)：无匹配时 cmd 会把通配符原样当成一项，于是这里永远"检测到已有 JAR"、
-REM 干净机器上会跳过构建，装完启动时才报 Unable to access jarfile。
+REM Check for an existing fat JAR.
+REM Do NOT use: for %%f in (<wildcard>) -- with no match cmd treats the wildcard as a literal item,
+REM so this always "detects" a JAR, the build is skipped and start.bat fails afterwards.
 set "EXISTING_JAR="
 for /f "delims=" %%f in ('dir /b /o-d "target\lisuan-fx-*-jar-with-dependencies.jar" 2^>nul') do (
     set "EXISTING_JAR=target\%%f"
@@ -144,7 +151,7 @@ if errorlevel 1 (
     exit /b 1
 )
 
-REM 构建"成功"也可能没产出 fat JAR（例如 packaging 被改过），这里必须真的校验一次
+REM A "successful" build may still produce no fat JAR, so verify it really exists
 set "EXISTING_JAR="
 for /f "delims=" %%f in ('dir /b /o-d "target\lisuan-fx-*-jar-with-dependencies.jar" 2^>nul') do (
     set "EXISTING_JAR=target\%%f"
@@ -180,7 +187,7 @@ echo [INFO] Creating database configuration tool...
     echo.
     echo cd /d "%%~dp0"
     echo.
-    echo REM 加载 .env 文件（如果存在）
+    echo REM Load .env if present
     echo if exist ".env" ^(
     echo     echo [INFO^] Loading configuration from .env file...
     echo     for /f "usebackq tokens=1,2 delims==" %%%%a in ^(".env"^) do ^(
@@ -199,7 +206,7 @@ echo [INFO] Creating database configuration tool...
     echo echo [INFO] Launching database configuration tool...
     echo echo.
     echo REM Find executable fat JAR. It contains the installer and all runtime dependencies.
-    echo REM for /f + dir /b：无匹配时不会像 for %%%%f in ^(通配符^) 那样把通配符原样当成路径。
+    echo REM for /f + dir /b never falls back to the literal wildcard pattern when nothing matches.
     echo set "JAR_FILE="
     echo for /f "delims=" %%%%f in ^('dir /b /o-d "target\lisuan-fx-*-jar-with-dependencies.jar"'^) do ^(
     echo     set "JAR_FILE=target\%%%%f"

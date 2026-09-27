@@ -11,7 +11,7 @@ cd /d "%~dp0"
 set "APP_NAME=LiSuan"
 set "APP_VERSION=2.6.0"
 
-REM 从 .env 定向读取数据库密码（与 start.sh 保持一致，仅读取密码变量，兼容旧版 MYSQL_PASSWORD）
+REM Read the DB password from .env only (same as start.sh; legacy MYSQL_PASSWORD still accepted)
 if exist ".env" (
     for /f "usebackq tokens=1,* delims==" %%a in (".env") do (
         if /i "%%a"=="CASHIER_DB_PASSWORD" if not defined CASHIER_DB_PASSWORD set "CASHIER_DB_PASSWORD=%%b"
@@ -80,10 +80,10 @@ echo.
 echo [4/5] Checking application files...
 echo ----------------------------------------
 
-REM 查找已构建的 fat JAR。
-REM 注意：不能写 for %%f in (target\lisuan-fx-*.jar)——cmd 在没有匹配时会把通配符**原样当成一项**，
-REM 于是 "%JAR_FILE%"=="" 永远为假、错误分支永远走不到，最后 java -jar 才报 Unable to access jarfile。
-REM for /f 配合 dir /b：无匹配时 dir 返回非零且不输出任何行，变量保持未定义。
+REM Locate the built fat JAR.
+REM Do NOT use: for %%f in (target\lisuan-fx-*.jar) -- with no match cmd treats the wildcard as a literal item,
+REM so the "not found" branch never fires and java -jar fails with "Unable to access jarfile".
+REM for /f with dir /b prints nothing when there is no match, so the variable stays undefined.
 set "JAR_FILE="
 for /f "delims=" %%f in ('dir /b /o-d "target\lisuan-fx-*-jar-with-dependencies.jar" 2^>nul') do (
     set "JAR_FILE=target\%%f"

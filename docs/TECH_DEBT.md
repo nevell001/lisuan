@@ -458,7 +458,7 @@ CLAUDE.md 的"查库统一后台化"只覆盖两个收银台（`FxThreadDbPolicy
 
 ## TD-011 Windows 启动脚本把未匹配的 JAR 通配符当路径，静默跳过构建
 
-**类别**：发布　**状态**：**静态部分已修复（2026-09），待 Windows 实机验收**
+**类别**：发布　**状态**：**静态已修 + 首轮 Windows 实机已验证（发现并修掉一处本批引入的回归）**
 **提出来源**：2026-09 全量审计（脚本）
 
 ### 根因
@@ -514,10 +514,56 @@ cmd 的语义是：**带通配符的集合在无匹配时会把该模式原样�
 5. `generatedDataConfigKeepsSameDetectionIdiom`：`install.bat` 生成的 `DataConfig.bat` 必须与
    随包版本用同一套检测写法，防止两处漂移；
 6. `installVerifiesJarAfterBuild`：显式构建之后必须再校验一次 fat JAR 产出并退出非零；
-7. `batchFilesAreStoredWithCrlfLineEndings`：跟踪的 `.bat` 工作区必须是 CRLF（或混合行尾即失败）。
+7. `batchFilesAreStoredWithCrlfLineEndings`：跟踪的 `.bat` 工作区必须是 CRLF（或混合行尾即失败）；
+8. `nonAsciiBatchScriptsMustSetCodePage`：含非 ASCII 字节的 `.bat` **必须**自己切换代码页
+   （必须匹配行首 `chcp 65001`）——否则中文 Windows 会重现上面的乱码/解析失败。
+   这条正是为上面那处回归补的；**第一版只查子串 `chcp`，被变异文本里自带的 "chcp" 字样骗过
+   （变异测试当场发现），已收紧为必须匹配真正的代码页切换行**。
 
 变异验证：① `start.bat` 检测改回通配符 `for` → 1、2 变红；② `start.bat` 加回 `call mvn` → 3 变红；
-③ `release.bat` 写回 LF → 7 变红；④ `install.bat` 生成段改回通配符 → 5 变红。均确认后还原。
+③ `release.bat` 写回 LF → 7 变红；④ `install.bat` 生成段改回通配符 → 5 变红；
+⑤ `DataConfig.bat` 写回中文注释 → 8 变红（实机回归的等价复现）；
+⑥ 把 `release.bat` 的 `chcp` 行改成别的内容 → 8 变红（收紧后的版本才抓得住）。均确认后还原。
+
+### 首轮 Windows 实机测试结果（2026-09，用户在 Windows 上跑 install.bat）
+
+**生效的部分**：`[4/4]` 段打印的是
+`[SKIP] Detected existing compiled JAR: target\lisuan-fx-2.6.0-jar-with-dependencies.jar`
+——是**真实文件名**而不是 `target\lisuan-fx-*-jar-with-dependencies.jar`，说明
+`for /f + dir /b` 的检测修复生效（旧写法在这里会打印通配符本身）。
+
+**本批引入的回归（已修）**：我为解释问题在 `start.bat`/`install.bat` 里加了**中文 `REM` 注释**，
+而 cmd 用当前 OEM 代码页（中文 Windows 是 936/GBK）读 `.bat`——UTF-8 中文变成乱码后**字节错位**，
+把 `REM` 后的空格与 `^(` 的 `^` 吞掉，于是注释被当成命令执行、块解析失败。用户实测输出：
+
+```
+'涓€椤癸紝浜庢槸杩欏噷姘歌繙"妫€娴嬪埌宸叉湁 JAR"銆?' 不是内部或外部命令，也不是可运行的程序
+'瀯寤猴紝瑁呭畬鍚姩鏃舵墠鎶?Unable' 不是内部或外部命令，也不是可运行的程序
+...
+[INFO] Creating database configuration tool...
+此时不应有 閭ｆ牰鎶婇€氶厤绗﹀師鏍峰綋鎴愯矾寰勩€?。
+```
+
+前两条是我那两行注释的**尾部**被当成命令，第三条（`此时不应有` = "was unexpected at this time"）
+是 heredoc 里 `echo REM ...：...` 那行破坏了 `( ... )` 块 → `install.bat` 直接中断。
+**教训**：我上一轮只检查了"中文 echo 行数 = 0"，漏掉了 `REM` 注释——注释里一样不能有非 ASCII 字节。
+
+**修复**：这几个 `.bat` 里的**全部非 ASCII 文本（都是 `REM` 注释，无任何用户可见文案）改写成英文**，
+于是文件变成**纯 ASCII**，不再依赖控制台代码页：
+
+| 文件 | 非 ASCII 字节（前→后） | 处理 |
+|---|---|---|
+| `start.bat` | 336 → 0 | 注释英文化 |
+| `install.bat` | 477 → 0 | 注释英文化（含 heredoc 里的生成物文案） |
+| `DataConfig.bat` | 132 → 0 | 注释英文化（含随包与生成两处） |
+| `create-shortcut.bat` | 183 → 0 | 注释英文化（同类隐患，顺手一并清掉） |
+| `release.bat` / `docker/start-mysql.bat` | 525 / 21 | **保持**：它们开头就有 `chcp 65001`，中文是用户可见文案，既有做法可用 |
+
+**同一轮实机发现的另一个 bug（已修）**：`[2/4]` 打印的
+`Version: C:\Users\nevell\scoop\apps\maven\current` —— 版本行显示成了路径。
+原因是 `findstr /i "Apache Maven"` 会被 scoop shim 输出的其它含该字样的行命中，
+再用 `tokens=3` 取到路径。现改为锚定真实横幅行
+（`findstr /r /c:"^Apache Maven [0-9]"`），解析不到时**如实说明**而不是把路径当版本号打印。
 
 ### 证据：cmd 语义的**模型复现**（不是实机验证）
 
@@ -531,7 +577,7 @@ cmd 的语义是：**带通配符的集合在无匹配时会把该模式原样�
 
 **这只能证明我对 cmd 语义的理解与修复方向自洽，不能替代实机验收。** 下面是实机清单。
 
-### Windows 实机验收清单（需要你在 Windows 上跑）
+### Windows 实机验收清单（**待重跑**：首轮在第 4 步被上述回归中断）
 
 前置：用 `git clone`（不要用 zip 拷贝 mac 工作区），`cmd` 里先 `cd /d` 到项目根目录。
 
@@ -540,7 +586,7 @@ cmd 的语义是：**带通配符的集合在无匹配时会把该模式原样�
 | 1 | `findstr /C:"for /f" start.bat` | 有输出（说明拿到的是新版脚本） |
 | 2 | `del /q target\lisuan-fx-*-jar-with-dependencies.jar` 然后 `start.bat < nul & echo EXIT=%ERRORLEVEL%` | 打印 `[ERROR] Application JAR not found in target\`、`mvn clean package -DskipTests`；`EXIT=1`；**不得**出现 `Unable to access jarfile` |
 | 3 | `mvn clean package -DskipTests` 然后 `start.bat` | 打印 `[OK] JAR file found: target\lisuan-fx-2.6.0-jar-with-dependencies.jar` 并打开收银界面 |
-| 4 | `del /q target\lisuan-fx-*-jar-with-dependencies.jar` 然后 `install.bat` | `[4/4]` 段**真的执行** `mvn clean package -DskipTests`（不再打印 `[SKIP] Detected existing compiled JAR`），完成后生成 `DataConfig.bat` 并能打开数据库配置界面 |
+| 4 | `del /q target\lisuan-fx-*-jar-with-dependencies.jar` 然后 `install.bat` | `[2/4]` 的 `Version:` 是形如 `3.9.x` 的版本号（**不再是 scoop 路径**）；`[4/4]` 段**真的执行** `mvn clean package -DskipTests`（不再打印 `[SKIP] Detected existing compiled JAR`）；**不得**再出现"不是内部或外部命令"或"此时不应有"；完成后生成 `DataConfig.bat` 并能打开数据库配置界面 |
 | 5 | `findstr /C:"for %%" DataConfig.bat` | **无输出**（生成物已不含坏写法）；`findstr /C:"for /f" DataConfig.bat` 有输出 |
 
 失败时请把这些发我：**完整命令输出**（含 `EXIT=` 那行的值）、`echo %ERRORLEVEL%`、
@@ -548,8 +594,11 @@ cmd 的语义是：**带通配符的集合在无匹配时会把该模式原样�
 
 ### 剩余
 
-- 上表 5 步未跑之前，TD-011 不能算完全关闭：静态门禁能挡住"写法回退"，但挡不住
+- 上表 5 步（重跑）未通过之前，TD-011 不能算完全关闭：静态门禁能挡住"写法回退"，但挡不住
   cmd 的解析细节（`for /f` 的引号规则、`^` 转义、路径含空格或中文、`%ERRORLEVEL%` 传播）。
+  首轮已确认：检测修复生效、Java/Maven/目录三段正常；第 4 步因上述回归中断，需重跑。
+- `install.bat` 在跳过构建时仍打印 `[OK] Project built successfully`（紧跟在 `[SKIP] ...` 之后），
+  措辞略有矛盾，属观感问题，本轮未动。
 - `diagnose.bat` 的 `dir /b ... 2>nul || echo ...` 经核对是**正确写法**（`dir` 无匹配返回非零，
   `||` 分支正是"没找到"的提示），不是静默吞错，无需改动。
 

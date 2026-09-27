@@ -40,6 +40,10 @@ class WindowsScriptPolicyTest {
     private static final Pattern JAVA_WITH_WILDCARD =
         Pattern.compile("java\\s+[^\\r\\n]*\\*[^\\r\\n]*");
 
+    /** 真正的代码页切换（chcp 65001 ...），而不是注释里提到 chcp。 */
+    private static final Pattern CODE_PAGE_SWITCH =
+        Pattern.compile("(?m)^\\s*chcp\\s+65001");
+
     /** 真正的 maven 调用（行首，或 call mvn）；错误提示里的 echo mvn ... 不算。 */
     private static final Pattern MAVEN_INVOCATION =
         Pattern.compile("(?m)^\\s*(call\\s+)?mvn\\s");
@@ -175,6 +179,35 @@ class WindowsScriptPolicyTest {
         assertTrue(violations.isEmpty(),
             "修复方式：git checkout -- <文件>（.gitattributes 里 *.bat 为 eol=crlf），"
                 + "或用支持 CRLF 的编辑器重存：\n  " + String.join("\n  ", violations));
+    }
+
+    @Test
+    @DisplayName(".bat 若含非 ASCII 文本，必须自己设置 UTF-8 代码页")
+    void nonAsciiBatchScriptsMustSetCodePage() throws Exception {
+        List<String> violations = new ArrayList<>();
+        for (String file : trackedBatFiles()) {
+            byte[] raw = Files.readAllBytes(Path.of(file));
+            boolean hasNonAscii = false;
+            for (byte b : raw) {
+                if (b < 0) {
+                    hasNonAscii = true;
+                    break;
+                }
+            }
+            String text = new String(raw, StandardCharsets.UTF_8);
+            // 必须是真的切换代码页：只出现 "chcp" 这个词不算（静态检查不能被注释里的自述骗过）
+            if (hasNonAscii && !CODE_PAGE_SWITCH.matcher(text).find()) {
+                violations.add(file + " 含非 ASCII 字节，但没有 chcp 65001");
+            }
+        }
+        assertTrue(violations.isEmpty(),
+            "cmd 用当前 OEM 代码页读 .bat（中文 Windows 是 936/GBK）：UTF-8 中文会变成乱码，"
+                + "而乱码会让字节错位，把 REM 后的空格或 ^( 的 ^ 吞掉，"
+                + "于是注释被当成命令执行（\"不是内部或外部命令\"）或块解析失败（\"此时不应有\"）——"
+                + "实测已在 Windows 上重现过。两种修法：注释改成纯英文（推荐，本仓库 start.bat/install.bat/"
+                + "DataConfig.bat/create-shortcut.bat/diagnose.bat 已如此），"
+                + "或在文件开头加 chcp 65001 >nul 并保持 UTF-8（release.bat/docker/start-mysql.bat 的既有做法）。"
+                + "注意 'echo 里中文' 也会写进生成物，同样算违规：\n  " + String.join("\n  ", violations));
     }
 
     private static List<String> trackedBatFiles() throws Exception {

@@ -3,7 +3,7 @@ setlocal enabledelayedexpansion
 
 cd /d "%~dp0"
 
-REM 加载 .env 文件（如果存在）
+REM Load .env if present
 if exist ".env" (
     echo [INFO] Loading configuration from .env file...
     for /f "usebackq tokens=1,2 delims==" %%a in (".env") do (
@@ -22,7 +22,7 @@ echo [INFO] ENVIRONMENT: %ENVIRONMENT%
 echo [INFO] Launching database configuration tool...
 echo.
 REM Find executable fat JAR. It contains the installer and all runtime dependencies.
-REM 不能用 for %%f in (通配符)：无匹配时 cmd 会把通配符原样赋给变量，错误分支永远不会触发。
+REM Do NOT use: for %%f in (<wildcard>) -- with no match cmd assigns the literal pattern to the variable.
 set "JAR_FILE="
 for /f "delims=" %%f in ('dir /b /o-d "target\lisuan-fx-*-jar-with-dependencies.jar" 2^>nul') do (
     set "JAR_FILE=target\%%f"
