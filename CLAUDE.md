@@ -732,7 +732,10 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   中文 Windows 是 936/GBK，UTF-8 中文会变乱码并**让字节错位**，把 `REM` 后的空格或 `^(` 的 `^` 吞掉，
   于是注释被当成命令执行（`不是内部或外部命令`）或块解析失败（`此时不应有`）。
   2026-09 已在 Windows 上实测撞到：我给 `start.bat`/`install.bat` 加的中文 `REM` 注释直接把
-  `install.bat` 跑崩。**结论：这几个脚本的注释一律写英文**（`start.bat`/`install.bat`/`DataConfig.bat`/
+  `install.bat` 跑崩。反过来，**给纯 ASCII 的批处理加 `chcp 65001` 也会影响同一窗口的后续命令**：
+  `start.bat` 为让 JVM 的 UTF-8 中文日志可读而切到 65001，结果同窗口接着跑 maven 时 javac 的 GBK
+  输出变乱码——所以它**只包住 `java` 调用**（启动前记住原代码页、返回后 `:restore_code_page` 恢复，
+  并用 `findstr /r "^[0-9][0-9]*$"` 校验解析结果），门禁第 9 条钉住这个配对。**结论：这几个脚本的注释一律写英文**（`start.bat`/`install.bat`/`DataConfig.bat`/
   `create-shortcut.bat`/`diagnose.bat` 现为纯 ASCII；`release.bat`/`docker/start-mysql.bat` 是中文文案 +
   `chcp 65001` 的既有做法，不要再往里加需要转义的 `^(` 之类）
 - 安装/运维脚本门禁：`InstallScriptPolicyTest`（`com.cashier.security`）钉住三条不变量——

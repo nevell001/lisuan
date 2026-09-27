@@ -151,6 +151,26 @@ class WindowsScriptPolicyTest {
     }
 
     @Test
+    @DisplayName("start.bat 切换代码页后必须恢复，不能把用户的窗口留在 65001")
+    void startBatRestoresCodePageAfterLaunch() throws Exception {
+        String text = read("start.bat");
+        assertTrue(CODE_PAGE_SWITCH.matcher(text).find(),
+            "start.bat 应为可读的中文日志把控制台切到 65001");
+        assertTrue(text.contains("chcp %ORIGINAL_CODE_PAGE%"),
+            "切了代码页就必须恢复：javac/maven 按 GBK 输出，留在 65001 会让它们的输出变乱码");
+        assertTrue(text.contains(":restore_code_page"),
+            "恢复逻辑应放在子过程里，并在 java 返回后与 GUI 模式提前返回前各调用一次");
+        assertTrue(text.contains("call :restore_code_page"),
+            "java 返回后必须调用恢复子过程");
+        // 恢复前要先取出原代码页，且解析结果必须校验为纯数字（chcp 输出随系统语言变化）
+        assertTrue(text.contains("ORIGINAL_CODE_PAGE"),
+            "必须先记住原代码页再切换");
+        assertTrue(text.contains("findstr /r \"^[0-9][0-9]*$\""),
+            "恢复前要校验解析出的代码页是纯数字（不同语言的 chcp 输出格式不同，解析失败时宁可不切）");
+        // release.bat / docker/start-mysql.bat 自身就是中文输出，保留 65001 是有意为之，不在此规则内
+    }
+
+    @Test
     @DisplayName("install.bat 构建后必须真的校验 fat JAR 产出")
     void installVerifiesJarAfterBuild() throws Exception {
         String text = read("install.bat");

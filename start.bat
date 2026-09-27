@@ -1,7 +1,4 @@
 @echo off
-REM Switch the console to UTF-8 so the application's Chinese log lines are readable
-REM (the JVM writes UTF-8; a GBK console would show mojibake). Same idiom as release.bat.
-chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 REM ============================================
@@ -161,6 +158,14 @@ echo.
 echo Starting application...
 echo.
 
+REM The JVM writes UTF-8 (see config/jvm.config), so the console must be on code page 65001
+REM while the application runs, otherwise the Chinese log lines are mojibake. Other tools
+REM (javac/maven) print GBK, so the previous code page is restored as soon as we come back.
+for /f "tokens=2 delims=:" %%c in ('chcp') do set "ORIGINAL_CODE_PAGE=%%c"
+set "ORIGINAL_CODE_PAGE=%ORIGINAL_CODE_PAGE: =%"
+chcp 65001 >nul
+if defined ORIGINAL_CODE_PAGE echo [INFO] Console switched to UTF-8 (65001); it will be restored to %ORIGINAL_CODE_PAGE% on exit
+
 if "%1"=="--gui" goto :launch_gui
 
 echo [INFO] Using java (console mode)...
@@ -175,6 +180,7 @@ if errorlevel 1 goto :launch_console
 echo [INFO] Using javaw (GUI mode)...
 start "" javaw !JFX_MODULES! !JVM_OPTS! -jar "%JAR_FILE%"
 echo [INFO] Application launched in background
+call :restore_code_page
 goto :eof
 
 :launch_console
@@ -183,6 +189,8 @@ java !JFX_MODULES! !JVM_OPTS! -jar "%JAR_FILE%"
 
 :after_launch
 
+call :restore_code_page
+
 echo.
 echo =========================================
 echo   Application exited
@@ -190,3 +198,12 @@ echo =========================================
 echo.
 pause
 exit /b 0
+
+REM Restore the code page captured before launching. Guarded with a digits-only check
+REM because the wording of "chcp" output differs per Windows language.
+:restore_code_page
+if not defined ORIGINAL_CODE_PAGE goto :eof
+echo %ORIGINAL_CODE_PAGE%| findstr /r "^[0-9][0-9]*$" >nul || goto :eof
+chcp %ORIGINAL_CODE_PAGE% >nul
+echo [INFO] Console code page restored to %ORIGINAL_CODE_PAGE%
+goto :eof
