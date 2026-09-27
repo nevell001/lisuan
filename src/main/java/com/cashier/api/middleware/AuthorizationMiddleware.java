@@ -62,7 +62,9 @@ public final class AuthorizationMiddleware {
             || path.matches("/api/payment/[^/]+/refund")
             || path.matches("/api/invoices/[^/]+/void")
             || path.equals("/api/invoices/manual")
-            || path.matches("/api/members/[^/]+/recharge")
+            // 会员充值**不在此列**：充值是收银台日常操作（顾客当面充卡），桌面端一直对收银员开放，
+            // 且充值会写 RechargeRecord 流水留痕（TD-018：按"收银员可充值"统一两侧口径）。
+            // 注意金额类的"改折扣/等级/积分/余额"仍限 finance/admin（上面那条 /api/members/[^/]+ 写方法）。
             || (path.matches("/api/members/[^/]+") && isMutating(method))
             // 资金统计属财务口径，收银员无需查看
             || path.startsWith("/api/payment/stats")

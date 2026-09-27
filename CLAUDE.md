@@ -819,6 +819,8 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   只禁用等级/折扣两个控件挡不住改折扣，积分必须一起锁，且保存时把值**还原**（禁用不阻止程序化赋值）；
   ② 余额是储值金额（等同发钱），与 API 把 `recharge` 限 finance/admin 的口径一致。
   等级/折扣变更必须写 `MEMBER/MEMBER_LEVEL_DISCOUNT_UPDATED` 审计日志（此前会员路径**完全没有**留痕）。
+  **充值相反**：`POST /api/members/{id}/recharge` 不限角色（2026-09 TD-018 决定：充值是收银台日常操作，
+  桌面端一直开放，且写 `RechargeRecord` 流水留痕）；但"改折扣/等级/积分/余额"仍限 finance/admin。
   门禁 `MemberPermissionPolicyTest`（3 项，含直接调 `AuthorizationMiddleware.isAllowed` 的行为级断言）。
   **教训**：判断某接口的角色限制要看**中间件与路由挂载**，不能只看控制器方法体——
   本条最初的结论（"API 不区分角色"）就是这么写错的。

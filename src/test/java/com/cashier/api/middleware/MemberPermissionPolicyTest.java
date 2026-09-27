@@ -37,7 +37,12 @@ class MemberPermissionPolicyTest {
         assertTrue(AuthorizationMiddleware.isAllowed("admin", "PUT", "/api/members/10"),
             "管理员应可修改会员等级/折扣");
         assertTrue(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/members"),
-            "建档是收银台日常操作，POST /api/members 不应被收紧（本次只收紧等级/折扣）");
+            "建档是收银台日常操作，POST /api/members 不应被收紧（本次只收紧金额类字段）");
+        assertTrue(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/members/10/recharge"),
+            "充值也是收银台日常操作（且写 RechargeRecord 流水留痕）：2026-09 按 TD-018 决定"
+                + "与桌面端口径统一为开放给收银员");
+        assertFalse(AuthorizationMiddleware.isAllowed("cashier", "PUT", "/api/members/10"),
+            "但金额类字段（等级/折扣/积分/余额）仍必须限 finance/admin");
     }
 
     @Test

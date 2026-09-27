@@ -32,7 +32,8 @@ class AuthorizationMiddlewareTest {
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "DELETE", "/api/products/10"));
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "PUT", "/api/inventory/10"));
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/invoices/manual"));
-        assertFalse(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/members/10/recharge"));
+        // 充值是收银台日常操作（顾客当面充卡），桌面端一直开放，2026-09 起 API 与之统一（TD-018）
+        assertTrue(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/members/10/recharge"));
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "PUT", "/api/members/10"));
         // 开票方信息会写进之后所有发票，属全局配置，收银员不得修改（读取仍允许）
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "PUT", "/api/invoices/seller-info"));
