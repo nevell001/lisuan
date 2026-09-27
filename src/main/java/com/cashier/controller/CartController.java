@@ -156,9 +156,11 @@ public class CartController implements CartViewHost {
     @FXML
     private Button cardButton;
 
-    private ObservableList<CartItem> cartList;
-    private ObservableList<Product> productList;
-    private Map<String, Product> inventoryMap;
+    private ObservableList<CartItem> cartList = javafx.collections.FXCollections.observableArrayList();
+    private ObservableList<Product> productList = javafx.collections.FXCollections.observableArrayList();
+    // 声明即初始化：loadInventory 是异步的，而 addToCart → applyAddToCart 会读它；
+    // 商品加载完成前手快点了商品就会 NPE
+    private final Map<String, Product> inventoryMap = new HashMap<>();
     private Map<String, CartItem> cartMap = new HashMap<>();
     private Member currentMember;
     private User currentUser;
@@ -456,7 +458,7 @@ public class CartController implements CartViewHost {
     private void loadInventory() {
         logger.info("CartController: 开始加载库存数据...");
         // 先占位，避免异步结果返回前被其它路径读到 null
-        inventoryMap = new HashMap<>();
+        inventoryMap.clear();
         long sequence = productQuerySequence.incrementAndGet();
         UIOptimizer.runInBackground(
             () -> productDAO.findAll(FIRST_PAGE, CART_PRODUCT_PAGE_SIZE).getData(),

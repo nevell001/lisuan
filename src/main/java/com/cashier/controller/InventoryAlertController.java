@@ -97,7 +97,7 @@ public class InventoryAlertController {
     private Button closeButton;
 
     private InventoryAlertService alertService;
-    private ObservableList<AlertItem> alertList;
+    private ObservableList<AlertItem> alertList = javafx.collections.FXCollections.observableArrayList();
     private Timer updateTimer;
 
     /**

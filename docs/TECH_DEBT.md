@@ -20,6 +20,7 @@
 | TD-013 | 版本号门禁只覆盖 4 处中的 2 处 | 发布 | **已修复（2026-09）** | 版本管理 |
 | TD-014 | i18n 硬编码与文档中的测试数过期 | 文档/体验 | **主要部分已修复（2026-09）**：终端用户可见文案已迁完（净新增 25 key + 复用既有 key，4 项门禁含状态栏）；剩打包向导与其它 17 处状态栏文案 | — |
 | TD-015 | `String.format` 用默认 locale 格式化金额（73 处） | 正确性 | **已修复（2026-09）**：73+5 处固定 `Locale.ROOT`，3 项门禁 + 德语 locale 全量验证 | 非中文 locale 部署 |
+| TD-016 | 界面集合字段未初始化，异步回调顺序一变就 NPE | UI 正确性 | **已修复（2026-09）**：14 个控制器 / 25 个字段改为声明即初始化 + 2 项门禁（Windows 实测发现） | 异步加载页面 |
 
 > 本节条目来自 2026-09 的全量审计（`mvn verify` 三关全绿的前提下，逐条回读代码 + 真实
 > Javalin 最小复现验证）。
@@ -75,6 +76,10 @@
 > I18nKeys 补常量），含备份/恢复对话框、充值支付方式显示层本地化（落库值不变）、打印预览、
 > 启动画面、启动失败/字体缺失弹窗、`InventoryView.fxml` 的 `promptText`；
 > 加 `HardcodedUiTextPolicyTest`（4 项，含变异验证），FXML 的两处运行时覆盖占位走带理由的白名单。
+>
+> **已修（第十五批）**：TD-016——Windows 实机跑出来的两次 NPE（库存页、采购订单页）根因是两个异步
+> 加载器互相依赖、读字段时另一个还没赋值；14 个控制器 / 25 个集合字段统一改为"声明即初始化"，
+> 加 `UiStateInitializationPolicyTest`（2 项，含变异验证），并给 `start.bat` 加 `chcp 65001` 让中文日志可读。
 >
 > **已修（第十四批）**：TD-011 静态部分——`start.bat`/`install.bat`/`DataConfig.bat`（含 install.bat
 > 生成的 heredoc）的 JAR 检测从"for 迭代通配符 + 空串判断"改为 `for /f + dir /b` + `if not defined`；
@@ -843,4 +848,82 @@ cmd 的语义是：**带通配符的集合在无匹配时会把该模式原样�
 
 - 无（`String.format` 的浮点格式化已全部固定 Locale）。
   注：纯 `%d`/`%s` 的格式化不强制带 Locale——它们不受 locale 影响。
+
+
+## TD-016 界面集合字段未初始化，异步回调顺序一变就 NPE
+
+**类别**：UI 正确性　**状态**：**已修复（2026-09）**
+**提出来源**：**Windows 实机测试**（TD-011 验收过程中用户跑出来）
+
+### 现象（用户 Windows 实测，macOS 本机跑不出来）
+
+打开库存页与采购订单页时，FX 线程抛两次 NPE、界面卡在未刷新状态：
+
+```
+NullPointerException: Cannot invoke "javafx.collections.ObservableList.size()" because "this.inventoryList" is null
+    at InventoryController.updateCountLabel(InventoryController.java:390)
+    at InventoryController.applyFilters(InventoryController.java:247)
+    at InventoryController.handleCategoryFilter(InventoryController.java:203)
+    at InventoryController.lambda$initialize$1(InventoryController.java:139)
+    at ... ComboBox$ComboBoxSelectionModel ... InventoryController.lambda$loadCategories$8(InventoryController.java:193)
+
+NullPointerException: Cannot invoke "java.util.Map.values()" because "this.orders" is null
+    at PurchaseOrderController.filterOrders(PurchaseOrderController.java:194)
+    at PurchaseOrderController.lambda$loadSuppliers$5(PurchaseOrderController.java:160)
+```
+
+### 根因：两个异步加载器互相依赖，读字段时另一个还没赋值
+
+2026-09 那批"页面打开即查库改为后台执行"（TD-006 第三批）把两个加载器都异步化了，
+于是**谁先回来不确定**：
+
+- `InventoryController`：`loadCategories()` 的回调里 `categoryFilterComboBox.getSelectionModel().select(0)`
+  会触发 `initialize()` 里注册的分类监听器 → `handleCategoryFilter → applyFilters → updateCountLabel`
+  读 `inventoryList`；而它要到 `loadTableData()` 的回调才被赋值。分类先回来就 NPE。
+- `PurchaseOrderController`：`loadSuppliers()` 的回调末尾会调 `filterOrders()` 刷一次（为了解析供应商名），
+  而 `filterOrders()` 读 `orders`；`orders` 要到 `loadOrders()` 的回调才赋值。供应商先回来就 NPE。
+
+macOS 上恰好是"订单/商品先回来"，所以本机全绿也发现不了——**只有实机能暴露顺序敏感缺陷**。
+
+### 修复：控制器里的集合状态字段一律"声明即初始化"
+
+```java
+private final ObservableList<Product> inventoryList = javafx.collections.FXCollections.observableArrayList();
+private final Map<Integer, Product> inventoryMap = new HashMap<>();
+```
+
+数据没到就表现为**空集合**而不是 null，读取顺序不再敏感。共改 **14 个控制器 / 25 个字段**：
+
+- 崩溃的 4 个：`InventoryController.inventoryList/inventoryMap`、`PurchaseOrderController.orders/suppliers`
+  （这两个文件的赋值语句同步改成 `clear()` / `setAll(...)`，并把 `final` 加上）；
+- 扫描出的同类潜在竞态 3 个（用户还没踩到）：`CartController.inventoryMap`（异步加载完成后才能入车）、
+  `MemberController.memberList`、`SupplierController.supplierList`（搜索回调会经 `updateCountLabel` 读）；
+- 其余 18 个同类字段（`PromotionController`、`ShiftController`、`TransactionController`、`UserController`、
+  `PurchaseApprovalController`、`PurchaseInboundController`、`PurchaseReportController`、
+  `InventoryReportController`、`InventoryCheckController`、`InventoryAlertController`、
+  `ProfitReportController`、`StatisticsController`、`PurchaseOrderController.orderList` 等）
+  一并加初始化器，让"集合字段永不为 null"成为**统一不变量**（已确认全仓库没有任何
+  `== null` / `!= null` 依赖这些字段，故行为等价）。
+  唯一排除项：`SearchController.resultsList` 是 FXML 注入的 `ListView` 控件（`@FXML private ListView<HBox> resultsList;`），
+  不是集合字段。
+
+### 门禁（2 项）
+
+`com.cashier.security.UiStateInitializationPolicyTest`：
+
+1. `controllerCollectionsAreInitializedAtDeclaration`：扫 `src/main/java/com/cashier/controller` 全部源码，
+   任何"集合类型 + 无初始化器"的私有字段即失败（`ListView` 等控件类型不在规则内），
+   失败信息里直接写明 Windows 撞过的 NPE 与改法；
+2. `previouslyCrashingFieldsStayInitialized`：把曾经崩溃的 5 个字段作为回归锚点逐个断言"声明处即初始化"。
+
+变异验证：把 `InventoryController.inventoryList` 的初始化器去掉 → 门禁变红（已还原）。
+
+### 另外顺手修的（同一轮实机发现）
+
+- **Windows 控制台中文日志乱码**：用户贴出的日志是 `鎴愬姛鍔犺浇 ... 瀛椾綋` 这种莫吉托乱码——
+  JVM 按 `-Dfile.encoding=UTF-8` 输出，而控制台代码页是 936。已在 `start.bat` 头部加
+  `chcp 65001 >nul`（与 `release.bat`/`docker/start-mysql.bat` 的既有做法一致），中文日志从此可读。
+  该文件仍是纯 ASCII，不影响批处理解析。
+
+---
 

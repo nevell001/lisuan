@@ -75,8 +75,9 @@ public class SupplierController {
     @FXML
     private Button deleteButton;
 
-    private ObservableList<Supplier> supplierList;
-    private Map<Integer, Supplier> suppliers;
+    // 声明即初始化：supplierList 由异步加载赋值，而搜索（同样是异步）会经 updateCountLabel 读它
+    private final ObservableList<Supplier> supplierList = FXCollections.observableArrayList();
+    private Map<Integer, Supplier> suppliers = new java.util.HashMap<>();
 
     /**
      * 初始化方法
@@ -128,7 +129,7 @@ public class SupplierController {
                 logger.error("加载供应商数据失败", e);
                 showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
                 suppliers = new HashMap<>();
-                supplierList = FXCollections.observableArrayList();
+                supplierList.clear();
                 supplierTable.setItems(supplierList);
                 updateCountLabel();
             });
@@ -139,7 +140,7 @@ public class SupplierController {
         for (Supplier supplier : supplierData) {
             suppliers.put(supplier.id, supplier);
         }
-        supplierList = FXCollections.observableArrayList(supplierData);
+        supplierList.setAll(supplierData);
         supplierTable.setItems(supplierList);
     }
 

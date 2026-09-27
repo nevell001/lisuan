@@ -95,8 +95,9 @@ public class TransactionController {
     @FXML
     private Button refreshButton;
 
-    private ObservableList<Transaction> transactionList;
-    private List<Transaction> allTransactions;
+    private ObservableList<Transaction> transactionList = javafx.collections.FXCollections.observableArrayList();
+    // 声明即初始化：这些集合由异步回调赋值，别处可能在数据到达前读它（Windows 实测过 NPE）
+    private List<Transaction> allTransactions = new java.util.ArrayList<>();
 
     /**
      * 初始化方法

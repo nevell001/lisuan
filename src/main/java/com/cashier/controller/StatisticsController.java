@@ -110,7 +110,7 @@ public class StatisticsController {
     @FXML
     private BarChart<String, Number> categorySalesBarChart;
 
-    private List<Transaction> allTransactions;
+    private List<Transaction> allTransactions = new java.util.ArrayList<>();
 
     /** 防止重复触发查询（后台线程仍在执行时忽略新查询） */
     private boolean statisticsQueryInProgress;

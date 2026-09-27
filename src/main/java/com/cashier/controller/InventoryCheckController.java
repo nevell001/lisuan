@@ -102,8 +102,8 @@ public class InventoryCheckController {
     @FXML
     private Button completeButton;
 
-    private ObservableList<InventoryCheck> checkList;
-    private Map<Integer, InventoryCheck> checks;
+    private ObservableList<InventoryCheck> checkList = javafx.collections.FXCollections.observableArrayList();
+    private Map<Integer, InventoryCheck> checks = new java.util.HashMap<>();
 
     // 当前用户
     private String currentUser = "admin";

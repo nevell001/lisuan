@@ -88,8 +88,10 @@ public class UserController {
     @FXML
     private Button deactivateButton;
 
-    private ObservableList<User> userList;
-    private Map<String, User> users;
+    // 声明即初始化：这些集合由异步回调赋值，别处可能在数据到达前读它（Windows 实测过 NPE）
+    private ObservableList<User> userList = FXCollections.observableArrayList();
+    // 声明即初始化：这些集合由异步回调赋值，别处可能在数据到达前读它（Windows 实测过 NPE）
+    private Map<String, User> users = new java.util.HashMap<>();
     private User currentUser;
 
     public void setCurrentUser(User currentUser) {

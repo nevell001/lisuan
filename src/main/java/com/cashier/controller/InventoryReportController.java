@@ -150,9 +150,9 @@ public class InventoryReportController {
     @FXML
     private Button exportButton;
 
-    private List<Product> allProducts;
-    private List<Transaction> allTransactions;
-    private Set<String> allCategories;
+    private List<Product> allProducts = new java.util.ArrayList<>();
+    private List<Transaction> allTransactions = new java.util.ArrayList<>();
+    private Set<String> allCategories = new java.util.LinkedHashSet<>();
     private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
 
     // 默认阈值

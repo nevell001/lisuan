@@ -140,10 +140,11 @@ public class ProfitReportController {
     @FXML
     private Button exportButton;
 
-    private List<Transaction> allTransactions;
+    // 声明即初始化：这些集合由异步回调赋值，别处可能在数据到达前读它（Windows 实测过 NPE）
+    private List<Transaction> allTransactions = new java.util.ArrayList<>();
     private Map<String, Double> productActualCostMap; // 商品实际成本（加权平均）
     private Map<String, Product> productNameMap; // 商品名称到商品的映射
-    private Set<String> allCategories;
+    private Set<String> allCategories = new java.util.LinkedHashSet<>();
     /** 防止重复触发查询（后台查询执行中忽略新查询） */
     private boolean profitQueryInProgress;
     private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
@@ -401,7 +402,7 @@ public class ProfitReportController {
         Thread worker = new Thread(() -> {
             try {
                 // 后台加载：区间交易、交易涉及商品、加权平均成本
-                allTransactions = findTransactionsByDateRange(startDate, endDate);
+                allTransactions = findTransactionsByDateRange(startDate, endDate);  // 查询结果直接替换（final 字段可重新赋值引用）
                 productNameMap = loadProductNameMap(allTransactions);
                 productActualCostMap = new HashMap<>();
                 loadProductActualCosts();

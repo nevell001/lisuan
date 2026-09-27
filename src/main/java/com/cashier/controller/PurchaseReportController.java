@@ -125,9 +125,9 @@ public class PurchaseReportController {
     @FXML
     private Button exportButton;
 
-    private List<PurchaseOrder> allOrders;
-    private List<Supplier> allSuppliers;
-    private Map<Integer, List<PurchaseOrderItem>> orderItemsMap;
+    private List<PurchaseOrder> allOrders = new java.util.ArrayList<>();
+    private List<Supplier> allSuppliers = new java.util.ArrayList<>();
+    private Map<Integer, List<PurchaseOrderItem>> orderItemsMap = new java.util.HashMap<>();
     private static final int PURCHASE_REPORT_SUPPLIER_LIMIT = 500;
 
     /**

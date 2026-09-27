@@ -1,4 +1,7 @@
 @echo off
+REM Switch the console to UTF-8 so the application's Chinese log lines are readable
+REM (the JVM writes UTF-8; a GBK console would show mojibake). Same idiom as release.bat.
+chcp 65001 >nul
 setlocal enabledelayedexpansion
 
 REM ============================================

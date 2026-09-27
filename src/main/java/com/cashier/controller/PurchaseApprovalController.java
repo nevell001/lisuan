@@ -74,8 +74,9 @@ public class PurchaseApprovalController {
     @FXML
     private Button viewDetailButton;
 
-    private ObservableList<PurchaseOrder> orderList;
-    private Map<Integer, PurchaseOrder> orders;
+    private ObservableList<PurchaseOrder> orderList = javafx.collections.FXCollections.observableArrayList();
+    // 声明即初始化：这些集合由异步回调赋值，别处可能在数据到达前读它（Windows 实测过 NPE）
+    private Map<Integer, PurchaseOrder> orders = new HashMap<>();
 
     // 当前用户（审批人）
     private String currentUser = "admin";

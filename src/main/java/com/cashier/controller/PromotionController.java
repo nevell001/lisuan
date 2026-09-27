@@ -88,8 +88,10 @@ public class PromotionController {
     @FXML
     private Button disableButton;
 
-    private ObservableList<Promotion> promotionList;
-    private List<Promotion> allPromotions;
+    // 声明即初始化：这些集合由异步回调赋值，别处可能在数据到达前读它（Windows 实测过 NPE）
+    private ObservableList<Promotion> promotionList = FXCollections.observableArrayList();
+    // 声明即初始化：这些集合由异步回调赋值，别处可能在数据到达前读它（Windows 实测过 NPE）
+    private List<Promotion> allPromotions = new java.util.ArrayList<>();
 
     /**
      * 初始化方法

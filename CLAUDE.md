@@ -766,6 +766,14 @@ When working on files that still use the old `ProductDAO`, consider migrating th
 - `I18nKeys.java` 里有**嵌套类**（`Menu.Help`、`Menu.Theme`、`Nav`、`Runtime`、`StatusMessage`…）：
   手工或用脚本改这个文件时**不要**"把块内常量行排序后重排"——那种写法会把嵌套类内的常量压平到外层，
   编译期才会以 `找不到符号` 暴露。新增常量要么严格落在所属嵌套类内，要么按类整体替换
+- **界面集合状态字段必须"声明即初始化"**（TD-016）：控制器里的 `List/Map/Set/ObservableList/...` 字段
+  一律在声明处 `= new ArrayList<>()` / `= FXCollections.observableArrayList()`。
+  原因：页面打开时多个**异步加载器互相依赖**（如"加载分类后默认选中第一项"会触发监听器 →
+  读商品列表），任一个先回来就会读另一个尚未赋值的字段 → Windows 实测抛过
+  `NPE: inventoryList is null`（`InventoryController.updateCountLabel`）与 `orders is null`
+  （`PurchaseOrderController.filterOrders`）。声明即初始化后"数据没到"表现为空集合，顺序不再敏感。
+  门禁 `UiStateInitializationPolicyTest`（2 项：全量扫描 + 崩溃字段回归锚点）。
+  注意：FXML 注入的控件（`TableView`/`ListView`）不是集合字段，不在规则内
 - i18n 门禁：`I18nBundleConsistencyTest` 断言三份语言包 key 集合一致、`I18nKeys` 常量齐全、
   源码字面量 i18n 调用 key 齐全（缺 key 时界面会直接显示 key，属 UI 缺陷）
 - 并发安全：`ConcurrentDeductionTest` 多线程验证乐观锁防库存超卖、防会员余额超扣
@@ -1291,6 +1299,7 @@ worker 迭代 `cartItems`（`ObservableList`）、对 `inventoryMap`（普通 `H
   TD-011 静态部分已修（Windows 脚本检测/行尾/不自动构建 + 7 项门禁），**实机验收清单见该条目**；
   TD-011 已过首轮 Windows 实机（发现并修掉本批引入的"中文注释破坏批处理解析"回归，
   另修 scoop 下 Maven 版本显示成路径的问题），**验收第 4 步待重跑**；
+  TD-016 已修（Windows 实机暴露的异步顺序 NPE，14 个控制器 / 25 个字段 + 2 项门禁）；
   其余（TD-014 剩余：其它控制器 17 处状态栏文案与打包向导）仍待处理
 
 **数据库密码来源（v2.6.0 补强）**

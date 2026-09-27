@@ -111,8 +111,10 @@ public class InventoryController extends BaseController<Product> {
     private Button unitButton;
 
     private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
-    private ObservableList<Product> inventoryList;
-    private Map<Integer, Product> inventoryMap;
+    // 声明即初始化：这两个字段由异步加载器赋值，而分类下拉框的监听器（同样由异步回调触发选中）
+    // 会在数据到达前就读它们 —— 曾经因此抛 NPE（Windows 上实测：updateCountLabel 里 inventoryList 为 null）
+    private final ObservableList<Product> inventoryList = FXCollections.observableArrayList();
+    private final Map<Integer, Product> inventoryMap = new HashMap<>();
     private long totalProducts;
 
     /**
@@ -363,7 +365,7 @@ public class InventoryController extends BaseController<Product> {
             e -> {
                 logger.error("加载商品数据失败", e);
                 showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
-                inventoryMap = new HashMap<>();
+                inventoryMap.clear();
                 totalProducts = 0;
                 refreshInventoryTable();
             });
@@ -371,13 +373,13 @@ public class InventoryController extends BaseController<Product> {
 
     /** 把内存中的商品映射刷到表格（仅 FX 线程调用） */
     private void refreshInventoryTable() {
-        inventoryList = FXCollections.observableArrayList(inventoryMap.values());
+        inventoryList.setAll(inventoryMap.values());
         inventoryTable.setItems(inventoryList);
         updateCountLabel();
     }
 
     private void setLoadedProducts(java.util.Collection<Product> products) {
-        inventoryMap = new HashMap<>();
+        inventoryMap.clear();
         for (Product product : products) {
             inventoryMap.put(product.id, product);
         }

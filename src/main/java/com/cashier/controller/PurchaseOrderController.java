@@ -98,9 +98,11 @@ public class PurchaseOrderController {
     @FXML
     private Button submitApprovalButton;
 
-    private ObservableList<PurchaseOrder> orderList;
-    private Map<Integer, PurchaseOrder> orders;
-    private Map<Integer, Supplier> suppliers;
+    private ObservableList<PurchaseOrder> orderList = javafx.collections.FXCollections.observableArrayList();
+    // 声明即初始化：供应商与订单是两个独立的异步加载器，任一先完成都会调用 filterOrders()，
+    // 而它同时读这两张表 —— 曾经因此抛 NPE（Windows 上实测：orders 为 null）
+    private final Map<Integer, PurchaseOrder> orders = new HashMap<>();
+    private final Map<Integer, Supplier> suppliers = new HashMap<>();
 
     /**
      * 初始化方法
@@ -152,7 +154,7 @@ public class PurchaseOrderController {
         UIOptimizer.runInBackground(
             () -> DAOFactory.getInstance().getSupplierDAO().findByStatus(true, PURCHASE_SUPPLIER_LIMIT),
             supplierData -> {
-                suppliers = new HashMap<>();
+                suppliers.clear();
                 for (Supplier supplier : supplierData) {
                     suppliers.put(supplier.id, supplier);
                 }
@@ -161,7 +163,7 @@ public class PurchaseOrderController {
             },
             e -> {
                 logger.error("加载供应商数据失败", e);
-                suppliers = new HashMap<>();
+                suppliers.clear();
             });
     }
 
@@ -172,7 +174,7 @@ public class PurchaseOrderController {
         UIOptimizer.runInBackground(
             () -> DAOFactory.getInstance().getPurchaseOrderDAO().findRecent(PURCHASE_ORDER_LIMIT),
             orderData -> {
-                orders = new HashMap<>();
+                orders.clear();
                 for (PurchaseOrder order : orderData) {
                     orders.put(order.id, order);
                 }
@@ -181,7 +183,7 @@ public class PurchaseOrderController {
             e -> {
                 logger.error("加载采购订单数据失败", e);
                 showError(I18nManager.getInstance().get("runtime.purchase_order_load_failed", e.getMessage()));
-                orders = new HashMap<>();
+                orders.clear();
                 filterOrders();
             });
     }

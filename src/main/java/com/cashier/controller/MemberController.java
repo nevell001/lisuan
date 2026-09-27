@@ -81,8 +81,9 @@ public class MemberController extends BaseController<Member> {
     @FXML
     private Button rechargeButton;
 
-    private ObservableList<Member> memberList;
-    private Map<String, Member> members;
+    // 声明即初始化：memberList 由异步加载赋值，而搜索（同样是异步）会经 updateCountLabel 读它
+    private final ObservableList<Member> memberList = FXCollections.observableArrayList();
+    private Map<String, Member> members = new java.util.HashMap<>();
     private long totalMembers;
 
     /**
@@ -142,7 +143,7 @@ public class MemberController extends BaseController<Member> {
                 Platform.runLater(() -> {
                     members = memberMap;
                     totalMembers = total;
-                    memberList = FXCollections.observableArrayList(members.values());
+                    memberList.setAll(members.values());
                     memberTable.setItems(memberList);
                     updateCountLabel();
                 });
@@ -152,7 +153,7 @@ public class MemberController extends BaseController<Member> {
                     showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
                     members = new java.util.HashMap<>();
                     totalMembers = 0;
-                    memberList = FXCollections.observableArrayList(members.values());
+                    memberList.setAll(members.values());
                     memberTable.setItems(memberList);
                     updateCountLabel();
                 });

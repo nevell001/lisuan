@@ -116,8 +116,9 @@ public class ShiftController {
     @FXML
     private javafx.scene.control.ScrollPane chartsScrollPane;
 
-    private ObservableList<Shift> shiftList;
-    private List<Shift> allShifts;
+    private ObservableList<Shift> shiftList = javafx.collections.FXCollections.observableArrayList();
+    // 声明即初始化：这些集合由异步回调赋值，别处可能在数据到达前读它（Windows 实测过 NPE）
+    private List<Shift> allShifts = new java.util.ArrayList<>();
     private com.cashier.model.User currentUser;
 
     /**
