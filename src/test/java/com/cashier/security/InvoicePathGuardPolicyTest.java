@@ -27,6 +27,11 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  * （读或写：{@code new File}、{@code Files.*}、{@code Path.of}、{@code FileInputStream}…），
  * 测试立即失败，并要求**同一次提交内**实现路径校验后再把这个站点登记进
  * {@link #VALIDATED_READ_SITES}（每条都要注明校验方式，与仓库其它白名单的做法一致）。</p>
+ *
+ * <p><b>已知边界</b>：解引用检测按"使用点同一行或前后三行"匹配，覆盖
+ * {@code Path.of(invoice.pdfPath)} 这类直接写法；若有人先把路径存进局部变量、十几行后再打开，
+ * 本门禁抓不到——这种间接用法要靠 code review。要收紧的话，把匹配范围从"±3 行"改成
+ * "所在方法体内"即可，但会引入误报（迁移/DDL 方法里同时有列名与文件操作），需一并处理白名单。</p>
  */
 @DisplayName("发票路径触发条件门禁")
 class InvoicePathGuardPolicyTest {
