@@ -158,6 +158,122 @@ class HardcodedUiTextPolicyTest {
             "打印预览按钮应通过 I18nManager 取名");
     }
 
+    /**
+     * 状态栏文案不得硬编码——**全仓库**、**跨行/表达式**都算。
+     *
+     * <p>为什么单列一条：此前这条规则只扫已迁移文件里的 `updateStatus/updateWarning("中文…")`，
+     * 而实际漏了两种写法——① 中文写在**续行**（`updateSuccess("商品删除成功: "\n + name)`）；
+     * ② 第一实参是**三元/拼接表达式**。于是"全仓库状态栏硬编码为 0"这个结论是错的，
+     * 现在改为：对 `src/main` 全量扫描状态栏调用，跳过注释后用**字符串字面量**判中文
+     * （i18n key 全是 ASCII，所以参数里出现中文字面量必是硬编码）。</p>
+     *
+     * <p>注意 `StatusBarManager.LEGACY_STATUS_KEYS` 那张"中文串 → key"的兼容映射**不在**本规则范围内：
+     * 它是兜底翻译表（不是调用实参），但它的存在会让这类硬编码在运行时被翻译，
+     * 从而掩盖问题——所以调用方应直接传 key，不要依赖它。</p>
+     */
+    @Test
+    @DisplayName("状态栏文案不得硬编码（全仓库、跨行表达式）")
+    void statusBarTextIsNeverHardcodedRepoWide() throws IOException {
+        List<String> violations = new ArrayList<>();
+        int checked = 0;
+        for (Path file : mainJavaSources()) {
+            String text = Files.readString(file);
+            Matcher call = STATUS_BAR_CALL.matcher(text);
+            while (call.find()) {
+                int open = text.indexOf('(', call.start());
+                int end = matchingParen(text, open);
+                if (end < 0) {
+                    continue;
+                }
+                checked++;
+                String arguments = text.substring(open + 1, end);
+                for (String literal : stringLiterals(arguments)) {
+                    if (CJK.matcher(literal).find()) {
+                        int line = text.substring(0, open).split("\n", -1).length;
+                        violations.add(relative(file) + ":" + line + "  →  " + literal);
+                    }
+                }
+            }
+        }
+        assertTrue(checked > 50, "只扫到 " + checked + " 处状态栏调用（2026-09 实际 97 处），识别规则可能失效（本门禁会变空转）");
+        assertTrue(violations.isEmpty(),
+            "状态栏文案仍是硬编码中文（切到 en/zh_TW 后不会翻译；日志与注释里的中文不算）。"
+                + "请改为 `I18nManager.getInstance().get(\"key\")` 或复用既有 key：\n  "
+                + String.join("\n  ", violations));
+    }
+
+    /** 状态栏写入入口（含 touch POS 用的 updateSuccess/Error/Warning）。 */
+    private static final Pattern STATUS_BAR_CALL =
+        Pattern.compile("\\.(updateStatus|updateSuccess|updateWarning|updateError|updateInfo)\\s*\\(");
+
+    /** 配对括号：跳过字符串字面量与注释，避免 `get(\"a (b)\")` 之类误判。 */
+    private static int matchingParen(String text, int open) {
+        int depth = 0;
+        for (int i = open; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '"') {
+                i = skipString(text, i);
+            } else if (c == '/' && i + 1 < text.length() && text.charAt(i + 1) == '/') {
+                i = text.indexOf('\n', i);
+                if (i < 0) {
+                    return -1;
+                }
+            } else if (c == '(') {
+                depth++;
+            } else if (c == ')') {
+                depth--;
+                if (depth == 0) {
+                    return i;
+                }
+            }
+        }
+        return -1;
+    }
+
+    private static int skipString(String text, int start) {
+        for (int i = start + 1; i < text.length(); i++) {
+            char c = text.charAt(i);
+            if (c == '\\') {
+                i++;
+            } else if (c == '"') {
+                return i;
+            } else if (c == '\n') {
+                return i - 1;
+            }
+        }
+        return text.length() - 1;
+    }
+
+    /** 取出一段代码里的字符串字面量内容（跳过注释）。 */
+    private static List<String> stringLiterals(String code) {
+        List<String> literals = new ArrayList<>();
+        for (int i = 0; i < code.length(); i++) {
+            char c = code.charAt(i);
+            if (c == '/' && i + 1 < code.length() && code.charAt(i + 1) == '/') {
+                int nl = code.indexOf('\n', i);
+                i = nl < 0 ? code.length() : nl;
+            } else if (c == '"') {
+                int end = skipString(code, i);
+                literals.add(code.substring(i + 1, Math.max(i + 1, end)));
+                i = end;
+            }
+        }
+        return literals;
+    }
+
+    private static List<Path> mainJavaSources() throws IOException {
+        List<Path> files = new ArrayList<>();
+        try (var walk = Files.walk(Path.of("src/main/java"))) {
+            walk.filter(p -> p.toString().endsWith(".java")).forEach(files::add);
+        }
+        assertFalse(files.isEmpty(), "未找到 Java 源码，路径不对？");
+        return files;
+    }
+
+    private static String relative(Path file) {
+        return "src/main/java/" + Path.of("src/main/java").relativize(file);
+    }
+
     private static void collect(String text, Pattern pattern, String file, List<String> violations, int group) {
         Matcher matcher = pattern.matcher(text);
         while (matcher.find()) {

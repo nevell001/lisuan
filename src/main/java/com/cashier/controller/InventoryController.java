@@ -458,7 +458,7 @@ public class InventoryController extends BaseController<Product> {
                 try {
                     if (productDAO.delete(product.id)) {
                         loadTableData();
-                        StatusBarManager.updateSuccess("商品删除成功: " + product.name);
+                        StatusBarManager.updateSuccess(com.cashier.i18n.I18nManager.getInstance().get("status_message.product_deleted", product.name));
                     }
                 } catch (SQLException e) {
                     logger.error("删除商品失败", e);
@@ -513,7 +513,13 @@ public class InventoryController extends BaseController<Product> {
 
             if (controller.isOkClicked()) {
                 loadTableData();
-                StatusBarManager.updateSuccess(item == null ? "商品添加成功" : "商品更新成功");
+                if (item == null) {
+                    StatusBarManager.updateSuccess(com.cashier.i18n.I18nManager.getInstance()
+                        .get("status_message.product_created_plain"));
+                } else {
+                    StatusBarManager.updateSuccess(com.cashier.i18n.I18nManager.getInstance()
+                        .get("status_message.product_updated_plain"));
+                }
                 return true;
             }
         } catch (IOException e) {
@@ -553,7 +559,8 @@ public class InventoryController extends BaseController<Product> {
 
                 if (controller.isOkClicked()) {
                     loadTableData();
-                    StatusBarManager.updateSuccess("快速入库成功: " + selected.name + " (+" + controller.getRestockQuantity() + ")");
+                    StatusBarManager.updateSuccess(com.cashier.i18n.I18nManager.getInstance().get("status_message.quick_restock",
+                        selected.name + " (+" + controller.getRestockQuantity() + ")"));
                     com.cashier.service.AuditService.success(currentUsername, "INVENTORY", "QUICK_RESTOCK",
                         "商品=" + selected.name + ", 数量=" + controller.getRestockQuantity(),
                         controller.getRestockQuantity());
@@ -591,7 +598,7 @@ public class InventoryController extends BaseController<Product> {
     @FXML
     public void handleRefresh() {
         loadTableData();
-        StatusBarManager.updateSuccess("商品列表已刷新");
+        StatusBarManager.updateSuccess(com.cashier.i18n.I18nManager.getInstance().get("status_message.product_list_refreshed"));
     }
 
     /**

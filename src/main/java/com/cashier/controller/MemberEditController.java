@@ -163,6 +163,42 @@ public class MemberEditController {
     }
 
     /**
+     * 受限角色（收银员）不得修改"金额相关"字段：等级、折扣、积分、余额。
+     *
+     * <p>等级与折扣由**积分**推导，故积分必须一起锁；余额是会员储值金额（等同于钱），
+     * 与 REST API 把 {@code POST /api/members/{id}/recharge} 限为 finance/admin 的口径一致。
+     * 收银员的充值走独立的充值流程（会写充值流水），不依赖本对话框。</p>
+     */
+    private boolean sensitiveFieldsEditable = true;
+    private String lockedLevel;
+    private java.math.BigDecimal lockedDiscount;
+    private java.math.BigDecimal lockedPoints;
+    private java.math.BigDecimal lockedBalance;
+
+    /**
+     * 设置能否修改等级/折扣（与 REST API 口径一致：{@code PUT /api/members/{id}} 在
+     * {@code AuthorizationMiddleware} 里限 finance/admin）。
+     *
+     * <p>注意：等级与折扣在 {@link #handleSave()} 里由**积分**推导
+     * （{@code MemberService.calculateLevel(points)}），所以只锁这两个字段挡不住改折扣——
+     * 积分字段必须一起锁；并且保存时把三者还原为打开对话框时的值，
+     * 防止程序化改动（禁用控件本身不阻止代码赋值）绕过。</p>
+     */
+    public void setSensitiveFieldsEditable(boolean editable) {
+        this.sensitiveFieldsEditable = editable;
+        levelComboBox.setDisable(!editable);
+        discountField.setDisable(!editable);
+        pointsField.setDisable(!editable);
+        balanceField.setDisable(!editable);
+        if (!editable && member != null) {
+            lockedLevel = member.level;
+            lockedDiscount = member.getDiscount();
+            lockedPoints = member.getPoints();
+            lockedBalance = member.getBalance();
+        }
+    }
+
+    /**
      * 获取编辑后的会员
      * @return 会员对象
      */
@@ -212,6 +248,16 @@ public class MemberEditController {
                     member.phone, member.points, member.level);
             } catch (Exception e) {
                 logger.error("自动更新会员等级失败", e);
+            }
+
+            // 受限角色：等级/折扣/积分/余额一律还原为打开对话框时的值。
+            // 上面那段由积分推导等级，因此只禁用控件是不够的（程序化赋值照样能改）。
+            if (!sensitiveFieldsEditable && lockedLevel != null) {
+                member.level = lockedLevel;
+                member.discount = lockedDiscount;
+                member.discountRate = lockedDiscount;
+                member.points = lockedPoints;
+                member.balance = lockedBalance;
             }
 
             okClicked = true;

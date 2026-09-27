@@ -811,6 +811,23 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   税额基数都是实付金额、触屏收银台必须计算并落库促销、支付方式筛选
   必须归一化后再比较；`TransactionServiceTest` 覆盖税率小数语义、促销按原价总额计算、
   `selectBestPromotion` 选优；`I18nUiUtilsTest` 覆盖中文/代码支付方式归一化
+- **会员「金额类字段」权限**（TD-017）：等级/折扣/**积分**/**余额** 只允许 admin/finance 修改，
+  **两侧同改**——API 早就由 `AuthorizationMiddleware`（`/api/members/[^/]+` + 写方法）限死，
+  桌面端由 `MemberEditController.setSensitiveFieldsEditable(...)` 按角色禁用（角色判定在
+  `MemberController.showEditDialog`，取不到用户时 fail-closed）。两个易错点：
+  ① 等级与折扣在保存时**由积分推导**（`MemberService.calculateLevel(points)`），
+  只禁用等级/折扣两个控件挡不住改折扣，积分必须一起锁，且保存时把值**还原**（禁用不阻止程序化赋值）；
+  ② 余额是储值金额（等同发钱），与 API 把 `recharge` 限 finance/admin 的口径一致。
+  等级/折扣变更必须写 `MEMBER/MEMBER_LEVEL_DISCOUNT_UPDATED` 审计日志（此前会员路径**完全没有**留痕）。
+  门禁 `MemberPermissionPolicyTest`（3 项，含直接调 `AuthorizationMiddleware.isAllowed` 的行为级断言）。
+  **教训**：判断某接口的角色限制要看**中间件与路由挂载**，不能只看控制器方法体——
+  本条最初的结论（"API 不区分角色"）就是这么写错的。
+- **状态栏文案门禁是全仓库、表达式感知的**（TD-014）：`statusBarTextIsNeverHardcodedRepoWide` 用
+  **平衡括号取实参 + 跳过注释 + 只看字符串字面量**判定，因此续行/三元/拼接都逃不掉；
+  单行 grep 会漏（我据此误报过"全仓库 0 处"）。历史坑：`StatusBarManager` 有一张
+  `LEGACY_STATUS_KEYS`/`PREFIXED_STATUS_KEYS` 兼容映射会把中文串兜底翻译成 key——
+  它让硬编码**在运行时被掩盖**，所以调用方一律直接传 key。另：断言"某操作使用成功级别"要按
+  **文案 key** 判级别（测试助手 `StatusBarAssertions`），不要钉中文文案，否则文案迁 i18n 时门禁会误红
 - **说明文档一致性**（`InstructionsDocPolicyTest`）：`AGENTS.md`（速查，已入库）与 `CLAUDE.md`（权威细节）
   都必须被 git 跟踪；两份文档里**讲"版本号四处同步"的那一句**必须列全
   `AppConstants`/`pom.xml`/`installer/Installer.java`/`.env.example`；

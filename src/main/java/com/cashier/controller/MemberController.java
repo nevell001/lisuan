@@ -244,6 +244,19 @@ public class MemberController extends BaseController<Member> {
             controller.setDialogStage(dialogStage);
             controller.setMember(item);
 
+            // 受限角色（收银员）不能改等级/折扣——与 REST API 保持一致
+            // （PUT /api/members/{id} 在 AuthorizationMiddleware 里限 finance/admin）。
+            // 取不到当前用户时按"不可改"处理（fail-closed）。
+            com.cashier.model.User operator =
+                com.cashier.CashierSystemFXApplication.getInstance().getCurrentUser();
+            boolean canEditSensitiveFields = operator != null
+                && ("admin".equals(operator.role) || "finance".equals(operator.role));
+            controller.setSensitiveFieldsEditable(canEditSensitiveFields);
+
+            // 对话框是就地把值写进 item，故改动前的值必须在 showAndWait 之前取
+            final String levelBefore = item == null ? null : item.level;
+            final java.math.BigDecimal discountBefore = item == null ? null : item.getDiscount();
+
             dialogStage.showAndWait();
 
             if (controller.isOkClicked()) {
@@ -255,7 +268,26 @@ public class MemberController extends BaseController<Member> {
                         DAOFactory.getInstance().getMemberDAO().update(updatedMember);
                     }
                     loadTableData();
-                    updateStatus(item == null ? "会员添加成功: " + updatedMember.name : "会员更新成功: " + updatedMember.name);
+                    String statusKey = item == null
+                        ? "status_message.member_created" : "status_message.member_updated";
+                    updateStatus(com.cashier.i18n.I18nManager.getInstance().get(statusKey, updatedMember.name));
+
+                    // 等级/折扣是敏感字段（直接决定收款金额），改动必须留痕。
+                    // 此前会员路径完全没有操作日志——"谁改了折扣"事后查不到。
+                    boolean levelChanged = item != null && !java.util.Objects.equals(levelBefore, updatedMember.level);
+                    boolean discountChanged = item != null && (discountBefore == null
+                        ? updatedMember.getDiscount() != null
+                        : updatedMember.getDiscount() == null || discountBefore.compareTo(updatedMember.getDiscount()) != 0);
+                    if (levelChanged || discountChanged) {
+                        com.cashier.service.AuditService.success(
+                            operator != null ? operator.username : "unknown",
+                            "MEMBER",
+                            "MEMBER_LEVEL_DISCOUNT_UPDATED",
+                            "会员 " + updatedMember.name + "(" + updatedMember.phone + "): 等级 "
+                                + levelBefore + "→" + updatedMember.level + ", 折扣 "
+                                + discountBefore + "→" + updatedMember.getDiscount(),
+                            1);
+                    }
                     return true;
                 } catch (SQLException e) {
                     logger.error(item == null ? "添加会员失败" : "更新会员失败", e);

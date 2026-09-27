@@ -159,7 +159,11 @@ public class MemberApiController {
                    .json(Map.of("success", false, "message", "会员不存在"));
                 return;
             }
-            
+
+            // 等级/折扣直接决定收款金额，改动必须留痕（此处记录改动前的值）
+            String levelBefore = member.level;
+            BigDecimal discountBefore = member.getDiscount();
+
             // 校验与桌面端（MemberEditController.isInputValid）保持一致：
             // 此前接口可写入 discount=999/负数、任意等级、非法手机号，且手机号冲突会变成 500
             if (request.name != null) {
@@ -209,6 +213,21 @@ public class MemberApiController {
             }
             
             logger.info("更新会员: {}", member.phone);
+
+            // 等级/折扣变更写审计日志（此前会员路径完全没有操作日志）
+            boolean levelChanged = levelBefore == null ? member.level != null : !levelBefore.equals(member.level);
+            boolean discountChanged = discountBefore == null ? member.getDiscount() != null
+                : member.getDiscount() == null || discountBefore.compareTo(member.getDiscount()) != 0;
+            if (levelChanged || discountChanged) {
+                User operator = ctx.attribute("currentUser");
+                com.cashier.service.AuditService.success(
+                    operator != null ? operator.username : "unknown",
+                    "MEMBER",
+                    "MEMBER_LEVEL_DISCOUNT_UPDATED",
+                    "会员 " + member.name + "(" + member.phone + "): 等级 " + levelBefore + "→" + member.level
+                        + ", 折扣 " + discountBefore + "→" + member.getDiscount(),
+                    1);
+            }
             
             // 广播会员更新事件
             com.cashier.api.sync.SyncManager.getInstance().broadcastSyncEvent(

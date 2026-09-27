@@ -55,8 +55,8 @@ class PromotionLoginRechargeFeedbackPolicyTest {
         ));
 
         assertTrue(loginController.contains("StatusBarManager.updateSuccess"));
-        assertTrue(productEditController.contains("StatusBarManager.updateSuccess(\"商品添加成功: \" + product.name)"));
-        assertTrue(productEditController.contains("StatusBarManager.updateSuccess(\"商品更新成功: \" + product.name)"));
+        StatusBarAssertions.assertUsesSuccessLevel(productEditController, "status_message.product_created", "ProductEditController");
+        StatusBarAssertions.assertUsesSuccessLevel(productEditController, "status_message.product_updated", "ProductEditController");
     }
 
     @Test

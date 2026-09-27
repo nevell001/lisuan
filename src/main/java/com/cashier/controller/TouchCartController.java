@@ -383,7 +383,7 @@ public class TouchCartController implements CartViewHost {
             // 对话框已完全关闭，打开交接班窗口（退出模式），交班完成后直接退出
             com.cashier.controller.ShiftController shiftController = openShiftDialog();
             if (shiftController != null && shiftController.isShiftEnded()) {
-                StatusBarManager.updateSuccess("交接班完成，正在退出…");
+                StatusBarManager.updateSuccess(com.cashier.i18n.I18nManager.getInstance().get("status_message.shift_ending_logout"));
                 if (application != null) {
                     application.logoutToLoginView();
                 }
@@ -440,7 +440,7 @@ public class TouchCartController implements CartViewHost {
     private void handleShift() {
         com.cashier.controller.ShiftController controller = openShiftDialog();
         if (controller != null) {
-            StatusBarManager.updateSuccess("交接班操作完成");
+            StatusBarManager.updateSuccess(com.cashier.i18n.I18nManager.getInstance().get("status_message.shift_completed"));
             updateShiftInfo();
         }
     }

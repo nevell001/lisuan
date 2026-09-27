@@ -323,7 +323,7 @@ public class ProductEditController {
             }
         }
 
-        StatusBarManager.updateSuccess("商品添加成功: " + product.name);
+        StatusBarManager.updateSuccess(com.cashier.i18n.I18nManager.getInstance().get("status_message.product_created", product.name));
         showSuccessAlert("runtime.product_added");
         logger.info("商品添加成功: {} ({})", product.name, product.productCode);
         return true;
@@ -354,7 +354,7 @@ public class ProductEditController {
             return false;
         }
 
-        StatusBarManager.updateSuccess("商品更新成功: " + product.name);
+        StatusBarManager.updateSuccess(com.cashier.i18n.I18nManager.getInstance().get("status_message.product_updated", product.name));
         showSuccessAlert("runtime.product_updated");
         logger.info("商品更新成功: {} ({})", product.name, product.productCode);
         return true;

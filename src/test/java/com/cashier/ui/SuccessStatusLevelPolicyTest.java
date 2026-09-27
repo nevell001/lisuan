@@ -18,12 +18,12 @@ class SuccessStatusLevelPolicyTest {
             "src/main/java/com/cashier/controller/InventoryController.java"
         ));
 
-        assertTrue(controller.contains("StatusBarManager.updateSuccess(\"商品删除成功: \" + product.name)"));
-        assertTrue(controller.contains("StatusBarManager.updateSuccess(item == null ? \"商品添加成功\" : \"商品更新成功\")"));
-        assertTrue(controller.contains("StatusBarManager.updateSuccess(\"快速入库成功: \" + selected.name"));
-        assertTrue(controller.contains("StatusBarManager.updateSuccess(\"商品列表已刷新\")"));
-        assertFalse(controller.contains("StatusBarManager.updateStatus(\"商品删除成功"));
-        assertFalse(controller.contains("StatusBarManager.updateStatus(item == null ? \"商品添加成功\""));
+        // 按文案 key 断言级别（不钉中文文案：文案迁 i18n 是 TD-014 的正常演进）
+        StatusBarAssertions.assertUsesSuccessLevel(controller, "status_message.product_deleted", "InventoryController");
+        StatusBarAssertions.assertUsesSuccessLevel(controller, "status_message.product_created_plain", "InventoryController");
+        StatusBarAssertions.assertUsesSuccessLevel(controller, "status_message.product_updated_plain", "InventoryController");
+        StatusBarAssertions.assertUsesSuccessLevel(controller, "status_message.quick_restock", "InventoryController");
+        StatusBarAssertions.assertUsesSuccessLevel(controller, "status_message.product_list_refreshed", "InventoryController");
     }
 
     @Test
@@ -49,7 +49,7 @@ class SuccessStatusLevelPolicyTest {
             "src/main/java/com/cashier/controller/TouchCartController.java"
         ));
 
-        assertTrue(controller.contains("StatusBarManager.updateSuccess(\"交接班完成，正在退出…\")"));
-        assertTrue(controller.contains("StatusBarManager.updateSuccess(\"交接班操作完成\")"));
+        StatusBarAssertions.assertUsesSuccessLevel(controller, "status_message.shift_ending_logout", "TouchCartController");
+        StatusBarAssertions.assertUsesSuccessLevel(controller, "status_message.shift_completed", "TouchCartController");
     }
 }

@@ -21,7 +21,8 @@
 | TD-014 | i18n 硬编码与文档中的测试数过期 | 文档/体验 | **已修复（2026-09）**：可见文案迁完（13 文件门禁）+ 无用 key 清零（-196 key / -60 常量）+ AGENTS.md 入库与一致性门禁；打包向导**明确不译**（开发者工具，POS 界面零引用） | — |
 | TD-015 | `String.format` 用默认 locale 格式化金额（73 处） | 正确性 | **已修复（2026-09）**：73+5 处固定 `Locale.ROOT`，3 项门禁 + 德语 locale 全量验证 | 非中文 locale 部署 |
 | TD-016 | 界面集合字段未初始化，异步回调顺序一变就 NPE | UI 正确性 | **已修复（2026-09）**：14 个控制器 / 25 个字段改为声明即初始化 + 2 项门禁（Windows 实测发现） | 异步加载页面 |
-| TD-017 | 会员等级/折扣的修改权限未按角色区分 | 权限/产品策略 | **待产品决定**：已核实 API 与桌面端**都不限角色**（非 API 单侧缺陷），附候选方案与影响面；收紧须两侧同改 | 会员权限策略 |
+| TD-017 | 会员「金额类字段」的修改权限 | 权限/产品策略 | **已修复（2026-09）**：桌面端按角色锁定等级/折扣/积分/余额（原来只有 API 受限，桌面端更宽松——旧结论写反了）；两条路径补等级/折扣变更审计日志；3 项门禁 + 5 处变异 | 会员权限策略 |
+| TD-018 | 会员充值/编辑的角色口径两侧不一致 | 权限/产品策略 | **待产品决定**：API 限 finance/admin 而桌面端允许收银员充值（方向相反），附两种统一方案；另 API 的 PUT 比桌面端更严 | 充值权限策略 |
 
 > 本节条目来自 2026-09 的全量审计（`mvn verify` 三关全绿的前提下，逐条回读代码 + 真实
 > Javalin 最小复现验证）。
@@ -340,36 +341,99 @@
 
 ---
 
-## TD-017 会员等级/折扣的修改权限未按角色区分（待产品决定）
+## TD-017 会员「金额类字段」的修改权限（已修复，2026-09）
 
-**类别**：权限 / 产品策略　**状态**：**待产品决定**——已给出证据、候选方案与影响面；不是技术缺陷，
-且收紧必须 API 与桌面端同改（见下）
+**类别**：权限 / 产品策略　**状态**：**已修复（2026-09）**——桌面端按角色锁定金额类字段，
+两条路径的等级/折扣变更补上操作日志；剩余两处角色口径不一致登记为 TD-018
 **提出来源**：2026-09 全量审计（权限）
+
+### 先纠正一版错误结论（诚实记录）
+
+本条最早（作为"补充"节）写的是"API `PUT /api/members/{id}` 只要求登录、不区分角色"——**这是错的**。
+核实后的事实：
+
+- `ApiServer` 的 `before` 过滤器挂了 `AuthorizationMiddleware.authorize`，而它的
+  `isFinanceOrAdminPath` 里**早有** `path.matches("/api/members/[^/]+") && isMutating(method)`
+  → `PUT /api/members/{id}` **一直是 finance/admin 专属**，且 `AuthorizationMiddlewareTest` 早就断言了
+  `isAllowed("cashier","PUT","/api/members/10") == false`；
+- 真正的问题在**桌面端**：`MemberEditController` 的等级/折扣/积分/余额字段对任何登录用户可编辑，
+  `MemberController` 里 0 处角色判断 → 收银员虽然过不了 API，却可以直接在界面里改折扣/余额。
+
+即：**桌面端比 API 宽松**（方向与本条原先写的相反）。原始"补充"节是基于阅读控制器代码得出的推断，
+没有回查中间件——**教训：判断某个接口的角色限制，要看中间件与路由挂载，不能只看控制器方法体。**
+
+### 已修复
+
+**桌面端按角色锁定金额类字段**（`MemberController.showEditDialog` → `MemberEditController`）：
+
+- 角色判定：`currentUser != null && (admin || finance)`，取不到用户时按**不可改**处理（fail-closed）；
+- 锁定字段：等级、折扣、**积分**、**余额**。为什么不止两个：
+  - 等级与折扣在 `handleSave` 里由 **积分**推导（`MemberService.calculateLevel(points)`）——
+    只禁用等级/折扣两个控件，收银员改积分即可改折扣；
+  - 余额是会员储值金额，等同"发钱"，且 API 的 `POST /api/members/{id}/recharge` 本就限 finance/admin
+    （收银员充值走独立充值流程，会写充值流水，不依赖本对话框）；
+- 仅禁用控件不够（禁用不阻止程序化赋值、也不阻止上面那段推导覆盖），因此保存时把四个字段
+  **还原为打开对话框时的值**，且还原发生在"按积分推导等级"**之后**。
+
+**等级/折扣变更补操作日志**：核实发现会员的建档/修改/充值路径**此前完全没有** `operation_logs`
+（写日志的是交易、退货、审计等路径）——"谁把折扣改成 0.5 折"事后查不到。现两条路径都在
+等级/折扣真正发生变化时写 `MEMBER/ MEMBER_LEVEL_DISCOUNT_UPDATED`（含旧值→新值）：
+
+- 桌面：`MemberController.showEditDialog`（改动前的值在 `showAndWait()` **之前**快照，
+  因为对话框是就地把值写进 `item`）；
+- API：`MemberApiController.update`（操作员取 `ctx.attribute("currentUser")`）。
+
+### 门禁与变异验证
+
+`com.cashier.api.middleware.MemberPermissionPolicyTest`（3 项）：
+
+1. **行为级**（直接调 `AuthorizationMiddleware.isAllowed`）：cashier 改会员 = false，
+   finance/admin = true，**且 cashier 建档（`POST /api/members`）仍为 true**——本次只收紧金额类字段，
+   "建档是收银台日常操作"这条产品口径不变；
+2. 桌面端：必须提供 `setSensitiveFieldsEditable`，四个字段都 `setDisable(!editable)`，
+   还原语句必须存在且在"按积分推导等级"之后，`MemberController` 必须传角色判定结果（admin/finance）；
+3. 两条路径都必须写 `MEMBER_LEVEL_DISCOUNT_UPDATED`。
+
+变异验证（5 处，全部确认变红后还原）：① 桌面不再按角色锁定；② 删掉保存时的还原；
+③ API 侧不留痕；④ **放宽 API 的会员写权限**（删掉 `isFinanceOrAdminPath` 里的 members 子句，
+行为级断言立刻红）；⑤ 状态栏文案改回**续行**硬编码（见 TD-014）。
+
+### 残留（已登记为 TD-018，需产品决定）
+
+- **API 比桌面端更严**：`PUT /api/members/{id}` 对 cashier 完全关闭（连姓名/生日也改不了），
+  桌面端只锁金额类字段。方向上无害（更严），但两侧口径不一致；
+- **充值的角色口径相反**：API 的 `POST /api/members/{id}/recharge` 限 finance/admin，
+  而桌面端收银员可自由充值——两边必有一边与业务不符，见 TD-018。
+
+
+## TD-018 会员充值/编辑的角色口径两侧不一致（待产品决定）
+
+**类别**：权限 / 产品策略　**状态**：**待产品决定**——2026-09 修 TD-017 时顺带核实出的两处不一致；
+不动代码，等口径定下来再一起改
+**提出来源**：2026-09 全量审计（权限，TD-017 复核）
 
 ### 现状（已核实）
 
-- API：`PUT /api/members/{id}`（`ApiServer:199`）只要求登录、**不区分角色**；`MemberApiController.update`
-  只校验"值合法"（等级 ∈ 普通/银卡/金卡/钻石、折扣 0..10），不校验"该角色有权改折扣"。
-- 桌面端：同样**没有角色门禁**——`MemberEditController` 的 `levelComboBox`/`discountField` 对任何登录用户
-  可编辑，`MemberController` 里 0 处角色判断，导航按钮 `membersBtn` 对三种角色一律可见。
+| 行为 | REST API | 桌面端 |
+|---|---|---|
+| 改等级/折扣/积分/余额 | **禁止** cashier（`PUT /api/members/{id}` 限 finance/admin） | 已按 TD-017 收紧为禁止 |
+| 改姓名/生日等非金额字段 | **禁止** cashier（同上，整个 PUT 被拦） | 允许（只锁金额类字段） |
+| 会员充值 `POST /api/members/{id}/recharge` | **禁止** cashier | **允许**（充值按钮对收银员开放） |
+| 建档 `POST /api/members` | 允许 | 允许 |
 
-所以这**不是"API 比桌面端弱"**：两边都开放。真正的问题是业务规则——**收银员是否可以自行修改会员
-等级与折扣**（折扣直接决定收款金额，属于可被滥用的权限）。
+### 为什么需要产品决定
 
-### 候选方案
+充值是最典型的收银台日常操作（顾客当面充卡），API 却把它限为 finance/admin——要么 API 的口径错了，
+要么门店实际不允许收银员充值。两条路的改法完全相反，且都涉及权限，不适合由我单方面决定：
 
-1. **收紧**：`PUT /api/members/{id}` 与桌面端编辑弹窗的"等级/折扣"限定 finance/admin（建档、充值、
-   联系方式修改仍对 cashier 开放）。必须**两侧同改**，否则会反过来造成"API 比桌面端严"的新不一致；
-   并补门禁防止只改一边。
-2. **维持现状**：若门店实际就是"收银员可自主发卡/给折扣"，则把本条记为**有意接受**的决定
-   （另需确认：改折扣目前是否留操作日志）。
+1. **按"收银员可充值"统一**：把 `/api/members/{id}/recharge` 从 `isFinanceOrAdminPath` 移出
+   （同时确认充值金额上限/审批策略是否需要）；
+2. **按"只有财务能充值"统一**：桌面端对收银员隐藏/禁用充值入口，并给收银员一条"请找财务充值"的提示；
+   注意这会改变门店日常流程。
 
-### 决定后才做的事
+另外，`PUT /api/members/{id}` 是否要**拆到字段级**（放开设名/生日给收银员，只拦金额类字段），
+取决于上表第 2 行是否是刻意设计——目前桌面端已经允许，API 更严，方向上无害。
 
-按方案 1：`AuthorizationMiddleware` 增加"改折扣/等级需 finance/admin" + `MemberEditController` 相应字段
-按角色禁用 + 门禁断言两侧同时受限（含变异验证）。
-
----
 
 ## TD-006 非收银台控制器仍在 FX 线程同步查库（约 18 个）
 
@@ -988,6 +1052,28 @@ cmd 的语义是：**带通配符的集合在无匹配时会把该模式原样�
 
 变异验证：往四份语言包各加一个 `runtime.__unused_probe` → `bundlesHaveNoUnusedKeys` 变红（已还原）。
 
+**第五批（状态栏规则升级为全仓库 / 表达式感知）**
+
+- 那 8 处的实际情况分两类：**7 处**被 `StatusBarManager` 的 `LEGACY_STATUS_KEYS` /
+  `PREFIXED_STATUS_KEYS`（"中文串 → key"兼容映射）**兜底翻译**了，界面并不会露中文；
+  **1 处**（`TouchCartController` 的「交接班完成，正在退出…」）**真未翻译**，切到 en 会是中文。
+  现全部改为显式 i18n 调用（新增 1 个 key `status_message.shift_ending_logout`，四份语言包同步）；
+  库存那处三元拆成 if/else，避免 `get(cond ? A : B)` 这种门禁不喜欢的形状。
+- 新规则 `HardcodedUiTextPolicyTest.statusBarTextIsNeverHardcodedRepoWide`：扫 `src/main` 全部 `.java` 的
+  `updateStatus/updateSuccess/updateWarning/updateError/updateInfo` 调用，**平衡括号取实参、跳过注释、
+  只看字符串字面量**里是否有中文（i18n key 全 ASCII，故参数里有中文字面量必是硬编码）——
+  续行、三元、拼接都逃不掉；我上一轮正是被单行 grep 骗过。防空转：扫到的调用数须 > 50（2026-09 实际 97 处）。
+  变异验证：把 `ProductEditController` 的文案改回**续行**中文 → 变红。
+- **兼容映射表的双面性**：它让迁移期不露中文，但**会让硬编码在运行时被翻译，从而掩盖问题**
+  （源码门禁看不见、复制到别处就失效、未命中时 `localizeStatus` 原样返回中文=静默不翻译）。
+  因此调用方一律直接传 key，这张表只当安全网。
+- **顺带修好两条被"文案迁移"打破的门禁**：`SuccessStatusLevelPolicyTest` 与
+  `PromotionLoginRechargeFeedbackPolicyTest.successFeedbackUsesSuccessLevel` 原本钉的是
+  `updateSuccess("商品删除成功: " + name)` 这类**硬编码完整文本**，于是把文案迁到 i18n 会被误判成
+  "不再使用成功级别"。现改为按**文案 key 断言级别**（新增测试助手 `StatusBarAssertions`：
+  取 key 所在语句，断言用 `updateSuccess(` 且未回退 `updateStatus(`）——门禁的意图是"级别"，
+  不该与文案字面量耦合。
+
 变异验证：① 打印预览按钮改回 `new Button("打印")` → 1、4 变红；
 ② 英文包删掉 `runtime.splash_finishing` → 3 变红（`I18nBundleConsistencyTest` 同时变红）；
 ③ `InventoryView.fxml` 写回 `promptText="全部"` → 2 变红。均确认后还原。
@@ -997,7 +1083,9 @@ cmd 的语义是：**带通配符的集合在无匹配时会把该模式原样�
 - ~~其它控制器里的 17 处状态栏文案~~ **已清零（2026-09，第四批）**：7 个文件 / 17 处全部迁走，
   **全部复用既有 `status_message.*` / `success.export` / `runtime.*_in_progress` key（新增 0 个同值 key，
   只新增 1 个真正不同的文案 `runtime.backup_already_running`）**；门禁 `MIGRATED_FILES` 扩到 13 个文件，
-  全仓库 `updateStatus/updateWarning("中文")` 扫描结果为 **0**。
+  ~~全仓库 `updateStatus/updateWarning("中文")` 扫描结果为 **0**~~ —— **该结论不准确（2026-09 复核订正）**：
+  那条 grep 要求"中文紧跟左括号"，于是漏掉了中文写在**续行**、或第一实参是三元的写法。
+  用"平衡括号取实参 + 跳过注释 + 只看参数字面量"精确重扫，发现仍有 **8 处**把中文传给状态栏。
 - `PackageWizardController`（89 处中文字面量）与 `SplashWindow` 品牌名以外的文案：打包向导是**维护者工具**
   （不是终端用户界面），优先级低；若要让向导也支持英文，需单独一批
 - ~~159 个无人引用的 bundle key~~ **已清理（2026-09，第五批）**：精确判定后删除 **196 个** key
