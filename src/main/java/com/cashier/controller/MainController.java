@@ -181,7 +181,7 @@ private Button shiftBtn;
         applyStatusLevelStyle(StatusBarManager.getStatusLevel());
 
         // 更新状态
-        StatusBarManager.updateStatus(I18nManager.getInstance().get(I18nKeys.Runtime.STATUS_READY));
+        StatusBarManager.updateStatus(I18nManager.getInstance().get(I18nKeys.Status.READY));
         updateDate();
         updateShiftInfo();
 
@@ -304,12 +304,12 @@ private Button shiftBtn;
 
     private void handleControlActionShortcut(KeyEvent event) {
         switch (event.getCode()) {
-            case S -> consumeShortcut(event, () -> updateStatus(I18nManager.getInstance().get(I18nKeys.Runtime.STATUS_DATA_SAVED)));
+            case S -> consumeShortcut(event, () -> updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.DATA_SAVED)));
             case F -> consumeShortcut(event, event.isShiftDown()
                 ? this::handleGlobalSearch
                 : () -> showPlaceholder(I18nManager.getInstance().get(I18nKeys.Common.SEARCH), "🔍", I18nManager.getInstance().get(I18nKeys.Runtime.FEATURE_SEARCH_IN_DEVELOPMENT)));
             case D -> consumeShortcut(event, this::handleExportData);
-            case R -> consumeShortcut(event, () -> updateStatus(I18nManager.getInstance().get(I18nKeys.Runtime.STATUS_REFRESHED)));
+            case R -> consumeShortcut(event, () -> updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.REFRESHED)));
             case Q -> consumeShortcut(event, this::handleExit);
             case A -> event.consume();
             case E -> consumeShortcut(event, () -> showPlaceholder(I18nManager.getInstance().get(I18nKeys.Common.EDIT), "✏️", I18nManager.getInstance().get(I18nKeys.Runtime.FEATURE_EDIT_IN_DEVELOPMENT)));
@@ -597,7 +597,7 @@ private Button shiftBtn;
     @FXML
     public void handleUserManagement() {
         if (!requirePermission(User.PERMISSION_MANAGE_USERS)) return;
-        updateStatus("用户管理");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.USER_MANAGEMENT));
         setActiveButton(userManagementBtn);
         
         try {
@@ -620,7 +620,7 @@ private Button shiftBtn;
     @FXML
     public void handleDataBackup() {
         if (!requirePermission(User.PERMISSION_BACKUP_RESTORE)) return;
-        updateStatus(I18nManager.getInstance().get(I18nKeys.Runtime.STATUS_DATA_BACKUP));
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Menu.DATA_BACKUP));
 
         // 创建备份目录（快速文件操作留在 FX 线程）
         String timestamp = LocalDateTime.now(ZoneId.systemDefault()).format(com.cashier.util.DateTimeFormats.BACKUP_TIMESTAMP);
@@ -648,7 +648,7 @@ private Button shiftBtn;
     @FXML
     public void handleDataRestore() {
         if (!requirePermission(User.PERMISSION_BACKUP_RESTORE)) return;
-        updateStatus(I18nManager.getInstance().get(I18nKeys.Runtime.STATUS_DATA_RESTORE));
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Menu.DATA_RESTORE));
         
         // 列出可用的备份目录
         File projectDir = new File(System.getProperty(SystemPropertyKeys.USER_DIR));
@@ -720,7 +720,7 @@ private Button shiftBtn;
     }    @FXML
     public void handleExportData() {
         if (!requirePermission(User.PERMISSION_EXPORT_DATA)) return;
-        updateStatus("导出数据");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.EXPORT_DATA));
         FXUtils.showInfoAlert(I18nManager.getInstance().get(I18nKeys.Runtime.IN_DEVELOPMENT_TITLE),
             I18nManager.getInstance().get(I18nKeys.Runtime.FEATURE_EXPORT_IN_DEVELOPMENT));
     }
@@ -795,7 +795,7 @@ private Button shiftBtn;
     public void handleLightTheme() {
         if (application != null) {
             application.applyTheme(application.getPrimaryStage().getScene(), "light");
-            updateStatus("已切换到浅色主题");
+            updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.THEME_LIGHT));
         }
     }
 
@@ -803,7 +803,7 @@ private Button shiftBtn;
     public void handleDarkTheme() {
         if (application != null) {
             application.applyTheme(application.getPrimaryStage().getScene(), "dark");
-            updateStatus("已切换到深色主题");
+            updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.THEME_DARK));
         }
     }
 
@@ -811,7 +811,7 @@ private Button shiftBtn;
     public void handleLiSuanTheme() {
         if (application != null) {
             application.applyTheme(application.getPrimaryStage().getScene(), "lisuan");
-            updateStatus("已切换到 LiSuan 主题");
+            updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.THEME_LISUAN));
         }
     }
 
@@ -843,7 +843,7 @@ private Button shiftBtn;
     @FXML
     public void handleInventory() {
         if (!requirePermission(User.PERMISSION_VIEW_INVENTORY)) return;
-        updateStatus("商品管理");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.INVENTORY));
         setActiveButton(inventoryBtn);
         
         try {
@@ -953,7 +953,7 @@ private Button shiftBtn;
     @FXML
     public void handleTransactions() {
         if (!requirePermission(User.PERMISSION_VIEW_TRANSACTIONS)) return;
-        updateStatus("交易记录");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.TRANSACTIONS));
         setActiveButton(transactionsBtn);
 
         try {
@@ -975,7 +975,7 @@ private Button shiftBtn;
     @FXML
     public void handleMembers() {
         if (!requirePermission(User.PERMISSION_MANAGE_MEMBERS)) return;
-        updateStatus("会员管理");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.MEMBERS));
         setActiveButton(membersBtn);
         
         try {
@@ -997,7 +997,7 @@ private Button shiftBtn;
     @FXML
     public void handleSupplier() {
         if (!requirePermission(User.PERMISSION_MANAGE_PURCHASE)) return;
-        updateStatus("供应商管理");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.SUPPLIER));
         setActiveButton(supplierBtn);
 
         try {
@@ -1019,7 +1019,7 @@ private Button shiftBtn;
     @FXML
     public void handlePurchaseOrder() {
         if (!requirePermission(User.PERMISSION_MANAGE_PURCHASE)) return;
-        updateStatus("采购订单");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.PURCHASE_ORDER));
         setActiveButton(purchaseOrderBtn);
 
         try {
@@ -1041,7 +1041,7 @@ private Button shiftBtn;
     @FXML
     public void handlePurchaseApproval() {
         if (!requirePermission(User.PERMISSION_MANAGE_PURCHASE)) return;
-        updateStatus("采购审批");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.PURCHASE_APPROVAL));
         setActiveButton(purchaseApprovalBtn);
 
         try {
@@ -1064,7 +1064,7 @@ private Button shiftBtn;
     @FXML
     public void handlePurchaseInbound() {
         if (!requirePermission(User.PERMISSION_MANAGE_PURCHASE)) return;
-        updateStatus("采购入库");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.PURCHASE_INBOUND));
         setActiveButton(purchaseInboundBtn);
 
         try {
@@ -1087,7 +1087,7 @@ private Button shiftBtn;
     @FXML
     public void handleInventoryCheck() {
         if (!requirePermission(User.PERMISSION_MANAGE_INVENTORY)) return;
-        updateStatus("库存盘点");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.INVENTORY_CHECK));
         setActiveButton(inventoryCheckBtn);
 
         try {
@@ -1109,7 +1109,7 @@ private Button shiftBtn;
     @FXML
     public void handleStatistics() {
         if (!requirePermission(User.PERMISSION_VIEW_REPORTS)) return;
-        updateStatus("数据统计");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.STATISTICS));
         setActiveButton(statisticsBtn);
 
         try {
@@ -1131,7 +1131,7 @@ private Button shiftBtn;
     @FXML
     public void handleInventoryAlert() {
         if (!requirePermission(User.PERMISSION_VIEW_INVENTORY)) return;
-        updateStatus("库存预警");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.INVENTORY_ALERT));
         setActiveButton(inventoryReportBtn);
 
         try {
@@ -1171,7 +1171,7 @@ private Button shiftBtn;
     @FXML
     public void handlePurchaseReport() {
         if (!requirePermission(User.PERMISSION_VIEW_REPORTS)) return;
-        updateStatus("采购报表");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.PURCHASE_REPORT));
         setActiveButton(purchaseReportBtn);
 
         try {
@@ -1193,7 +1193,7 @@ private Button shiftBtn;
     @FXML
     public void handleInventoryReport() {
         if (!requirePermission(User.PERMISSION_VIEW_REPORTS)) return;
-        updateStatus("库存报表");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.INVENTORY_REPORT));
         setActiveButton(inventoryReportBtn);
 
         try {
@@ -1215,7 +1215,7 @@ private Button shiftBtn;
     @FXML
     public void handleProfitReport() {
         if (!requirePermission(User.PERMISSION_VIEW_REPORTS)) return;
-        updateStatus("利润分析");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.PROFIT_REPORT));
         setActiveButton(profitReportBtn);
 
         try {
@@ -1237,7 +1237,7 @@ private Button shiftBtn;
     @FXML
     public void handleReturnReport() {
         if (!requirePermission(User.PERMISSION_VIEW_REPORTS)) return;
-        updateStatus("退货报表");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.RETURN_REPORT));
         setActiveButton(returnReportBtn);
 
         try {
@@ -1249,7 +1249,7 @@ private Button shiftBtn;
             ReturnReportController controller = loader.getController();
 
             // 创建内容标签页
-            createContentTab(I18nManager.getInstance().get("nav.return_report"), root);
+            createContentTab(I18nManager.getInstance().get(I18nKeys.Nav.RETURN_REPORT), root);
 
         } catch (IOException e) {
             showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
@@ -1259,7 +1259,7 @@ private Button shiftBtn;
     @FXML
     public void handlePromotions() {
         if (!requirePermission(User.PERMISSION_MANAGE_PROMOTIONS)) return;
-        updateStatus("促销管理");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.PROMOTIONS));
         setActiveButton(promotionsBtn);
 
         try {
@@ -1281,7 +1281,7 @@ private Button shiftBtn;
     @FXML
     public void handleShift() {
         if (!requirePermission(User.PERMISSION_MANAGE_SHIFT)) return;
-        updateStatus("交接班");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Runtime.SHIFT_HANDOVER));
         setActiveButton(shiftBtn);
 
         try {
@@ -1309,7 +1309,7 @@ private Button shiftBtn;
     @FXML
     public void handleSettings() {
         if (!requirePermission(User.PERMISSION_MANAGE_SETTINGS)) return;
-        updateStatus("系统设置");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.SETTINGS));
         setActiveButton(settingsBtn);
 
         try {
@@ -1356,7 +1356,7 @@ private Button shiftBtn;
     @FXML
     public void handleReturnOrder() {
         if (!requirePermission(User.PERMISSION_MANAGE_RETURNS)) return;
-        updateStatus("退货订单");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.RETURN_ORDER));
         setActiveButton(returnOrderBtn);
 
         try {
@@ -1375,7 +1375,7 @@ private Button shiftBtn;
     @FXML
     public void handleReturnApproval() {
         if (!requirePermission(User.PERMISSION_APPROVE_RETURNS)) return;
-        updateStatus("退货审批");
+        updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.RETURN_APPROVAL));
         setActiveButton(returnApprovalBtn);
 
         try {
@@ -1385,7 +1385,7 @@ private Button shiftBtn;
             ReturnApprovalController controller = loader.getController();
             controller.setCurrentUser(currentUser);
 
-            createContentTab(I18nManager.getInstance().get("nav.return_approval"), root);
+            createContentTab(I18nManager.getInstance().get(I18nKeys.Nav.RETURN_APPROVAL), root);
 
         } catch (IOException e) {
             showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + e.getMessage());
@@ -1561,7 +1561,7 @@ private Button shiftBtn;
     private void refreshCurrentTab() {
         Tab selectedTab = tabPane.getSelectionModel().getSelectedItem();
         if (selectedTab == null) {
-            updateStatus("无需刷新");
+            updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.NO_REFRESH_NEEDED));
             return;
         }
 
@@ -1576,7 +1576,7 @@ private Button shiftBtn;
         }
         if (title == null) {
             // 欢迎页等未注册内容页无需刷新
-            updateStatus("无需刷新");
+            updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.NO_REFRESH_NEEDED));
             return;
         }
 
@@ -1588,12 +1588,12 @@ private Button shiftBtn;
         // 按标题重新打开对应界面（标题 = 当前语言的 nav 文案，与建页时使用的 key 一致）
         Runnable action = resolveRefreshAction(title);
         if (action == null) {
-            updateStatus("无法刷新: " + title);
+            updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.REFRESH_FAILED, title));
             return;
         }
         action.run();
 
-        updateStatus("已刷新: " + title);
+        updateStatus(I18nManager.getInstance().get(I18nKeys.StatusMessage.REFRESHED_ITEM, title));
     }
 
     /**

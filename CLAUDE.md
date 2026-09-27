@@ -740,9 +740,14 @@ When working on files that still use the old `ProductDAO`, consider migrating th
 - **界面可见文案不得硬编码**（TD-014）：`HardcodedUiTextPolicyTest` 守住已迁移的文件——
   `setTitle/setContentText/setText/setPromptText/show*Alert/showPlaceholder` 与 `new Label/Button("中文")`
   不得含中文（**日志与注释里的中文不算**）；FXML 的 `text/promptText/title` 必须是 `%key`
-  （运行时会被覆盖的设计期占位走白名单，且白名单每一条都要注明覆盖它的代码位置）。
-  迁移新文件时把路径加进该测试的 `MIGRATED_FILES`。注意 `RechargeController` 的支付方式：
-  **下拉项仍需保留规范中文落库值**（TD-002），只能通过 `StringConverter` 本地化显示层
+  （运行时会被覆盖的设计期占位走白名单，且白名单每一条都要注明覆盖它的代码位置）；
+  `updateStatus`/`updateWarning` 也在守卫范围内——状态栏文案应**复用** `nav.*` 等既有 key，
+  别新建同值 key。迁移新文件时把路径加进该测试的 `MIGRATED_FILES`。
+  注意 `RechargeController` 的支付方式：**下拉项仍需保留规范中文落库值**（TD-002），
+  只能通过 `StringConverter` 本地化显示层
+- `I18nKeys.java` 里有**嵌套类**（`Menu.Help`、`Menu.Theme`、`Nav`、`Runtime`、`StatusMessage`…）：
+  手工或用脚本改这个文件时**不要**"把块内常量行排序后重排"——那种写法会把嵌套类内的常量压平到外层，
+  编译期才会以 `找不到符号` 暴露。新增常量要么严格落在所属嵌套类内，要么按类整体替换
 - i18n 门禁：`I18nBundleConsistencyTest` 断言三份语言包 key 集合一致、`I18nKeys` 常量齐全、
   源码字面量 i18n 调用 key 齐全（缺 key 时界面会直接显示 key，属 UI 缺陷）
 - 并发安全：`ConcurrentDeductionTest` 多线程验证乐观锁防库存超卖、防会员余额超扣
@@ -1264,9 +1269,8 @@ worker 迭代 `cartItems`（`ObservableList`）、对 `inventoryMap`（普通 `H
   TD-014 部分（文档测试数不再写死、locale 折叠已修，可见文案硬编码待办）；
   TD-010（初始化脚本与 Java 建表对齐）、TD-012（安装脚本失败可见与口令守卫）、
   TD-015（`String.format` 默认 locale）**已修复**；
-  TD-014 第二批判名文案已迁（备份/恢复对话框、充值支付方式显示、打印预览、启动画面、
-  启动失败/字体缺失弹窗、InventoryView promptText）；
-  其余（Windows 启动脚本 TD-011、TD-014 剩余：主界面 28 处状态栏文案与打包向导）仍待处理
+  TD-014 终端用户可见文案已迁完（对话框/占位弹窗/打印预览/启动画面/字体提示/InventoryView、  以及主界面 26 处状态栏文案，均为复用既有 key）；
+  其余（Windows 启动脚本 TD-011、TD-014 剩余：其它控制器 17 处状态栏文案与打包向导）仍待处理
 
 **数据库密码来源（v2.6.0 补强）**
 

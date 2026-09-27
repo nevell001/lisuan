@@ -99,6 +99,9 @@ public final class I18nKeys {
     }
 
     public static final class Menu {
+        public static final String DATA_BACKUP = "menu.data.backup";
+        public static final String DATA_RESTORE = "menu.data.restore";
+
         public static final class Help {
             public static final String ABOUT = "menu.help.about";
 
@@ -147,7 +150,9 @@ public final class I18nKeys {
         public static final String PURCHASE_INBOUND = "nav.purchase_inbound";
         public static final String PURCHASE_ORDER = "nav.purchase_order";
         public static final String PURCHASE_REPORT = "nav.purchase_report";
+        public static final String RETURN_APPROVAL = "nav.return_approval";
         public static final String RETURN_ORDER = "nav.return_order";
+        public static final String RETURN_REPORT = "nav.return_report";
         public static final String SETTINGS = "nav.settings";
         public static final String SHIFT = "nav.shift";
         public static final String STATISTICS = "nav.statistics";
@@ -232,6 +237,7 @@ public final class I18nKeys {
         public static final String SELECT_PROMOTION = "runtime.select_promotion";
         public static final String SELECT_PURCHASE_ORDER = "runtime.select_purchase_order";
         public static final String SELECT_RETURN_ORDER = "runtime.select_return_order";
+        public static final String SHIFT_HANDOVER = "runtime.shift_handover";
         public static final String SPLASH_FINISHING = "runtime.splash_finishing";
         public static final String SPLASH_INITIALIZING = "runtime.splash_initializing";
         public static final String SPLASH_LOADING_DATA = "runtime.splash_loading_data";
@@ -241,12 +247,7 @@ public final class I18nKeys {
         public static final String STARTUP_FAILED_TITLE = "runtime.startup_failed_title";
         public static final String STATUS_APPROVED = "runtime.status.approved";
         public static final String STATUS_COMPLETED = "runtime.status.completed";
-        public static final String STATUS_DATA_BACKUP = "runtime.status_data_backup";
-        public static final String STATUS_DATA_RESTORE = "runtime.status_data_restore";
-        public static final String STATUS_DATA_SAVED = "runtime.status_data_saved";
         public static final String STATUS_PENDING_APPROVAL = "runtime.status.pending_approval";
-        public static final String STATUS_READY = "runtime.status_ready";
-        public static final String STATUS_REFRESHED = "runtime.status_refreshed";
         public static final String STATUS_REJECTED = "runtime.status.rejected";
         public static final String SUBTOTAL = "runtime.subtotal";
         public static final String SUPPLIER_SELECT = "runtime.supplier_select";
@@ -255,6 +256,23 @@ public final class I18nKeys {
         public static final String UI_FONT_MISSING_TITLE = "runtime.ui_font_missing_title";
 
         private Runtime() {
+        }
+    }
+
+    /** 状态栏提示文案（status_message.*）；这些 key 此前只有字面量引用，常量集中在这里。 */
+    public static final class StatusMessage {
+        public static final String DATA_SAVED = "status_message.data_saved";
+        public static final String EXPORT_DATA = "status_message.export_data";
+        public static final String INVENTORY_ALERT = "status_message.inventory_alert";
+        public static final String NO_REFRESH_NEEDED = "status_message.no_refresh_needed";
+        public static final String REFRESHED = "status_message.refreshed";
+        public static final String REFRESHED_ITEM = "status_message.refreshed_item";
+        public static final String REFRESH_FAILED = "status_message.refresh_failed";
+        public static final String THEME_DARK = "status_message.theme_dark";
+        public static final String THEME_LIGHT = "status_message.theme_light";
+        public static final String THEME_LISUAN = "status_message.theme_lisuan";
+
+        private StatusMessage() {
         }
     }
 

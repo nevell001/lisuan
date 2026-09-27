@@ -18,7 +18,7 @@
 | TD-011 | Windows 启动脚本把未匹配的 JAR 通配符当路径，静默跳过构建 | 发布 | 待处理 | Windows 启动 |
 | TD-012 | install.sh / docker-init.sh 静默成功与占位口令 | 运维 | **已修复（2026-09）**：失败可见 + 口令硬守卫 + 容器名同源 + 删未实现开关，4 项门禁 | 安装脚本 |
 | TD-013 | 版本号门禁只覆盖 4 处中的 2 处 | 发布 | **已修复（2026-09）** | 版本管理 |
-| TD-014 | i18n 硬编码与文档中的测试数过期 | 文档/体验 | **部分修复（2026-09）**：运行时可见文案已迁移（30 key，4 项门禁）；主界面状态栏 28 处与打包向导待办 | — |
+| TD-014 | i18n 硬编码与文档中的测试数过期 | 文档/体验 | **主要部分已修复（2026-09）**：终端用户可见文案已迁完（净新增 25 key + 复用既有 key，4 项门禁含状态栏）；剩打包向导与其它 17 处状态栏文案 | — |
 | TD-015 | `String.format` 用默认 locale 格式化金额（73 处） | 正确性 | **已修复（2026-09）**：73+5 处固定 `Locale.ROOT`，3 项门禁 + 德语 locale 全量验证 | 非中文 locale 部署 |
 
 > 本节条目来自 2026-09 的全量审计（`mvn verify` 三关全绿的前提下，逐条回读代码 + 真实
@@ -75,6 +75,10 @@
 > I18nKeys 补常量），含备份/恢复对话框、充值支付方式显示层本地化（落库值不变）、打印预览、
 > 启动画面、启动失败/字体缺失弹窗、`InventoryView.fxml` 的 `promptText`；
 > 加 `HardcodedUiTextPolicyTest`（4 项，含变异验证），FXML 的两处运行时覆盖占位走带理由的白名单。
+>
+> **已修（第十三批）**：TD-014 状态栏收尾——`MainController` 的 26 处 `updateStatus("中文")`
+> 与 2 处带参刷新提示全部迁走（**复用**导航与既有状态 key，净新增 0 个 key），
+> 门禁的调用清单加入 `updateStatus`/`updateWarning`；同时把我上一批多建的 5 个同值 key 去掉、改为复用既有 key。
 
 ---
 
@@ -579,7 +583,8 @@ Windows 干净机器首次运行脚本、或发布前验证脚本门禁时。
 
 ## TD-014 i18n 硬编码与文档中的测试数过期
 
-**类别**：文档 / 体验　**状态**：**部分修复（2026-09）**——运行时可见文案已迁移，主界面状态栏文案待办
+**类别**：文档 / 体验　**状态**：**主要部分已修复（2026-09）**——终端用户可见文案已迁移完毕；
+剩余是打包向导（维护者工具）与无用 key 清理
 **提出来源**：2026-09 全量审计（UI/i18n + 文档）
 
 ### 已修复
@@ -599,6 +604,11 @@ Windows 干净机器首次运行脚本、或发布前验证脚本门禁时。
 把审计点名的硬编码文案全部迁到语言包（新增 30 个 key，`I18nKeys.Runtime` 补常量，
 四份语言包同步；能复用的都复用了，如 `common.cancel`、`app.name`、`runtime.backup_file_success`）：
 
+- **新增 key 数**：第二批新增 30 个，随后发现其中 5 个（`runtime.status_ready`、`status_refreshed`、
+  `status_data_saved`、`status_data_backup`、`status_data_restore`）与既有 key **同值重复**，
+  已改为复用既有 key（`status.ready`、`status_message.refreshed`、`status_message.data_saved`、
+  `menu.data.backup`、`menu.data.restore`）并删除重复项 → **净新增 25 个**；
+  本批（第三批）状态栏文案**全部复用既有 key，新增 0 个**
 - `MainController` 备份/恢复对话框（成功/失败/无备份 → 标题 + 正文，`{0}` 占位）、
   状态栏文案（就绪/数据已保存/已刷新/数据备份/数据恢复）与"功能开发中"占位弹窗（搜索/编辑/批量操作/导出）；
   顺带把该文件里误用的 `i18n.get(...)`（本来没有这个字段）统一为 `I18nManager.getInstance().get(...)`
@@ -612,6 +622,19 @@ Windows 干净机器首次运行脚本、或发布前验证脚本门禁时。
 - `TouchCartView.fxml` 的两处设计期占位（`便利店`、`2026-08-23 星期日`）**保持硬编码**并登记白名单：
   它们都有 `fx:id`，运行时必被覆盖（`TouchCartController` 用设置里的店名与当前日期 `setText`），
   改成语言包只会增加无意义的 key——白名单里逐条注明覆盖它的代码位置
+
+**第三批（状态栏文案）**
+
+`MainController` 里 **26 处** `updateStatus("中文")` + 2 处带参数的拼接（`"无法刷新: " + title`、
+`"已刷新: " + title`）全部迁走。这批文案都是菜单/导航名，直接**复用导航栏与既有状态文案的 key**
+（`nav.transactions`、`nav.members`、`menu.data.backup`、`status.ready`、`status_message.theme_*` 等），
+状态栏与导航项文案因此永远一致；新增常量少量（`Menu.DATA_BACKUP/DATA_RESTORE`、
+`Nav.RETURN_APPROVAL/RETURN_REPORT`、`Runtime.SHIFT_HANDOVER`，
+以及集中 `status_message.*` 的新嵌套类 `I18nKeys.StatusMessage`）。
+
+门禁同步升级：`UI_CALL` 清单加入 `updateStatus`/`updateWarning`，状态栏文案从此也在守卫范围内。
+变异验证：把一处 `updateStatus(I18nManager.getInstance().get(I18nKeys.Nav.TRANSACTIONS))`
+改回 `updateStatus("交易记录")` → 门禁变红（已还原）。
 
 ### 门禁（4 项，全部做过变异验证）
 
@@ -631,9 +654,10 @@ Windows 干净机器首次运行脚本、或发布前验证脚本门禁时。
 
 ### 仍待处理
 
-- **`MainController` 的 28 处 `updateStatus("中文")`**：菜单导航状态提示（用户管理/商品管理/交易记录/
-  主题切换…）。它们是同一类问题但数量多、且都属于"状态栏一句话"，本轮先只做审计点名的对话框与占位弹窗；
-  门禁的调用清单里暂未包含 `updateStatus`，迁移时请连同类一起加进 `UI_CALL`
+- **其它控制器里还有 17 处**硬编码的 `updateStatus/updateWarning` 文案
+  （`SupplierController`、`ShiftController`、`PurchaseInboundController`、`PurchaseOrderController`、
+  `TransactionController` 等）。这些文件尚未纳入 `MIGRATED_FILES`，
+  门禁目前只在已迁移文件上生效——把文件加进列表即可让门禁指出剩余位置（迁移方式同上：优先复用 `nav.*`）
 - `PackageWizardController`（89 处中文字面量）与 `SplashWindow` 品牌名以外的文案：打包向导是**维护者工具**
   （不是终端用户界面），优先级低；若要让向导也支持英文，需单独一批
 - 159 个无人引用的 bundle key（清理需先确认没有 FXML/反射引用）

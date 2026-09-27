@@ -52,7 +52,7 @@ class HardcodedUiTextPolicyTest {
     private static final Pattern UI_CALL = Pattern.compile(
         "(setTitle|setHeaderText|setContentText|setPromptText|setTooltipText|setText|showErrorAlert|"
             + "showInfoAlert|showWarningAlert|showError|showWarning|showInformation|showPlaceholder|"
-            + "showConfirm)\\s*\\(\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
+            + "showConfirm|updateStatus|updateWarning)\\s*\\(\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
 
     /** 直接构造控件时传入的可见文案。 */
     private static final Pattern NEW_CONTROL = Pattern.compile(
@@ -113,16 +113,24 @@ class HardcodedUiTextPolicyTest {
         List<String> bundles = List.of("messages.properties", "messages_zh_CN.properties",
             "messages_zh_TW.properties", "messages_en.properties");
         List<String> keys = List.of(
-            "runtime.status_ready", "runtime.backup_in_progress", "runtime.backup_failed",
-            "runtime.backup_none_found", "runtime.restore_in_progress", "runtime.restore_failed",
+            // 本轮新增并保留的文案 key
+            "runtime.backup_in_progress", "runtime.backup_failed", "runtime.backup_none_found",
+            "runtime.restore_in_progress", "runtime.restore_failed",
             "runtime.print_preview", "runtime.print_button",
             "runtime.splash_starting", "runtime.splash_initializing", "runtime.splash_loading_data",
             "runtime.splash_starting_services", "runtime.splash_finishing",
             "runtime.startup_failed_title", "runtime.startup_failed_detail",
             "runtime.ui_font_missing_title", "runtime.ui_font_missing_detail",
             "runtime.feature_search_in_development", "runtime.feature_edit_in_development",
-            "runtime.feature_batch_in_development", "runtime.status_data_backup",
-            "runtime.status_data_restore", "runtime.status_data_saved", "runtime.status_refreshed");
+            "runtime.feature_batch_in_development", "runtime.feature_export_in_development",
+            "runtime.in_development_title", "runtime.shift_handover",
+            // 状态栏改为复用的既有 key（本轮去重：同值不再新增 key）
+            "menu.data.backup", "menu.data.restore", "status_message.data_saved", "status.ready",
+            "status_message.refreshed", "status_message.refresh_failed", "status_message.refreshed_item",
+            "status_message.export_data", "status_message.inventory_alert",
+            "status_message.no_refresh_needed", "status_message.theme_light",
+            "status_message.theme_dark", "status_message.theme_lisuan",
+            "nav.return_report", "nav.return_approval");
         for (String bundle : bundles) {
             String path = "src/main/resources/com/cashier/i18n/" + bundle;
             String text = Files.readString(Path.of(path));
