@@ -33,15 +33,37 @@ public final class AuthorizationMiddleware {
             return true;
         }
 
-        if (isAdminOnlyPath(method, path)) {
+        String normalized = withoutTrailingSlash(path);
+
+        if (isAdminOnlyPath(method, normalized)) {
             return false;
         }
 
-        if (isFinanceOrAdminPath(method, path)) {
+        if (isFinanceOrAdminPath(method, normalized)) {
             return FINANCE.equals(role);
         }
 
         return true;
+    }
+
+    /**
+     * 判定角色前先去掉末尾斜杠。
+     *
+     * <p>Javalin 6 默认 {@code ignoreTrailingSlashes = true}：{@code PUT /api/members/1/} 照样命中
+     * 路由 {@code /api/members/{id}}，而 {@code ctx.path()} 返回的是**原始 URI**（带斜杠）。
+     * 本类的门禁用 {@code equals}/{@code matches} 做全串比对，多一个斜杠就全部落空 →
+     * 整条角色门禁被跳过：收银员即可退款、改会员折扣/等级/手机号、改开票方信息与支付配置
+     * （2026-09 审计用真实 Javalin 6.1.3 复现的越权，不要删掉这个归一化）。</p>
+     */
+    static String withoutTrailingSlash(String path) {
+        if (path == null || path.isEmpty()) {
+            return "/";
+        }
+        int end = path.length();
+        while (end > 1 && path.charAt(end - 1) == '/') {
+            end--;
+        }
+        return path.substring(0, end);
     }
 
     private static boolean isAdminOnlyPath(String method, String path) {

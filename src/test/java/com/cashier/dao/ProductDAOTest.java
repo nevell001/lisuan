@@ -116,11 +116,16 @@ public class ProductDAOTest extends DatabaseTestBase {
     @Order(7)
     @DisplayName("测试更新商品库存")
     public void testUpdateQuantity() throws SQLException {
+        int versionBefore = DAOFactory.getInstance().getProductDAO().findById(insertedProductId).version;
+
         boolean result = DAOFactory.getInstance().getProductDAO().updateQuantity(insertedProductId, 10);
         assertTrue(result);
 
         Product updated = DAOFactory.getInstance().getProductDAO().findById(insertedProductId);
         assertEquals(60, updated.quantity);
+        assertEquals(versionBefore + 1, updated.version,
+            "相对增减库存也必须递增 version：结账扣库存是 'quantity 绝对值 + WHERE version=?'，"
+                + "不递增就会让并发结账用旧 version 命中并把刚还回的库存覆盖掉");
     }
 
     @Test

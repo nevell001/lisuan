@@ -26,6 +26,24 @@
 | TD-019 | 商品管理页数量显示露出未替换的 `{0}` | 正确性/体验 | **已修复（2026-09，用户实测发现）**：`get(key)` 漏传参；新增"占位符必须传参"门禁（1 项 + 变异验证） | 界面文案 |
 | TD-020 | 深色模式下硬编码亮色背景的块 | 体验/主题 | **已修复（2026-09）**：交班页橙色横条（顶部栏被覆盖成饱和橙 + 分隔条无覆盖）→ 深品牌色/中性色；随后做通用排查又修 `.error-label`/`.validation-error`/`.product-info-card` 等 6 处；门禁改为"硬编码亮色背景的简单类必须被深色主题覆盖"（+变异验证） | 深色主题 |
 | TD-021 | FXML 的 `%key` 引用了带占位符的 key，界面显示 `{0}` | 正确性/体验 | **已修复（2026-09，由 TD-019 顺藤摸瓜发现）**：13 个标签改为空文本 + 删掉 10 个无用 key；门禁 4 项（含"变量 key"与兼容映射表两个盲区，均变异验证） | 界面文案 |
+| TD-022 | F8/命令面板进收银台后导航高亮消失（`checkoutBtn` 在 FXML 里根本不存在） | UI 正确性 | **已修复（2026-09）**：删陈旧字段 + `handleCheckout` 委托 `handleCart()`；新增 FXML↔控制器绑定门禁（3 项 + 4 处变异） | 界面绑定 |
+| TD-023 | 盘点单保存/删除非原子：一次失败会清空明细 | 正确性/数据丢失 | **已修复（2026-09）**：表头+明细（新建/编辑/删除）统一进事务 + 拒绝空明细 + 明细加载失败可见；门禁 2 项 + 变异 | 库存盘点 |
+| TD-024 | 退款还原库存丢弃 UPDATE 结果；相对增减库存不递增 version 被并发覆盖 | 正确性/并发 | **已修复（2026-09）**：消费返回值并留 WARN；`updateQuantityWithConnection` 补 `version = version + 1`（退款/入库/盘点三处受益）；门禁 + 行为测试 | 库存与退款 |
+| TD-025 | 手工开票表头与明细不在同一事务（会留"有金额无明细"的孤儿发票） | 正确性 | **已修复（2026-09）**：改走 `insertWithConnection` + 事务；门禁 + 变异 | 发票 |
+| TD-026 | 建库/建表/迁移失败被 catch 吞掉（启动看似成功，随后页面全报 SQL 错） | 运维/可诊断性 | **已修复（2026-09）**：`initializeDatabase` 抛 `SQLException`，由静态块转成"初始化失败 + 排查指引"；门禁 + 变异 | 启动排障 |
+| TD-027 | `ProductDataImporter` 的 ZIP 分支必抛 `Stream closed`（已实测复现），`importFromGitHub` 零调用方 | 死代码/潜在缺陷 | **待产品决定（2026-09）**：功能是否保留——删死代码，或修 ZIP 解析（关闭 BufferedReader 会连带关掉 ZipInputStream） | 是否还要"从 GitHub 拉商品数据" |
+| TD-028 | Apache POI 5.2.5 受 CVE-2025-31672 影响（poi-ooxml < 5.4.0） | 依赖安全 | **已评估（2026-09）**：本仓库只用 POI **写** xlsx，全仓库没有解析外部 Office 文件的路径 → 该 CVE 不可达；升级到 ≥5.4.0 属加固，非必须 | 依赖升级窗口 |
+| TD-029 | 月报/任意区间报表用 `findByDateRange(start,end)` 全量 JOIN 物化到内存 | 性能 | **待处理（2026-09 审计发现）**：列表接口已有 `limit` 重载，报表侧未用 | 大数据量门店 |
+| TD-030 | 首次登录改密对话框取消后，登录界面永久禁用（只能杀进程） | UI 缺陷 | **待处理（优先）**：`setLoginState(true)` 后成功路径/取消路径都不恢复 | 强制改密 |
+| TD-031 | 网关下单在 FX 线程且 HttpClient 无任何超时 → 收银台可无限卡死 | 体验/健壮性 | **待处理（优先）**：`PaymentService.createPaymentOrder` 直接跑在 FX 线程；`java.net.http` 默认无超时 | 电子支付 |
+| TD-032 | FX 线程同步查库若干处（选品框逐字符搜索、每次购物车变更查促销、登录时同步启动两个服务） | 性能 | **待处理** | 界面流畅度 |
+| TD-033 | 触屏切语言泄漏 scheduler/Timeline/全局监听；`BackupService.start()` 无并发守卫 | 资源泄漏 | **待处理** | 触屏收银台 |
+| TD-034 | 金额/数量口径一批（7 项：发票税额百分比 `setScale(0)` 抛异常、挂单折扣走 double、退款单价取整使 Σ明细≠实付、积分冲减按次取整、充值小数积分被编辑保存截断、`promotions.discount` 列精度与输入不匹配、发票行税与表头差 1 分） | 正确性 | **待处理**：逐条有明确输入→错误输出，详见文末"第五批审计待办" | 对账 |
+| TD-035 | 其它（打包向导 FX 线程违规、`NotificationManager` 定时任务无 try/catch、`hasActiveShift` 吞异常让收银员看到"请先开班"、非 daemon 线程、`CurrencyUtil` HALF_EVEN…） | 杂项 | **待处理** | — |
+| TD-036 | 结尾斜杠绕过**全部**角色门禁（收银员可退款/改会员折扣/改支付配置） | 安全 | **已修复（2026-09）**：`isAllowed` 先归一化末尾斜杠；回归测试覆盖 13 条受控路由 × {正常,`/`,`//`} + 变异验证 | 越权 |
+| TD-037 | 收银员可用 `POST /api/printers/{id}/receipt` 的 `openCashDrawer` 打开钱箱（而 `/cashdrawer` 是管理员专属） | 安全/权限策略 | **待产品决定（2026-09）**：堵住这条等价路径，还是按"收银员本就要开钱箱找零"放开 `/cashdrawer`——两条路的业务含义不同，不擅自改 | 钱箱权限 |
+| TD-038 | `POST /api/invoices/from-transaction` 请求体可自报开票方信息/`createBy`/`taxRate` | 安全 | **待处理（2026-09）**：同一条路由的 `PUT /api/invoices/seller-info` 是管理员专属，此处却可覆盖全局开票方并伪造开票人 | 发票 |
+| TD-039 | `POST /api/invoices/{id}/print` 可写任意 `pdfPath`/`imagePath`；mock 支付模式回调密钥熵低 | 安全 | **待处理（2026-09，低危）**：路径字段目前不被当文件读取（TD-001 门禁守着），影响限于数据伪造；mock 模式仅出现在本地未跟踪配置 | 发票/支付 |
 
 > 本节条目来自 2026-09 的全量审计（`mvn verify` 三关全绿的前提下，逐条回读代码 + 真实
 > Javalin 最小复现验证）。
@@ -1353,3 +1371,302 @@ private final Map<Integer, Product> inventoryMap = new HashMap<>();
 
 ---
 
+---
+
+## TD-022 F8/命令面板进收银台后导航高亮消失（已修复，2026-09 审计）
+
+### 现象与根因
+
+`MainController.handleCheckout()`（F8、命令面板"收银台"都走它）调用 `setActiveButton(checkoutBtn)`，
+而 `MainView.fxml` 里**没有** `checkoutBtn`——收银台导航按钮的 id 是 `cartBtn`。
+
+FXML 注入是**按名字绑定**：名字对不上不报错，字段恒为 `null`。`setActiveButton(null)` 会先把旧按钮的
+高亮去掉，再因为参数为 null 而不设新高亮 → 进收银台后**没有任何导航项处于选中态**。
+同一方法里 `configurePermissions()` 的 `setButtonAccess(checkoutBtn, …)` 也是空操作
+（幸好 `cartBtn` 已被同样地限制，且 `handleCheckout` 自身有 `requirePermission`，**没有**权限漏洞）。
+
+另外 `handleCheckout()` 整段是 `handleCart()` 的复制粘贴，只有日志文案和高亮目标不同。
+
+### 修复
+
+- 删除陈旧字段 `checkoutBtn` 与那行空操作 `setButtonAccess`；
+- `handleCheckout()` 改为委托 `handleCart()`（购物车与结账自 v2.6.0 起已是同一个标签页）。
+
+### 门禁：`FxmlControllerBindingPolicyTest`（3 项）
+
+1. `everyFxmlHandlerResolvesToControllerMethod`：FXML 里每个 `onAction="#xxx"` 都能在
+   `fx:controller` 指定的类里找到方法（写错会在加载视图时抛 `LoadException`）；
+2. `everyInjectedFieldHasMatchingFxId`：每个 `@FXML` 字段至少在一个声明该控制器的 FXML 里有同名
+   `fx:id`，豁免表 `KNOWN_ORPHAN_FIELDS` 每条都要写清原因（现有 7 条：`CartController` 两个遗留字段
+   代码已判空 + 5 个从未被引用的死字段），且**豁免失效即报错**（防止表腐烂）；
+3. `checkoutEntryPointSharesCartNavigation`：回归锚点，钉住"不得再出现 `checkoutBtn` 调用/字段"
+   与"`handleCheckout` 必须委托 `handleCart()`"。
+
+变异验证（4 处）：加一个无 fx:id 的 `@FXML` 字段 → 第 2 项红；把某 FXML 的 `onAction` 改错名字 →
+第 1 项红；豁免表写一个不存在的字段名 → 第 2 项"豁免表过期"红；把 `handleCart()` 换成别的语句 →
+第 3 项红。另注：第 3 项第一版被**注释里提到的旧写法**误红，故加了 `withoutComments`（保留字符串字面量）。
+
+## TD-023 盘点单保存/删除非原子（已修复，2026-09 审计）
+
+### 现象与根因
+
+`InventoryCheckController.handleSaveCheck` 编辑路径原来依次调用
+`inventoryCheckDAO.update(newCheck)` → `inventoryCheckItemDAO.deleteByCheckId(...)` → 逐条 `insert(...)`。
+这些方法各自从连接池取一条 autocommit 连接并立即提交，于是 `DELETE` 先落库；
+之后任一步失败（连接抖动、数值非法、进程被杀），结果就是**已提交的删除 + 半截明细**：
+表头仍写着 N 条、差额从此算错，且 `canComplete` 要求 `checking`，用户也无法重做。
+`handleDeleteCheck` 同样是两条独立提交（先删明细、再删表头）。
+
+### 修复
+
+- 新增 `insertWithConnection` / `updateWithConnection` / `deleteWithConnection`
+  （`InventoryCheckDAORefactored`）与 `insertWithConnection` / `deleteByCheckIdWithConnection`
+  （`InventoryCheckItemDAORefactored`），保存与删除整体放进 `DatabaseManager.executeBooleanTransaction`；
+- 取号 `generateNextCheckNo` 挪到事务**外**（避免事务内再占一条池连接）；
+- 新增空明细守卫（`items.isEmpty()` → 报错返回，与 `PurchaseOrderController` 一致）：
+  明细加载失败时列表为空，空列表提交等于把盘点明细整批清空；
+- 明细加载失败的 catch 不再只记日志，改为弹出可见错误。
+
+### 门禁（2 项）
+
+- `InventoryCheckSaveAtomicityTest`（行为级，H2）：在事务里模拟"改表头 → 删旧明细 → 插新明细 → 抛异常"，
+  断言**旧明细还在、表头改动一并回滚**；成功路径断言明细被整体替换。
+  这是钉住"`*WithConnection` 确实参与调用方事务"的关键测试（H2 已启用外键，TD-009）；
+- `WriteAtomicityPolicyTest.inventoryCheckSaveIsAtomic`（源码级）：保存方法必须用
+  `executeBooleanTransaction` + 三个 `*WithConnection`，且全文件不得再出现自带连接的
+  `update(newCheck)` / `insert(newCheck)` / `insert(...)` / `deleteByCheckId(...)`；并断言空明细守卫存在。
+
+变异验证：把保存改回自带连接写法 → 源码门禁红（行为级测试仍绿——它只覆盖 DAO 层参与事务，
+控制器接线由源码门禁覆盖，两者互补，这里如实记录）。
+
+## TD-024 退款还原库存丢弃结果 + 相对增减库存不递增 version（已修复，2026-09 审计）
+
+### 现象与根因
+
+`TransactionApiController` 的退款事务里，还库存是
+`productDAO.updateQuantityWithConnection(conn, product.id, product.quantity);`——**返回值被丢弃**。
+`transaction_items.product_id` 允许为 NULL（DAO 映射成 0），旧数据里确实存在；
+此时 UPDATE 影响 0 行，但接口照样回 200「退款成功」。
+
+更隐蔽的一条：`updateQuantityWithConnection` 的 SQL 是 `quantity = quantity + ?`，**不动 `version`**，
+而结账扣库存走 `updateWithVersionWithConnection`（`quantity` 绝对值 + `WHERE id=? AND version=?`）。
+退款在结账的"快照读之后、UPDATE 之前"提交时，结账仍能用旧 version 命中，
+把刚还回的库存**覆盖掉**——即退款成功、货没回来。入库、盘点调整同样受影响。
+
+### 修复
+
+- 退款侧新增 `restoreInventoryForRefund(conn, product)`：`product.id <= 0` 时记 WARN 跳过
+  （旧数据无从知道还给哪个商品），`id > 0` 但影响 0 行时记 WARN（商品已删除；**钱照退**，
+  不能因为商品下架就让顾客收不到退款），但**结果必须被消费**；
+- `updateQuantityWithConnection` 补上 `version = version + 1`（并顺手让非连接版
+  `updateQuantity` 委托它，保持口径一致）——三处调用（退款还原、入库、盘点调整）同时受益。
+
+### 门禁
+
+- `WriteAtomicityPolicyTest.refundRestoreConsumesUpdateResult`（源码级：必须 `if (!...updateQuantityWithConnection(...))` 且留 WARN）；
+- `WriteAtomicityPolicyTest.stockQuantityUpdateBumpsVersion`（源码级：方法体必须含 `version = version + 1`）；
+- `ProductDAOTest.testUpdateQuantity`（行为级：调用后 `version` 必须 +1）。
+
+变异验证：去掉 `version = version + 1` → 行为测试与源码门禁同时红；把退款返回值改成丢弃 → 源码门禁红。
+
+## TD-025 手工开票表头与明细不在同一事务（已修复，2026-09 审计）
+
+`InvoiceService.createManualInvoice` 调 `invoiceDAO.insert(invoice)`，而 `insert()` 用**自己的**
+autocommit 连接；`insertWithConnection` 内部先插表头（提交），再插明细。
+明细失败（例如 `product_name` 超长、SQL 严格模式）时接口回 500，但表头已经落库：
+发票列表里出现一张"有金额、无明细"的孤儿发票，用户重试还会再产生一张（`invoice_id` 每次重新生成）。
+对比：`createInvoiceFromTransaction` 早就把同样的工作包在 `executeBooleanTransaction` 里。
+
+修复：手工开票改走 `insertWithConnection(conn, invoice)` + `executeBooleanTransaction`。
+门禁 `WriteAtomicityPolicyTest.manualInvoiceInsertIsAtomic`（变异：改回 `insert(invoice)` → 红）。
+
+## TD-026 建库/迁移失败被吞掉（已修复，2026-09 审计）
+
+`DatabaseManager.initializeDatabase()` 的 `catch (SQLException e) { logger.error(...) }` 只记日志，
+而类静态块里的 `catch (Exception e)` 本意是打印**可行动的**"数据库初始化失败 + 排查指引"
+（MySQL 未启动 / 主机端口 / CASHIER_DB_PASSWORD …）并终止启动——因为异常被吞，这段永远不会触发。
+
+后果：建表或 `upgradeTableStructure` 中途失败时应用照常启动，之后每个页面都报
+`Table 'xxx' doesn't exist` / 未知列，用户看不出根因；半套迁移也会静默留存。
+
+修复：`initializeDatabase()` 声明 `throws SQLException` 并在 catch 里 `throw e;`，交给静态块统一处理。
+门禁 `WriteAtomicityPolicyTest.schemaInitializationFailureIsNotSwallowed`（变异：去掉 `throw e;` → 红）。
+注意：本机没有可连的 MySQL，**"初始化失败时确实弹出该提示并退出"需在 Windows 实机确认**
+（只想验证提示文案的可以临时改错 `config/database.properties` 的端口）。
+
+---
+
+## 第五批审计待办（2026-09，TD-027 ~ TD-035）
+
+本批只修了**会造成数据丢失/错误或直接卡死**的 TD-022 ~ TD-026；下面这些已核实但未改，逐条给了
+可复现的输入或路径，下一批按优先级处理。
+
+### TD-027 ZIP 导入（死代码 + 必失败）
+
+`ProductDataImporter.parseZipData` 用 `try (BufferedReader reader = ...)` 包住 `ZipInputStream` 的每个 entry，
+读完第一个 entry 时 reader 关闭会**连带关闭 ZipInputStream**，随后 `closeEntry()`/`getNextEntry()`
+抛 `IOException: Stream closed`——已用最小程序实测复现（单 entry 的 zip 也一样）。
+但 `importFromGitHub()` 全仓库**零调用方**（`SettingsController` 只调 `importFromCSV`），
+`DATA_FILES` 两项却都是 `.zip`，说明这条路径从未真正跑通。需要产品决定：删掉死代码，
+还是修好 ZIP 解析（改用不关闭底层流的包装，或按 entry 读字节）。
+
+### TD-028 POI CVE
+
+`pom.xml` 用 `poi`/`poi-ooxml` 5.2.5。CVE-2025-31672（重复 zip 条目导致的输入校验问题）影响
+**poi-ooxml < 5.4.0**，5.2.5 在受影响区间内。但全仓库只有 `ExportUtil` 使用 POI 且仅
+`new XSSFWorkbook()` **写**文件，没有任何解析上传/下载 Office 文件的代码路径 → 该 CVE 在本项目
+**不可达**。若日后加入 Excel 导入（`ProductDataImporter` 目前只读 CSV），必须同批升级到 ≥5.4.0。
+
+### TD-029 报表按区间全量物化
+
+`ReportApiController:49/128`（日/月报）、`StatisticsController:253`（用户可选区间）、
+`ShiftController:789` 用 `TransactionDAORefactored.findByDateRange(start, end)`，
+实现是 4 表 JOIN 把区间内**每一笔交易和每一条明细**都构造成对象再在 Java 侧聚合。
+列表接口已有 `findByDateRange(start, end, limit)` 重载（`TransactionApiController:46` 已用）。
+建议：报表侧改为 SQL 聚合（`SUM`/`GROUP BY`）或分页流式处理。
+
+### TD-030 改密对话框取消 → 登录界面永久禁用（优先）
+
+`LoginController:106` 先 `setLoginState(true)`（禁用用户名/密码框 + 显示 loading），
+成功路径 `:152-161` 只调用 `showPasswordChangeDialog(user)` / `switchToMainView(user)`，
+**从不** `setLoginState(false)`；改密对话框 `:234` 带 `CANCEL`，`:262` 用
+`showAndWait().ifPresent(...)`——取消/关窗时 Optional 为空，什么都不执行。
+结果：首次登录用户取消改密后，登录页两个输入框是灰的、转圈还在转，只能杀进程。
+修法：对话框返回后（含取消、含异常）一律 `setLoginState(false)`。
+
+### TD-031 网关下单在 FX 线程且无超时（优先）
+
+`CartController:1236` / `TouchCartController:1510` 直接调用
+`PaymentService.createPaymentOrder(...)`，其内部 `provider.createOrder(order)` 用
+`HttpClient.newHttpClient()` 发 HTTP（`AlipayPrecreatePaymentProvider:134`、`WechatNativePaymentProvider:193`），
+全仓库 **没有任何 `.timeout(...)`**。网关不可达时 `java.net.http` 的默认行为是无限等待，
+收银员按了"微信/支付宝"后整个界面卡死且无法取消。
+修法：`.connectTimeout(...)` + `.timeout(...)`，下单放到 `UIOptimizer.runInBackground`。
+
+### TD-032 FX 线程上的同步查库
+
+- `PurchaseOrderController:881` / `InventoryCheckController:651`：`searchField` 的 text 监听器
+  每敲一个字符就 `productDAO.search(...)`（仓库里同类输入的正确做法是
+  `UIOptimizer.runInBackground` + `PauseTransition` 防抖，见 `TouchCartController:184`）；
+- `CartController:1519` / `TouchCartController:892`：每次加/减商品、改数量、开始支付都
+  `PromotionDAORefactored.findActive()`（无缓存）；
+- `CashierSystemFXApplication:770/778/832/840`：登录时同步 `InventoryAlertService.start()`
+  （内部立刻跑一次全表低库存查询并逐条发通知）与 `BackupService.start()`。
+
+### TD-033 触屏切换语言泄漏资源
+
+`TouchCartController:1941`（`switchLanguage` 内）直接 `application.switchToPosModeView(currentUser)`，
+没有调 `cleanup()`：`clockTimeline`（INDEFINITE，1 秒）继续跑、`bindStatusBar()` 绑定的全局监听又叠一层、
+旧场景被 Timeline 引用无法回收；`BackupService.start()`（`:543-561`）没有
+`InventoryAlertService` 那样的 `isRunning` 守卫，于是每切一次语言就多一个非 daemon 的
+`ScheduledExecutorService` 线程。
+
+### TD-034 金额/数量口径（7 项，均有"输入 → 错误输出"）
+
+1. `InvoicePrintService:218` `rate.multiply(100).setScale(0)` 未给 `RoundingMode`：
+   税率 0.065（6.5%）→ `ArithmeticException: Rounding necessary` → 打印发票接口 500
+   （现有测试只用 0.13 所以没暴露）；
+2. `CartController:2193-2194` 挂单折扣用 `double discountRate = discount.doubleValue()/10.0` +
+   `BigDecimal.valueOf(1 - discountRate)`：总价 1.10、银卡 9.5 折存 `final_amount=1.04`，
+   而结账实际收 1.05（触屏台用 `BigDecimal.subtract`，两台收银机口径不一致）；
+3. `ReturnService:53-56` 退款单价按行取整后再求和：2×10.10、9.5 折 → 实付 19.19 却退 19.20；
+   反向也有少退 1 分的情况（API 侧退了准确的 `finalAmount`，但 `return_order_items` 之和与之不符）；
+4. `ReturnService:275-277` 积分按"每次退货"取整：实付 10.10 得 101 分，分两次各退 5.05 →
+   冲减 51+51=102 分（顾客损失从未获得的积分）；
+5. `MemberService:70` 充值积分 `amount * 10` 不取整（`points` 是 DECIMAL(10,2)），
+   而 `MemberEditController:149` 显示时 `intValue()` 截断、`:233` 保存这个截断值 →
+   充值 10.55 元得 105.5 分，打开会员编辑再保存就变成 105.00（0.5 分静默丢失）；
+6. `promotions.discount` 列是 DECIMAL(10,2)，而 `PromotionController:640` 接受任意精度
+   （只校验 0<x<1）：输入 0.985 存成 0.99 → 1000 元订单少打 5 元折；
+7. `InvoiceItem:44-46` 行税额不取整、`Invoice:104-115` 用未取整值累加表头：
+   3×33.33 @13% → 各行 4.33（Σ=12.99），表头 13.00，实付合计与明细差 1 分。
+
+### TD-035 其它
+
+- `PackageWizardController:508` 的 `Task.call()` 在 worker 线程里调 `appendLog` →
+  `logTextArea.appendText(...)`（Node 写，仅进程输出那处包了 `Platform.runLater`）；
+  该向导的 `Executors.newSingleThreadExecutor()` 非 daemon 且只由 `handleCancel` 关闭；
+- `NotificationManager:93-98` 的 `scheduleAtFixedRate` 任务体没有 try/catch：
+  按 `ScheduledExecutorService` 语义，任务抛一次异常就**永久取消**后续通知（当前监听器各自兜了异常，属潜在）；
+- `DataService.hasActiveShift():428-435` 吞 `SQLException` 返回 false，调用方（`CartController:568/1397`）
+  于是把数据库故障显示成"请先开班/没有活跃班次"——排查方向被带偏；
+- 11 处 `new Thread(...)`（`LoginController:109`、`RechargeController:163`、`MemberController:135`、
+  `StatisticsController:251` 等）未设 `setDaemon(true)`：线程正常结束无碍，但卡住的 JDBC 调用会让
+  关窗后进程不退出；
+- `CurrencyUtil:63-65` 的 `DecimalFormat` 未设 `RoundingMode`（默认 HALF_EVEN），
+  而全应用金额是 HALF_UP：`format(1.005)` → `1.00`（只影响 3 位以上小数的中间值展示）；
+- `InventoryAlertController:410-416` 先弹"检查完成"再异步刷新（且刷新失败只记日志，表格静默保留旧数据）。
+
+---
+
+## TD-036 结尾斜杠绕过全部角色门禁（已修复，2026-09 审计，安全）
+
+### 漏洞
+
+`AuthorizationMiddleware.authorize` 用 `ctx.path()`（**原始请求 URI**）做全串比对，
+而 Javalin 6 默认 `ignoreTrailingSlashes = true`：`PUT /api/members/1/` 照样命中路由
+`/api/members/{id}`，但 `path.matches("/api/members/[^/]+")` 因末尾多一个斜杠而不成立 →
+**整条角色门禁被跳过**。收银员 token 即可：
+
+| 路由 | 越权后果 |
+|---|---|
+| `POST /api/transactions/{id}/refund` | 任意交易退款（还库存、退回余额/积分、写现金退款日志） |
+| `POST /api/payment/{paymentId}/refund` | 渠道退款（不超过已付金额） |
+| `PUT /api/members/{id}` | 改等级/折扣（折扣 0 = 免费卖）、改手机号（可把会员"换号"后花其余额/积分） |
+| `POST /api/invoices/manual`、`POST /api/invoices/{id}/void` | 任意开票/作废 |
+| `PUT /api/invoices/seller-info` | 改全局开票方名称/税号/银行账号（正常仅管理员） |
+| `PUT /api/payment/config` | 改微信/支付宝 appId、密钥、`alipayGateway`、回调地址（正常仅管理员） |
+
+财务角色同样能靠斜杠拿到两条管理员专属配置。
+
+### 我自己的复现（不只依赖报告）
+
+用项目 classpath 起了一个最小 Javalin 6.1.3 应用（`before` 打印 `ctx.path()`，路由 `/api/members/{id}`）：
+
+```
+PUT /api/members/1    -> HTTP 200 | before path=/api/members/1  matchedPath=*
+PUT /api/members/1/   -> HTTP 200 | before path=/api/members/1/ matchedPath=*   <-- 命中处理器，且 before 看到的是带斜杠原始路径
+PUT /api/members/1//  -> HTTP 404 | Endpoint PUT /api/members/1// not found
+PUT /API/members/1    -> HTTP 404
+```
+
+即：**单结尾斜杠是有效攻击向量**，双斜杠与大小写变体会 404（不能利用）。
+
+### 修复
+
+`AuthorizationMiddleware.isAllowed` 入口先归一化：`withoutTrailingSlash(path)` 去掉全部末尾斜杠
+（`"/"`/`""` → `"/"`），再走原有的 `equals`/`matches` 判定。所有 `app.before` 调用点自动受益，
+正常写法的行为完全不变；`/api/printers/{id}/receipt/` 之类原本因斜杠而"更严"的判定也一并归位。
+
+刻意**没有**改 `ApiServer.isPublicApiPath`（仍是精确匹配）：带斜杠访问登录/健康检查会 401 而不是放行，
+属 fail-closed，不影响安全。
+
+### 门禁
+
+`AuthorizationMiddlewareTest.trailingSlashCannotBypassRoleGate`：13 条受控路由 × {正常写法, 一个斜杠, 两个斜杠}
+都必须返回 false，并断言 finance 拿不到管理员配置、`/api/members/10/recharge/` 与
+`GET /api/invoices/seller-info/` 这些**本该放行**的仍放行（防止归一化过度收紧），
+外加 `withoutTrailingSlash` 的边界（`"/"`、`""`、多斜杠）。
+
+变异验证：把 `String normalized = withoutTrailingSlash(path);` 改回 `String normalized = path;` →
+测试立刻报 `POST /api/transactions/T1/refund/ ==> expected: <false> but was: <true>`（复现修复前的越权）。
+
+## TD-037 ~ TD-039 REST API 审计的其余发现（未改，需决定）
+
+同一轮 API 审计（解析全部 92 条路由 + 用真实 Javalin 验证路由/中间件行为 + 逐路由跑真实
+`isAllowed()`）还发现三条，均**已核实但未改**，因为都涉及"权限该松还是该紧"的产品判断：
+
+- **TD-037 钱箱**：`POST /api/printers/{id}/cashdrawer` 是管理员专属，
+  但同组的 `POST /api/printers/{id}/receipt` 被排除规则放行，而请求体 `openCashDrawer:true`
+  会走到 `PrintTask.createReceiptTask(content, printLogo, true)` → `PrinterManager.print(...)`
+  → `printer.openCashDrawer()`。于是收银员 token 能开钱箱。两条路的业务含义不同
+  （收银员找零本来就要开钱箱 vs 抽屉开启属受控操作），需产品先定口径。
+- **TD-038 发票字段自报**：`POST /api/invoices/from-transaction`（仅认证，收银员可调）把请求体交给
+  `InvoiceService.createInvoiceFromTransaction`：`sellerName/sellerTaxId/...` 覆盖管理员配置的全局开票方，
+  `createBy` 伪造开票人，`payee/checker/taxRate` 也来自请求体（`taxRate` 直接决定税额与价税合计）。
+  明细金额是从交易重算的，所以货值不能伪造。桌面端没有任何调用方。
+- **TD-039**：`POST /api/invoices/{id}/print` 仅认证，可把任意 `pdfPath`/`imagePath` 写进任何发票
+  （当前这两个字段不被当文件路径读取，TD-001 的门禁守着，所以影响限于数据伪造）；
+  另外 `payment.mode=mock` 时回调只要 `mock_signature` 等于配置密钥即可把待支付订单标记为已付——
+  本地未跟踪的 `config/payment.properties` 里确实是 mock + 低熵密钥，但仓库里的示例默认
+  `disabled` + 占位符，是否会在生产开 mock 需运维确认。

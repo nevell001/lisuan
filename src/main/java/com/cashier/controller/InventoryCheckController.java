@@ -428,6 +428,8 @@ public class InventoryCheckController {
                 }
             } catch (SQLException ex) {
                 logger.error("加载盘点明细失败", ex);
+                // 不能只记日志：明细没加载出来时列表是空的，用户一按保存就会把已有明细整批删掉
+                showError(I18nManager.getInstance().get("runtime.inventory_check_items_load_failed"));
             }
         } else {
             checkNoField.setText(generateCheckNo());
@@ -440,6 +442,13 @@ public class InventoryCheckController {
                                  ObservableList<CheckItemWrapper> items, Stage dialogStage,
                                  InventoryCheck check, boolean isEdit) {
         saveButton.setDisable(true);
+        if (items.isEmpty()) {
+            // 与采购订单一致：空明细既可能是用户没选商品，也可能是明细加载失败，
+            // 两种都不能保存——编辑路径会先删掉全部旧明细，空列表提交等于清空盘点单
+            saveButton.setDisable(false);
+            showError(I18nManager.getInstance().get("runtime.inventory_check_items_required"));
+            return;
+        }
         InventoryCheck newCheck = new InventoryCheck();
         newCheck.checkNo = checkNoField.getText();
         newCheck.checkDate = checkDatePicker.getValue().toString();
@@ -453,21 +462,34 @@ public class InventoryCheckController {
         try {
             if (isEdit) {
                 newCheck.id = check.id;
-                inventoryCheckDAO.update(newCheck);
-                inventoryCheckItemDAO.deleteByCheckId(check.id);
-                for (CheckItemWrapper wrapper : items) {
-                    inventoryCheckItemDAO.insert(toInventoryCheckItem(check.id, wrapper));
-                }
-                updateStatus(I18nManager.getInstance().get("runtime.inventory_check_updated"));
             } else {
+                // 取号要读库，放在事务外（避免事务内再占一条池连接）
                 newCheck.checkNo = inventoryCheckDAO.generateNextCheckNo(newCheck.checkDate);
                 checkNoField.setText(newCheck.checkNo);
-                inventoryCheckDAO.insert(newCheck);
-                for (CheckItemWrapper wrapper : items) {
-                    inventoryCheckItemDAO.insert(toInventoryCheckItem(newCheck.id, wrapper));
-                }
-                updateStatus(I18nManager.getInstance().get("runtime.inventory_check_created"));
             }
+
+            // 表头与明细必须同一事务：编辑路径会先删掉全部旧明细再逐条插入，
+            // 之前每步各自 autocommit，中途失败会留下"已提交的 DELETE + 半截明细"
+            // （表头仍写着 N 条），盘点差额从此算错且无法重做。
+            DatabaseManager.executeBooleanTransaction(conn -> {
+                if (isEdit) {
+                    if (!inventoryCheckDAO.updateWithConnection(conn, newCheck)) {
+                        throw new SQLException("盘点单更新失败: id=" + newCheck.id);
+                    }
+                    inventoryCheckItemDAO.deleteByCheckIdWithConnection(conn, newCheck.id);
+                } else if (!inventoryCheckDAO.insertWithConnection(conn, newCheck)) {
+                    throw new SQLException("盘点单保存失败: " + newCheck.checkNo);
+                }
+                for (CheckItemWrapper wrapper : items) {
+                    if (!inventoryCheckItemDAO.insertWithConnection(conn, toInventoryCheckItem(newCheck.id, wrapper))) {
+                        throw new SQLException("盘点明细保存失败: " + wrapper.productName);
+                    }
+                }
+                return true;
+            });
+
+            updateStatus(I18nManager.getInstance().get(isEdit
+                ? "runtime.inventory_check_updated" : "runtime.inventory_check_created"));
             loadChecks();
             dialogStage.close();
         } catch (SQLException | RuntimeException ex) {
@@ -797,8 +819,11 @@ public class InventoryCheckController {
 
             if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
                 try {
-                    inventoryCheckItemDAO.deleteByCheckId(selected.id);
-                    inventoryCheckDAO.delete(selected.id);
+                    // 明细与表头同一事务：分开提交时中途失败会留下没有表头的孤儿明细
+                    DatabaseManager.executeBooleanTransaction(conn -> {
+                        inventoryCheckItemDAO.deleteByCheckIdWithConnection(conn, selected.id);
+                        return inventoryCheckDAO.deleteWithConnection(conn, selected.id);
+                    });
                     checks.remove(selected.id);
                     filterChecks();
                     updateStatus(I18nManager.getInstance().get("runtime.inventory_check_deleted"));

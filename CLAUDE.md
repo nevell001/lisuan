@@ -867,6 +867,41 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   已知边界：解引用匹配按"同一行 ±3 行"，**间接用法（先存局部变量、后方再打开）抓不到**，靠 review
 - 启动入口：可执行 JAR 的 Main-Class 为 `com.cashier.Launcher`（不继承 `Application`），
   使 `java -jar lisuan-fx-*-jar-with-dependencies.jar` 无需 module-path 即可启动
+- **FXML 与控制器是"按名字绑定"的，名字对不上不会报错**（TD-022）：`onAction="#handleX"` 写错会在
+  加载视图时抛 `LoadException`（页面打不开）；`@FXML private Button x;` 而 FXML 里没有 `fx:id="x"`
+  则字段恒为 null，直到某处解引用变成 NPE——**或者更坏：静默失效**。
+  实测：`MainController.handleCheckout` 调 `setActiveButton(checkoutBtn)`，而 MainView.fxml 里
+  只有 `cartBtn`，于是按 F8 进收银台后导航停在"无高亮"；同一行的 `setButtonAccess(checkoutBtn, …)`
+  也是空操作。门禁 `FxmlControllerBindingPolicyTest`（3 项）：① 每个 FXML 事件处理器都能在
+  `fx:controller` 里找到方法；② 每个 `@FXML` 字段都有同名 `fx:id`（豁免表 `KNOWN_ORPHAN_FIELDS`
+  逐条写明原因，**过期即失败**）；③ 回归锚点：`handleCheckout` 必须委托 `handleCart()`。
+  改 FXML 时如果新增/改名 `fx:id`，记得同步控制器字段（门禁会报出来）
+- **多表/多行写入必须走 `*WithConnection` + `executeBooleanTransaction`**（TD-023~025）：本仓库 DAO 有
+  两套写法，`xxx(...)` 自带 autocommit 连接并立即提交，`xxxWithConnection(conn, ...)` 参与调用方事务。
+  审计实测的三处事故：盘点单保存（先删全部旧明细再逐条插，中途失败留下"已提交的 DELETE + 半截明细"，
+  表头还写着 N 条）；手工开票（表头先提交、明细后插 → 孤儿发票）；退款还库存（丢弃 UPDATE 返回值，
+  货没还回去也报"退款成功"）。门禁 `WriteAtomicityPolicyTest`（5 项，含"空明细不得保存"）、
+  行为级 `InventoryCheckSaveAtomicityTest`（H2 事务回滚）。新增这类写入时照抄相邻的 `*WithConnection` 写法
+- **相对增减库存必须递增 `version`**（TD-024）：结账扣库存是 `quantity` 绝对值 + `WHERE version=?`，
+  退款/入库/盘点调整走 `updateQuantityWithConnection`（`quantity = quantity + ?`）。若后者不动 `version`，
+  并发结账会拿旧 version 命中并把刚还回的库存**覆盖掉**。已补 `version = version + 1`，
+  `ProductDAOTest.testUpdateQuantity` 断言 version +1，`WriteAtomicityPolicyTest` 钉住 SQL
+- **建库/迁移失败不得只记日志**（TD-026）：`DatabaseManager.initializeDatabase()` 声明
+  `throws SQLException` 并在 catch 里 `throw e;`，由类静态块统一转成"数据库初始化失败 + 排查指引"
+  （MySQL 未启动/端口/口令）。只记日志时应用照常启动，随后每个页面都报 `Table doesn't exist`，
+  用户看不出根因。门禁 `WriteAtomicityPolicyTest.schemaInitializationFailureIsNotSwallowed`
+- **REST 角色门禁必须先归一化末尾斜杠**（TD-036，安全）：Javalin 6 默认
+  `ignoreTrailingSlashes = true`，`PUT /api/members/1/` 照样命中 `/api/members/{id}`，
+  而 `ctx.path()` 返回**原始 URI**（带斜杠）。`AuthorizationMiddleware` 的门禁原是
+  `equals`/`matches` 全串比对，多一个斜杠就整条跳过 → 收银员可退款、改会员折扣/等级/手机号、
+  改开票方信息与支付配置（已用最小 Javalin 6.1.3 应用复现：`/api/members/1/` → HTTP 200，
+  `//` → 404）。现在 `isAllowed` 入口先 `withoutTrailingSlash(path)`；
+  `AuthorizationMiddlewareTest.trailingSlashCannotBypassRoleGate` 覆盖 13 条受控路由 × {正常,`/`,`//`}。
+  **以后往这个类里加路径规则时不要绕过归一化**
+- 2026-09 第五批审计的其余发现（未修，逐条带复现）见 `docs/TECH_DEBT.md` 的 TD-027 ~ TD-039：
+  ZIP 导入死代码必失败、POI CVE（本仓库不可达）、报表全量物化、改密取消后登录界面永久禁用、
+  网关下单无超时卡死 FX 线程、选品框逐字符查库、切语言泄漏资源、金额口径 7 项
+  （含发票税额百分比 `setScale(0)` 抛异常、挂单折扣走 double、退款单价取整）等
 
 **结账字段口径统一（v2.6.0 补强）**
 

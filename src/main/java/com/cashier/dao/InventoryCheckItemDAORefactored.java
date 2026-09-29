@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.List;
 
 /**
@@ -126,13 +127,41 @@ public class InventoryCheckItemDAORefactored extends BaseDAO {
      * @throws SQLException 数据库操作异常
      */
     public boolean insert(InventoryCheckItem item) throws SQLException {
-        long id = executeInsertReturnId(
-            "INSERT INTO inventory_check_items (check_id, product_id, product_name, book_quantity, actual_quantity, diff_quantity, diff_reason, create_time) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
-            item.checkId, item.productId, item.productName, item.bookQuantity,
-            item.actualQuantity, item.diffQuantity, item.diffReason, item.createTime);
-        item.id = (int) id;
-        return id > 0;
+        try (Connection conn = getConnection()) {
+            return insertWithConnection(conn, item);
+        }
+    }
+
+    /**
+     * 使用指定连接插入库存盘点明细（事务内调用）。
+     *
+     * @param conn 数据库连接
+     * @param item 库存盘点明细对象
+     * @return 是否插入成功
+     * @throws SQLException 数据库操作异常
+     */
+    public boolean insertWithConnection(Connection conn, InventoryCheckItem item) throws SQLException {
+        String sql = "INSERT INTO inventory_check_items (check_id, product_id, product_name, book_quantity, actual_quantity, diff_quantity, diff_reason, create_time) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            pstmt.setInt(1, item.checkId);
+            pstmt.setInt(2, item.productId);
+            pstmt.setString(3, item.productName);
+            pstmt.setInt(4, item.bookQuantity);
+            pstmt.setInt(5, item.actualQuantity);
+            pstmt.setInt(6, item.diffQuantity);
+            pstmt.setString(7, item.diffReason);
+            pstmt.setTimestamp(8, item.createTime);
+            if (pstmt.executeUpdate() <= 0) {
+                return false;
+            }
+            try (ResultSet keys = pstmt.getGeneratedKeys()) {
+                if (keys.next()) {
+                    item.id = keys.getInt(1);
+                }
+            }
+            return true;
+        }
     }
 
     /**
@@ -184,7 +213,24 @@ public class InventoryCheckItemDAORefactored extends BaseDAO {
      * @throws SQLException 数据库操作异常
      */
     public boolean deleteByCheckId(int checkId) throws SQLException {
-        return executeUpdate("DELETE FROM inventory_check_items WHERE check_id = ?", checkId) > 0;
+        try (Connection conn = getConnection()) {
+            return deleteByCheckIdWithConnection(conn, checkId);
+        }
+    }
+
+    /**
+     * 使用指定连接按盘点ID删除明细（事务内调用）。
+     *
+     * @param conn    数据库连接
+     * @param checkId 盘点ID
+     * @return 是否有行被删除
+     * @throws SQLException 数据库操作异常
+     */
+    public boolean deleteByCheckIdWithConnection(Connection conn, int checkId) throws SQLException {
+        try (PreparedStatement pstmt = conn.prepareStatement("DELETE FROM inventory_check_items WHERE check_id = ?")) {
+            pstmt.setInt(1, checkId);
+            return pstmt.executeUpdate() > 0;
+        }
     }
 
     /**

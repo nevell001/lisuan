@@ -6,6 +6,7 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.List;
 
@@ -175,13 +176,44 @@ public class InventoryCheckDAORefactored extends BaseDAO {
      * @throws SQLException 数据库操作异常
      */
     public boolean insert(InventoryCheck check) throws SQLException {
-        long id = executeInsertReturnId(
-            "INSERT INTO inventory_check (check_no, check_date, check_type, total_items, diff_items, status, operator, checker, remark, create_time, update_time) " +
-                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-            check.checkNo, check.checkDate, check.checkType, check.totalItems, check.diffItems,
-            check.status, check.operator, check.checker, check.remark, check.createTime, check.updateTime);
-        check.id = (int) id;
-        return id > 0;
+        try (Connection conn = getConnection()) {
+            return insertWithConnection(conn, check);
+        }
+    }
+
+    /**
+     * 使用指定连接插入库存盘点记录（事务内调用）。
+     *
+     * @param conn  数据库连接
+     * @param check 库存盘点对象
+     * @return 是否插入成功
+     * @throws SQLException 数据库操作异常
+     */
+    public boolean insertWithConnection(Connection conn, InventoryCheck check) throws SQLException {
+        String sql = "INSERT INTO inventory_check (check_no, check_date, check_type, total_items, diff_items, status, operator, checker, remark, create_time, update_time) "
+            + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+            pstmt.setString(1, check.checkNo);
+            pstmt.setString(2, check.checkDate);
+            pstmt.setString(3, check.checkType);
+            pstmt.setInt(4, check.totalItems);
+            pstmt.setInt(5, check.diffItems);
+            pstmt.setString(6, check.status);
+            pstmt.setString(7, check.operator);
+            pstmt.setString(8, check.checker);
+            pstmt.setString(9, check.remark);
+            pstmt.setTimestamp(10, check.createTime);
+            pstmt.setTimestamp(11, check.updateTime);
+            if (pstmt.executeUpdate() <= 0) {
+                return false;
+            }
+            try (ResultSet keys = pstmt.getGeneratedKeys()) {
+                if (keys.next()) {
+                    check.id = keys.getInt(1);
+                }
+            }
+            return true;
+        }
     }
 
     /**
@@ -192,13 +224,37 @@ public class InventoryCheckDAORefactored extends BaseDAO {
      * @throws SQLException 数据库操作异常
      */
     public boolean update(InventoryCheck check) throws SQLException {
-        return executeUpdate(
-            "UPDATE inventory_check SET check_no = ?, check_date = ?, check_type = ?, " +
-                "total_items = ?, diff_items = ?, status = ?, operator = ?, checker = ?, remark = ?, update_time = ? " +
-                "WHERE id = ?",
-            check.checkNo, check.checkDate, check.checkType, check.totalItems, check.diffItems,
-            check.status, check.operator, check.checker, check.remark,
-            new Timestamp(System.currentTimeMillis()), check.id) > 0;
+        try (Connection conn = getConnection()) {
+            return updateWithConnection(conn, check);
+        }
+    }
+
+    /**
+     * 使用指定连接更新库存盘点记录（事务内调用）。
+     *
+     * @param conn  数据库连接
+     * @param check 库存盘点对象
+     * @return 是否更新成功
+     * @throws SQLException 数据库操作异常
+     */
+    public boolean updateWithConnection(Connection conn, InventoryCheck check) throws SQLException {
+        String sql = "UPDATE inventory_check SET check_no = ?, check_date = ?, check_type = ?, "
+            + "total_items = ?, diff_items = ?, status = ?, operator = ?, checker = ?, remark = ?, update_time = ? "
+            + "WHERE id = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, check.checkNo);
+            pstmt.setString(2, check.checkDate);
+            pstmt.setString(3, check.checkType);
+            pstmt.setInt(4, check.totalItems);
+            pstmt.setInt(5, check.diffItems);
+            pstmt.setString(6, check.status);
+            pstmt.setString(7, check.operator);
+            pstmt.setString(8, check.checker);
+            pstmt.setString(9, check.remark);
+            pstmt.setTimestamp(10, new Timestamp(System.currentTimeMillis()));
+            pstmt.setInt(11, check.id);
+            return pstmt.executeUpdate() > 0;
+        }
     }
 
     /**
@@ -275,7 +331,24 @@ public class InventoryCheckDAORefactored extends BaseDAO {
      * @throws SQLException 数据库操作异常
      */
     public boolean delete(int id) throws SQLException {
-        return executeUpdate("DELETE FROM inventory_check WHERE id = ?", id) > 0;
+        try (Connection conn = getConnection()) {
+            return deleteWithConnection(conn, id);
+        }
+    }
+
+    /**
+     * 使用指定连接删除库存盘点记录（事务内调用）。
+     *
+     * @param conn 数据库连接
+     * @param id   盘点ID
+     * @return 是否删除成功
+     * @throws SQLException 数据库操作异常
+     */
+    public boolean deleteWithConnection(Connection conn, int id) throws SQLException {
+        try (PreparedStatement pstmt = conn.prepareStatement("DELETE FROM inventory_check WHERE id = ?")) {
+            pstmt.setInt(1, id);
+            return pstmt.executeUpdate() > 0;
+        }
     }
 
     /**

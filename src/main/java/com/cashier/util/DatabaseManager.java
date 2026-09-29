@@ -325,7 +325,7 @@ public class DatabaseManager {
     /**
      * 初始化数据库表结构
      */
-    private static void initializeDatabase() {
+    private static void initializeDatabase() throws SQLException {
         // 每次启动都检查表结构，确保升级脚本被执行
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
@@ -369,7 +369,11 @@ public class DatabaseManager {
             logger.info("MySQL 数据库初始化成功");
 
         } catch (SQLException e) {
+            // 不能只记日志：建表/迁移失败后应用照常启动，随后每个页面都报
+            // "Table doesn't exist"/未知列，用户看不出根因是初始化失败；
+            // 抛出去由静态块统一转换成"数据库初始化失败 + 排查指引"。
             logger.error("数据库表创建失败", e);
+            throw e;
         }
     }
 

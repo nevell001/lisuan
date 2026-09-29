@@ -96,8 +96,15 @@ public class InvoiceService {
         invoice.calculateAmounts();
         invoice.createBy = request.createBy != null ? request.createBy : "";
         
-        // 保存发票
-        DAOFactory.getInstance().getInvoiceDAO().insert(invoice);
+        // 表头与明细必须同一事务：insert() 走的是自己的 autocommit 连接，
+        // 表头先提交、明细再插，明细失败（如明细字段超长）就留下一张"有金额、无明细"的孤儿发票，
+        // 用户重试还会再产生一张（invoice_id 每次重新生成）。
+        DatabaseManager.executeBooleanTransaction(conn -> {
+            if (!DAOFactory.getInstance().getInvoiceDAO().insertWithConnection(conn, invoice)) {
+                throw new SQLException("保存发票失败: " + invoice.invoiceId);
+            }
+            return true;
+        });
         
         logger.info("手工发票创建成功: {} - 金额: {}", invoice.invoiceId, invoice.finalAmount);
         

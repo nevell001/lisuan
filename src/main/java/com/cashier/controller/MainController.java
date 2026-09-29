@@ -91,9 +91,6 @@ public class MainController {
     private Button cartBtn;
 
     @FXML
-    private Button checkoutBtn;
-
-    @FXML
     private Button transactionsBtn;
 
     @FXML
@@ -381,7 +378,6 @@ private Button shiftBtn;
 
     private void configurePermissions() {
         setButtonAccess(cartBtn, User.PERMISSION_CHECKOUT);
-        setButtonAccess(checkoutBtn, User.PERMISSION_CHECKOUT);
         setButtonAccess(shiftBtn, User.PERMISSION_MANAGE_SHIFT);
         setButtonAccess(inventoryBtn, User.PERMISSION_VIEW_INVENTORY);
         setButtonAccess(inventoryCheckBtn, User.PERMISSION_MANAGE_INVENTORY);
@@ -905,37 +901,11 @@ private Button shiftBtn;
 
     @FXML
     public void handleCheckout() {
-        if (!requirePermission(User.PERMISSION_CHECKOUT)) return;
-        updateStatus("POS");
-        setActiveButton(checkoutBtn);
-        
-        try {
-            String title = I18nManager.getInstance().get(I18nKeys.Nav.CART);
-            if (selectOpenTab(title)) {
-                focusSelectedCartSearchField();
-                return;
-            }
-
-            // 加载购物车界面（购物车和结账已合并）
-            FXMLLoader loader = FXMLUtils.loadFXMLLoader("/com/cashier/view/CartView.fxml");
-            VBox root = loader.load();
-            
-            // 获取控制器
-            CartController controller = loader.getController();
-            controller.setCurrentUser(currentUser);
-            root.getProperties().put("controller", controller);
-            
-            // 创建内容标签页
-            createContentTab(title, root);
-            javafx.application.Platform.runLater(controller::focusSearchField);
-            
-        } catch (IOException e) {
-            logger.error("加载结账界面失败", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + getErrorMessage(e));
-        } catch (Exception e) {
-            logger.error("加载结账界面时发生异常", e);
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA) + ": " + getErrorMessage(e));
-        }
+        // 购物车与结账已合并为同一个标签页，F8 / 命令面板与导航按钮走同一条路径。
+        // 原先这里重复实现了一遍加载逻辑，并调用 setActiveButton(checkoutBtn)——
+        // 而 MainView.fxml 里没有 checkoutBtn（id 是 cartBtn），于是 F8 打开收银台后
+        // 导航高亮被清掉却不再设置任何按钮，停在"无高亮"状态。
+        handleCart();
     }
 
     private void focusSelectedCartSearchField() {

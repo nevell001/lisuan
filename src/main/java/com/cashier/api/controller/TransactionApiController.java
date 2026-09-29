@@ -428,9 +428,28 @@ public class TransactionApiController {
         List<ReturnOrderItem> returnItems = new ArrayList<>();
         for (Product product : transaction.items) {
             returnItems.add(createReturnOrderItem(returnOrderId, product, transaction.finalAmount, gross));
-            productDAO.updateQuantityWithConnection(conn, product.id, product.quantity);
+            restoreInventoryForRefund(conn, product);
         }
         return DAOFactory.getInstance().getReturnOrderItemDAO().batchInsertWithConnection(conn, returnItems);
+    }
+
+    /**
+     * 退款时把商品退回库存。
+     *
+     * <p>钱必须退（顾客不能因为商品下架而收不到退款），所以商品行不存在时只记 WARN 不抛；
+     * 但**结果必须被消费**——此前这里直接丢弃 {@code updateQuantityWithConnection} 的返回值，
+     * 库存根本没还回去也照样报"退款成功"，对账时才发现少货。</p>
+     */
+    private static void restoreInventoryForRefund(Connection conn, Product product) throws SQLException {
+        if (product.id <= 0) {
+            // 历史数据的 transaction_items.product_id 允许为 NULL（DAO 映射成 0），无从得知该还给哪个商品
+            logger.warn("退款还原库存跳过：明细缺少有效商品ID, productCode={}", product.productCode);
+            return;
+        }
+        if (!productDAO.updateQuantityWithConnection(conn, product.id, product.quantity)) {
+            logger.warn("退款还原库存未生效（商品可能已删除）: productId={}, quantity={}",
+                product.id, product.quantity);
+        }
     }
 
     private static ReturnOrderItem createReturnOrderItem(String returnOrderId, Product product,

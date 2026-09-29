@@ -298,8 +298,9 @@ public class ProductDAORefactored extends BaseDAO {
      * @throws SQLException 数据库操作异常
      */
     public boolean updateQuantity(int id, int delta) throws SQLException {
-        String sql = "UPDATE products SET quantity = quantity + ? WHERE id = ?";
-        return executeUpdate(sql, delta, id) > 0;
+        try (Connection conn = getConnection()) {
+            return updateQuantityWithConnection(conn, id, delta);
+        }
     }
 
     /**
@@ -311,7 +312,11 @@ public class ProductDAORefactored extends BaseDAO {
      * @throws SQLException 数据库操作异常
      */
     public boolean updateQuantityWithConnection(Connection conn, int id, int delta) throws SQLException {
-        String sql = "UPDATE products SET quantity = quantity + ? WHERE id = ?";
+        // 必须同时递增 version：这是"相对增减"，但结账扣库存走的是
+        // updateWithVersionWithConnection（quantity 绝对值 + WHERE version=?）。
+        // 若这里不动 version，并发结账会拿着改前的 version 命中并把还回的库存覆盖掉
+        // （退款/入库/盘点调整被静默吃掉）。
+        String sql = "UPDATE products SET quantity = quantity + ?, version = version + 1 WHERE id = ?";
         try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
             pstmt.setInt(1, delta);
             pstmt.setInt(2, id);
