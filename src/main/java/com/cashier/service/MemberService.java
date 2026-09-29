@@ -67,7 +67,9 @@ public class MemberService {
      */
     public static boolean recharge(Member member, BigDecimal amount, String paymentMethod, String operator) {
         BigDecimal rechargeAmount = amount;
-        BigDecimal bonusPoints = rechargeAmount.multiply(BigDecimal.TEN);
+        // 积分口径与销售一致（每元 10 分，向下取整）：不取整会写入 DECIMAL(10,2) 的小数积分，
+        // 而会员编辑界面显示/保存时按整数处理，0.5 分会在"打开编辑再保存"后静默丢失（TD-034）
+        BigDecimal bonusPoints = rechargeAmount.multiply(BigDecimal.TEN).setScale(0, RoundingMode.FLOOR);
         try {
             boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
                 // 获取最新会员信息

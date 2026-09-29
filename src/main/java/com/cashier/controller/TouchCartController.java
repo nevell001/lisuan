@@ -1507,12 +1507,23 @@ public class TouchCartController implements CartViewHost {
         try {
             Transaction transaction = createTransaction(paymentMethod);
             String terminalId = currentUser != null ? currentUser.username : "desktop";
-            PaymentOrder paymentOrder = PaymentService.createPaymentOrder(
-                transaction.transactionId, transaction.finalAmount, channel, terminalId,
-                currentUser != null ? currentUser.username : "system");
-            showElectronicPaymentDialog(paymentOrder, transaction, paymentMethod);
+            String operator = currentUser != null ? currentUser.username : "system";
+
+            // 下单 = 一次网关 HTTP 调用，必须离开 FX 线程（TD-031）：触屏收银台更经不起卡死。
+            // 先置 paymentInProgress，挡住异步窗口内的重复结账（showElectronicPaymentDialog 也会置位）。
+            paymentInProgress = true;
+            UIOptimizer.runInBackground(
+                () -> PaymentService.createPaymentOrder(transaction.transactionId, transaction.finalAmount,
+                    channel, terminalId, operator),
+                paymentOrder -> showElectronicPaymentDialog(paymentOrder, transaction, paymentMethod),
+                error -> {
+                    logger.error("创建电子支付订单失败", error);
+                    paymentInProgress = false;
+                    warn(i18n.get("payment.create.failed") + ": " + error.getMessage());
+                });
         } catch (Exception e) {
             logger.error("创建电子支付订单失败", e);
+            paymentInProgress = false;
             warn(i18n.get("payment.create.failed") + ": " + e.getMessage());
         }
     }

@@ -146,7 +146,9 @@ public class MemberEditController {
             phoneField.setText(member.phone);
             phoneField.setDisable(true); // 手机号不可修改
             nameField.setText(member.name);
-            pointsField.setText(String.valueOf(member.getPoints().intValue()));
+            // 必须原样显示：intValue() 会把历史遗留的小数积分（老版本充值产生的 105.5）
+            // 截断成 105，用户一保存就把 0.5 分永久抹掉（TD-034）
+            pointsField.setText(member.getPoints().stripTrailingZeros().toPlainString());
             levelComboBox.getSelectionModel().select(member.level);
             discountField.setText(String.valueOf(member.getDiscount()));
             balanceField.setText(String.format(java.util.Locale.ROOT, "%.2f", member.getBalance()));

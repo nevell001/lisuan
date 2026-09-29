@@ -15,6 +15,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
@@ -30,13 +31,23 @@ public final class WechatNativePaymentProvider implements PaymentChannelProvider
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final DateTimeFormatter WECHAT_TIME =
         DateTimeFormatter.ISO_OFFSET_DATE_TIME.withZone(ZoneOffset.ofHours(8));
+    /**
+     * 网关超时必须显式设置：java.net.http 的默认是**无限等待**，网关不可达时会把调用线程永久挂住
+     * （收银台在 FX 线程调用下单，曾表现为界面彻底卡死，TD-031）。
+     */
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(15);
 
     private final PaymentService.PaymentConfig config;
     private final HttpClient client;
     private final String unavailableReason;
 
     public WechatNativePaymentProvider(PaymentService.PaymentConfig config) {
-        this(config, HttpClient.newHttpClient());
+        this(config, newHttpClient());
+    }
+
+    private static HttpClient newHttpClient() {
+        return HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build();
     }
 
     WechatNativePaymentProvider(PaymentService.PaymentConfig config, HttpClient client) {
@@ -186,6 +197,7 @@ public final class WechatNativePaymentProvider implements PaymentChannelProvider
         HttpRequest.Builder builder = HttpRequest.newBuilder(URI.create(url))
             .header("Accept", "application/json")
             .header("Authorization", authorization)
+            .timeout(REQUEST_TIMEOUT)
             .header("Content-Type", "application/json");
         HttpRequest request = "GET".equals(method)
             ? builder.GET().build()

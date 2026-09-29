@@ -643,4 +643,63 @@ class ReturnServiceTest extends DatabaseTestBase {
         assertEquals(0, expected.compareTo(actual));
     }
 
+    @Test
+    @DisplayName("应退总额按整单实付比例取整：整单退货恰好退实付，不再多退 1 分")
+    void refundTotalIsProportionalAndNeverExceedsPaid() {
+        BigDecimal paid = new BigDecimal("19.19");   // 2 × 10.10，9.5 折
+        BigDecimal gross = new BigDecimal("20.20");
+
+        assertAmountEquals(paid, ReturnService.refundTotal(paid, gross, gross));
+        // 只退一件：10.10/20.20 = 一半 → 19.19/2 = 9.595 → 9.60
+        assertAmountEquals(new BigDecimal("9.60"),
+            ReturnService.refundTotal(paid, gross, new BigDecimal("10.10")));
+        // 非法/缺失参数不放大退款
+        assertAmountEquals(BigDecimal.ZERO.setScale(2), ReturnService.refundTotal(paid, gross, BigDecimal.ZERO));
+        assertAmountEquals(new BigDecimal("9.60"),
+            ReturnService.refundTotal(paid, BigDecimal.ZERO, new BigDecimal("9.60")));
+    }
+
+    @Test
+    @DisplayName("明细行金额之和不得超过应退总额（单价只有 2 位小数时的分摊取整）")
+    void itemAmountsNeverExceedRefundTotal() {
+        // 逐行单价 9.60 × 各 1 件 = 19.20，而按比例应退 19.19
+        List<ReturnOrderItem> items = new ArrayList<>();
+        items.add(returnItem(new BigDecimal("9.60"), 1));
+        items.add(returnItem(new BigDecimal("9.60"), 1));
+        BigDecimal refundTotal = new BigDecimal("19.19");
+
+        ReturnService.alignItemsToRefundTotal(items, refundTotal);
+
+        BigDecimal sum = items.stream()
+            .map(ReturnOrderItem::getReturnAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        assertTrue(sum.compareTo(refundTotal) <= 0,
+            "明细之和 " + sum + " 不得超过实际退款额 " + refundTotal);
+        assertTrue(refundTotal.subtract(sum).compareTo(new BigDecimal("0.02")) <= 0,
+            "明细之和不应比应退总额少 2 分以上（当前 " + sum + " vs " + refundTotal + "）");
+    }
+
+    @Test
+    @DisplayName("多次部分退货累计冲减的积分不超过原单所得")
+    void partialReturnsNeverReverseMorePointsThanEarned() {
+        BigDecimal paid = new BigDecimal("10.10");
+        BigDecimal earned = ReturnService.pointsToReverse(paid, paid);
+        assertAmountEquals(new BigDecimal("101"), earned);
+
+        BigDecimal half = new BigDecimal("5.05");
+        BigDecimal reversed = ReturnService.pointsToReverse(half, paid)
+            .add(ReturnService.pointsToReverse(half, paid));
+        assertTrue(reversed.compareTo(earned) <= 0,
+            "两次各退一半累计冲减 " + reversed + " 分，不得超过原单所得的 " + earned
+                + " 分（HALF_UP 会得到 102）");
+    }
+
+    private ReturnOrderItem returnItem(BigDecimal unitPrice, int quantity) {
+        ReturnOrderItem item = new ReturnOrderItem();
+        item.unitPrice = unitPrice;
+        item.returnQuantity = quantity;
+        item.calculateAmount();
+        return item;
+    }
+
 }

@@ -657,6 +657,12 @@ public class PromotionController {
         if (discount.compareTo(BigDecimal.ZERO) <= 0) {
             throw new IllegalArgumentException(getDiscountRequiredMessage(type));
         }
+        // promotions.discount 是 DECIMAL(10,2)：输入 0.985 会被数据库静默存成 0.99，
+        // 1000 元订单实际只打 1% 折而不是 1.5%，与界面显示的数值不一致（TD-034）。
+        // 宁可让用户改输入，也不要静默改钱。
+        if (discount.stripTrailingZeros().scale() > 2) {
+            throw new IllegalArgumentException(I18nManager.getInstance().get("promotion.validation.discount_scale"));
+        }
         if ("打折".equals(type)) {
             if (discount.compareTo(BigDecimal.ONE) >= 0) {
                 throw new IllegalArgumentException(I18nManager.getInstance().get("promotion.validation.discount_rate_range"));

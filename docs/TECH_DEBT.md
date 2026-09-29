@@ -34,11 +34,11 @@
 | TD-027 | `ProductDataImporter` 的 ZIP 分支必抛 `Stream closed`（已实测复现），`importFromGitHub` 零调用方 | 死代码/潜在缺陷 | **待产品决定（2026-09）**：功能是否保留——删死代码，或修 ZIP 解析（关闭 BufferedReader 会连带关掉 ZipInputStream） | 是否还要"从 GitHub 拉商品数据" |
 | TD-028 | Apache POI 5.2.5 受 CVE-2025-31672 影响（poi-ooxml < 5.4.0） | 依赖安全 | **已评估（2026-09）**：本仓库只用 POI **写** xlsx，全仓库没有解析外部 Office 文件的路径 → 该 CVE 不可达；升级到 ≥5.4.0 属加固，非必须 | 依赖升级窗口 |
 | TD-029 | 月报/任意区间报表用 `findByDateRange(start,end)` 全量 JOIN 物化到内存 | 性能 | **待处理（2026-09 审计发现）**：列表接口已有 `limit` 重载，报表侧未用 | 大数据量门店 |
-| TD-030 | 首次登录改密对话框取消后，登录界面永久禁用（只能杀进程） | UI 缺陷 | **待处理（优先）**：`setLoginState(true)` 后成功路径/取消路径都不恢复 | 强制改密 |
-| TD-031 | 网关下单在 FX 线程且 HttpClient 无任何超时 → 收银台可无限卡死 | 体验/健壮性 | **待处理（优先）**：`PaymentService.createPaymentOrder` 直接跑在 FX 线程；`java.net.http` 默认无超时 | 电子支付 |
+| TD-030 | 首次登录改密对话框取消后，登录界面永久禁用（只能杀进程） | UI 缺陷 | **已修复（2026-09）**：改密对话框返回后，凡未真正切到主界面（取消/关窗/改密失败/无 application）一律 `setLoginState(false)`；1 项门禁 + 变异验证 | 强制改密 |
+| TD-031 | 网关下单在 FX 线程且 HttpClient 无任何超时 → 收银台可无限卡死 | 体验/健壮性 | **已修复（2026-09）**：两个渠道都加 `connectTimeout(5s)` + 请求 `timeout(15s)`；两个收银台的下单改走 `UIOptimizer.runInBackground`（异步窗口内置 `paymentInProgress` 防重复提交）；2 项门禁 + 变异验证 | 电子支付 |
 | TD-032 | FX 线程同步查库若干处（选品框逐字符搜索、每次购物车变更查促销、登录时同步启动两个服务） | 性能 | **待处理** | 界面流畅度 |
 | TD-033 | 触屏切语言泄漏 scheduler/Timeline/全局监听；`BackupService.start()` 无并发守卫 | 资源泄漏 | **待处理** | 触屏收银台 |
-| TD-034 | 金额/数量口径一批（7 项：发票税额百分比 `setScale(0)` 抛异常、挂单折扣走 double、退款单价取整使 Σ明细≠实付、积分冲减按次取整、充值小数积分被编辑保存截断、`promotions.discount` 列精度与输入不匹配、发票行税与表头差 1 分） | 正确性 | **待处理**：逐条有明确输入→错误输出，详见文末"第五批审计待办" | 对账 |
+| TD-034 | 金额/数量口径一批（7 项：发票税额百分比 `setScale(0)` 抛异常、挂单折扣走 double、退款单价取整使 Σ明细≠实付、积分冲减按次取整、充值小数积分被编辑保存截断、`promotions.discount` 列精度与输入不匹配、发票行税与表头差 1 分） | 正确性 | **已修复（2026-09）**：7 项全部处理（退款改为"总额权威、明细只许少算"，积分/充值改 FLOOR）；4 项门禁 + 5 项行为测试，11 处变异全红 | 对账 |
 | TD-035 | 其它（打包向导 FX 线程违规、`NotificationManager` 定时任务无 try/catch、`hasActiveShift` 吞异常让收银员看到"请先开班"、非 daemon 线程、`CurrencyUtil` HALF_EVEN…） | 杂项 | **待处理** | — |
 | TD-036 | 结尾斜杠绕过**全部**角色门禁（收银员可退款/改会员折扣/改支付配置） | 安全 | **已修复（2026-09）**：`isAllowed` 先归一化末尾斜杠；回归测试覆盖 13 条受控路由 × {正常,`/`,`//`} + 变异验证 | 越权 |
 | TD-037 | 收银员可用 `POST /api/printers/{id}/receipt` 的 `openCashDrawer` 打开钱箱（而 `/cashdrawer` 是管理员专属） | 安全/权限策略 | **待产品决定（2026-09）**：堵住这条等价路径，还是按"收银员本就要开钱箱找零"放开 `/cashdrawer`——两条路的业务含义不同，不擅自改 | 钱箱权限 |
@@ -1500,6 +1500,8 @@ autocommit 连接；`insertWithConnection` 内部先插表头（提交），再�
 
 本批只修了**会造成数据丢失/错误或直接卡死**的 TD-022 ~ TD-026；下面这些已核实但未改，逐条给了
 可复现的输入或路径，下一批按优先级处理。
+（**2026-09 更新**：TD-030 / TD-031 / TD-034 已在下一批修复，详见上文
+"TD-030 / TD-031 / TD-034 修复"；以下三节保留原始复现记录，状态以表格为准。）
 
 ### TD-027 ZIP 导入（死代码 + 必失败）
 
@@ -1525,7 +1527,7 @@ autocommit 连接；`insertWithConnection` 内部先插表头（提交），再�
 列表接口已有 `findByDateRange(start, end, limit)` 重载（`TransactionApiController:46` 已用）。
 建议：报表侧改为 SQL 聚合（`SUM`/`GROUP BY`）或分页流式处理。
 
-### TD-030 改密对话框取消 → 登录界面永久禁用（优先）
+### TD-030 改密对话框取消 → 登录界面永久禁用（优先） — **已修复，见下文专节**
 
 `LoginController:106` 先 `setLoginState(true)`（禁用用户名/密码框 + 显示 loading），
 成功路径 `:152-161` 只调用 `showPasswordChangeDialog(user)` / `switchToMainView(user)`，
@@ -1534,7 +1536,7 @@ autocommit 连接；`insertWithConnection` 内部先插表头（提交），再�
 结果：首次登录用户取消改密后，登录页两个输入框是灰的、转圈还在转，只能杀进程。
 修法：对话框返回后（含取消、含异常）一律 `setLoginState(false)`。
 
-### TD-031 网关下单在 FX 线程且无超时（优先）
+### TD-031 网关下单在 FX 线程且无超时（优先） — **已修复，见下文专节**
 
 `CartController:1236` / `TouchCartController:1510` 直接调用
 `PaymentService.createPaymentOrder(...)`，其内部 `provider.createOrder(order)` 用
@@ -1561,7 +1563,7 @@ autocommit 连接；`insertWithConnection` 内部先插表头（提交），再�
 `InventoryAlertService` 那样的 `isRunning` 守卫，于是每切一次语言就多一个非 daemon 的
 `ScheduledExecutorService` 线程。
 
-### TD-034 金额/数量口径（7 项，均有"输入 → 错误输出"）
+### TD-034 金额/数量口径（7 项，均有"输入 → 错误输出"） — **已修复，见下文专节**
 
 1. `InvoicePrintService:218` `rate.multiply(100).setScale(0)` 未给 `RoundingMode`：
    税率 0.065（6.5%）→ `ArithmeticException: Rounding necessary` → 打印发票接口 500
@@ -1670,3 +1672,72 @@ PUT /API/members/1    -> HTTP 404
   另外 `payment.mode=mock` 时回调只要 `mock_signature` 等于配置密钥即可把待支付订单标记为已付——
   本地未跟踪的 `config/payment.properties` 里确实是 mock + 低熵密钥，但仓库里的示例默认
   `disabled` + 占位符，是否会在生产开 mock 需运维确认。
+
+---
+
+## TD-030 / TD-031 / TD-034 修复（2026-09，第二批）
+
+### TD-030 强制改密对话框取消后登录界面永久禁用
+
+`handleLogin` 在异步校验前调用 `setLoginState(true)`（禁用用户名/密码框 + 显示转圈）。
+首次登录用户会被弹"必须改密"对话框，而 `showPasswordChangeDialog` 只有
+"改密成功且切到主界面"这一条出路：原来用 `dialog.showAndWait().ifPresent(response -> {...})`，
+**取消/关窗时 Optional 为空，什么也不做**；改密抛异常时也只弹了个错误。
+两种情况都停在"输入框是灰的、转圈还在转"的登录页，只能杀进程。
+
+修复：把结果记进 `boolean switchedToMain`，`showAndWait()` 返回后统一
+`if (!switchedToMain) setLoginState(false);`；外层 catch（对话框本身出错）也恢复。
+
+门禁 `LoginStateRecoveryPolicyTest`：断言恢复调用出现在 `showAndWait()` **之后**、
+数量 ≥ 2（内层 catch + 外层 catch）、且挂在 `if (!switchedToMain)` 分支上。
+**这里踩过一次坑**：第一版只数了 `setLoginState(false)` 的出现次数与位置，
+把条件写成 `if (switchedToMain)`（语义完全反了）居然还是绿的——变异测试抓出来的，
+因此补了"必须用取反分支"的断言。
+
+### TD-031 网关 HTTP 无超时 + 下单跑在 FX 线程
+
+两个渠道 provider 都用 `HttpClient.newHttpClient()`（**默认无限等待**）且请求不带 `timeout`，
+而收银台在 FX 线程直接调用 `PaymentService.createPaymentOrder(...)`：
+网关不可达时整个收银界面卡死且无法取消，收银员卡在一笔交易中间。
+
+修复两处：
+
+1. `AlipayPrecreatePaymentProvider` / `WechatNativePaymentProvider`：
+   `HttpClient.newBuilder().connectTimeout(5s)` + 每个请求 `.timeout(15s)`；
+2. 两个收银台的 `startElectronicPayment` 把下单改到 `UIOptimizer.runInBackground(...)`
+   （仓库既有的后台→回 FX 线程范式），并在异步窗口内先置 `paymentInProgress` /
+   `setPaymentInProgress(true)`，挡住重复点击造成两笔支付单；失败分支负责恢复该标记。
+
+门禁 `ElectronicPaymentSafetyPolicyTest` 新增 2 项：网关必须同时有连接超时与请求超时
+（且不得再出现 `HttpClient.newHttpClient()`）；两个 `startElectronicPayment` 内必须出现
+`UIOptimizer.runInBackground(`。变异验证：去掉 `.timeout(...)`、把触屏台改回同步调用 → 各自变红。
+
+**顺手撞上的棘轮门禁**：`ControllerSizePolicyTest` 钉着 `CartController ≤ 2240` 行，
+第一版用裸 `CompletableFuture.supplyAsync` 把它顶到 2245 行而被判红。
+按门禁意图改为复用 `UIOptimizer.runInBackground`（少 13 行）后回到上限内——
+这条门禁的作用正是"别把逻辑继续堆进巨型控制器"。
+
+### TD-034 金额/数量口径 7 项
+
+| # | 问题 | 修法 |
+|---|---|---|
+| 1 | `InvoicePrintService.formatPercent` 用 `setScale(0)` 不带 RoundingMode：税率 6.5% 时抛 `ArithmeticException: Rounding necessary`，打印发票接口 500 | 改 `setScale(0, HALF_UP)`（行为测试：6.5% → "7%"） |
+| 2 | 挂单折扣用 `double discountRate = discount.doubleValue()/10.0` 反推：总价 1.10 银卡 9.5 折落库 1.04，结账实收 1.05 | `calculateHoldOrderFinal` 直接调用 `TransactionService.calculateFinalAmount(cartList, currentMember, appliedPromotion)`，折扣 = 总额 − 实付（与结账同一算法） |
+| 3 | 退款按"每行单价四舍五入×数量"求和：2 × 10.10、9.5 折实付 19.19 却退 19.20（实测约 6.7% 的金额组合会偏） | 新增 `ReturnService.refundTotal(paid, gross, returnedGross)` 作为**权威退款额**（按实付比例取整、上限为实付）；`alignItemsToRefundTotal` 把明细之和压到不超过它。桌面退货单与 API 退款都改用这两个方法 |
+| 4 | 积分冲减按"每次退货"四舍五入：实付 10.10 得 101 分，分两次各退 5.05 → 51+51=102 分 | 改 `FLOOR`（整单退货仍恰好冲掉全部积分；部分退货宁可少扣，也不扣会员从未得到的积分） |
+| 5 | 充值产生小数积分（10.55 元 → 105.5 分），会员编辑界面 `intValue()` 显示 105，保存即丢 0.5 分 | 充值积分按"每元 10 分、向下取整"（与销售一致）→ 105；编辑界面改 `stripTrailingZeros().toPlainString()` 原样显示，历史小数积分不再被截断 |
+| 6 | `promotions.discount` 是 DECIMAL(10,2)，界面却接受任意精度：输入 0.985 被存成 0.99（1000 元订单少打 5 元折） | 校验阶段拒绝超过 2 位小数（新增 key `promotion.validation.discount_scale`，三语） |
+| 7 | 发票行税额不取整、表头用未取整值累加：3 × 33.33 @13% 表头 13.00、明细之和 12.99 | `InvoiceItem.calculateAmount` 逐行 `setScale(2, HALF_UP)`，表头累加取整后的行值 |
+
+**关于第 3 项的口径（有意保留的取舍）**：`return_order_items.unit_price` 是 `DECIMAL(10,2)`，
+而 `return_amount = unit_price × quantity`，所以"单行 2 件、应退 19.19"在语义上无法用
+2 位小数单价表达（9.595 存不了）。因此口径定为：**退款金额以 `return_orders.total_amount`
+（= `refundTotal`）为准**，明细行只允许少算（`alignItemsToRefundTotal` 逐分下调金额最大的行）。
+即"钱一分不多退，明细之和 ≤ 实退"，账面上不会再出现明细之和大于退款额。
+若日后要连明细也精确，需要把该列放宽到 DECIMAL(10,4) 或让 `return_amount` 独立于单价——留待有需要再做。
+
+门禁与测试：`MoneyPrecisionPolicyTest`（4 项源码门禁：挂单算法/积分显示/促销精度/发票逐行取整）、
+`ReturnServiceTest` 新增 3 项（比例取整、明细不超过总额、多次退货不超冲积分）、
+`InvoiceServiceTest` 新增 1 项（行税之和 == 表头）、`InvoicePrintServiceTest` 新增 1 项（6.5% 可打印）、
+`MemberServiceTest` 新增 1 项（充值 10.55 → 105 分）。
+**11 处变异全部验证为红**（含把门禁条件写反的那次，见 TD-030）。

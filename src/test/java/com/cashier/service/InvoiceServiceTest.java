@@ -65,6 +65,33 @@ class InvoiceServiceTest extends DatabaseTestBase {
     }
 
     @Test
+    @DisplayName("多行明细的行税额与表头税额一致（逐行取整到分，不再差 1 分）")
+    void lineTaxesSumToHeaderTax() throws SQLException {
+        // 3 × 33.33 @13%：每行税额 4.3329 → 落库 4.33，Σ=12.99。
+        // 表头若用未取整值累加会得到 13.00，与明细对不上（TD-034）
+        List<InvoiceItem> items = List.of(
+            item("商品A", new BigDecimal("33.33"), 1),
+            item("商品B", new BigDecimal("33.33"), 1),
+            item("商品C", new BigDecimal("33.33"), 1));
+
+        Invoice invoice = InvoiceService.createManualInvoice(manualRequest(items, new BigDecimal("0.13")));
+
+        BigDecimal lineTax = invoice.items.stream()
+            .map(i -> i.taxAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        BigDecimal lineTotal = invoice.items.stream()
+            .map(i -> i.totalAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+
+        assertEquals(0, invoice.taxAmount.compareTo(lineTax),
+            "表头税额 " + invoice.taxAmount + " 必须等于明细行税额之和 " + lineTax);
+        assertEquals(0, invoice.finalAmount.compareTo(lineTotal),
+            "价税合计 " + invoice.finalAmount + " 必须等于明细行合计之和 " + lineTotal);
+        assertEquals(0, new BigDecimal("12.99").compareTo(invoice.taxAmount),
+            "3 × 33.33 @13% 的行税额合计应为 12.99");
+    }
+
+    @Test
     @DisplayName("空明细发票金额为零")
     void emptyItemsInvoiceIsZero() throws SQLException {
         Invoice invoice = InvoiceService.createManualInvoice(manualRequest(List.of(), new BigDecimal("0.13")));

@@ -74,6 +74,22 @@ class InvoicePrintServiceTest {
     }
 
     @Test
+    @DisplayName("非整数百分比税率（6.5%）也能打印，不再因 setScale 抛异常")
+    void generateHtmlHandlesFractionalTaxRate() throws IOException {
+        InvoicePrintService.setOutputDir(tempDir.toString());
+        Invoice invoice = xssInvoice();
+        BigDecimal fractional = new BigDecimal("0.065");
+        invoice.taxRate = fractional;
+        invoice.items.get(0).taxRate = fractional;
+
+        String html = Files.readString(Path.of(InvoicePrintService.generateHtml(invoice)), StandardCharsets.UTF_8);
+
+        // 修复前 rate.multiply(100).setScale(0) 会抛 ArithmeticException: Rounding necessary，
+        // 打印接口直接 500（TD-034）
+        assertTrue(html.contains("7%"), "6.5% 应四舍五入显示为 7%，且不得抛异常");
+    }
+
+    @Test
     @DisplayName("空值字段不会导致生成失败")
     void generateHtmlHandlesNullFields() throws IOException {
         InvoicePrintService.setOutputDir(tempDir.toString());

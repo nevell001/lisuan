@@ -258,37 +258,46 @@ public class LoginController {
             dialog.initModality(javafx.stage.Modality.APPLICATION_MODAL);
             dialog.initOwner(usernameField.getScene().getWindow());
 
-            dialog.showAndWait().ifPresent(response -> {
-                if (response == ButtonType.OK) {
-                    try {
-                        String newPassword = newPasswordField.getText();
-                        String hashedPassword = com.cashier.util.PasswordUtil.hashPassword(newPassword);
+            // 只有"改密成功且已切到主界面"才算离开登录页；其余情况（取消/关窗/改密失败/
+            // application 为空）都必须把登录界面恢复可用——handleLogin 在进入这里之前
+            // 已经 setLoginState(true) 禁用了两个输入框，不恢复就只能杀进程（TD-030）。
+            boolean switchedToMain = false;
+            java.util.Optional<ButtonType> response = dialog.showAndWait();
+            if (response.isPresent() && response.get() == ButtonType.OK) {
+                try {
+                    String newPassword = newPasswordField.getText();
+                    String hashedPassword = com.cashier.util.PasswordUtil.hashPassword(newPassword);
 
-                        // 更新密码
-                        com.cashier.dao.DAOFactory.getInstance().getUserDAO().updatePassword(user.id, hashedPassword);
+                    // 更新密码
+                    com.cashier.dao.DAOFactory.getInstance().getUserDAO().updatePassword(user.id, hashedPassword);
 
-                        // 显示成功消息
-                        StatusBarManager.updateSuccess(com.cashier.i18n.I18nManager.getInstance().get("runtime.password_changed_message"));
-                        javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
-                        alert.setTitle(com.cashier.i18n.I18nManager.getInstance().get("runtime.password_changed_title"));
-                        alert.setHeaderText(null);
-                        alert.setContentText(com.cashier.i18n.I18nManager.getInstance().get("runtime.password_changed_message"));
-                        alert.showAndWait();
+                    // 显示成功消息
+                    StatusBarManager.updateSuccess(com.cashier.i18n.I18nManager.getInstance().get("runtime.password_changed_message"));
+                    javafx.scene.control.Alert alert = new javafx.scene.control.Alert(javafx.scene.control.Alert.AlertType.INFORMATION);
+                    alert.setTitle(com.cashier.i18n.I18nManager.getInstance().get("runtime.password_changed_title"));
+                    alert.setHeaderText(null);
+                    alert.setContentText(com.cashier.i18n.I18nManager.getInstance().get("runtime.password_changed_message"));
+                    alert.showAndWait();
 
-                        // 切换到主界面
-                        if (application != null) {
-                            application.switchToMainView(user);
-                        }
-
-                    } catch (Exception e) {
-                        logger.error("密码修改失败", e);
-                        showError(I18nManager.getInstance().get("runtime.password_change_failed", I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED)));
+                    // 切换到主界面
+                    if (application != null) {
+                        application.switchToMainView(user);
+                        switchedToMain = true;
                     }
+
+                } catch (Exception e) {
+                    logger.error("密码修改失败", e);
+                    showError(I18nManager.getInstance().get("runtime.password_change_failed", I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED)));
                 }
-            });
+            }
+
+            if (!switchedToMain) {
+                setLoginState(false);
+            }
 
         } catch (Exception e) {
             logger.error("显示密码修改对话框失败", e);
+            setLoginState(false);
             showError(I18nManager.getInstance().get("runtime.password_dialog_failed", I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED)));
         }
     }

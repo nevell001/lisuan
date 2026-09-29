@@ -898,10 +898,32 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `//` → 404）。现在 `isAllowed` 入口先 `withoutTrailingSlash(path)`；
   `AuthorizationMiddlewareTest.trailingSlashCannotBypassRoleGate` 覆盖 13 条受控路由 × {正常,`/`,`//`}。
   **以后往这个类里加路径规则时不要绕过归一化**
+- **网关 HTTP 必须显式设超时，下单不得在 FX 线程**（TD-031）：`java.net.http` 默认**无限等待**，
+  两个渠道 provider 都必须 `HttpClient.newBuilder().connectTimeout(...)` + 请求 `.timeout(...)`；
+  两个收银台的 `startElectronicPayment` 必须把下单放进 `UIOptimizer.runInBackground(...)`
+  （异步窗口内先置 `paymentInProgress`/`setPaymentInProgress(true)` 防重复提交，失败分支恢复）。
+  门禁 `ElectronicPaymentSafetyPolicyTest`（2 项）
+- **登录页的状态必须能恢复**（TD-030）：`handleLogin` 在异步校验前 `setLoginState(true)` 禁用输入，
+  之后弹出的模态框（如强制改密）**任何出口都要恢复**——取消/关窗走的是 `showAndWait()` 返回空的分支，
+  漏掉就留下"输入框禁用 + 转圈不停、只能杀进程"的登录页。门禁 `LoginStateRecoveryPolicyTest`
+  （断言恢复挂在 `if (!switchedToMain)` 分支上；只数调用次数会被"条件写反"骗过，变异测试抓过）
+- **金额口径五条**（TD-034，逐条都有"输入 → 错误输出"）：
+  ① 挂单金额必须调 `TransactionService.calculateFinalAmount(...)`，**不得用 `double` 反推折扣**
+  （总价 1.10 银卡 9.5 折：double 路径落库 1.04、结账实收 1.05）；
+  ② 退款金额以 `ReturnService.refundTotal(paid, gross, returnedGross)` 为权威（按实付比例取整、上限为实付），
+  明细用 `alignItemsToRefundTotal` 压到不超过它——`unit_price` 是 DECIMAL(10,2)，
+  "逐行四舍五入再乘数量"会多退（2×10.10、9.5 折实付 19.19 却退 19.20）；
+  ③ 积分冲减/充值赠送都用 `RoundingMode.FLOOR`（按次 HALF_UP 会累计超冲：101 分的单分两次退会冲 102 分）；
+  会员编辑界面显示积分用 `stripTrailingZeros().toPlainString()`，**不得 `intValue()`**；
+  ④ `promotions.discount` 是 DECIMAL(10,2)，界面必须拒绝超过 2 位小数（0.985 会被存成 0.99）；
+  ⑤ 发票行金额/税额逐行 `setScale(2, HALF_UP)`，否则表头累加未取整值会与明细差 1 分。
+  门禁 `MoneyPrecisionPolicyTest`（4 项源码）+ 4 个服务测试类里的 5 项行为测试
+- **控制器体积棘轮**（`ControllerSizePolicyTest`）：`CartController ≤ 2240` 行、
+  `TouchCartController ≤ 1980` 行。**加功能时要顺手把等价逻辑挪进 `UIOptimizer`/视图工厂等已有归属**，
+  而不是继续堆进控制器（TD-031 第一版就顶破了这条门禁，改成复用 `UIOptimizer.runInBackground` 才回到线内）
 - 2026-09 第五批审计的其余发现（未修，逐条带复现）见 `docs/TECH_DEBT.md` 的 TD-027 ~ TD-039：
-  ZIP 导入死代码必失败、POI CVE（本仓库不可达）、报表全量物化、改密取消后登录界面永久禁用、
-  网关下单无超时卡死 FX 线程、选品框逐字符查库、切语言泄漏资源、金额口径 7 项
-  （含发票税额百分比 `setScale(0)` 抛异常、挂单折扣走 double、退款单价取整）等
+  ZIP 导入死代码必失败、POI CVE（本仓库不可达）、报表全量物化、选品框逐字符查库、
+  切语言泄漏资源、钱箱/发票字段的权限口径待定等（TD-030/TD-031/TD-034 已修，见上）
 
 **结账字段口径统一（v2.6.0 补强）**
 

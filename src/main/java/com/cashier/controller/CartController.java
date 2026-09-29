@@ -1233,12 +1233,31 @@ public class CartController implements CartViewHost {
         try {
             Transaction transaction = createTransaction(paymentMethod);
             String terminalId = currentUser != null ? currentUser.username : "desktop";
-            PaymentOrder paymentOrder = PaymentService.createPaymentOrder(
-                transaction.transactionId, transaction.finalAmount, channel, terminalId,
-                currentUser != null ? currentUser.username : "system");
-            showElectronicPaymentDialog(paymentOrder, transaction, paymentMethod);
+            String operator = currentUser != null ? currentUser.username : "system";
+
+            // 下单 = 一次网关 HTTP 调用，必须离开 FX 线程（TD-031）：即使已有超时，
+            // 几秒等待也会冻住收银界面；先置"支付进行中"挡住异步窗口内的重复点击。
+            setPaymentInProgress(true);
+            UIOptimizer.runInBackground(
+                () -> PaymentService.createPaymentOrder(transaction.transactionId, transaction.finalAmount,
+                    channel, terminalId, operator),
+                paymentOrder -> {
+                    try {
+                        showElectronicPaymentDialog(paymentOrder, transaction, paymentMethod);
+                    } catch (Exception e) {
+                        logger.error("显示电子支付对话框失败", e);
+                        setPaymentInProgress(false);
+                        showError(i18n.get("payment.create.failed") + ": " + e.getMessage());
+                    }
+                },
+                error -> {
+                    logger.error("创建电子支付订单失败", error);
+                    setPaymentInProgress(false);
+                    showError(i18n.get("payment.create.failed") + ": " + error.getMessage());
+                });
         } catch (Exception e) {
             logger.error("创建电子支付订单失败", e);
+            setPaymentInProgress(false);
             showError(i18n.get("payment.create.failed") + ": " + e.getMessage());
         }
     }
@@ -2185,23 +2204,18 @@ public class CartController implements CartViewHost {
      * 获取折扣金额
      */
     private java.math.BigDecimal calculateHoldOrderDiscount() {
-        java.math.BigDecimal total = calculateHoldOrderTotal();
-        java.math.BigDecimal discount = java.math.BigDecimal.ZERO;
-
-        if (currentMember != null) {
-            // discount是折扣（如9.5表示95折），计算折扣金额
-            double discountRate = currentMember.discount.doubleValue() / 10.0;
-            discount = total.multiply(java.math.BigDecimal.valueOf(1 - discountRate));
-        }
-
-        return discount;
+        return calculateHoldOrderTotal().subtract(calculateHoldOrderFinal());
     }
 
     /**
      * 获取最终金额
+     *
+     * <p>必须与结账走**同一个算法**（`TransactionService.calculateFinalAmount`，含会员折扣与促销）：
+     * 原来这里用 `double discountRate = discount.doubleValue() / 10.0` 再 `BigDecimal.valueOf(1 - rate)`
+     * 反推折扣，在 `.xx5` 的边界上会与结账差 1 分——挂单列表/落库金额与实际收款对不上（TD-034）。</p>
      */
     private java.math.BigDecimal calculateHoldOrderFinal() {
-        return calculateHoldOrderTotal().subtract(calculateHoldOrderDiscount());
+        return TransactionService.calculateFinalAmount(cartList, currentMember, appliedPromotion);
     }
 
     /**

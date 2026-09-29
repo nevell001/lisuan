@@ -56,6 +56,71 @@ public class ReturnService {
     }
 
     /**
+     * 按整单实付比例计算**应退总额**——退货单金额的权威来源。
+     *
+     * <p>不能拿"每行单价四舍五入后再乘数量"求和：`return_order_items.unit_price` 是
+     * {@code DECIMAL(10,2)}，2 × 10.10、9.5 折时每件 9.595 只能存 9.60，行金额 19.20，
+     * 而整单实付是 19.19——按行求和会**多退 1 分**（TD-034；实测 6.7% 的金额组合会偏）。
+     * 退款金额以本方法为准，明细行只是分解。</p>
+     *
+     * @param paidAmount          整单实付
+     * @param grossAmount         整单原价合计
+     * @param returnedGrossAmount 本次退货部分（选中且退货数量 &gt; 0）的原价合计
+     * @return 应退金额，2 位小数，落在 [0, paidAmount]
+     */
+    public static BigDecimal refundTotal(BigDecimal paidAmount, BigDecimal grossAmount,
+                                         BigDecimal returnedGrossAmount) {
+        BigDecimal returned = returnedGrossAmount != null ? returnedGrossAmount : BigDecimal.ZERO;
+        if (returned.compareTo(BigDecimal.ZERO) <= 0) {
+            return BigDecimal.ZERO.setScale(2, RoundingMode.HALF_UP);
+        }
+        BigDecimal paid = (paidAmount != null ? paidAmount : returned).setScale(2, RoundingMode.HALF_UP);
+        if (grossAmount == null || grossAmount.compareTo(BigDecimal.ZERO) <= 0) {
+            return returned.setScale(2, RoundingMode.HALF_UP).min(paid);
+        }
+        return paid.multiply(returned)
+            .divide(grossAmount, 2, RoundingMode.HALF_UP)
+            .min(paid)
+            .max(BigDecimal.ZERO);
+    }
+
+    /**
+     * 把明细行的金额之和**压到不超过**应退总额。
+     *
+     * <p>单价只有 2 位小数，逐行"单价×数量"最多比精确分摊多几分；退款已按
+     * {@link #refundTotal} 生效，明细只允许少算、不允许多算，否则账面明细之和会大于实际退款额。
+     * 逐分从当前金额最大的行往下调（每轮至少减 1 分，循环次数有上限）。</p>
+     */
+    public static void alignItemsToRefundTotal(List<ReturnOrderItem> items, BigDecimal refundTotal) {
+        if (items == null || items.isEmpty() || refundTotal == null) {
+            return;
+        }
+        BigDecimal sum = items.stream()
+            .map(ReturnOrderItem::getReturnAmount)
+            .reduce(BigDecimal.ZERO, BigDecimal::add);
+        int guard = 0;
+        while (sum.compareTo(refundTotal) > 0 && guard++ < 10_000) {
+            ReturnOrderItem largest = null;
+            for (ReturnOrderItem item : items) {
+                if (item.returnQuantity <= 0 || item.getUnitPrice().compareTo(BigDecimal.ZERO) <= 0) {
+                    continue;
+                }
+                if (largest == null || item.getReturnAmount().compareTo(largest.getReturnAmount()) > 0) {
+                    largest = item;
+                }
+            }
+            if (largest == null) {
+                return;
+            }
+            largest.unitPrice = largest.getUnitPrice().subtract(new BigDecimal("0.01"));
+            largest.calculateAmount();
+            sum = items.stream()
+                .map(ReturnOrderItem::getReturnAmount)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+        }
+    }
+
+    /**
      * 创建退货订单（事务）
      *
      * <p>退货单号由 MAX+1 生成，多进程并发创建时可能撞唯一键；失败时整体重试一次
@@ -262,6 +327,11 @@ public class ReturnService {
      * <p>积分累计口径与 {@code TransactionService} 一致（每元 10 分，向下取整），
      * 因此整单退货恰好冲掉原单积分，部分退货按比例冲减。</p>
      *
+     * <p>这里必须用 {@code FLOOR} 而不是 {@code HALF_UP}：本方法按**每次退货**调用，
+     * 四舍五入会让多次部分退货累计冲减超过原单得分。实测原单实付 10.10（得 101 分），
+     * 分两次各退 5.05 时 101×0.5=50.5，HALF_UP 每次 51、合计 102 &gt; 101（TD-034）。
+     * 向下取整则每次最多少冲 1 分，宁可少扣也不扣掉会员从未得到的积分。</p>
+     *
      * @param refundAmount 本次退货金额
      * @param originalPaidAmount 原单实付金额
      * @return 应冲减的积分；参数缺失或非法时返回 0
@@ -274,7 +344,7 @@ public class ReturnService {
         }
         BigDecimal earnedPoints = originalPaidAmount.multiply(BigDecimal.TEN).setScale(0, RoundingMode.FLOOR);
         BigDecimal ratio = refundAmount.divide(originalPaidAmount, 6, RoundingMode.HALF_UP).min(BigDecimal.ONE);
-        return earnedPoints.multiply(ratio).setScale(0, RoundingMode.HALF_UP);
+        return earnedPoints.multiply(ratio).setScale(0, RoundingMode.FLOOR);
     }
 
     /**

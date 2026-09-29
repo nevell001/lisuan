@@ -73,6 +73,8 @@ public class CreateReturnOrderDialogController {
         public String productName;
         public int originalQuantity;
         public int returnQuantity;
+        /** 原价（未折算会员折扣/促销），用于按整单实付比例算应退总额 */
+        public double originalPrice;
         public double unitPrice;
         public String condition = "GOOD";
 
@@ -322,6 +324,7 @@ public class CreateReturnOrderDialogController {
             returnItem.productName = product.name;
             returnItem.originalQuantity = product.quantity;
             returnItem.returnQuantity = product.quantity;
+            returnItem.originalPrice = product.getPrice() != null ? product.getPrice().doubleValue() : 0;
             // 退款单价按整单实付比例折算（ReturnService 统一口径）
             returnItem.unitPrice = ReturnService
                 .refundUnitPrice(product.getPrice(), paidAmount, grossAmount)
@@ -337,13 +340,8 @@ public class CreateReturnOrderDialogController {
      * 计算退货总金额
      */
     private void calculateTotal() {
-        double total = 0;
-        for (ReturnItem item : returnItems) {
-            if (item.isSelected()) {
-                total += item.getReturnAmount();
-            }
-        }
-        totalReturnAmountLabel.setText(CurrencyUtil.format(total));
+        // 显示的就是最终会退给顾客的金额（与落库的 total_amount 同一算法）
+        totalReturnAmountLabel.setText(CurrencyUtil.format(refundTotalAmount().doubleValue()));
     }
 
     /**
@@ -437,11 +435,33 @@ public class CreateReturnOrderDialogController {
 
         ReturnOrder returnOrder = buildReturnOrder(returnReason, resolveMemberId());
         List<ReturnOrderItem> items = buildReturnOrderItems(returnReason);
-        returnOrder.totalAmount = calculateReturnTotal(items);
+        // 应退总额以"整单实付比例"为准（ReturnService.refundTotal），不能拿逐行单价×数量求和：
+        // unit_price 只有 2 位小数，2 × 10.10、9.5 折时行金额 19.20 而实付 19.19，按行求和会多退 1 分（TD-034）
+        BigDecimal refundTotal = refundTotalAmount();
+        // 明细只允许少算：把超过应退总额的部分逐分调下来，保证"明细之和 ≤ 实际退款额"
+        ReturnService.alignItemsToRefundTotal(items, refundTotal);
+        returnOrder.totalAmount = refundTotal;
 
         // 保存退货订单
         boolean result = ReturnService.createReturnOrder(returnOrder, items);
         handleReturnOrderSaveResult(result, returnOrder);
+    }
+
+    /** 本次选中退货部分（含退货数量）的原价合计，未折算会员折扣/促销。 */
+    private BigDecimal selectedGrossAmount() {
+        BigDecimal total = BigDecimal.ZERO;
+        for (ReturnItem item : returnItems) {
+            if (item.isSelected() && item.returnQuantity > 0) {
+                total = total.add(BigDecimal.valueOf(item.originalPrice)
+                    .multiply(BigDecimal.valueOf(item.returnQuantity)));
+            }
+        }
+        return total;
+    }
+
+    /** 本次退货的应退总额（权威金额，与落库的 return_orders.total_amount 一致）。 */
+    private BigDecimal refundTotalAmount() {
+        return ReturnService.refundTotal(paidAmount, grossAmount, selectedGrossAmount());
     }
 
     private boolean hasSelectedReturnItem() {

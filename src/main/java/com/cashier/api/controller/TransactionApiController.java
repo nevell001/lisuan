@@ -430,6 +430,10 @@ public class TransactionApiController {
             returnItems.add(createReturnOrderItem(returnOrderId, product, transaction.finalAmount, gross));
             restoreInventoryForRefund(conn, product);
         }
+        // 逐行单价×数量最多比实退金额多几分（unit_price 只有 2 位小数，TD-034）：
+        // 退款额取 transaction.final_amount（权威），明细只允许少算
+        ReturnService.alignItemsToRefundTotal(returnItems,
+            transaction.finalAmount != null ? transaction.finalAmount : BigDecimal.ZERO);
         return DAOFactory.getInstance().getReturnOrderItemDAO().batchInsertWithConnection(conn, returnItems);
     }
 

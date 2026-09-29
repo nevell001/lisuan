@@ -13,6 +13,7 @@ import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.Date;
@@ -23,13 +24,23 @@ public final class AlipayPrecreatePaymentProvider implements PaymentChannelProvi
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private static final String DEFAULT_GATEWAY = "https://openapi.alipay.com/gateway.do";
     private static final DateTimeFormatter ALIPAY_TIME = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    /**
+     * 网关超时必须显式设置：java.net.http 的默认是**无限等待**，网关不可达时会把调用线程永久挂住
+     * （收银台在 FX 线程调用下单，曾表现为界面彻底卡死，TD-031）。
+     */
+    private static final Duration CONNECT_TIMEOUT = Duration.ofSeconds(5);
+    private static final Duration REQUEST_TIMEOUT = Duration.ofSeconds(15);
 
     private final PaymentService.PaymentConfig config;
     private final HttpClient client;
     private final String unavailableReason;
 
     public AlipayPrecreatePaymentProvider(PaymentService.PaymentConfig config) {
-        this(config, HttpClient.newHttpClient());
+        this(config, newHttpClient());
+    }
+
+    private static HttpClient newHttpClient() {
+        return HttpClient.newBuilder().connectTimeout(CONNECT_TIMEOUT).build();
     }
 
     AlipayPrecreatePaymentProvider(PaymentService.PaymentConfig config, HttpClient client) {
@@ -129,6 +140,7 @@ public final class AlipayPrecreatePaymentProvider implements PaymentChannelProvi
         sign(params);
         HttpRequest request = HttpRequest.newBuilder(URI.create(gateway()))
             .header("Content-Type", "application/x-www-form-urlencoded;charset=UTF-8")
+            .timeout(REQUEST_TIMEOUT)
             .POST(HttpRequest.BodyPublishers.ofString(formBody(params)))
             .build();
         HttpResponse<String> httpResponse = client.send(request, HttpResponse.BodyHandlers.ofString());

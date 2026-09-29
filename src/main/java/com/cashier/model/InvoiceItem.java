@@ -41,8 +41,13 @@ public class InvoiceItem {
      */
     public void calculateAmount(BigDecimal taxRate) {
         this.taxRate = taxRate;
-        this.amount = this.unitPrice.multiply(BigDecimal.valueOf(this.quantity));
-        this.taxAmount = this.amount.multiply(this.taxRate);
+        BigDecimal rate = taxRate != null ? taxRate : BigDecimal.ZERO;
+        // 逐行取整到分：invoice_items 的 amount/tax_amount 是 DECIMAL(10,2)，落库本来就会取整；
+        // 表头若用未取整值累加，就会出现"表头 13.00、明细之和 12.99"的 1 分差
+        // （3 × 33.33 @13%：每行税额 4.3329 → 存 4.33，Σ=12.99，表头却是 13.00，TD-034）
+        this.amount = this.unitPrice.multiply(BigDecimal.valueOf(this.quantity))
+            .setScale(2, RoundingMode.HALF_UP);
+        this.taxAmount = this.amount.multiply(rate).setScale(2, RoundingMode.HALF_UP);
         this.totalAmount = this.amount.add(this.taxAmount);
     }
     

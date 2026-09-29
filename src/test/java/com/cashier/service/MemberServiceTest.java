@@ -365,6 +365,22 @@ class MemberServiceTest extends DatabaseTestBase {
     }
 
     @Test
+    @Order(21)
+    @DisplayName("充值赠送积分向下取整，不落库小数积分（否则编辑保存会静默丢分）")
+    void rechargePointsAreFlooredToWholePoints() throws Exception {
+        BigDecimal pointsBefore = testMember.points;
+
+        // 10.55 元 → 105.5 分：必须向下取整成 105（与销售"每元 10 分、向下取整"一致）
+        assertTrue(MemberService.recharge(testMember, new BigDecimal("10.55"), "现金", "测试操作员"));
+
+        Member updated = memberDAO.findById(testMember.id);
+        assertEquals(0, pointsBefore.add(new BigDecimal("105")).compareTo(updated.getPoints()),
+            "充值 10.55 元应得 105 分（不是 105.5）：小数积分会被会员编辑界面显示成整数后保存时抹掉");
+        assertEquals(0, updated.getPoints().stripTrailingZeros().scale(),
+            "积分不得带小数位");
+    }
+
+    @Test
     @Order(20)
     @DisplayName("测试会员充值失败时回滚余额更新")
     void testRechargeRollbackWhenRecordInsertFails() throws Exception {

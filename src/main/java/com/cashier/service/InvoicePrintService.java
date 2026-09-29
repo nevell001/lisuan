@@ -215,7 +215,9 @@ public class InvoicePrintService {
      */
     private static String formatPercent(BigDecimal rate) {
         if (rate == null) return "0%";
-        return rate.multiply(BigDecimal.valueOf(100)).setScale(0).toString() + "%";
+        // 必须给 RoundingMode：税率 0.065 时 6.500.setScale(0) 会抛
+        // ArithmeticException: Rounding necessary，打印发票接口直接 500（TD-034）
+        return rate.multiply(BigDecimal.valueOf(100)).setScale(0, RoundingMode.HALF_UP).toString() + "%";
     }
 
     private static String formatDate(Date date) {
