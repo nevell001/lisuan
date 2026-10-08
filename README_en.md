@@ -4,12 +4,7 @@
 
 LiSuan Cashier System is a desktop POS (Point of Sale) cashier system built with JavaFX 17. It is designed for daily retail operations, covering checkout, products, members, purchasing, inventory, returns, reports, user permissions, data backup, and hardware integration.
 
-**Current Version**: v2.6.0 | **Latest Update**: 2026-10-08 | **Test Coverage**: see the build output
-
-> Test scope: `mvn -q clean verify` runs the full suite (tests + SpotBugs + JaCoCo gates). The case count
-> is deliberately not written down here — read `Tests run:` from the build output.
-> `LoginControllerUITest` (17 cases) requires a real display environment and is run explicitly with
-> `mvn -Pui-tests -Dtest=LoginControllerUITest test`.
+**Current Version**: v2.6.0 | **Latest Update**: 2026-10-08
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.12-blue)
@@ -222,20 +217,11 @@ chmod +x install.sh start.sh
 # Compile
 mvn clean compile
 
-# Run tests
-mvn test
-
-# Package while skipping tests
+# Package (skipping tests)
 mvn clean package -DskipTests
 
-# Run specific test class
-mvn test -Dtest=ProductDAOTest
-
-# Run specific test method
-mvn test -Dtest=PasswordUtilTest#testHashPassword
-
-# Static quality checks (SpotBugs)
-mvn -q -DskipTests spotbugs:check
+# Run directly
+mvn javafx:run
 ```
 
 ---
@@ -384,14 +370,10 @@ src/main/resources/
 - **Rate Limiting**: Maximum 60 requests per IP per minute
 - **Security Headers**: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
 
-### Code Quality
-- **Unit Tests**: 589 test cases (`mvn -q clean verify`) covering DAOs, services, utilities, concurrency safety, and the API (606 in total including display-dependent UI tests)
-- **Static Analysis**: SpotBugs high-risk defect gate
-- **Coverage Gate**: JaCoCo line coverage ≥10%
-- **i18n Gate**: Enforces identical keys across the three language bundles, complete `I18nKeys` constants, and complete keys for source i18n calls
-- **Concurrency Tests**: Optimistic locking prevents overselling stock and over-drawing member balances
+### Reliability
+- **Concurrency Safety**: Optimistic locking prevents overselling stock and over-drawing member balances
+- **Multi-language**: Simplified Chinese / Traditional Chinese / English bundles are complete and switchable at any time
 - **Dependency Management**: Maven Enforcer plugin ensures dependency consistency
-- **Logging Standards**: Unified use of SLF4J + LoggerFactoryUtil
 - **Code Standards**: Follows guidelines in CLAUDE.md
 
 ---
@@ -444,12 +426,8 @@ src/main/resources/
 - Fixed FormValidator DISCOUNT validation rule boundary issue (10.1 should be invalid)
 - Fixed DatabaseManager JDBC resource leak (ResultSet not closed)
 - Dependency updates: Jackson 2.18.2, SLF4J 2.0.16, Mockito 5.15.2, JUnit 5.11.3, H2 2.3.232
-- Test enhancements: Added FormValidatorTest (33 tests) and LoginControllerUITest (17 tests)
-- All 380 test cases passing, test coverage continuously improving
 
 ### v2.5.9-maintenance (2026-07-05)
-- Fixed API Token security test failure.
-- Optimized Mockito configuration for test environments.
 - Strengthened security prompts in production configuration templates.
 - Unified database initialization scripts, enabling out-of-the-box support for more modules.
 - Optimized README structure for better readability.

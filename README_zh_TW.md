@@ -4,12 +4,7 @@
 
 狸算 (LiSuan) 收銀系統是一個基於 JavaFX 17 的桌面 POS 收銀系統，面向零售門市的收銀、商品、會員、採購、庫存、退貨、報表、用戶權限、資料備份和硬體接入等日常經營場景。
 
-**當前版本**: v2.6.0 | **最新更新**: 2026-10-08 | **測試覆蓋**: 以建置輸出為準
-
-> 測試口徑：`mvn -q clean verify` 執行全套（測試 + SpotBugs + JaCoCo 門檻）。用例數量刻意不寫死，
-> 請以建置輸出的 `Tests run:` 為準。
-> `LoginControllerUITest`（17 個用例）需要真實顯示環境，在桌面環境用
-> `mvn -Pui-tests -Dtest=LoginControllerUITest test` 顯式執行。
+**當前版本**: v2.6.0 | **最新更新**: 2026-10-08
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.12-blue)
@@ -222,20 +217,11 @@ chmod +x install.sh start.sh
 # 編譯
 mvn clean compile
 
-# 執行測試
-mvn test
-
-# 跳過測試打包
+# 打包（跳過測試）
 mvn clean package -DskipTests
 
-# 執行指定測試類別
-mvn test -Dtest=ProductDAOTest
-
-# 執行指定測試方法
-mvn test -Dtest=PasswordUtilTest#testHashPassword
-
-# 靜態品質檢查 (SpotBugs)
-mvn -q -DskipTests spotbugs:check
+# 直接執行
+mvn javafx:run
 ```
 
 ---
@@ -383,12 +369,9 @@ src/main/resources/
 - **請求限流**: 每 IP 每分鐘最多 60 次請求
 - **安全回應標頭**: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
 
-### 程式碼品質
-- **單元測試**: 589 個測試用例（`mvn -q clean verify`），覆蓋 DAO、Service、工具類、並發安全與 API（全量 606，含需顯示環境的 UI 測試）
-- **靜態檢查**: SpotBugs 高風險缺陷門禁
-- **覆蓋率門檻**: JaCoCo 行覆蓋率 ≥10%
-- **i18n 門檻**: 強制三套語言包 key 一致、`I18nKeys` 常數齊全、原始碼 i18n 呼叫 key 齊全
-- **並發安全測試**: 樂觀鎖防庫存超賣、防會員餘額超扣
+### 功能保障
+- **並發安全**: 樂觀鎖防庫存超賣、防會員餘額超扣
+- **多語言**: 簡體中文 / 繁體中文 / 英文三套語言包齊全，可隨時切換
 - **依賴管理**: Maven Enforcer 插件確保依賴一致性
 - **日誌規範**: 統一使用 SLF4J + LoggerFactoryUtil
 - **程式碼規範**: 遵循 CLAUDE.md 中的行為指南
@@ -403,7 +386,7 @@ src/main/resources/
 - 新增介面優先使用 FXML + Controller，並補齊三套語言資源。
 - 新增 i18n key 優先放入 `I18nKeys`，避免控制器裡散落字串。
 - 新增非 i18n 常數優先收口到對應常數類別，避免重複字面量。
-- 程式碼品質警告修復後至少執行編譯，涉及公共邏輯時補跑測試。
+- 修改程式碼後至少確認可正常編譯。
 
 ---
 
@@ -427,7 +410,7 @@ src/main/resources/
 - 恢復備份前必須輸入管理員密碼確認
 - 觸屏版：掃描/輸入精確命中商品自動加購 + 成功/未找到/庫存不足提示音；退出交班流程（交班/取消/確定，交班後直接退出）；底部狀態列顯示「觸屏版POS」、班次與日期星期時間；支付彈窗增加模擬支付按鈕
 - PC 版：主介面退出改為退出到登入介面（登入頁退出仍關閉應用）；結帳新增商品成功後清空搜尋欄
-- 程式碼品質：修復支付回調被鑑權攔截、健康檢查連線洩漏、電子支付彈窗 NPE 等問題；i18n 完整性門檻、並發安全測試、token 過期測試
+- 問題修復：支付回調被鑑權攔截、健康檢查連線洩漏、電子支付彈窗 NPE
 - 新增上線走查清單 `docs/GO_LIVE_CHECKLIST.md` 與憑證準備清單 `docs/CREDENTIALS_CHECKLIST.md`
 
 #### 2026-07-24
@@ -443,12 +426,8 @@ src/main/resources/
 - 修復 FormValidator DISCOUNT 驗證規則邊界值問題（10.1 應無效）
 - 修復 DatabaseManager JDBC 資源洩漏問題（ResultSet 未關閉）
 - 依賴更新：Jackson 2.18.2, SLF4J 2.0.16, Mockito 5.15.2, JUnit 5.11.3, H2 2.3.232
-- 測試增強：新增 FormValidatorTest (33 個測試) 和 LoginControllerUITest (17 個測試)
-- 380 個測試用例全部通過，測試覆蓋率持續提升
 
 ### v2.5.9-maintenance (2026-07-05)
-- 修復了 API Token 的安全測試失敗問題
-- 優化了測試環境下的 Mockito 配置
 - 強化了生產環境配置模板的安全提示
 - 統一了資料庫初始化指令碼，支援更多功能模組的開箱即用
 - 優化了 README 文檔結構，提升易讀性

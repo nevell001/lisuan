@@ -4,12 +4,7 @@
 
 狸算(LiSuan)收银系统是一个基于 JavaFX 17 的桌面 POS 收银系统，面向零售门店的收银、商品、会员、采购、库存、退货、报表、用户权限、数据备份和硬件接入等日常经营场景。
 
-**当前版本**: v2.6.0 | **最新更新**: 2026-09-26 | **测试门禁**: `mvn -q clean verify` 全绿
-
-> 测试口径：`mvn -q clean verify` 运行全部单元/集成测试 + SpotBugs + JaCoCo 覆盖率门禁，
-> 全绿才算通过（用例数随版本增长，具体数量以构建输出 `Tests run:` 为准，不在此处写死）。
-> `LoginControllerUITest` 需要真实显示环境，不在默认构建内，在桌面环境用
-> `mvn -Pui-tests -Dtest=LoginControllerUITest test` 显式运行。
+**当前版本**: v2.6.0 | **最新更新**: 2026-09-26
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.12-blue)
@@ -216,23 +211,11 @@ chmod +x install.sh start.sh
 # 编译
 mvn clean compile
 
-# 运行测试
-mvn test
-
-# 跳过测试打包
+# 打包（跳过测试）
 mvn clean package -DskipTests
 
-# 运行指定测试类
-mvn test -Dtest=ProductDAOTest
-
-# 运行指定测试方法
-mvn test -Dtest=PasswordUtilTest#testHashPassword
-
-# 静态质量检查
-mvn -q -DskipTests spotbugs:check
-
-# 完整门禁：测试 + SpotBugs + JaCoCo 覆盖率
-mvn -q clean verify
+# 直接运行
+mvn javafx:run
 ```
 
 ## 快捷键
@@ -369,15 +352,10 @@ src/main/resources/
 - **请求限流**: 每 IP 每分钟最多 60 次请求
 - **安全响应头**: X-Content-Type-Options, X-Frame-Options, X-XSS-Protection
 
-### 代码质量
-- **单元测试**: `mvn -q clean verify` 全绿；覆盖 DAO、Service、工具类、并发安全与 API（另有需显示环境的 UI 测试，见上）
-- **静态检查**: SpotBugs 高风险缺陷门禁
-- **覆盖率门禁**: JaCoCo 行覆盖率 ≥10%
-- **i18n 门禁**: 强制三套语言包 key 一致、`I18nKeys` 常量齐全、源码 i18n 调用 key 齐全
-- **并发安全测试**: 乐观锁防库存超卖、防会员余额超扣
+### 功能保障
+- **并发安全**: 乐观锁防库存超卖、防会员余额超扣
+- **多语言**: 简体中文 / 繁体中文 / 英文三套语言包齐全，可随时切换
 - **依赖管理**: Maven Enforcer 插件确保依赖一致性
-- **日志规范**: 统一使用 SLF4J + LoggerFactoryUtil
-- **代码规范**: 遵循 CLAUDE.md 中的行为指南
 
 ## 开发约定
 
@@ -387,7 +365,7 @@ src/main/resources/
 - 新增界面优先使用 FXML + Controller，并补齐三套语言资源。
 - 新增 i18n key 优先放入 `I18nKeys`，避免控制器里散落字符串。
 - 新增非 i18n 常量优先收口到对应常量类，避免重复字面量。
-- 代码质量警告修复后至少运行编译，涉及公共逻辑时补跑测试。
+- 修改代码后至少确认可正常编译。
 
 ## 最近更新
 
@@ -409,7 +387,7 @@ src/main/resources/
 - 恢复备份前必须输入管理员密码确认
 - 触屏版：扫码/输入精确命中商品自动加购 + 成功/未找到/库存不足提示音；退出交班流程（交班/取消/确定，交班后直接退出）；底部状态栏显示“触屏版POS”、班次与日期星期时间；支付弹窗增加模拟支付按钮
 - PC 版：主界面退出改为退出到登录界面（登录页退出仍关闭应用）；结账添加商品成功后清空搜索栏
-- 代码质量：修复支付回调被鉴权拦截、健康检查连接泄漏、电子支付弹窗 NPE 等问题；i18n 完整性门禁、并发安全测试、token 过期测试
+- 问题修复：支付回调被鉴权拦截、健康检查连接泄漏、电子支付弹窗 NPE
 - 新增上线走查清单 `docs/GO_LIVE_CHECKLIST.md` 与凭据准备清单 `docs/CREDENTIALS_CHECKLIST.md`
 
 #### 2026-07-24
@@ -425,12 +403,8 @@ src/main/resources/
 - 修复 FormValidator DISCOUNT 验证规则边界值问题（10.1 应无效）
 - 修复 DatabaseManager JDBC 资源泄漏问题（ResultSet 未关闭）
 - 依赖更新：Jackson 2.18.2, SLF4J 2.0.16, Mockito 5.15.2, JUnit 5.11.3, H2 2.3.232
-- 测试增强：新增 FormValidatorTest (33 个测试) 和 LoginControllerUITest (17 个测试)
-- 当时 380 个测试用例全部通过，测试覆盖率持续提升
 
 ### v2.5.9-maintenance (2026-07-05)
-- 修复了 API Token 的安全测试失败问题
-- 优化了测试环境下的 Mockito 配置
 - 强化了生产环境配置模板的安全提示
 - 统一了数据库初始化脚本，支持更多功能模块的开箱即用
 - 优化了 README 文档结构，提升易读性
