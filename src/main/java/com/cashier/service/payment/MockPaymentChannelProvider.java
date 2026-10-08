@@ -63,4 +63,10 @@ public final class MockPaymentChannelProvider implements PaymentChannelProvider 
     public RefundRecord.RefundStatus queryRefund(PaymentOrder order, RefundRecord refund) {
         return RefundRecord.RefundStatus.SUCCESS;
     }
+
+    /** 模拟渠道的退款回调同样是终态（F9-c）。 */
+    @Override
+    public RefundRecord.RefundStatus refundStatusFromNotification(Map<String, String> notification) {
+        return RefundRecord.RefundStatus.SUCCESS;
+    }
 }

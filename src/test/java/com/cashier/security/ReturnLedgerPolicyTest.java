@@ -22,6 +22,34 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("退货占用台账门禁")
 class ReturnLedgerPolicyTest {
 
+    @Test
+    @DisplayName("行级可退量校验（F10-c）：必须按原交易明细行校验，且与商品级同在锁内事务里")
+    void lineLevelValidationIsEnforcedInsideTransaction() throws Exception {
+        String service = read("com/cashier/service/ReturnService.java");
+        assertTrue(service.contains("validateRequestedLines("),
+            "同一商品多行时必须按行校验可退量，否则可以把超出该行的数量算到更贵的一行多退钱");
+        int lock = service.indexOf("lockAndValidateReturnable(conn,");
+        int line = service.indexOf("validateRequestedLines(conn,");
+        assertTrue(lock > 0 && line > lock,
+            "行级校验必须与行锁/商品级校验在同一事务内（事务外校验挡不住并发）");
+        assertTrue(service.contains("sumReturnedQuantitiesByTransactionItemWithConnection"),
+            "行级已退量必须取明细表的权威记录");
+
+        String dao = read("com/cashier/dao/ReturnOrderItemDAORefactored.java");
+        assertTrue(dao.contains("AND ro.status <> 'REJECTED'"),
+            "行级口径必须与台账一致：已驳回的退货单不占额度");
+        assertTrue(dao.contains("transaction_item_id IS NOT NULL"),
+            "没有行 id 的老数据不参与行级校验（商品级校验仍然兜着）");
+
+        // 三条写路径都要带上行 id，否则行级校验形同虚设
+        assertTrue(read("com/cashier/dao/TransactionDAORefactored.java").contains("ti.id AS item_id"),
+            "加载原单明细必须带出行 id");
+        assertTrue(read("com/cashier/controller/CreateReturnOrderDialogController.java")
+                .contains("item.transactionItemId"), "桌面建单明细必须带上行 id");
+        assertTrue(read("com/cashier/api/controller/TransactionApiController.java")
+                .contains("item.transactionItemId"), "API 整单退款的明细也要带上行 id");
+    }
+
     private static String read(String relativeToMain) throws Exception {
         return Files.readString(Path.of("src/main/java/" + relativeToMain));
     }

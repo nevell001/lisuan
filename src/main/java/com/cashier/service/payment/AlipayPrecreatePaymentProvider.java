@@ -145,6 +145,12 @@ public final class AlipayPrecreatePaymentProvider implements PaymentChannelProvi
         return RefundRecord.RefundStatus.SUCCESS;
     }
 
+    /** 支付宝退款同步返回终态，回调（若配置）同样按 SUCCESS 处理（F9-c）。 */
+    @Override
+    public RefundRecord.RefundStatus refundStatusFromNotification(Map<String, String> notification) {
+        return RefundRecord.RefundStatus.SUCCESS;
+    }
+
     private JsonNode call(Map<String, String> params, String responseNode) throws Exception {
         sign(params);
         HttpRequest request = HttpRequest.newBuilder(URI.create(gateway()))

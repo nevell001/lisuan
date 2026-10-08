@@ -423,6 +423,11 @@ class TransactionApiControllerTest extends DatabaseTestBase {
         assertEquals(2, queryInt("SELECT quantity FROM return_reservations WHERE original_transaction_id = '"
             + transactionId + "'"), "占用数量应等于该商品在交易里的数量");
 
+        // F10-c：API 整单退款的明细也要记下原交易行 id，桌面退货按行校验才能对得上
+        assertEquals(1, queryInt("SELECT COUNT(*) FROM return_order_items roi JOIN return_orders ro "
+            + "ON roi.return_order_id = ro.return_order_id WHERE ro.original_transaction_id = '" + transactionId
+            + "' AND roi.transaction_item_id IS NOT NULL"), "API 退款明细必须带上 transaction_item_id");
+
         // 桌面退货走 ReturnService 的可退余量校验：已被整单退款 → 余量不足
         ReturnOrder desktopReturn = new ReturnOrder();
         desktopReturn.originalTransactionId = transactionId;

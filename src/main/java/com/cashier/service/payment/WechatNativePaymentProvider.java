@@ -134,7 +134,12 @@ public final class WechatNativePaymentProvider implements PaymentChannelProvider
             }
 
             JsonNode root = MAPPER.readTree(rawBody);
-            if (!"TRANSACTION.SUCCESS".equals(root.path("event_type").asText())) {
+            String eventType = root.path("event_type").asText();
+            boolean paymentEvent = "TRANSACTION.SUCCESS".equals(eventType);
+            // F9-c：退款回调（REFUND.SUCCESS/REFUND.ABNORMAL/REFUND.CLOSED）走同一条验签解密路径，
+            // 只是解出来的字段不同（有 out_refund_no 而没有 trade_state）
+            boolean refundEvent = eventType.startsWith("REFUND.");
+            if (!paymentEvent && !refundEvent) {
                 return false;
             }
             JsonNode resource = root.path("resource");
@@ -144,17 +149,30 @@ public final class WechatNativePaymentProvider implements PaymentChannelProvider
                 resource.path("associated_data").asText(),
                 resource.path("ciphertext").asText()
             );
-            JsonNode transaction = MAPPER.readTree(plainText);
-            if (!"SUCCESS".equals(transaction.path("trade_state").asText())) {
+            JsonNode payload = MAPPER.readTree(plainText);
+            notification.put("event_type", eventType);
+            notification.put("wechat_plain_body", plainText);
+
+            if (refundEvent) {
+                String refundStatus = payload.path("refund_status").asText("");
+                notification.put("out_refund_no", payload.path("out_refund_no").asText(""));
+                notification.put("out_trade_no", payload.path("out_trade_no").asText(""));
+                notification.put("refund_id", payload.path("refund_id").asText(""));
+                notification.put("refund_status", refundStatus);
+                notification.put("refund_amount", fromCents(payload.path("amount").path("refund").asInt())
+                    .toPlainString());
+                return !notification.get("out_refund_no").isBlank();
+            }
+
+            if (!"SUCCESS".equals(payload.path("trade_state").asText())) {
                 return false;
             }
-            notification.put("out_trade_no", transaction.path("out_trade_no").asText(""));
+            notification.put("out_trade_no", payload.path("out_trade_no").asText(""));
             notification.put("trade_status", "SUCCESS");
-            notification.put("transaction_id", transaction.path("transaction_id").asText(""));
-            notification.put("buyer_id", transaction.path("payer").path("openid").asText(""));
-            notification.put("total_amount", fromCents(transaction.path("amount").path("payer_total")
-                .asInt(transaction.path("amount").path("total").asInt())).toPlainString());
-            notification.put("wechat_plain_body", plainText);
+            notification.put("transaction_id", payload.path("transaction_id").asText(""));
+            notification.put("buyer_id", payload.path("payer").path("openid").asText(""));
+            notification.put("total_amount", fromCents(payload.path("amount").path("payer_total")
+                .asInt(payload.path("amount").path("total").asInt())).toPlainString());
             return true;
         } catch (Exception e) {
             logger.warn("微信支付回调验签或解密异常: {}", e.getMessage(), e);
@@ -166,7 +184,7 @@ public final class WechatNativePaymentProvider implements PaymentChannelProvider
     public void refund(PaymentOrder order, RefundRecord refund) {
         ensureAvailable();
         try {
-            String body = MAPPER.writeValueAsString(Map.of(
+            String body = MAPPER.writeValueAsString(new java.util.LinkedHashMap<>(Map.of(
                 "out_trade_no", order.merchantOrderNo,
                 "out_refund_no", refund.merchantRefundNo,
                 "reason", refund.reason == null ? "POS refund" : refund.reason,
@@ -175,7 +193,8 @@ public final class WechatNativePaymentProvider implements PaymentChannelProvider
                     "total", toCents(order.amount),
                     "currency", "CNY"
                 )
-            ));
+            )));
+            body = withRefundNotifyUrl(body);
             HttpResponse<String> response = send("POST", "/v3/refund/domestic/refunds", "", body);
             JsonNode root = parseSuccess(response);
             refund.channelRefundNo = root.path("refund_id").asText();
@@ -215,6 +234,37 @@ public final class WechatNativePaymentProvider implements PaymentChannelProvider
         } catch (Exception e) {
             throw new IllegalStateException("查询微信退款状态失败", e);
         }
+    }
+
+    /**
+     * 退款请求里带上 {@code notify_url}（F9-c）。
+     *
+     * <p>微信退款通知既可以通过申请退款时的 {@code notify_url} 推送，也可以不带（那就只能靠
+     * {@code PaymentRefundReconcileService} 轮询）。回调把收敛时间从"分钟级"降到"秒级"，
+     * 两条路都保留：回调丢了/ABNORMAL 时对账仍然兜得住。</p>
+     */
+    private String withRefundNotifyUrl(String body) {
+        if (config.notifyUrl == null || config.notifyUrl.isBlank()) {
+            logger.debug("未配置 notify.url，退款结果只能靠对账任务轮询收敛");
+            return body;
+        }
+        try {
+            Map<String, Object> payload = new java.util.LinkedHashMap<>(
+                MAPPER.readValue(body, new com.fasterxml.jackson.core.type.TypeReference<Map<String, Object>>() { }));
+            payload.put("notify_url", config.notifyUrl);
+            return MAPPER.writeValueAsString(payload);
+        } catch (Exception e) {
+            logger.warn("写入退款 notify_url 失败，退回无回调模式（仍有对账兜底）: {}", e.getMessage());
+            return body;
+        }
+    }
+
+    /**
+     * 退款回调里的 {@code refund_status} → 本地状态（与查询接口同一套映射）。
+     */
+    @Override
+    public RefundRecord.RefundStatus refundStatusFromNotification(Map<String, String> notification) {
+        return mapRefundStatus(notification == null ? null : notification.get("refund_status"));
     }
 
     /**

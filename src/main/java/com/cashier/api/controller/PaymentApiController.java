@@ -215,11 +215,16 @@ public class PaymentApiController {
             if (ctx.formParam("mock_signature") != null) {
                 notifyData.put("mock_signature", ctx.formParam("mock_signature"));
             }
-            logger.info("支付回调接收: channel={}, keys={}, mock_signature={}, out_trade_no={}",
+            logger.info("支付回调接收: channel={}, keys={}, mock_signature={}, out_trade_no={}, out_refund_no={}",
                 channelStr, notifyData.keySet(),
                 notifyData.get("mock_signature") != null ? "***" : null,
-                notifyData.get("out_trade_no"));
-            boolean success = PaymentService.handlePaymentNotify(channel, notifyData);
+                notifyData.get("out_trade_no"),
+                notifyData.get("out_refund_no"));
+            // 支付与退款结果用同一个回调地址（微信申请退款时的 notify_url 指向这里）：
+            // 按载荷里有没有 out_refund_no 分派——退款通知没有 out_trade_no 的支付语义
+            boolean success = notifyData.get("out_refund_no") != null && !notifyData.get("out_refund_no").isBlank()
+                ? PaymentService.handleRefundNotify(channel, notifyData)
+                : PaymentService.handlePaymentNotify(channel, notifyData);
             
             // 返回响应
             if (!success) {

@@ -69,6 +69,8 @@ public class CreateReturnOrderDialogController {
     public static class ReturnItem {
         private BooleanProperty selected = new SimpleBooleanProperty(false);
         public int productId;
+        /** 原交易明细行 id（F10-c）：同一商品多行时，可退量按行归属，避免把退款算到更贵的一行 */
+        public Integer transactionItemId;
         public String productCode;
         public String productName;
         public int originalQuantity;
@@ -320,6 +322,7 @@ public class CreateReturnOrderDialogController {
         for (Product product : items) {
             ReturnItem returnItem = new ReturnItem();
             returnItem.productId = product.id;
+            returnItem.transactionItemId = product.transactionItemId;
             returnItem.productCode = product.productCode != null ? product.productCode : "";
             returnItem.productName = product.name;
             returnItem.originalQuantity = product.quantity;
@@ -461,6 +464,7 @@ public class CreateReturnOrderDialogController {
     private ReturnOrderItem buildReturnOrderItem(ReturnItem item, String returnReason) {
         ReturnOrderItem returnItem = new ReturnOrderItem();
         returnItem.productId = item.productId;
+        returnItem.transactionItemId = item.transactionItemId;
         returnItem.productCode = item.productCode;
         returnItem.productName = item.productName;
         returnItem.returnQuantity = item.returnQuantity;

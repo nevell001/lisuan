@@ -10,6 +10,14 @@ public class Product {
     public String name;
     public BigDecimal price;
     public int quantity;
+
+    /**
+     * 原交易明细行 id（`transaction_items.id`）。
+     *
+     * <p>同一商品可能在同一笔交易里出现多行（不同单价/促销），退货的"可退量"必须按**行**归属，
+     * 否则把退款算到更贵的那一行就会多退（F10-c）。购物车/商品管理场景下为 null。</p>
+     */
+    public Integer transactionItemId;
     public String category;
     public String barcode;        // 条形码
     public String unit;           // 单位（个、kg、瓶等）

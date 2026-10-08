@@ -497,6 +497,8 @@ public class TransactionApiController {
         ReturnOrderItem item = new ReturnOrderItem();
         item.returnOrderId = returnOrderId;
         item.productId = product.id;
+        // 行 id 一并落库（F10-c）：桌面退货按行校验时，API 整单退款的占用也要能按行对得上
+        item.transactionItemId = product.transactionItemId;
         item.productCode = product.productCode;
         item.productName = product.name;
         item.barcode = product.barcode;

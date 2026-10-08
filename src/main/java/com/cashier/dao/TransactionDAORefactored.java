@@ -89,7 +89,8 @@ public class TransactionDAORefactored extends BaseDAO {
     }
 
     private List<Product> loadItems(String transactionId) throws SQLException {
-        String sql = "SELECT ti.product_id, ti.product_code, ti.barcode, ti.product_name, ti.price, ti.quantity, p.category " +
+        String sql = "SELECT ti.id AS item_id, ti.product_id, ti.product_code, ti.barcode, ti.product_name, " +
+            "ti.price, ti.quantity, p.category " +
             "FROM transaction_items ti LEFT JOIN products p ON ti.product_id = p.id WHERE ti.transaction_id = ?";
         try (Connection conn = getConnection();
              PreparedStatement pstmt = conn.prepareStatement(sql)) {
@@ -98,6 +99,8 @@ public class TransactionDAORefactored extends BaseDAO {
                 List<Product> items = new ArrayList<>();
                 while (rs.next()) {
                     Product product = new Product();
+                    // 行 id 必须带出来：退货的按行校验/归属靠它（F10-c）
+                    product.transactionItemId = rs.getInt("item_id");
                     product.id = rs.getInt("product_id");
                     product.productCode = rs.getString("product_code");
                     product.barcode = rs.getString("barcode");
@@ -432,6 +435,22 @@ public class TransactionDAORefactored extends BaseDAO {
      * <p>退货校验必须按商品合计，不能按明细行比较：同一商品在交易里出现多行时，
      * 按行比较会把"这一行退了 1 件"误判成"只退了这一行的量"。</p>
      */
+    /** 原交易每**行**的销售数量（行 id → 数量），供 F10-c 的行级可退量校验。 */
+    public Map<Integer, Integer> findItemQuantitiesByLineWithConnection(Connection conn, String transactionId)
+            throws SQLException {
+        Map<Integer, Integer> quantities = new HashMap<>();
+        String sql = "SELECT id, quantity FROM transaction_items WHERE transaction_id = ?";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, transactionId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    quantities.put(rs.getInt("id"), rs.getInt("quantity"));
+                }
+            }
+        }
+        return quantities;
+    }
+
     public Map<Integer, Integer> sumItemQuantitiesByProductWithConnection(Connection conn, String transactionId)
             throws SQLException {
         Map<Integer, Integer> quantities = new HashMap<>();

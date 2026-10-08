@@ -8,8 +8,8 @@
 
 | 项 | 性质 | 后果 | 建议 |
 |---|---|---|---|
-| **F10** | 正确性 / 资损 | 同一交易可被退两次：**库存恢复两次 + 退款两次**（不可逆） | **F10-a / F10-b 已实施（2026-10）**：台账表 + 建单事务内锁与校验 + 幂等回填 + 三条写路径状态同步 + 服务层错误文案；F10-c（行级明细）与 F9 待做 |
-| **F9** | 正确性 / 资金占用 | 微信退款停在 `PROCESSING`：**该额度永久不能再退**，订单还被错标"部分退款" | **F9-a / F9-b 已实施（2026-10）**：`queryRefund` + 对账调度 + 状态机收敛 + 零成功退款不标部分退款；F9-c（退款回调）未做 |
+| **F10** | 正确性 / 资损 | 同一交易可被退两次：**库存恢复两次 + 退款两次**（不可逆） | **F10-a / F10-b / F10-c 已实施（2026-10）**：台账表 + 建单事务内锁与校验 + 幂等回填 + 三条写路径状态同步 + 服务层错误文案 + 行级可退量校验（同一商品多行不得把退款算到更贵的一行） |
+| **F9** | 正确性 / 资金占用 | 微信退款停在 `PROCESSING`：**该额度永久不能再退**，订单还被错标"部分退款" | **F9-a / F9-b / F9-c 已实施（2026-10）**：`queryRefund` + 对账调度 + 状态机收敛 + 零成功退款不标部分退款 + 退款回调（收敛降到秒级） |
 
 两者互不依赖，可并行。都不需要前端改版（F10 需要把一条既有错误文案的触发点挪进服务层）。
 
@@ -27,10 +27,11 @@
   事务外校验（规则的第二个实现，也是 check-then-act 的源头）。测试增至 10 项，
   新增 `TransactionApiControllerTest.apiRefundOccupiesLedgerSoDesktopReturnIsRejected`（跨路径）；
   **两处变异（API 不写台账、审批不同步）分别让对应测试变红**，已还原。
-- ⏳ **F10-c（可选）**：`return_order_items` 升级为行级（加 `transaction_item_id`），更精确但要迁移。
-- ✅ **F9-a / F9-b**：`queryRefund` 回查 + `PaymentRefundReconcileService` 对账 + `settleRefund` 零成功退款
-  短路修正（详见下面 §2 的"实施结果"）。**F9-c（退款回调）未做**：需要生产回调地址与 `REFUND.SUCCESS`
-  事件处理，有了 60 秒对账只是把收敛从"分钟级"降到"秒级"，不影响正确性。
+- ✅ **F10-c**：`return_order_items` / `return_reservations` 之外新增行级校验（见 §3）。
+  **实现与本节原计划有出入**：原计划把台账主键从商品改成 `transaction_item_id`（需要 UNIQUE 索引迁移），
+  实际改成"台账仍按商品（资金兜底口径不变）+ 额外按行校验一次"，**无需任何索引迁移**，防护效果相同。
+- ✅ **F9-a / F9-b / F9-c**：`queryRefund` 回查 + `PaymentRefundReconcileService` 对账 + `settleRefund`
+  零成功退款短路修正（§2.5）+ 退款回调（§2.6）。对账仍然保留：回调丢了、或渠道只给 ABNORMAL 时兜底。
 
 ---
 
@@ -244,7 +245,7 @@
 2. **F10-b**：审批/完成/API 路径接台账 + 错误文案统一。
 3. ✅ **F9-a**：`queryRefund` + 状态机收敛（`settled==0` 修正）+ 幂等更新（**已实施**）。
 4. ✅ **F9-b**：对账调度服务 + 配置 + 运维查询接口（**已实施**）。
-5. 可选：**F9-c** 退款回调、**F10-c** 行级明细（`transaction_item_id`）（未做）。
+5. ✅ **F9-c** 退款回调（**已实施**，见 §2.6）；✅ **F10-c** 行级明细（**已实施**，见 §3）。
 
 ### 2.5 实施结果（2026-10）
 
@@ -273,3 +274,45 @@
 2. 微信退款 `ABNORMAL` 后自动重试还是转人工？
 3. 退款对账间隔与最长跟踪时长（建议 60s / 24h）——是否需要可配？
 4. 是否对外暴露"退款处理中"的查询接口（财务对账用）？
+
+### 2.6 F9-c：退款回调（2026-10）
+
+- 申请退款时带 `notify_url`（`WechatNativePaymentProvider.refund` → `withRefundNotifyUrl`，取
+  `payment.properties` 的 `notify.url`）；未配置时退回"只有对账"的模式并留日志。
+- 回调与支付回调**共用同一个地址** `/api/payment/notify/{channel}`，`PaymentApiController` 按载荷里
+  有没有 `out_refund_no` 分派——退款通知没有支付语义的 `out_trade_no`，混在一起处理会把退款当支付。
+- `WechatNativePaymentProvider.verifyNotification` 现在接受 `TRANSACTION.SUCCESS` 与 `REFUND.*` 两类事件，
+  分别解密出支付字段/退款字段（`out_refund_no`、`refund_id`、`refund_status`、`refund_amount`）；
+  未知事件仍然拒绝。
+- 状态映射落在渠道实现里（`refundStatusFromNotification`，微信复用 `mapRefundStatus`）：
+  `ABNORMAL` 依旧**刻意留在 PROCESSING**（资金去向需人工确认，标 FAILED 会释放额度允许再退），
+  回调只应答、不改状态，交给对账继续查。
+- **回调与对账共用 `applyChannelRefundStatus`**：状态迁移带 from 条件，重复回调/回调与对账撞车都只收敛一次。
+  重复回调直接幂等确认（`refund.status.isFinal()` 短路）。
+- 测试：微信回调验签解密 + 状态映射（含 ABNORMAL、未知事件拒绝）3 项；
+  `PaymentRefundReconcileTest` 增至 11 项（回调收敛成功、重复回调幂等且不回退、ABNORMAL 保持处理中、
+  未知退款单/验签失败拒绝）；门禁 `RefundTerminalStatePolicyTest` 增至 5 项（回调与对账共用一条收敛路径）。
+
+## 3. F10-c：行级可退量（2026-10）
+
+**问题**：F10-a 的台账按商品聚合，能挡住"同一商品退超总销量"；但同一商品在同一笔交易里可能有多行
+（不同单价/促销），行归属由调用方自报。实测场景：1×20.00 与 1×10.00 两行，界面把 2 件都算在
+20.00 那一行 → 商品级看到 "2 ≤ 2" 放行，实际退 40.00（真实应退 30.00）。
+
+**实现（与原计划的出入见 §0）**：
+
+| 件 | 位置 |
+|---|---|
+| 行 id 贯通 | `transaction_items.id` → `TransactionDAORefactored.loadItems`（`ti.id AS item_id`）→ `Product.transactionItemId` → 界面 `ReturnItem` / `ReturnOrderItem` / API 退款明细 |
+| 落库 | `return_order_items.transaction_item_id`（可空；老库由 `DatabaseManager` 的 ALTER 补列，`docker/mysql-init` 同步，`InitSchemaParityTest` 守着） |
+| 行级校验 | `ReturnService.validateRequestedLines`：`该行已退 + 本次 ≤ 该行原数量`，已退量取 `return_order_items`（排除 REJECTED），**与行锁/商品级校验同一事务** |
+| 商品级兜底 | 台账 `return_reservations` 口径**完全不变**（仍按商品），老数据/无行 id 的明细只走商品级 |
+
+**为什么不用迁移台账主键**：台账是资金兜底（商品级已经足够），行级只是"别把退款算到更贵的一行"。
+把行级校验放在明细表上，既不需要改 `UNIQUE(return_order_id, product_id)`、也不需要重写回填，
+老数据（`transaction_item_id IS NULL`）自动退回原有商品级行为，风险面最小。
+
+**测试**：`ReturnLineLevelValidationTest`（4 项：超出该行销量被拦、同一行不能重复退、驳回释放行额度、
+无行 id 退回商品级且不会写成 0）+ `ReturnLedgerPolicyTest` 增至 6 项（行级校验必须在锁内、
+口径排除 REJECTED、三条写路径都带行 id）+ API 跨路径断言 `transaction_item_id` 落库。
+变异验证：关闭行级校验 → 2 项行为测试变红；去掉行级查询的 REJECTED 条件 → 门禁 + 行为测试变红（均已还原）。

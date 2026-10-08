@@ -2024,8 +2024,12 @@ item 改稳定代码、`settings` 表落代码、`paperSize` 老显示串归一�
     终态不回退/超期转人工/服务不可重复启动）+ 微信状态映射 1 项 + 门禁 `RefundTerminalStatePolicyTest`（4 项）。
     变异验证：删掉零成功退款短路 → 2 项行为测试变红（订单变 `PARTIAL_REFUND`）；去掉 `AND status = ?`
     → 门禁变红（均已还原）。
-  - **未做（可选）F9-c**：微信退款回调（`notify_url`）——需要生产回调地址与 `REFUND.SUCCESS` 事件处理；
-    有了 60 秒对账，回调只是把收敛时间从"分钟级"降到"秒级"，不影响正确性。
+  - **F9-c 也已实施（2026-10）**：申请退款带 `notify_url`（取 `notify.url`）；退款回调与支付回调共用
+  `/api/payment/notify/{channel}`，按载荷里有没有 `out_refund_no` 分派；微信 `verifyNotification` 兼容
+  `REFUND.*` 事件；回调与对账**共用 `applyChannelRefundStatus`**（带 from 条件，重复回调幂等）。
+  微信 `ABNORMAL` 依旧留在 PROCESSING，只应答不改状态，交给对账；**对账保留**作为回调丢失时的兜底。
+  测试：微信回调验签/映射 3 项、对账行为增至 11 项、门禁增至 5 项。
+  **F9 至此全部收口**，无剩余项。
   → **设计方案：[DESIGN_F9_F10.md](DESIGN_F9_F10.md)**（2026-10）
 - **F10 退货创建是 check-then-act**：校验在事务外，`return_orders` 无唯一约束/已退数量台账，
   两个终端同时提交可各退满额。窗口窄，串行操作会被拦；彻底修需要"已退数量台账 + 唯一约束"的设计。
@@ -2041,7 +2045,16 @@ item 改稳定代码、`settings` 表落代码、`paperSize` 老显示串归一�
   测试 `ReturnReservationConcurrencyTest`（10 项，含真实双线程并发）+ 跨路径
   `TransactionApiControllerTest.apiRefundOccupiesLedgerSoDesktopReturnIsRejected` +
   门禁 `ReturnLedgerPolicyTest`（5 项）；3 处变异（校验短路、API 不写台账、审批不同步）均让对应测试变红（已还原）。
-  **剩余**：F10-c 行级明细（可选，需迁移）与 F9。
+  - **F10-c 也已实施（2026-10）**：同一商品在同一交易里多行时，只按商品合计校验会把"超出该行的数量"
+  算到更贵的一行（1×20.00 + 1×10.00 两行、退 2 件按 20.00 算 → 多退 10.00）。现在
+  `return_order_items` 增加 `transaction_item_id`（老库 ALTER 补列，`docker/mysql-init` 同步），
+  行 id 从 `transaction_items.id` 贯通到界面/API 明细，`ReturnService.validateRequestedLines` 在
+  **同一事务**里再做一次 `该行已退 + 本次 ≤ 该行原数量`（已退量取明细表并排除 REJECTED）。
+  **台账口径不变、无需索引迁移**（原设计里"要迁移"的部分因此没有发生）：老数据没有行 id 时自动退回
+  商品级校验，风险面最小。
+  测试 `ReturnLineLevelValidationTest`（4 项）+ 门禁 `ReturnLedgerPolicyTest`（6 项）+ API 跨路径断言；
+  2 处变异（关闭行级校验、去掉 REJECTED 条件）均让对应测试变红（已还原）。
+  **F10 至此全部收口**，无剩余项（仅 F10-c 的"按行台账主键"作为可选重构保留在设计中，收益不足未做）。
 - **F13 `ProductDAORefactored.batchUpdateWithConnection` 丢弃 `executeBatch()` 结果**并无条件 `version++`：
   当前唯一调用方 `DataService.saveInventory` 无生产调用方，属埋雷，未动。
 - **F14 `InventoryAlertController` 的硬编码中文**：**已修**（弹窗/导出/时长/级别名全部迁 i18n，

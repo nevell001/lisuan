@@ -421,13 +421,29 @@ public final class PaymentService {
             logger.debug("退款仍在处理中: refundId={}, channel={}", refund.refundId, refund.channel);
             return false;
         }
+        return applyChannelRefundStatus(refund, channelStatus, refund.channelRefundNo, "对账");
+    }
 
+    /**
+     * 把渠道给出的**终态**落到本地（F9）：对账与退款回调共用，保证只有一条收敛路径。
+     *
+     * <p>关键点：状态迁移带 from 条件——对账与迟到回调可能并发，裸 UPDATE 会把已落终态的退款改回去，
+     * 进而重复结算（订单被重复标退款、额度被重复释放）。</p>
+     *
+     * @param source 日志里的触发来源（"对账" / "回调"）
+     * @return 是否由本次调用完成收敛
+     */
+    static boolean applyChannelRefundStatus(RefundRecord refund, RefundRecord.RefundStatus channelStatus,
+                                            String channelRefundNo, String source) throws SQLException {
+        if (refund == null || refund.status == null || channelStatus == null || !channelStatus.isFinal()) {
+            return false;
+        }
+        PaymentDAORefactored dao = DAOFactory.getInstance().getPaymentDAO();
         RefundRecord.RefundStatus previous = refund.status;
         boolean settled = DatabaseManager.executeBooleanTransaction(conn -> {
-            // 带 from 状态条件：对账与迟到回调并发时不会把已落终态的单改回去（也不会重复结算）
             if (!dao.updateRefundStatusIfNotFinalWithConnection(conn, refund.refundId, previous,
-                    channelStatus, refund.channelRefundNo)) {
-                logger.info("退款状态已被其它流程推进，跳过对账: refundId={}, from={}", refund.refundId, previous);
+                    channelStatus, channelRefundNo)) {
+                logger.info("退款状态已被其它流程推进，跳过{}: refundId={}, from={}", source, refund.refundId, previous);
                 return false;
             }
             BigDecimal settledAmount = dao.sumSettledRefundAmountWithConnection(conn, refund.paymentId);
@@ -445,20 +461,67 @@ public final class PaymentService {
         }
 
         refund.status = channelStatus;
+        if (channelRefundNo != null && !channelRefundNo.isBlank()) {
+            refund.channelRefundNo = channelRefundNo;
+        }
         if (channelStatus.isSuccess()) {
-            logger.info("退款对账收敛为成功: refundId={}, paymentId={}, 金额={}",
-                refund.refundId, refund.paymentId, refund.refundAmount);
+            logger.info("退款{}收敛为成功: refundId={}, paymentId={}, 金额={}",
+                source, refund.refundId, refund.paymentId, refund.refundAmount);
         } else {
-            logger.warn("退款对账判定为{}，预占额度已释放: refundId={}, paymentId={}",
-                channelStatus.getDisplayName(), refund.refundId, refund.paymentId);
+            logger.warn("退款{}判定为{}，预占额度已释放: refundId={}, paymentId={}",
+                source, channelStatus.getDisplayName(), refund.refundId, refund.paymentId);
         }
         AuditService.success(refund.operator, "REFUND", "PAYMENT_REFUND_RECONCILED",
-            "退款单=" + refund.merchantRefundNo + ", 渠道终态=" + channelStatus.name()
+            "退款单=" + refund.merchantRefundNo + ", 来源=" + source + ", 渠道终态=" + channelStatus.name()
                 + ", 支付单=" + refund.paymentId, 1);
         SyncManager.getInstance().broadcastSyncEvent(SyncEventType.PAYMENT_REFUND,
             Map.of("refundId", refund.refundId, "paymentId", refund.paymentId,
                 "status", channelStatus.name()));
         return true;
+    }
+
+    /**
+     * 退款结果回调（F9-c）。
+     *
+     * <p>与支付回调同一个入口 URL，按"载荷里有没有 {@code out_refund_no}"分派。回调只是把收敛时间从
+     * 分钟级（对账轮询）降到秒级——**回调丢了、或渠道只给 ABNORMAL，对账仍然兜得住**，
+     * 两条路都必须走同一套带条件的落库逻辑，否则重复回调会重复结算。</p>
+     *
+     * @return 是否应答渠道（true = 收到了且已处理/无需处理）
+     */
+    public static boolean handleRefundNotify(PaymentOrder.PaymentChannel channel,
+                                              Map<String, String> notifyData) throws SQLException {
+        PaymentChannelProvider provider = requireProvider(channel);
+        if (!provider.verifyNotification(notifyData)) {
+            logger.warn("拒绝未通过验签的退款回调: channel={}", channel);
+            return false;
+        }
+        String merchantRefundNo = notifyData.get("out_refund_no");
+        if (merchantRefundNo == null || merchantRefundNo.isBlank()) {
+            logger.warn("退款回调缺少 out_refund_no: channel={}, keys={}", channel, notifyData.keySet());
+            return false;
+        }
+        RefundRecord refund = DAOFactory.getInstance().getPaymentDAO()
+            .findRefundByMerchantRefundNo(merchantRefundNo);
+        if (refund == null || refund.channel == null || !refund.channel.equals(channel.name())) {
+            logger.warn("退款回调找不到对应退款单: channel={}, out_refund_no={}", channel, merchantRefundNo);
+            return false;
+        }
+        if (refund.status != null && refund.status.isFinal()) {
+            // 幂等：重复回调/回调与对账撞车都直接确认，绝不重复结算
+            logger.info("收到重复退款回调，幂等确认: refundId={}, status={}", refund.refundId, refund.status);
+            return true;
+        }
+
+        RefundRecord.RefundStatus channelStatus = provider.refundStatusFromNotification(notifyData);
+        if (channelStatus == null || !channelStatus.isFinal()) {
+            // ABNORMAL/仍处理中：不回非终态，留给对账继续查（应答 200 避免渠道无意义重推）
+            logger.info("退款回调未给出终态({}), 交由对账继续收敛: refundId={}",
+                notifyData.get("refund_status"), refund.refundId);
+            return true;
+        }
+        return applyChannelRefundStatus(refund, channelStatus, notifyData.get("refund_id"), "回调")
+            || refund.status.isFinal();
     }
 
     private static PaymentOrder.PaymentChannel parseChannel(String channel) {

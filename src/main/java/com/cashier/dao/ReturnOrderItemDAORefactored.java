@@ -8,7 +8,9 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 /**
  * 退货订单明细数据访问对象（重构版）
@@ -18,7 +20,8 @@ import java.util.List;
 public class ReturnOrderItemDAORefactored extends BaseDAO {
 
     private static final String SELECT_COLUMNS =
-        "id, return_order_id, product_id, product_code, product_name, barcode, category, return_quantity, unit_price, return_amount, reason, `condition` ";
+        "id, return_order_id, product_id, transaction_item_id, product_code, product_name, barcode, category, " +
+        "return_quantity, unit_price, return_amount, reason, `condition` ";
 
     private static final RowMapper<ReturnOrderItem> ITEM_MAPPER = new RowMapper<ReturnOrderItem>() {
         @Override
@@ -27,6 +30,9 @@ public class ReturnOrderItemDAORefactored extends BaseDAO {
             item.id = rs.getInt("id");
             item.returnOrderId = rs.getString("return_order_id");
             item.productId = rs.getInt("product_id");
+            int transactionItemId = rs.getInt("transaction_item_id");
+            // 列可空：老库/老数据没有行级信息时必须保持 null，否则行级校验会误判成"第 0 行"
+            item.transactionItemId = rs.wasNull() ? null : transactionItemId;
             item.productCode = rs.getString("product_code");
             item.productName = rs.getString("product_name");
             item.barcode = rs.getString("barcode");
@@ -62,8 +68,8 @@ public class ReturnOrderItemDAORefactored extends BaseDAO {
      */
     public boolean insertWithConnection(Connection conn, ReturnOrderItem item) throws SQLException {
         String sql = "INSERT INTO return_order_items (return_order_id, product_id, product_code, product_name, " +
-            "barcode, category, return_quantity, unit_price, return_amount, reason, `condition`) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "barcode, category, return_quantity, unit_price, return_amount, reason, `condition`, transaction_item_id) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             bindInsertParams(stmt, item);
@@ -93,8 +99,8 @@ public class ReturnOrderItemDAORefactored extends BaseDAO {
      */
     public boolean batchInsertWithConnection(Connection conn, List<ReturnOrderItem> items) throws SQLException {
         String sql = "INSERT INTO return_order_items (return_order_id, product_id, product_code, product_name, " +
-            "barcode, category, return_quantity, unit_price, return_amount, reason, `condition`) " +
-            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+            "barcode, category, return_quantity, unit_price, return_amount, reason, `condition`, transaction_item_id) " +
+            "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             for (ReturnOrderItem item : items) {
@@ -193,6 +199,31 @@ public class ReturnOrderItemDAORefactored extends BaseDAO {
     /**
      * 删除指定退货单的所有明细
      */
+    /**
+     * 某原交易上**按行**仍占用的退货数量（行 id → 数量），供 F10-c 行级可退量校验。
+     *
+     * <p>取的是明细表（每行退了多少是权威记录），并排除已驳回的退货单——与台账口径一致。
+     * 行 id 为空的老数据不参与行级校验（商品级校验仍然兜着）。</p>
+     */
+    public Map<Integer, Integer> sumReturnedQuantitiesByTransactionItemWithConnection(Connection conn,
+                                                                                     String transactionId)
+            throws SQLException {
+        Map<Integer, Integer> returned = new HashMap<>();
+        String sql = "SELECT roi.transaction_item_id AS item_id, SUM(roi.return_quantity) AS qty "
+            + "FROM return_order_items roi JOIN return_orders ro ON roi.return_order_id = ro.return_order_id "
+            + "WHERE ro.original_transaction_id = ? AND ro.status <> 'REJECTED' "
+            + "AND roi.transaction_item_id IS NOT NULL GROUP BY roi.transaction_item_id";
+        try (PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, transactionId);
+            try (ResultSet rs = stmt.executeQuery()) {
+                while (rs.next()) {
+                    returned.put(rs.getInt("item_id"), rs.getInt("qty"));
+                }
+            }
+        }
+        return returned;
+    }
+
     public boolean deleteByReturnOrderId(String returnOrderId) {
         String sql = "DELETE FROM return_order_items WHERE return_order_id = ?";
 
@@ -240,6 +271,11 @@ public class ReturnOrderItemDAORefactored extends BaseDAO {
         stmt.setBigDecimal(9, item.returnAmount);
         stmt.setString(10, item.reason);
         stmt.setString(11, item.condition);
+        if (item.transactionItemId != null && item.transactionItemId > 0) {
+            stmt.setInt(12, item.transactionItemId);
+        } else {
+            stmt.setNull(12, java.sql.Types.INTEGER);
+        }
     }
 
     private <T> T queryOneOrNullWithConnection(Connection conn, String sql, RowMapper<T> mapper, Object... params)

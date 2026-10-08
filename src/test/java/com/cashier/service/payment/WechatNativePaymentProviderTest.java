@@ -85,6 +85,75 @@ class WechatNativePaymentProviderTest {
     }
 
     @Test
+    @DisplayName("微信退款回调应验签解密为退款字段；ABNORMAL 不落终态")
+    void wechatRefundNotificationIsVerifiedAndMapped() throws Exception {
+        KeyPair keyPair = generateRsaKeyPair();
+        WechatNativePaymentProvider provider = new WechatNativePaymentProvider(configWithPublicKey(keyPair));
+        String plainBody = MAPPER.writeValueAsString(Map.of(
+            "out_trade_no", "LS202607100001",
+            "out_refund_no", "RF202607100001",
+            "refund_id", "503000000020260710000001",
+            "refund_status", "SUCCESS",
+            "amount", Map.of("total", 1288, "refund", 1288)
+        ));
+
+        Map<String, String> notification = signedNotification(keyPair, "REFUND.SUCCESS", plainBody, "refund");
+        assertTrue(provider.verifyNotification(notification), "退款回调必须能通过验签与解密");
+        assertEquals("RF202607100001", notification.get("out_refund_no"));
+        assertEquals("503000000020260710000001", notification.get("refund_id"));
+        assertEquals("12.88", notification.get("refund_amount"));
+        assertEquals(RefundRecord.RefundStatus.SUCCESS, provider.refundStatusFromNotification(notification));
+
+        // ABNORMAL（资金去向需人工确认）：不能当失败，否则立刻释放预占额度、允许同一笔支付再退
+        String abnormalBody = MAPPER.writeValueAsString(Map.of(
+            "out_trade_no", "LS202607100001",
+            "out_refund_no", "RF202607100002",
+            "refund_id", "503000000020260710000002",
+            "refund_status", "ABNORMAL",
+            "amount", Map.of("total", 1288, "refund", 1288)
+        ));
+        Map<String, String> abnormal = signedNotification(keyPair, "REFUND.ABNORMAL", abnormalBody, "refund");
+        assertTrue(provider.verifyNotification(abnormal));
+        assertEquals(RefundRecord.RefundStatus.PROCESSING, provider.refundStatusFromNotification(abnormal));
+    }
+
+    @Test
+    @DisplayName("微信非支付非退款事件必须拒绝（不得把未知事件当回调处理）")
+    void wechatRejectsUnknownEventTypes() throws Exception {
+        KeyPair keyPair = generateRsaKeyPair();
+        WechatNativePaymentProvider provider = new WechatNativePaymentProvider(configWithPublicKey(keyPair));
+        Map<String, String> notification = signedNotification(keyPair, "SOMETHING.ELSE", "{}", "refund");
+        assertFalse(provider.verifyNotification(notification));
+    }
+
+    private static Map<String, String> signedNotification(KeyPair keyPair, String eventType, String plainBody,
+                                                          String associatedData) throws Exception {
+        String resourceNonce = "resourceNonce";
+        String ciphertext = encryptAesGcm(plainBody, resourceNonce, associatedData);
+        String rawBody = MAPPER.writeValueAsString(Map.of(
+            "id", "EV-" + eventType,
+            "event_type", eventType,
+            "resource_type", "encrypt-resource",
+            "resource", Map.of(
+                "algorithm", "AEAD_AES_256_GCM",
+                "ciphertext", ciphertext,
+                "associated_data", associatedData,
+                "nonce", resourceNonce
+            )
+        ));
+        String timestamp = "1783688400";
+        String notifyNonce = "notifyNonce";
+        String signature = sign(timestamp + "\n" + notifyNonce + "\n" + rawBody + "\n", keyPair);
+
+        Map<String, String> notification = new HashMap<>();
+        notification.put("raw_body", rawBody);
+        notification.put("Wechatpay-Timestamp", timestamp);
+        notification.put("Wechatpay-Nonce", notifyNonce);
+        notification.put("Wechatpay-Signature", signature);
+        return notification;
+    }
+
+    @Test
     @DisplayName("微信退款状态映射：只有 SUCCESS/CLOSED 落终态，ABNORMAL 必须留在处理中")
     void refundStatusMappingKeepsAbnormalInProgress() {
         assertEquals(RefundRecord.RefundStatus.SUCCESS,

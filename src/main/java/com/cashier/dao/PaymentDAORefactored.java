@@ -517,6 +517,21 @@ public class PaymentDAORefactored extends BaseDAO {
         return refunds;
     }
 
+    /** 按商户退款单号取退款单（F9-c 退款回调用）。 */
+    public RefundRecord findRefundByMerchantRefundNo(String merchantRefundNo) throws SQLException {
+        if (merchantRefundNo == null || merchantRefundNo.isBlank()) {
+            return null;
+        }
+        String sql = "SELECT " + REFUND_COLUMNS + " FROM refund_records WHERE merchant_refund_no = ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, merchantRefundNo);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? mapRefund(rs) : null;
+            }
+        }
+    }
+
     /**
      * 列出退款单（财务对账 / 人工核对用）。
      *

@@ -444,6 +444,7 @@ public abstract class DatabaseTestBase {
                 id INT PRIMARY KEY AUTO_INCREMENT,
                 return_order_id VARCHAR(50) NOT NULL,
                 product_id INT,
+                transaction_item_id INT,
                 product_code VARCHAR(50),
                 product_name VARCHAR(100) NOT NULL,
                 barcode VARCHAR(50),

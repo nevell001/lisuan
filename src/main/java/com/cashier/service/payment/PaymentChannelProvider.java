@@ -31,4 +31,14 @@ public interface PaymentChannelProvider {
      * @return 渠道当前状态；无法判定（仍在处理）时返回 {@link RefundRecord.RefundStatus#PROCESSING}
      */
     RefundRecord.RefundStatus queryRefund(PaymentOrder order, RefundRecord refund);
+
+    /**
+     * 从**已验签**的退款通知里取终态（F9-c 退款回调）。
+     *
+     * <p>默认返回 {@code PROCESSING}（渠道不支持退款回调时交由对账任务回查）：不能因为"看不懂"就猜终态，
+     * 猜 FAILED 会释放预占额度、允许同一笔支付再退。</p>
+     */
+    default RefundRecord.RefundStatus refundStatusFromNotification(Map<String, String> notification) {
+        return RefundRecord.RefundStatus.PROCESSING;
+    }
 }

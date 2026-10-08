@@ -933,7 +933,14 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   漏了它，桌面退货查不到这笔占用，同一交易就能再退一次。超量提示由服务层
   `ReturnQuantityExceededException` 用 i18n 组装（含商品名/原单量/已退量/本次量），
   建单界面**不再自己实现一份校验**（那是规则的第二个实现，也是 check-then-act 的源头）。
-  设计与剩余项（F10-c）见 `docs/DESIGN_F9_F10.md`；F9（退款终态）见下一条
+  **F10-c 行级校验**：同一商品在同一交易里可能有多行（不同单价），只按商品合计校验会让"超出该行的
+  数量"被算到更贵的一行（1×20.00 + 1×10.00 退 2 件按 20.00 算 → 多退 10.00）。因此
+  `return_order_items` 增加 `transaction_item_id`（`transaction_items.id` 贯通模型→界面→API 明细；
+  老库由 ALTER 补列、`docker/mysql-init` 同步），`ReturnService.validateRequestedLines` 在**同一事务**
+  里再校验一次 `该行已退 + 本次 ≤ 该行原数量`（已退量取明细表、排除 REJECTED）。
+  **台账口径不变、无需索引迁移**：没有行 id 的老数据自动退回商品级校验。
+  `ReturnLineLevelValidationTest`（4 项）+ `ReturnLedgerPolicyTest`（6 项）；2 处变异均让测试变红。
+  设计与剩余项见 `docs/DESIGN_F9_F10.md`；F9（退款终态）见下一条
 - **异步退款必须能收敛到终态**（F9，2026-10）：微信退款是异步的（非 SUCCESS 只能先记
   `PROCESSING`），且退款请求**没带 `notify_url`**（微信不推送退款结果）——没有回查时这笔记录永远
   停在处理中：预占额度永久占用（同一笔支付再也退不了），订单还会被错标"部分退款"。
@@ -946,9 +953,13 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   （渠道只是受理≠部分退款）；③ 微信 `ABNORMAL`（资金去向需人工确认）**刻意留在处理中**，标 FAILED 会
   立刻释放额度允许再退。放弃边界：超过 `refund.max.track.hours`（默认 24h）不再自动重试，只告警转人工
   核对；运维入口 `GET /api/payment/refunds?status=PROCESSING`（finance/admin）。
-  门禁 `RefundTerminalStatePolicyTest`（4 项源码）+ 行为 `PaymentRefundReconcileTest`（7 项，用假渠道注入）；
+  **F9-c 退款回调**：申请退款带 `notify_url`，回调与支付回调共用 `/api/payment/notify/{channel}`，
+  按载荷里有没有 `out_refund_no` 分派（退款通知没有支付的 `out_trade_no` 语义）；微信
+  `verifyNotification` 兼容 `TRANSACTION.SUCCESS` 与 `REFUND.*`，状态映射在渠道侧
+  （`refundStatusFromNotification`，`ABNORMAL` 仍留 PROCESSING，只应答不改状态）。
+  **回调与对账必须共用 `applyChannelRefundStatus`**（带 from 条件）——重复回调/回调与对账撞车只能收敛一次。
+  门禁 `RefundTerminalStatePolicyTest`（5 项源码）+ 行为 `PaymentRefundReconcileTest`（11 项，假渠道注入）；
   变异验证：删零成功退款短路 → 订单变 `PARTIAL_REFUND`（2 项红），去掉 `AND status = ?` → 门禁红。
-  **未做**：F9-c 退款回调（`notify_url`，需生产回调地址；有 60s 对账只是慢一点，不影响正确性）
 - **多表/多行写入必须走 `*WithConnection` + `executeBooleanTransaction`**（TD-023~025）：本仓库 DAO 有
   两套写法，`xxx(...)` 自带 autocommit 连接并立即提交，`xxxWithConnection(conn, ...)` 参与调用方事务。
   审计实测的三处事故：盘点单保存（先删全部旧明细再逐条插，中途失败留下"已提交的 DELETE + 半截明细"，

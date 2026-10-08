@@ -12,6 +12,7 @@ import java.math.RoundingMode;
 import java.sql.Connection;
 import java.sql.SQLException;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
@@ -141,7 +142,8 @@ public class ReturnService {
             try {
                 boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
                     // 行锁 + 余量校验必须与插入同事务：事务外的校验挡不住并发建单
-                    if (!lockAndValidateReturnable(conn, returnOrder.originalTransactionId, requested)) {
+                    if (!lockAndValidateReturnable(conn, returnOrder.originalTransactionId, requested)
+                        || !validateRequestedLines(conn, returnOrder.originalTransactionId, items)) {
                         return false;
                     }
 
@@ -219,6 +221,58 @@ public class ReturnService {
      *
      * @return 允许建单
      */
+    /**
+     * 行级可退量校验（F10-c）：同一商品在同一笔交易里可能有多行（不同单价/促销），
+     * 只做商品级合计校验时，"退 2 件都算在更贵的那一行"会通过——例如 1×20.00 与 1×10.00 两行，
+     * 商品级看到 2 ≤ 2 放行，却按 20.00×2 退 40.00（真实应退 30.00）。
+     *
+     * <p>因此在商品级校验之外，再按**原交易明细行**校验一次：{@code 该行已退 + 本次 ≤ 该行原数量}。
+     * 行 id 缺失的老数据/脏数据不参与行级校验（商品级校验仍然兜着，保持原有行为）。</p>
+     *
+     * <p>调用方必须在同一事务内、且已锁原交易行之后调用——否则并发建单照样能各退一次。</p>
+     */
+    private static boolean validateRequestedLines(Connection conn, String transactionId,
+                                                  List<ReturnOrderItem> items) throws SQLException {
+        if (items == null || items.isEmpty()) {
+            return true;
+        }
+        Map<Integer, Integer> requestedByLine = new HashMap<>();
+        Map<Integer, Integer> lineProduct = new HashMap<>();
+        for (ReturnOrderItem item : items) {
+            if (item.transactionItemId == null || item.transactionItemId <= 0 || item.returnQuantity <= 0) {
+                continue;
+            }
+            requestedByLine.merge(item.transactionItemId, item.returnQuantity, Integer::sum);
+            lineProduct.put(item.transactionItemId, item.productId);
+        }
+        if (requestedByLine.isEmpty()) {
+            return true;
+        }
+
+        Map<Integer, Integer> lineOriginal = DAOFactory.getInstance().getTransactionDAO()
+            .findItemQuantitiesByLineWithConnection(conn, transactionId);
+        Map<Integer, Integer> lineReturned = DAOFactory.getInstance().getReturnOrderItemDAO()
+            .sumReturnedQuantitiesByTransactionItemWithConnection(conn, transactionId);
+        for (Map.Entry<Integer, Integer> entry : requestedByLine.entrySet()) {
+            int lineId = entry.getKey();
+            int lineAvailable = lineOriginal.getOrDefault(lineId, 0);
+            if (lineAvailable <= 0) {
+                // 该行已不存在（历史脏数据）：不额外加锁限制，商品级校验仍然生效
+                continue;
+            }
+            int lineAlready = lineReturned.getOrDefault(lineId, 0);
+            if (lineAlready + entry.getValue() > lineAvailable) {
+                int productId = lineProduct.getOrDefault(lineId, 0);
+                logger.warn("退货数量超出该行可退余量，拒绝创建: transactionId={}, lineId={}, 已退={}, 本次={}, 该行={}",
+                    transactionId, lineId, lineAlready, entry.getValue(), lineAvailable);
+                throw new ReturnQuantityExceededException(I18nManager.getInstance().get(
+                    "runtime.return_quantity_exceeded", productNameWithConnection(conn, productId),
+                    lineAvailable, lineAlready, entry.getValue()));
+            }
+        }
+        return true;
+    }
+
     private static boolean lockAndValidateReturnable(Connection conn, String transactionId,
                                                      Map<Integer, Integer> requested) throws SQLException {
         if (transactionId == null || transactionId.isBlank()) {

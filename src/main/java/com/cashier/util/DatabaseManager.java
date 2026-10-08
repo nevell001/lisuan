@@ -349,6 +349,14 @@ public class DatabaseManager {
             createTableInventoryCheckItems(stmt);
             createTableReturnOrders(stmt);
             createTableReturnOrderItems(stmt);
+            // 老库补 return_order_items.transaction_item_id（CREATE TABLE IF NOT EXISTS 对已存在的表不补列）
+            try {
+                stmt.execute("ALTER TABLE return_order_items ADD COLUMN transaction_item_id INT "
+                    + "COMMENT '原交易明细行ID（F10-c 行级校验；老数据为空）'");
+            } catch (SQLException e) {
+                // 列已存在会抛 Duplicate column 错误，属于正常情况，忽略
+                logger.debug("return_order_items.transaction_item_id 列已存在或添加失败: {}", e.getMessage());
+            }
             createTableReturnReservations(stmt);
             createTableInvoices(stmt);
             createTableInvoiceItems(stmt);
@@ -1018,6 +1026,7 @@ public class DatabaseManager {
                     id INT PRIMARY KEY AUTO_INCREMENT,
                     return_order_id VARCHAR(50) NOT NULL COMMENT '退货单号',
                     product_id INT NOT NULL COMMENT '商品ID',
+                    transaction_item_id INT COMMENT '原交易明细行ID（F10-c 行级校验；老数据为空）',
                     product_code VARCHAR(50) COMMENT '商品编号',
                     product_name VARCHAR(100) NOT NULL COMMENT '商品名称',
                     barcode VARCHAR(100) COMMENT '条形码',

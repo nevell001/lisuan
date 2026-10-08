@@ -103,6 +103,36 @@ class RefundTerminalStatePolicyTest {
             "登出/退出必须停止对账，避免调度器泄漏");
     }
 
+    @Test
+    @DisplayName("退款回调（F9-c）：申请退款要带 notify_url，回调与对账共用同一条收敛路径")
+    void refundCallbackSharesOneSettlementPath() throws Exception {
+        String wechat = read("src/main/java/com/cashier/service/payment/WechatNativePaymentProvider.java");
+        assertTrue(wechat.contains("\"notify_url\""),
+            "申请微信退款必须带 notify_url，否则只能靠对账轮询（回调能把收敛降到秒级）");
+        assertTrue(wechat.contains("refundStatusFromNotification"),
+            "退款回调的状态映射要落在渠道实现里（原始状态词表是渠道私有的）");
+
+        String service = read(SERVICE);
+        assertTrue(service.contains("static boolean applyChannelRefundStatus("),
+            "回调与对账必须共用一条收敛路径，否则两处逻辑漂移");
+        int reconcile = service.indexOf("static boolean reconcileRefund(");
+        int apply = service.indexOf("static boolean applyChannelRefundStatus(");
+        assertTrue(reconcile > 0 && apply > 0);
+        String reconcileBody = service.substring(reconcile, apply);
+        assertTrue(reconcileBody.contains("applyChannelRefundStatus"),
+            "对账必须委托给共用的收敛方法，不得自己再写一遍 UPDATE");
+        assertTrue(!reconcileBody.contains("updateRefundStatusIfNotFinalWithConnection"),
+            "收敛 UPDATE 只应出现在共用方法里");
+        assertTrue(service.contains("handleRefundNotify"),
+            "退款结果必须有回调入口，否则渠道重推只能靠轮询");
+
+        String controller = read("src/main/java/com/cashier/api/controller/PaymentApiController.java");
+        assertTrue(controller.contains("handleRefundNotify"),
+            "回调入口必须按载荷分派（退款通知没有 out_trade_no 的支付语义）");
+        assertTrue(controller.contains("out_refund_no"),
+            "分派依据必须是 out_refund_no");
+    }
+
     private static String read(String relativePath) throws IOException {
         return new String(Files.readAllBytes(Path.of(relativePath)), StandardCharsets.UTF_8);
     }

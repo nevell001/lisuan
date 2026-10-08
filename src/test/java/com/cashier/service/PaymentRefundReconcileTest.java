@@ -181,6 +181,77 @@ class PaymentRefundReconcileTest extends DatabaseTestBase {
         assertFalse(service.isRunning());
     }
 
+    @Test
+    @DisplayName("退款回调把处理中收敛为成功（F9-c）：比轮询快，且走同一套带条件的落库")
+    void refundCallbackSettlesProcessingRefund() throws SQLException {
+        PaymentOrder order = paidOrder("50.00");
+        RefundRecord refund = processingRefund(order, "50.00");
+
+        provider.notifyResult = RefundRecord.RefundStatus.SUCCESS;
+        assertTrue(PaymentService.handleRefundNotify(PaymentOrder.PaymentChannel.WECHAT,
+            refundCallback(refund.merchantRefundNo, "SUCCESS", "WX-RF-1")), "回调应被接受");
+
+        RefundRecord settled = refundById(refund.refundId);
+        assertEquals(RefundRecord.RefundStatus.SUCCESS, settled.status);
+        assertEquals("WX-RF-1", settled.channelRefundNo);
+        assertEquals(PaymentOrder.PaymentStatus.REFUNDED, paymentDAO.findById(order.paymentId).status);
+        assertEquals(0, PaymentService.reconcileRefunds(10), "已收敛的退款不该再被对账处理");
+    }
+
+    @Test
+    @DisplayName("重复退款回调必须幂等：不重复结算、不回退终态")
+    void refundCallbackIsIdempotent() throws SQLException {
+        PaymentOrder order = paidOrder("50.00");
+        RefundRecord refund = processingRefund(order, "50.00");
+
+        provider.notifyResult = RefundRecord.RefundStatus.SUCCESS;
+        assertTrue(PaymentService.handleRefundNotify(PaymentOrder.PaymentChannel.WECHAT,
+            refundCallback(refund.merchantRefundNo, "SUCCESS", "WX-RF-2")));
+        // 同一笔退款再来一次（渠道会重推），甚至这次报 FAILED：都不得改变已有终态
+        provider.notifyResult = RefundRecord.RefundStatus.FAILED;
+        assertTrue(PaymentService.handleRefundNotify(PaymentOrder.PaymentChannel.WECHAT,
+            refundCallback(refund.merchantRefundNo, "CLOSED", "WX-RF-2")));
+
+        assertEquals(RefundRecord.RefundStatus.SUCCESS, refundById(refund.refundId).status, "终态不得回退");
+        assertEquals(PaymentOrder.PaymentStatus.REFUNDED, paymentDAO.findById(order.paymentId).status);
+    }
+
+    @Test
+    @DisplayName("回调只给 ABNORMAL：应答渠道但不落终态，继续交给对账")
+    void refundCallbackWithAbnormalKeepsProcessing() throws SQLException {
+        PaymentOrder order = paidOrder("50.00");
+        RefundRecord refund = processingRefund(order, "50.00");
+
+        provider.notifyResult = RefundRecord.RefundStatus.PROCESSING;
+        assertTrue(PaymentService.handleRefundNotify(PaymentOrder.PaymentChannel.WECHAT,
+            refundCallback(refund.merchantRefundNo, "ABNORMAL", "WX-RF-3")));
+
+        assertEquals(RefundRecord.RefundStatus.PROCESSING, refundById(refund.refundId).status,
+            "ABNORMAL 不能当失败，否则额度被释放、同一笔支付能再退一次");
+        assertEquals(PaymentOrder.PaymentStatus.SUCCESS, paymentDAO.findById(order.paymentId).status);
+    }
+
+    @Test
+    @DisplayName("找不到退款单或验签失败的回调必须拒绝")
+    void refundCallbackForUnknownRefundIsRejected() throws SQLException {
+        assertFalse(PaymentService.handleRefundNotify(PaymentOrder.PaymentChannel.WECHAT,
+            refundCallback("RF-NOT-EXIST", "SUCCESS", "WX-RF-4")), "未知退款单不得被确认");
+
+        provider.verifyResult = false;
+        assertFalse(PaymentService.handleRefundNotify(PaymentOrder.PaymentChannel.WECHAT,
+            refundCallback("RF-NOT-EXIST", "SUCCESS", "WX-RF-5")), "验签失败必须拒绝");
+        provider.verifyResult = true;
+    }
+
+    private Map<String, String> refundCallback(String merchantRefundNo, String refundStatus, String channelRefundNo) {
+        Map<String, String> notify = new HashMap<>();
+        notify.put("out_refund_no", merchantRefundNo);
+        notify.put("refund_status", refundStatus);
+        notify.put("refund_id", channelRefundNo);
+        notify.put("event_type", "REFUND." + refundStatus);
+        return notify;
+    }
+
     // ===== 辅助 =====
 
     private void cleanRefundTables() throws SQLException {
@@ -239,6 +310,7 @@ class PaymentRefundReconcileTest extends DatabaseTestBase {
     private static final class FakeChannelProvider implements PaymentChannelProvider {
         private RefundRecord.RefundStatus refundResult = RefundRecord.RefundStatus.PROCESSING;
         private RefundRecord.RefundStatus queryResult = RefundRecord.RefundStatus.PROCESSING;
+        private RefundRecord.RefundStatus notifyResult = RefundRecord.RefundStatus.PROCESSING;
 
         @Override public PaymentOrder.PaymentChannel channel() { return PaymentOrder.PaymentChannel.WECHAT; }
         @Override public boolean isAvailable() { return true; }
@@ -247,13 +319,20 @@ class PaymentRefundReconcileTest extends DatabaseTestBase {
         @Override public PaymentOrder.PaymentStatus queryStatus(PaymentOrder order) {
             return PaymentOrder.PaymentStatus.SUCCESS;
         }
-        @Override public boolean verifyNotification(Map<String, String> notification) { return true; }
+        private boolean verifyResult = true;
+
+        @Override public boolean verifyNotification(Map<String, String> notification) { return verifyResult; }
 
         @Override
         public void refund(PaymentOrder order, RefundRecord refund) {
             refund.status = refundResult;
             refund.channelRefundNo = refundResult == RefundRecord.RefundStatus.SUCCESS
                 ? "FAKE-RFD-" + refund.merchantRefundNo : null;
+        }
+
+        @Override
+        public RefundRecord.RefundStatus refundStatusFromNotification(Map<String, String> notification) {
+            return notifyResult;
         }
 
         @Override

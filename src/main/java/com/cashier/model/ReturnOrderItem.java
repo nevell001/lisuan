@@ -9,6 +9,8 @@ public class ReturnOrderItem {
     public int id;
     public String returnOrderId;  // 退货单号
     public int productId;  // 商品ID
+    /** 原交易明细行 id（F10-c）；老数据/API 无行信息时为 null，此时只做商品级校验 */
+    public Integer transactionItemId;
     public String productCode;  // 商品编号
     public String productName;  // 商品名称
     public String barcode;  // 条形码
