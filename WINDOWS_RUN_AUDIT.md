@@ -605,7 +605,6 @@ java --module-path "" -version
 - **代码版本**：`main` @ `75edc45`（阶段一：原代码实机验证）→ `56388c3`（阶段二：首启向导改造）
 - **复验主机**：Windows（x64，DPI 100%）原生；另加 Linux 实机——WSL2 Debian（WSLg，`DISPLAY=:0`）
 - **数据库**：MySQL 8.0.46，跑在 WSL2 docker 容器 `lisuan-mysql`（`127.0.0.1:3306`；`docker run mysql:8.0` 创建，**未挂载** `docker/mysql-init/`，schema 全部由应用 `DatabaseManager` 自建）
-- **工具链**（仓库外便携目录 `C:\Users\nevell\lisuan-win-verify\`）：JDK Temurin **17.0.20.1+1**、Maven **3.9.16**（Linux 侧为 apt Maven 3.9.9 + Temurin 17）
 
 ## 一、背景与结论
 
@@ -681,7 +680,6 @@ java --module-path "" -version
 5. 库内证据：`operation_logs` 有 `FIRST_RUN_SETUP` 与 `LOGIN SUCCESS`；`users` 行 `force_password_change=0`、`last_login_time` 已写；
 6. 验证后从备份恢复 `lisuan_system`（33 张表）。（会话使用的测试口令均为一次性验证用，不记入本报告；`lisuan_fresh` 辅助库已删除。）
 
-（截图均在仓库外 `C:\Users\nevell\lisuan-win-verify\`。）
 
 ## 五、Linux 实机验证（WSL2 Debian + WSLg）
 
@@ -694,7 +692,8 @@ java --module-path "" -version
 ## 六、提交、清理与遗留
 
 - 提交：`56388c3` `feat(security): 首次运行向导取代默认凭据（删除随机临时密码与 SQL 种子）`（20 文件，+620/−137）；提交后仓库干净；
-- 验证环境全部在仓库外（`C:\Users\nevell\lisuan-win-verify\`）；`config/api.properties` 已还原 `api.enabled=false`；应用进程已退出；`lisuan-mysql` 容器保留运行（`docker stop lisuan-mysql` 可停）；下载用 `jdk.zip`/`maven.zip` 与旧配置备份已删（仅保留解压后的工具链目录——本机无其他 JDK/Maven）；
+- 验证环境全部在仓库外（`C:\Users\nevell\lisuan-win-verify\`）；`config/api.properties` 已还原 `api.enabled=false`；应用进程已退出；`lisuan-mysql` 容器保留运行（`docker stop lisuan-mysql` 可停）；下载用 `jdk.zip`/`maven.zip` 与旧配置备份已删（当时仅保留解压后的工具链目录）；
+
 - 遗留（均不阻塞发布，待确认后再动）：
   1. **locale 一行修复**（见第五节）——影响所有平台的弹窗文案观感，需确认；
   2. `/api/health/detail` 需 token——若文档称 health 系列公开则需改文档；
