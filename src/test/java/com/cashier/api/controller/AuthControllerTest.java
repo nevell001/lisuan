@@ -27,6 +27,23 @@ class AuthControllerTest {
     }
 
     @Test
+    @DisplayName("空口令登录返回 400：不得把空串当成有效凭据去验密")
+    void loginWithEmptyPasswordReturns400() {
+        AuthController.LoginRequest request = new AuthController.LoginRequest();
+        request.username = "admin";
+        request.password = "";
+
+        TestContext ctx = new TestContext()
+            .withRequest(io.javalin.http.HandlerType.POST, "/api/auth/login")
+            .withBody(request);
+
+        AuthController.login(ctx.context);
+
+        assertEquals(HttpStatus.BAD_REQUEST, ctx.status);
+        assertEquals(false, response(ctx).get("success"));
+    }
+
+    @Test
     @DisplayName("未认证用户不能读取当前用户")
     void currentUserRequiresAuthentication() {
         TestContext ctx = new TestContext();

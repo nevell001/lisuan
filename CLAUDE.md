@@ -129,12 +129,12 @@ install.bat            # Windows
 ### Layer Structure
 
 ```
-Controller (34 classes) → Service (14 classes) → DAO (29 instance DAOs) → Database
+Controller (34 classes) → Service (15 classes) → DAO (29 instance DAOs) → Database
         ↓                          ↓              ↓
      FXML Views              Business Logic    Data Access
 
 REST API Layer (v2.5.0):
-ApiController (15 classes) → Service Layer → DAO Layer
+ApiController (14 classes) → Service Layer → DAO Layer
         ↓
     WebSocket Sync (real-time)
 ```
@@ -185,13 +185,13 @@ ApiController (15 classes) → Service Layer → DAO Layer
 **API Controllers** (`api/controller/`):
 - `AuthController` - Login, token refresh, logout
 - `ProductApiController` - Product CRUD (6 endpoints)
-- `MemberApiController` - Member CRUD, recharge, search (8 endpoints)
-- `TransactionApiController` - Transaction processing, stats (7 endpoints)
-- `InventoryApiController` - Stock updates, alerts (5 endpoints)
-- `ReportApiController` - Daily/monthly/sales reports (5 endpoints)
-- `PaymentApiController` - Electronic payment (11 endpoints)
+- `MemberApiController` - Member CRUD, recharge, search (6 endpoints)
+- `TransactionApiController` - Transaction processing, stats (5 endpoints)
+- `InventoryApiController` - Stock updates, alerts (4 endpoints)
+- `ReportApiController` - Daily/monthly/sales reports (4 endpoints)
+- `PaymentApiController` - Electronic payment (10 endpoints)
 - `InvoiceApiController` - Invoice management (10 endpoints)
-- `PrintApiController` - Network printing (14 endpoints)
+- `PrintApiController` - Network printing (15 endpoints)
 - `BackupApiController` - Cloud backup (9 endpoints)
 - `I18nApiController` - Multi-language support (6 endpoints)
 - `UserApiController` - User management (admin only)
@@ -255,7 +255,7 @@ productDAO.update(product);
 
 **DAOFactory** (`dao/DAOFactory.java`)
 - Singleton factory for DAO instance management
-- Currently registers `ProductDAORefactored`
+- `registerDefaults()` 当前注册 **29** 个 `XxxDAORefactored`（不是"只注册 Product"）
 - Pattern: `DAOFactory.getInstance().getProductDAO()`
 
 ### Controller Patterns
@@ -290,7 +290,7 @@ productDAO.update(product);
 - Dynamic language switching via `I18nManager.setLocale()`
 - FXML bindings: Use `%resource_key` syntax
 
-**Language Preference Storage** (`dao/LanguagePreferenceDAO.java`)
+**Language Preference Storage** (`dao/LanguagePreferenceDAORefactored.java`)
 - Hierarchical preference resolution: user-specific → global default → system default (zh-CN)
 - User preferences stored in `language_preferences` table with `language_tag` field
 - Global default stored with `username = 'default'`
@@ -657,8 +657,9 @@ SyncManager.broadcastTransactionComplete(transactionId);
 
 **Config Files:**
 - `config/database.properties` - Database connection (HikariCP pool settings included; password via `CASHIER_DB_PASSWORD` from `.env`/environment, legacy `CASHER_DB_PASSWORD` accepted)
-- `config/jvm.config` - JVM options
-- `config/printer.properties` - Printer settings
+- `config/jvm.config` - JVM options（**由 `install.sh`/`install.bat`/`start.bat` 生成**，仓库里只有 `.example`）
+- `config/printer.properties` - **仅参考模板**（仓库里只有 `.example`，`src/main/java` 无任何代码读取它；
+  实际打印设置走 `settings` 表，见 `docs/HARDWARE_ACCEPTANCE.md`）
 - `config/api.properties` - API server settings (v2.5.0)
 - Note: Maven resource filtering is enabled for `.properties`, `.fxml`, `.css` files
 
@@ -765,6 +766,11 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `updateStatus`/`updateWarning` 也在守卫范围内（现已覆盖 13 个文件，全仓库状态栏硬编码为 0）——
   状态栏文案应**复用** `status_message.*`/`nav.*` 等既有 key，别新建同值 key。
   迁移新文件时把路径加进该测试的 `MIGRATED_FILES`。
+  **2026-10 订正（审计 G1）**：这条规则原先只匹配"中文紧跟左括号"，于是第二实参
+  （`showErrorAlert(标题, "中文正文")`）与拼接（`setTitle(常量 + "中文")`）全都漏检——
+  白名单文件里实测仍有 3 处可见中文而门禁是绿的。现在已改为**平衡括号取全部实参 + 跳过 i18n key
+  字面量**，`updateSuccess/updateError/updateInfo` 也纳入范围；那 3 处已迁到
+  `runtime.dialog_open_failed` / `runtime.tpos_window_title`。
   **写 i18n 调用时要顺着门禁的形状写**：`I18nManager.get(...)` 的首参必须是字面量或常量
   （`get(cond ? A : B, x)` 会让 `I18nBundleConsistencyTest` 把条件里的字面量当成 key）；
   用户可见文案也可能不在 `updateStatus` 里——`showError`/`showWarning` 同样是文案出口，

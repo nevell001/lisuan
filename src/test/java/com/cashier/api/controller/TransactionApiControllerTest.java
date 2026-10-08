@@ -101,6 +101,39 @@ class TransactionApiControllerTest extends DatabaseTestBase {
     }
 
     @Test
+    @DisplayName("会员余额支付必须带会员：不带会员（或会员不存在）回 400，库存与交易都不动")
+    void memberBalancePaymentWithoutMemberIsRejected() throws Exception {
+        Product product = insertProduct("余额无会员商品", "APIBAL001", new BigDecimal("10.00"), 5);
+        User operator = new User();
+        operator.username = "cashier01";
+        operator.name = "真实收银员";
+
+        TestContext noMember = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions")
+            .withAttribute("currentUser", operator)
+            .withBody(createRequest(product.id, 1, "MEMBER_BALANCE", null));
+        TransactionApiController.create(noMember.context);
+
+        assertEquals(HttpStatus.BAD_REQUEST, noMember.status,
+            "会员余额支付不带会员必须回 400（否则不扣任何账户却照扣库存、照落成交）");
+        assertEquals(5, DAOFactory.getInstance().getProductDAO().findById(product.id).quantity, "被拒单不得扣库存");
+        assertTrue(transactionDAO.findAll().isEmpty(), "被拒单不得落交易");
+
+        // 会员 ID 不存在时同样必须被拒（resolveMember 返回 null）
+        TransactionApiController.TransactionRequest bogus = createRequest(product.id, 1, "会员余额", null);
+        bogus.memberId = 999999;
+        TestContext bogusMember = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions")
+            .withAttribute("currentUser", operator)
+            .withBody(bogus);
+        TransactionApiController.create(bogusMember.context);
+
+        assertEquals(HttpStatus.BAD_REQUEST, bogusMember.status);
+        assertEquals(5, DAOFactory.getInstance().getProductDAO().findById(product.id).quantity);
+        assertTrue(transactionDAO.findAll().isEmpty());
+    }
+
+    @Test
     @DisplayName("API 下单：total_amount 写原价合计，税额按实付金额计")
     void createStoresOriginalTotalAndTaxesPayableAmount() throws Exception {
         DataService.saveSettings(Map.of("taxRate", "0.06"));

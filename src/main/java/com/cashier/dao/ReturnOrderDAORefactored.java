@@ -117,15 +117,35 @@ public class ReturnOrderDAORefactored extends BaseDAO {
     public boolean markApprovalWithConnection(Connection conn, String returnOrderId,
                                               String newStatus, String approverName,
                                               String approvalComment) throws SQLException {
+        return markApprovalWithConnection(conn, returnOrderId, newStatus, approverName, approvalComment, null);
+    }
+
+    /**
+     * 原子审批/驳回，并（可选）把审批人选择的退款方式与状态**一起**落库。
+     *
+     * <p>{@code return_orders.payment_method} 决定退款去向（{@code ReturnService.settleRefund}
+     * 按它判断退现金还是退回会员余额），因此审批人改了退款方式就必须一起写：
+     * 分成两条 UPDATE 会出现"状态已 APPROVED、退款方式没改"的中间态，且并发下审批冲突时
+     * 退款方式可能已被写脏。{@code COALESCE} 保证传 null 时沿用建单时的值。</p>
+     *
+     * @param refundPaymentMethod 退款方式（规范代码，如 CASH/WECHAT）；null 表示不改
+     * @return 是否成功迁移；0 行受影响（状态已非 PENDING）返回 false
+     */
+    public boolean markApprovalWithConnection(Connection conn, String returnOrderId,
+                                              String newStatus, String approverName,
+                                              String approvalComment,
+                                              String refundPaymentMethod) throws SQLException {
         String sql = "UPDATE return_orders SET status = ?, approver_name = ?, approval_date = ?, " +
-            "approval_comment = ?, update_time = ? WHERE return_order_id = ? AND status = 'PENDING'";
+            "approval_comment = ?, update_time = ?, payment_method = COALESCE(?, payment_method) " +
+            "WHERE return_order_id = ? AND status = 'PENDING'";
         try (PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, newStatus);
             stmt.setString(2, approverName);
             stmt.setTimestamp(3, Timestamp.from(java.time.Instant.now()));
             stmt.setString(4, approvalComment);
             stmt.setTimestamp(5, Timestamp.from(java.time.Instant.now()));
-            stmt.setString(6, returnOrderId);
+            stmt.setString(6, refundPaymentMethod);
+            stmt.setString(7, returnOrderId);
             return stmt.executeUpdate() > 0;
         }
     }

@@ -68,6 +68,51 @@ class DataServiceTest extends DatabaseTestBase {
     }
 
     @Test
+    @DisplayName("整数/开关设置读取：缺失取默认值、越界钳制、脏值回落（登录锁定与空闲登出靠它兜底）")
+    void typedSettingsAreClampedAndSafe() throws SQLException {
+        // 缺失 → 默认值
+        assertEquals(5, DataService.getIntSetting("passwordMaxAttempts", 5, 1, 50));
+        assertEquals("0.0", DataService.loadSettings().get("taxRate"));
+
+        Map<String, String> settings = new HashMap<>();
+        settings.put("passwordMaxAttempts", "3");
+        settings.put("autoLogout", "true");
+        settings.put("autoLogoutMinutes", "45");
+        DataService.saveSettings(settings);
+
+        assertEquals(3, DataService.getIntSetting("passwordMaxAttempts", 5, 1, 50));
+        assertEquals(45, DataService.getIntSetting("autoLogoutMinutes", 30, 5, 120));
+        assertTrue(DataService.getBooleanSetting("autoLogout", false));
+
+        // 越界 → 钳制到边界（一条脏设置不得把防护关掉/无限延长）
+        settings.put("passwordMaxAttempts", "0");
+        settings.put("autoLogoutMinutes", "100000");
+        DataService.saveSettings(settings);
+        assertEquals(1, DataService.getIntSetting("passwordMaxAttempts", 5, 1, 50));
+        assertEquals(120, DataService.getIntSetting("autoLogoutMinutes", 30, 5, 120));
+
+        // 非法值 → 回落到默认值
+        settings.put("passwordMaxAttempts", "abc");
+        settings.put("autoLogout", "");
+        DataService.saveSettings(settings);
+        assertEquals(5, DataService.getIntSetting("passwordMaxAttempts", 5, 1, 50));
+        assertFalse(DataService.getBooleanSetting("autoLogout", false));
+    }
+
+    @Test
+    @DisplayName("备份频率文案映射为小时数：中英文都认，无法识别时不改周期")
+    void backupFrequencyMapsToHours() {
+        assertEquals(24, BackupService.intervalHoursForFrequency("每天"));
+        assertEquals(24, BackupService.intervalHoursForFrequency("Daily"));
+        assertEquals(24 * 7, BackupService.intervalHoursForFrequency("每周"));
+        assertEquals(24 * 7, BackupService.intervalHoursForFrequency("Weekly"));
+        assertEquals(24 * 30, BackupService.intervalHoursForFrequency("每月"));
+        assertEquals(24 * 30, BackupService.intervalHoursForFrequency("Monthly"));
+        assertEquals(0, BackupService.intervalHoursForFrequency("随便"));
+        assertEquals(0, BackupService.intervalHoursForFrequency(null));
+    }
+
+    @Test
     @DisplayName("主题偏好默认值、保存回读与用户回退默认")
     void themePreferencePersistsAndFallsBack() {
         assertEquals(FXConstants.DEFAULT_THEME, DataService.loadThemePreference("nobody"));

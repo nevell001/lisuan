@@ -217,7 +217,9 @@ exit /b 0
 set "LEAK_FILE=%~1"
 echo !LEAK_FILE! | findstr /I /C:".example" /C:"database.properties.template" >nul
 if not errorlevel 1 exit /b 0
-findstr /I /C:"RootPassword123!" /R /C:"db.password=..*" "!LEAK_FILE!" >nul 2>&1
+rem Generic shape only (credential key + non-empty value). The old named canary was a real
+rem plaintext password kept in the repo; see docs/TECH_DEBT.md G2.
+findstr /I /R /C:"db.password=..*" /C:"PASSWORD[A-Za-z0-9_]*=..*" /C:"SECRET[A-Za-z0-9_]*=..*" "!LEAK_FILE!" >nul 2>&1
 if not errorlevel 1 (
     echo WARNING: possible leaked local password found in !LEAK_FILE!
     set "LEAK_FOUND=1"

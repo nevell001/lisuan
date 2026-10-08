@@ -750,7 +750,9 @@ private Button shiftBtn;
             dialogStage.show();
         } catch (IOException e) {
             logger.error("加载快捷键帮助界面失败", e);
-            FXUtils.showErrorAlert(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Label.ERROR), "无法打开快捷键帮助");
+            FXUtils.showErrorAlert(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Label.ERROR),
+                com.cashier.i18n.I18nManager.getInstance().get("runtime.dialog_open_failed",
+                    com.cashier.i18n.I18nManager.getInstance().get("shortcut.help.title")));
         }
     }
 
@@ -783,7 +785,9 @@ private Button shiftBtn;
             dialogStage.showAndWait();
         } catch (IOException e) {
             logger.error("加载全局搜索界面失败", e);
-            FXUtils.showErrorAlert(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Label.ERROR), "无法打开全局搜索");
+            FXUtils.showErrorAlert(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Label.ERROR),
+                com.cashier.i18n.I18nManager.getInstance().get("runtime.dialog_open_failed",
+                    com.cashier.i18n.I18nManager.getInstance().get("search.title")));
         }
     }
 

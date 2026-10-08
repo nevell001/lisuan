@@ -58,6 +58,14 @@ public class PrintTask {
     private final boolean requirePreview;
 
     /**
+     * 正文之后直写的原始字节（ESC/POS 指令，如条码）
+     *
+     * <p>只有能发原始字节的设备（{@link NetworkPrinterDevice#print(PrintTask)}）会写出它；
+     * 文本/文件小票的调用方不设置该字段，因此控制字节不会混进小票文本。</p>
+     */
+    private final byte[] rawPrintBytes;
+
+    /**
      * 打印状态
      */
     private PrintTaskStatus status;
@@ -84,6 +92,16 @@ public class PrintTask {
     public PrintTask(String taskId, String taskName, PrintTaskType taskType, String content,
                     int copies, boolean printLogo, boolean openCashDrawer, 
                     boolean cutPaper, boolean requirePreview) {
+        this(taskId, taskName, taskType, content, copies, printLogo, openCashDrawer,
+             cutPaper, requirePreview, null);
+    }
+
+    /**
+     * @param rawPrintBytes 正文之后直写的原始字节（ESC/POS 指令）；不需要时传 null
+     */
+    public PrintTask(String taskId, String taskName, PrintTaskType taskType, String content,
+                    int copies, boolean printLogo, boolean openCashDrawer,
+                    boolean cutPaper, boolean requirePreview, byte[] rawPrintBytes) {
         this.taskId = taskId;
         this.taskName = taskName;
         this.taskType = taskType;
@@ -94,6 +112,7 @@ public class PrintTask {
         this.openCashDrawer = openCashDrawer;
         this.cutPaper = cutPaper;
         this.requirePreview = requirePreview;
+        this.rawPrintBytes = rawPrintBytes;
         this.status = PrintTaskStatus.PENDING;
     }
     
@@ -137,6 +156,13 @@ public class PrintTask {
         return requirePreview;
     }
 
+    /**
+     * 正文之后要直写的原始字节（ESC/POS 指令，如条码）；未设置时为 null
+     */
+    public byte[] getRawPrintBytes() {
+        return rawPrintBytes;
+    }
+
     public PrintTaskStatus getStatus() {
         return status;
     }
@@ -176,9 +202,18 @@ public class PrintTask {
      * 创建销售小票任务
      */
     public static PrintTask createReceiptTask(String content, boolean printLogo, boolean openCashDrawer) {
+        return createReceiptTask(content, printLogo, openCashDrawer, null);
+    }
+
+    /**
+     * 创建销售小票任务
+     * @param rawPrintBytes 正文之后直写的原始字节（ESC/POS 指令，如条码）；不需要时传 null
+     */
+    public static PrintTask createReceiptTask(String content, boolean printLogo, boolean openCashDrawer,
+                                             byte[] rawPrintBytes) {
         String taskId = "RCP-" + System.currentTimeMillis();
-        return new PrintTask(taskId, "销售小票", PrintTaskType.RECEIPT, content, 
-                           1, printLogo, openCashDrawer, true, false);
+        return new PrintTask(taskId, "销售小票", PrintTaskType.RECEIPT, content,
+                           1, printLogo, openCashDrawer, true, false, rawPrintBytes);
     }
 
     /**

@@ -263,6 +263,13 @@ public class NetworkPrinterDevice implements PrinterDevice {
             String content = task.getContent();
             outputStream.write(content.getBytes("GBK"));
             
+            // 正文之后直写原始字节（ESC/POS 指令，如条码）：只有本设备会写出它，
+            // 条目缺失时为 null（文本/文件小票即如此），不会多写任何字节
+            byte[] rawPrintBytes = task.getRawPrintBytes();
+            if (rawPrintBytes != null && rawPrintBytes.length > 0) {
+                outputStream.write(rawPrintBytes);
+            }
+            
             // 添加换行
             outputStream.write(EscPosUtils.LINE_FEED);
             outputStream.write(EscPosUtils.LINE_FEED);

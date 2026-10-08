@@ -52,22 +52,33 @@ public class InvoiceItem {
     }
     
     /**
-     * 从商品转换
+     * 从商品转换（开票明细）。
+     *
+     * <p>{@code product.price} 是**含税**原价，而电子发票明细要求填不含税单价，所以要按
+     * {@code 税率} 换算（{@code 含税单价 / (1 + 税率)}）。此前这里把税率硬编码成 13%，
+     * 而税额又按 {@code invoice.taxRate}（可能来自请求体）计算，两个税率不一致时
+     * 价税合计会直接算错（审计 F3）：106 元商品按 6% 开票会得到 99.44。</p>
+     *
+     * @param product        商品（{@code price} 为含税价）
+     * @param quantity       数量
+     * @param taxRate        本次开票使用的税率（小数，如 0.13）；null 视为 0
+     * @param grossUnitPrice 实际成交的含税单价（已按整单实付比例折掉会员折扣/促销）；
+     *                       null 表示按商品原价
      */
-    public static InvoiceItem fromProduct(Product product, int quantity) {
+    public static InvoiceItem fromProduct(Product product, int quantity, BigDecimal taxRate,
+                                          BigDecimal grossUnitPrice) {
         InvoiceItem item = new InvoiceItem();
         item.productName = product.name;
         item.specification = product.spec != null ? product.spec : "";
         item.unit = product.unit != null ? product.unit : "个";
         item.quantity = quantity;
-        
-        // 价格不含税计算（假设价格是含税价）
-        BigDecimal taxRate = new BigDecimal("0.13");
-        BigDecimal taxDivisor = BigDecimal.ONE.add(taxRate);
-        item.unitPrice = product.price.divide(taxDivisor, 2, RoundingMode.HALF_UP);
-        
-        item.calculateAmount(taxRate);
-        
+
+        BigDecimal rate = taxRate != null ? taxRate : BigDecimal.ZERO;
+        BigDecimal gross = grossUnitPrice != null ? grossUnitPrice : product.price;
+        item.unitPrice = gross.divide(BigDecimal.ONE.add(rate), 2, RoundingMode.HALF_UP);
+
+        item.calculateAmount(rate);
+
         return item;
     }
 }

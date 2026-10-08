@@ -1592,9 +1592,12 @@ autocommit 连接；`insertWithConnection` 内部先插表头（提交），再�
   按 `ScheduledExecutorService` 语义，任务抛一次异常就**永久取消**后续通知（当前监听器各自兜了异常，属潜在）；
 - `DataService.hasActiveShift():428-435` 吞 `SQLException` 返回 false，调用方（`CartController:568/1397`）
   于是把数据库故障显示成"请先开班/没有活跃班次"——排查方向被带偏；
-- 11 处 `new Thread(...)`（`LoginController:109`、`RechargeController:163`、`MemberController:135`、
-  `StatisticsController:251` 等）未设 `setDaemon(true)`：线程正常结束无碍，但卡住的 JDBC 调用会让
-  关窗后进程不退出；
+- ~~11 处~~ **8 处** `new Thread(...)` 未设 `setDaemon(true)`（2026-10 复核订正：原文举的
+  `StatisticsController:251` **已经**有 `worker.setDaemon(true)`（同文件 274 行），数量也数错了。
+  实测 28 处 `new Thread(...)` 里 20 处已设 daemon，剩 8 处：`AuditLogController:123`、
+  `LoginController:109`、`MemberController:135`、`PasswordResetController:93`、`RechargeController:163`、
+  `SettingsController:1562`、`UserController:168`、`installer/Installer.java:348`）：
+  线程正常结束无碍，但卡住的 JDBC 调用会让关窗后进程不退出；
 - `CurrencyUtil:63-65` 的 `DecimalFormat` 未设 `RoundingMode`（默认 HALF_EVEN），
   而全应用金额是 HALF_UP：`format(1.005)` → `1.00`（只影响 3 位以上小数的中间值展示）；
 - `InventoryAlertController:410-416` 先弹"检查完成"再异步刷新（且刷新失败只记日志，表格静默保留旧数据）。
@@ -1741,3 +1744,93 @@ PUT /API/members/1    -> HTTP 404
 `InvoiceServiceTest` 新增 1 项（行税之和 == 表头）、`InvoicePrintServiceTest` 新增 1 项（6.5% 可打印）、
 `MemberServiceTest` 新增 1 项（充值 10.55 → 105 分）。
 **11 处变异全部验证为红**（含把门禁条件写反的那次，见 TD-030）。
+
+---
+
+## 2026-10 第二轮全量审计（F1~F15 / G1~G3）
+
+**审计方式**：`mvn -B -ntp clean verify` 从零跑三关（**796 用例全绿**、SpotBugs High 0、JaCoCo 达标）、
+德语 locale 下全量再跑一遍（同样全绿）、覆盖率实测（行 22.4%）、并把工作拆给 3 路只读深审
+（金额/库存/支付、认证/API/密钥、生命周期/文档一致性）——**每条结论都由本人回读源码复核**后才写进本文件。
+本轮修 13 项、补 6 个门禁，未修的逐条写明状态。
+
+### 钱与权限（优先修）
+
+| 项 | 问题（每条都有"输入 → 错误输出"） | 修法 | 门禁/测试 |
+|---|---|---|---|
+| **F1** | 退货审批的"退款方式"下拉是死值（`String paymentMethod = refundMethod;` 之后再没被引用），而 `settleRefund` 是按 `return_orders.payment_method` 决定"退现金还是退回会员余额"→ 微信单在审批时改成现金，仍然退进会员余额（反之亦然） | 下拉框的值与状态迁移放进**同一条** UPDATE（`markApprovalWithConnection` 增加 `payment_method = COALESCE(?, payment_method)`）；选中退货单时把下拉框刷成该单原有支付方式 | `ReturnServiceTest` 4 项（落库/去向/非法值被拒/旧调用方不变）+ `ReturnApprovalRefundMethodPolicyTest`（控制器必须把值传下去，不得回归死变量） |
+| **F2** | `POST /api/transactions` 接受 `会员余额` 但可以不带会员：库存照扣、交易照落，**没有任何账户被扣款**（余额校验在 `workingMember != null` 分支里，而该分支整段被跳过） | 服务层 `executeTransaction` 入口兜底拒绝（覆盖所有调用方），API 层提前回 400 给明确错误 | `TransactionApiControllerTest`/`TransactionServiceTest` 各 1 项（400 + 库存不动 + 不落单） |
+| **F7** | **空口令是有效凭据**：`PasswordUtil.hashPassword("")` 能写入且 `verifyPassword("", hash)` 通过；`POST /api/users` 完全不校验口令，`login` 只挡 `null` → 空口令账号可直接登录；桌面"添加用户"口令留空也照样建号（OK 从不禁用） | 建号与登录两侧都拒绝空白口令；桌面新建用户对话框在口令/用户名为空时禁用 OK；更新接口把空白口令视为"不修改" | `UserApiControllerTest` 2 项、`AuthControllerTest` 1 项、`UserCreationPasswordPolicyTest`（桌面路径无法无头测，用源码门禁钉住"空口令不哈希 + OK 禁用"） |
+| **F8** | `PUT /api/settings/{key}` 写的是 `config/settings.properties`——**全仓库没有任何代码读它**（桌面设置走 DB），接口却回 `success:true`；写失败也被本地 catch 吞掉 | 改为读写桌面端同一份 `settings` 表（`SystemSettingsDAORefactored`），写/删失败如实回 500，key 做非空与长度校验；弃用的配置文件已删除 | `SettingsApiControllerTest.setAffectsWhatTheApplicationReads`（断言 `DataService.loadSettings()` 真能看到新值，旧实现必红） |
+
+### 报表/金额口径
+
+| 项 | 问题 | 修法 | 门禁/测试 |
+|---|---|---|---|
+| **F3** | 从交易开票金额与顾客实付不符：净单价**硬编码除以 1.13**、明细取商品**原价**（折扣从不参与）、税率缺省写死 13%（不读系统设置）→ 106 元单按 6% 开票得 99.44，9.5 折单按 13% 开成 226.00 | 净单价按**本次税率**换算；含税单价按「实付/原价合计」比例折算（与退款同一口径）；缺省税率取系统设置的 `taxRate` | `InvoiceServiceTest` 2 项（按实付折算 = 214.70；净单价与税额同一税率） |
+| **F4** | 利润报表**对桌面退货不减**：桌面退货从不写 `transactions.status=REFUNDED`（只有 API 退款会），而报表只跳过 `REFUNDED` → 卖 100 成本 60 后退掉，利润仍显示 40。TD-003 的"已修"只对 API 路径成立 | 在后台线程查区间内**已完成退货**及其明细，按退货完成日冲减收入与成本（退货回库，成本同样要冲回），分类过滤与销售侧同口径 | `ProfitReportControllerReturnDeductionTest` 3 项（整单退货归零/无退货不变/区间外不冲） |
+| **F5** | 触屏收银台**按旧价格收款**：刚查到的行只用于库存校验，购物车行仍用网格里的旧对象 → 改价后仍按 10.00 卖（标准台对已在车里的行也有同样问题） | `CartItem.refreshProduct(fresh)`：加购/改数量时把行内商品对象换成刚读到的行并重算小计；标准台与触屏台都用它 | `CartItemTest` + `PosStalePricePolicyTest`（两个收银台都不得再用旧对象建行） |
+
+### 设置项"只写不读"（F6，产品决定：全部实现）
+
+审计实测：设置页有 8 个控件写进 `settings` 表后**没有任何读取方**。现已逐项接通：
+
+- **口令锁定次数** `passwordMaxAttempts`：桌面 `LoginController` 与 API `LoginRateLimiter` 都改为读设置
+  （`DataService.getIntSetting`，越界钳制、脏值回落）；
+- **空闲自动登出** `autoLogout`/`autoLogoutMinutes`：新增 `util/IdleLogoutMonitor`（场景级活动监听 +
+  守护定时器，未登录或关闭开关时不触发），由 `CashierSystemFXApplication` 在启动时挂上、关窗时停止；
+- **自动备份/备份频率** `autoBackup`/`backupFrequency`：保存设置时落到 `backup_config` 并**重启调度器**
+  （`BackupService.applyScheduleFromSettings`，中英文文案都认）；
+- **门店地址/电话** `storeAddress`/`storePhone`：印在小票页头（触屏 `PrintUtil` 与标准 `ReceiptPrinter`
+  的文本 + ESC/POS 两条路径共用 `PrintUtil.storeContactLines`，留空不留空标签行）；
+- **打印条码** `printBarcode`：为 ESC/POS 网络路径补上唯一的"原始字节通道"（`PrintTask.rawPrintBytes`
+  由 `NetworkPrinterDevice` 在正文后直写），开启时按交易号打 Code128 条码；文本/文件小票与 REST
+  纯文本小票**不带**条码。`EscPosUtils.barcodeCode128` 此前**零调用方**，就是没有这条通道。
+
+门禁/测试：`DataServiceTest` 2 项（整数/开关设置钳制、频率映射）、`IdleLogoutMonitorTest`、
+`SalesReceiptPrintTest` 5 项（地址电话有/无、参数只填一项、模板不残留 `{{storeInfo}}`、条码字节契约）。
+
+### 门禁本身的假绿灯（G1~G3）
+
+- **G1 · i18n 硬编码门禁只认"第一个实参"**：`UI_CALL` 要求中文**紧跟左括号**，于是
+  `showErrorAlert(标题, "中文正文")` 的第二实参与 `setTitle(常量 + "中文")` 的拼接写法全都漏检。
+  实测白名单（"零硬编码"的 13 个文件）里仍有 3 处可见中文（主界面两处弹窗正文 + 触屏收银台窗口标题）。
+  **已修**：规则改为"平衡括号取全部实参 + 跳过 i18n key 字面量"，3 处文案迁到 `runtime.dialog_open_failed`、
+  `runtime.tpos_window_title`；顺带覆盖了 `updateSuccess/updateError/updateInfo` 三个状态栏出口。
+- **G2 · 明文凭据门禁的引号盲区**：脚本规则要求"凭据键 = **带引号**字面量"，于是
+  `DB_PASSWORD=Abc123xyz` 这类不带引号的赋值整类漏检；而 `release.sh`/`release.bat` 里那个
+  **历史明文口令金丝雀**（`RootPassword123!`）也因此被判合规——等于把已泄露口令重新明文发布在 HEAD。
+  **已修**：引号改为可选（并识别 cmd 的 `!VAR!` 引用，避免误报），release 脚本改为通用形态检查、
+  不再内置任何口令字面量；新增 7 条规则单测（含"口令里的 `!` 仍要被抓到"）。
+- **G3 · SpotBugs 注释与事实不符**：`pom.xml` 注释称"中低优先级告警保留在报告中逐步治理"，
+  但 `threshold=High` 让报告里**一条都没有**，仓库/CI 里没有任何可治理的清单。
+  **已修**：注释改为事实，并新增可选 profile `mvn -Pspotbugs-backlog -DskipTests verify`
+  生成 Medium 清单（2026-10 实测 **267 条**，主要是 `PA_PUBLIC_PRIMITIVE_ATTRIBUTE`、
+  `EI_EXPOSE_REP`、`DLS_DEAD_LOCAL_STORE`、`RV_RETURN_VALUE_IGNORED_BAD_PRACTICE` 等）。
+  默认构建仍只卡 High（保持 CI 时长）。
+
+### 静默降级与死代码（F11/F12）
+
+- F11：购物车/扫码查库失败时**不得拿旧快照充数**，也不得把"查库失败"报成"未找到商品"
+  （标准台与触屏台的加购路径改为显式提示并放弃；充值历史加载失败改为弹错误而不是静默空表）；
+- F12：`startBackgroundServices()` 里那个"延迟 3 秒启动库存预警/备份/API"的守护 `Timer` 任务体
+  **只打一行日志**（服务实际在登录后启动），属误导性死代码，已删除；
+  `CashierSystemFXApplication.loadMainScene()` 与 `NotificationManager.addListener/removeListener`
+  仍无生产调用方，登记为待清理。
+
+### 本轮**未修**（状态与理由）
+
+- **F9 微信异步退款永不落终态**：`WechatNativePaymentProvider` 对非 SUCCESS 状态写 `PROCESSING`，
+  而全仓库没有任何消费方 → 支付单停在 `PARTIAL_REFUND`、预留额度不释放（保守，不会多退钱）。
+  需要设计"退款结果轮询/回调"（查询接口或对账任务），属功能开发，未在本次修。
+- **F10 退货创建是 check-then-act**：校验在事务外，`return_orders` 无唯一约束/已退数量台账，
+  两个终端同时提交可各退满额。窗口窄，串行操作会被拦；彻底修需要"已退数量台账 + 唯一约束"的设计。
+- **F13 `ProductDAORefactored.batchUpdateWithConnection` 丢弃 `executeBatch()` 结果**并无条件 `version++`：
+  当前唯一调用方 `DataService.saveInventory` 无生产调用方，属埋雷，未动。
+- **F14 `InventoryAlertController` 的硬编码中文**（弹窗正文、导出表头等约 10 处）：
+  该文件不在 `HardcodedUiTextPolicyTest.MIGRATED_FILES` 里，属 TD-014 的待迁移范围，本次未扩围。
+- **F15 依赖版本**：Javalin 6.1.3 传递来 **Jetty 11.0.20**（早于修 CVE-2024-8184/6763 的 11.0.24）；
+  **logback 1.5.18** 命中 CVE-2025-11226（本仓库无 Janino + 无 Spring → 不可达）。
+  升级需要联网解析依赖并复跑全量回归，未在本次动。
+- **F6 的"只写不读"已全部实现**，但 `theme` 这个 key 仍只写不读（主题偏好走 `theme_preferences` 表，
+  功能本身正常），属历史冗余键。

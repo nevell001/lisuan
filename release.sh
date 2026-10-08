@@ -135,7 +135,9 @@ if [ -f "config/payment.properties" ]; then
 fi
 
 # 检查敏感信息（二次确认）
-if grep -r -E "RootPassword123!|db.password=.+[^[:space:]]" config/ src/main/resources/ \
+# 注意：这里只按"凭据键 + 非空值"的通用形态检查，不再把某个历史口令字面量写进脚本——
+# 那等于把口令重新明文发布在 HEAD 里（审计 G2：门禁自己也扫不到带引号的可选写法）。
+if grep -r -E "db\.password=.+[^[:space:]]|(PASSWORD|PASSWD|SECRET|TOKEN)[A-Za-z0-9_]*=[^[:space:]\"'$][^[:space:]]*" config/ src/main/resources/ \
     --exclude='database.properties.template' \
     --exclude='*.example' > /dev/null 2>&1; then
     echo "✗ 警告：在代码或配置中发现疑似泄露的本地密码！请清理后再发布。"

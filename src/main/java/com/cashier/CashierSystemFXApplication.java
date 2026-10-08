@@ -74,6 +74,7 @@ public class CashierSystemFXApplication extends Application {
     private Stage primaryStage;
     private User currentUser;
     private Object currentController; // 当前活动的控制器，用于清理资源
+    private com.cashier.util.IdleLogoutMonitor idleLogoutMonitor; // 空闲自动登出（审计 F6）
 
     // 单实例控制
     private static final String APP_LOCK_FILE = System.getProperty("java.io.tmpdir") + java.io.File.separator + "lisuan.lock";
@@ -290,6 +291,25 @@ public class CashierSystemFXApplication extends Application {
         if (database.needsFirstRunSetup()) {
             Platform.runLater(this::showFirstRunSetup);
         }
+
+        // 空闲自动登出：设置页的 autoLogout/autoLogoutMinutes 此前只写不读（审计 F6）。
+        // 未登录时 supplier 返回 0（不触发），登录后按设置生效；默认与设置页一致（勾选 + 30 分钟）
+        idleLogoutMonitor = com.cashier.util.IdleLogoutMonitor.start(primaryStage,
+            () -> {
+                if (getCurrentUser() == null) {
+                    return 0;
+                }
+                boolean enabled = com.cashier.service.DataService.getBooleanSetting("autoLogout", true);
+                return enabled
+                    ? com.cashier.service.DataService.getIntSetting("autoLogoutMinutes", 30, 5, 24 * 60)
+                    : 0;
+            },
+            () -> {
+                if (getCurrentUser() != null) {
+                    logger.info("空闲超时，返回登录界面");
+                    logoutToLoginView();
+                }
+            });
 
         // 异步初始化后台服务 - 启动后立即执行
         startBackgroundServices();
@@ -689,6 +709,15 @@ public class CashierSystemFXApplication extends Application {
         try {
             logger.info("正在关闭系统服务...");
 
+            // 停止空闲自动登出监控
+            try {
+                if (idleLogoutMonitor != null) {
+                    idleLogoutMonitor.stop();
+                }
+            } catch (Exception e) {
+                logger.error("停止空闲自动登出监控时发生错误", e);
+            }
+
             // 停止库存预警服务
             try {
                 com.cashier.service.InventoryAlertService.getInstance().stop();
@@ -791,7 +820,7 @@ public class CashierSystemFXApplication extends Application {
             primaryStage.setScene(scene);
 
             // 更新窗口标题
-            primaryStage.setTitle(APP_TITLE + " - 触屏收银台 - " + user.name);
+            primaryStage.setTitle(I18nManager.getInstance().get("runtime.tpos_window_title", APP_TITLE, user.name));
 
             logger.info("用户 {} ({}) 进入触屏收银台", user.name, user.getRoleDisplayName());
 

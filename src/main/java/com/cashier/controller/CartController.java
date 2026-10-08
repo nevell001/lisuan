@@ -575,11 +575,10 @@ public class CartController implements CartViewHost {
             return;
         }
 
-        if (context.latestProduct() != null) {
-            // 更新内存中的库存数据
-            inventoryMap.put(product.name, context.latestProduct());
-            product = context.latestProduct();
-        }
+        // 读库失败不得用旧快照兜底（价格/库存可能已变）；正常路径一律用刚读到的行
+        if (context.latestProduct() == null) { showError(I18nManager.getInstance().get("runtime.product_load_short_failed", product.name)); return; }
+        inventoryMap.put(product.name, context.latestProduct());
+        product = context.latestProduct();
 
         if (quantity > product.quantity) {
             showError(I18nManager.getInstance().get("runtime.low_stock_current", product.quantity));
@@ -594,6 +593,7 @@ public class CartController implements CartViewHost {
                 showError(I18nManager.getInstance().get("runtime.low_stock_max", product.quantity));
                 return;
             }
+            cartItem.refreshProduct(product);
             cartItem.setQuantity(newQuantity);
             // 先移除再添加来触发TableView刷新
             cartList.remove(cartItem);
@@ -642,7 +642,7 @@ public class CartController implements CartViewHost {
         } catch (SQLException e) {
             logger.error("查询扫码商品失败: {}", normalizedScanText, e);
             playScanErrorSound();
-            showScanMessage(i18n.get("cart.scan.not_found", normalizedScanText), ScanMessageLevel.ERROR);
+            showScanMessage(i18n.get("runtime.product_load_short_failed", normalizedScanText), ScanMessageLevel.ERROR);
             return false;
         }
 

@@ -108,13 +108,16 @@ public class LoginController {
         // 异步验证登录（避免阻塞 UI）
         new Thread(() -> {
             try {
+                // 锁定阈值取系统设置 passwordMaxAttempts（此前写死在常量里，设置页改了不生效，审计 F6）
+                final int maxLoginAttempts = com.cashier.service.DataService.getIntSetting(
+                    "passwordMaxAttempts", MAX_LOGIN_ATTEMPTS, 1, 50);
                 // 使用数据库验证用户
                 User user = DAOFactory.getInstance().getUserDAO().findByUsername(username);
                 if (user == null) {
                     AuditService.failure(null, "AUTH", "LOGIN", "用户名不存在: " + username);
-                    int attempts = DAOFactory.getInstance().getLoginAttemptDAO().recordFailedAttempt(username, MAX_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MINUTES * 60 * 1000);
+                    int attempts = DAOFactory.getInstance().getLoginAttemptDAO().recordFailedAttempt(username, maxLoginAttempts, LOCKOUT_DURATION_MINUTES * 60 * 1000);
                     Platform.runLater(() -> {
-                        showError(I18nManager.getInstance().get("runtime.login_user_missing", MAX_LOGIN_ATTEMPTS - attempts));
+                        showError(I18nManager.getInstance().get("runtime.login_user_missing", maxLoginAttempts - attempts));
                         shakeTextField(usernameField);
                         setLoginState(false);
                     });
@@ -123,9 +126,9 @@ public class LoginController {
 
                 if (!PasswordUtil.verifyPassword(password, user.password, username)) {
                     AuditService.failure(username, "AUTH", "LOGIN", "密码验证失败");
-                    int attempts = DAOFactory.getInstance().getLoginAttemptDAO().recordFailedAttempt(username, MAX_LOGIN_ATTEMPTS, LOCKOUT_DURATION_MINUTES * 60 * 1000);
+                    int attempts = DAOFactory.getInstance().getLoginAttemptDAO().recordFailedAttempt(username, maxLoginAttempts, LOCKOUT_DURATION_MINUTES * 60 * 1000);
                     Platform.runLater(() -> {
-                        showError(I18nManager.getInstance().get("runtime.login_wrong_password", MAX_LOGIN_ATTEMPTS - attempts));
+                        showError(I18nManager.getInstance().get("runtime.login_wrong_password", maxLoginAttempts - attempts));
                         shakeTextField(passwordField);
                         setLoginState(false);
                     });

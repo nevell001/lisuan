@@ -50,13 +50,19 @@ class SecretHygienePolicyTest {
 
     private static final Pattern PROP_LINE = Pattern.compile("^\\s*([A-Za-z0-9_.]+)\\s*[=:]\\s*(.*)$");
 
-    /** 脚本里把带引号的字面量直接赋给凭据变量。 */
+    /**
+     * 脚本里把字面量直接赋给凭据变量。
+     *
+     * <p>引号可选：{@code DB_PASSWORD=Abc123xyz} 这种不带引号的写法同样是把明文写进仓库，
+     * 而旧规则要求必须带引号，于是这类赋值整类漏检（2026-10 审计 G2）。值字符类刻意不含
+     * {@code / ( \} 与空白：路径、命令替换与转义写法不当作字面量凭据。</p>
+     */
     private static final Pattern SCRIPT_ASSIGN = Pattern.compile(
-        "(?i)\\b[A-Z0-9_]*(?:PASSWORD|PASSWD|SECRET|TOKEN)[A-Z0-9_]*\\s*=\\s*[\"']([A-Za-z0-9!@#$%^&*_.\\-]{4,})[\"']");
+        "(?i)\\b[A-Z0-9_]*(?:PASSWORD|PASSWD|SECRET|TOKEN)[A-Z0-9_]*\\s*=\\s*[\"']?([A-Za-z0-9!@#$%^&*_.\\-]{4,})[\"']?");
 
-    /** 脚本里 <code>${VAR:-"字面量"}</code> 形式的硬编码默认口令。 */
+    /** 脚本里 <code>${VAR:-字面量}</code> 形式的硬编码默认口令（引号同样可选）。 */
     private static final Pattern SCRIPT_DEFAULT = Pattern.compile(
-        "(?i)\\$\\{[A-Z0-9_]*(?:PASSWORD|PASSWD|SECRET)[A-Z0-9_]*:-\\s*[\"']([^\"']{4,})[\"']");
+        "(?i)\\$\\{[A-Z0-9_]*(?:PASSWORD|PASSWD|SECRET)[A-Z0-9_]*:-\\s*[\"']?([^\"'}\\s]{4,})[\"']?");
 
     private static final List<String> PLACEHOLDER_PREFIXES = List.of(
         "change_me", "change-me", "changeme", "your_", "your-", "xxx", "replace",
@@ -120,6 +126,11 @@ class SecretHygienePolicyTest {
         assertTrue(scriptHasLiteralCredential("DB_PASSWORD=\"Abc123!xyz\""));
         assertTrue(scriptHasLiteralCredential("DB_PASSWORD=${MYSQL_PASSWORD:-\"Abc123!xyz\"}"));
 
+        // 不带引号的写法同样是明文凭据（旧规则整类漏检，审计 G2）
+        assertTrue(scriptHasLiteralCredential("DB_PASSWORD=Abc123xyz"));
+        assertTrue(scriptHasLiteralCredential("export MYSQL_ROOT_PASSWORD=Abc123xyz"));
+        assertTrue(scriptHasLiteralCredential("DB_PASSWORD=${MYSQL_PASSWORD:-Abc123xyz}"));
+
         // 模板文件必须按 properties 规则扫描（扩展名是 .example，不能只看后缀）
         assertTrue(isPropertiesLike("database.properties.example"));
         assertTrue(isPropertiesLike(".env.example"));
@@ -129,9 +140,18 @@ class SecretHygienePolicyTest {
         assertFalse(isCredentialKeyLine("db.password="));
         assertFalse(isCredentialKeyLine("db.password=CHANGE_ME_PWD"));
         assertFalse(isCredentialKeyLine("db.password=${CASHIER_DB_PASSWORD}"));
-        assertFalse(isCredentialKeyLine("token.expire.hours=24"));        assertFalse(scriptHasLiteralCredential("export MYSQL_ROOT_PASSWORD=your_secure_password"));
+        assertFalse(isCredentialKeyLine("token.expire.hours=24"));
+        assertFalse(scriptHasLiteralCredential("export MYSQL_ROOT_PASSWORD=your_secure_password"));
         assertFalse(scriptHasLiteralCredential("MYSQL_PASSWORD_VALUE=$(grep -E \"^MYSQL_PASSWORD=\" .env)"));
         assertFalse(scriptHasLiteralCredential("grep -r -E \"Pwd123!|db.password=.+[^[:space:]]\" config/"));
+        // 非凭据变量名、以及路径/短值不算
+        assertFalse(scriptHasLiteralCredential("TOKEN_EXPIRE_HOURS=24"));
+        assertFalse(scriptHasLiteralCredential("SECRET_FILE=/etc/lisuan/secret.txt"));
+        assertFalse(scriptHasLiteralCredential("if [ -z \"$MYSQL_PASSWORD\" ]; then MYSQL_PASSWORD=; fi"));
+        // cmd 延迟展开引用（!VAR!）不是字面量，但真实口令里的感叹号仍要被抓到
+        assertFalse(scriptHasLiteralCredential("set \"CASHIER_DB_PASSWORD=!CASHIER_DB_PASSWORD:\"=!\""));
+        assertFalse(scriptHasLiteralCredential("set \"TOKEN_SECRET_VALUE=!TOKEN_SECRET!\""));
+        assertTrue(scriptHasLiteralCredential("DB_PASSWORD=Abc123!xyz"));
     }
 
     /**
@@ -175,6 +195,9 @@ class SecretHygienePolicyTest {
         }
         if (value.isEmpty() || value.indexOf('$') >= 0 || value.indexOf('%') >= 0) {
             return true; // 变量引用 / 环境变量展开
+        }
+        if (value.startsWith("!")) {
+            return true; // cmd 延迟展开 !VAR!（只能从起始位置判断，否则真实口令里的 ! 会被放过）
         }
         String lower = value.toLowerCase(Locale.ROOT);
         if (PLACEHOLDER_VALUES.contains(lower)) {

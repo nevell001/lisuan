@@ -1,8 +1,11 @@
 package com.cashier.printer;
 
 import org.slf4j.Logger;
+import com.cashier.service.DataService;
 import com.cashier.util.DateTimeFormats;
 import com.cashier.util.LoggerFactoryUtil;
+
+import java.util.Map;
 
 
 /**
@@ -51,6 +54,12 @@ public class PrintUtil {
         try {
             PrintTemplate template = PrintTemplate.createReceiptTemplate();
             
+            // 门店地址/电话取自系统设置：与标准收银台（ReceiptPrinter）同源、格式一致；
+            // 留空时 storeContactLines 返回空串，模板不会留下空标签行
+            Map<String, String> settings = DataService.loadSettings();
+            template.setVariable("storeInfo",
+                storeContactLines(settings.get("storeAddress"), settings.get("storePhone")));
+
             template.setVariable("storeName", storeName);
             template.setVariable("cashierName", cashierName);
             template.setVariable("transactionId", transactionId);
@@ -65,7 +74,13 @@ public class PrintUtil {
             template.setVariable("paymentMethod", paymentMethod);
             template.setVariable("memberInfo", memberInfo != null ? memberInfo : "非会员");
             
-            PrintTask task = PrintTask.createReceiptTask(template.generate(), printLogo, true);
+            // 打印条码开关（默认 true，与设置页复选框默认勾选一致）：条码以 ESC/POS 原始字节
+            // 挂在打印任务上，由 NetworkPrinterDevice 在正文之后直写设备；关掉则什么都不带。
+            // 文本/文件小票（ReceiptPrinter 的 .txt 路径）不打印条码。
+            byte[] barcodeBytes = Boolean.parseBoolean(settings.getOrDefault("printBarcode", "true"))
+                ? EscPosUtils.barcodeCode128(transactionId) : null;
+            
+            PrintTask task = PrintTask.createReceiptTask(template.generate(), printLogo, true, barcodeBytes);
             
             return PrinterManager.getInstance().print(task);
             
@@ -232,6 +247,24 @@ public class PrintUtil {
      */
     public static boolean openCashDrawer() {
         return PrinterManager.getInstance().openCashDrawer();
+    }
+
+    /**
+     * 小票上的门店地址/电话两行（模板变量 {@code {{storeInfo}}} 的值，也供
+     * {@link com.cashier.util.ReceiptPrinter} 的文本与 ESC/POS 小票复用，保证两条打印路径格式一致）。
+     *
+     * <p>把**整行连换行**都放进返回值：设置里留空时返回空串，模板不会印出"地址: "这种没有内容的行，
+     * 也不会多出一条空行；只有一项填了就只印那一行。</p>
+     */
+    public static String storeContactLines(String storeAddress, String storePhone) {
+        StringBuilder lines = new StringBuilder();
+        if (storeAddress != null && !storeAddress.trim().isEmpty()) {
+            lines.append("地址: ").append(storeAddress.trim()).append("\n");
+        }
+        if (storePhone != null && !storePhone.trim().isEmpty()) {
+            lines.append("电话: ").append(storePhone.trim()).append("\n");
+        }
+        return lines.toString();
     }
 
     private static String formatNow() {

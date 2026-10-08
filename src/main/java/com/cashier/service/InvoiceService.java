@@ -64,7 +64,7 @@ public class InvoiceService {
 
         Invoice invoice = createBaseInvoice(request);
         invoice.transactionId = transactionId;
-        invoice.items = createInvoiceItems(transaction);
+        invoice.items = createInvoiceItems(transaction, invoice.taxRate);
         invoice.calculateAmounts();
         invoice.createBy = request.createBy != null ? request.createBy : transaction.operatorUsername;
 
@@ -118,13 +118,34 @@ public class InvoiceService {
         invoice.invoiceNumber = generateInvoiceNumber();
         applyBuyerInfo(invoice, request);
         applySellerInfo(invoice, request);
-        invoice.taxRate = request.taxRate != null ? request.taxRate : defaultTaxRate;
+        invoice.taxRate = resolveTaxRate(request);
         invoice.createTime = new Date();
         invoice.status = "ISSUED";
         invoice.remark = request.remark != null ? request.remark : "";
         invoice.payee = request.payee != null ? request.payee : "";
         invoice.checker = request.checker != null ? request.checker : "";
         return invoice;
+    }
+
+    /**
+     * 开票税率：请求体优先，其次系统设置里的 {@code taxRate}（结账用的就是它），最后回落默认值。
+     *
+     * <p>此前无论请求体给不给，缺省一律写死 13%，与结账/税额口径（{@code TransactionService.calculateTax}
+     * 读的是系统设置）不一致（审计 F3）。</p>
+     */
+    private static BigDecimal resolveTaxRate(InvoiceRequest request) {
+        if (request != null && request.taxRate != null) {
+            return request.taxRate;
+        }
+        String configured = DataService.loadSettings().get("taxRate");
+        if (configured != null && !configured.isBlank()) {
+            try {
+                return new BigDecimal(configured.trim());
+            } catch (NumberFormatException e) {
+                logger.warn("税率配置无法解析，按默认 {} 处理: {}", defaultTaxRate, configured);
+            }
+        }
+        return defaultTaxRate;
     }
 
     private static void applyBuyerInfo(Invoice invoice, InvoiceRequest request) {
@@ -143,12 +164,34 @@ public class InvoiceService {
         invoice.sellerBank = request.sellerBank != null ? request.sellerBank : defaultSellerBank;
     }
 
-    private static List<InvoiceItem> createInvoiceItems(Transaction transaction) {
+    /**
+     * 由交易明细生成开票明细。
+     *
+     * <p>金额必须与顾客实付一致：会员折扣与促销作用在**整单**上，而 {@code transaction.items}
+     * 只存商品原价，因此按「实付 / 原价合计」把含税单价折下来（与退货退款同一折算口径）。
+     * 此前直接用原价开票，9.5 折成交的单子会按原价多开（审计 F3）。</p>
+     */
+    private static List<InvoiceItem> createInvoiceItems(Transaction transaction, BigDecimal taxRate) {
         List<InvoiceItem> items = new ArrayList<>();
-        if (transaction.items != null) {
-            for (Product product : transaction.items) {
-                items.add(InvoiceItem.fromProduct(product, product.quantity));
+        if (transaction.items == null) {
+            return items;
+        }
+        // 原价合计无效（脏数据）时不折算，与 ReturnService.refundRatio 的兜底一致
+        BigDecimal grossTotal = BigDecimal.ZERO;
+        for (Product product : transaction.items) {
+            if (product != null && product.price != null) {
+                grossTotal = grossTotal.add(product.price.multiply(BigDecimal.valueOf(product.quantity)));
             }
+        }
+        BigDecimal paid = transaction.finalAmount != null ? transaction.finalAmount : grossTotal;
+        BigDecimal ratio = grossTotal.compareTo(BigDecimal.ZERO) <= 0
+            ? BigDecimal.ONE
+            : paid.divide(grossTotal, 4, java.math.RoundingMode.HALF_UP)
+                .min(BigDecimal.ONE).max(BigDecimal.ZERO);
+        for (Product product : transaction.items) {
+            BigDecimal grossUnitPrice = product.price.multiply(ratio)
+                .setScale(2, java.math.RoundingMode.HALF_UP);
+            items.add(InvoiceItem.fromProduct(product, product.quantity, taxRate, grossUnitPrice));
         }
         return items;
     }

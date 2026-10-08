@@ -289,7 +289,11 @@
                 </executions>
             </plugin>
 
-            <!-- 高风险静态缺陷门禁；中低优先级告警保留在报告中逐步治理 -->
+            <!-- 高风险静态缺陷门禁（**只卡 High**）。中低优先级不在默认构建里：
+                 需要清单时用 `mvn -Pspotbugs-backlog -DskipTests verify` 生成
+                 target/spotbugsXml.xml（2026-10 实测 Medium 共 264 条，见 docs/TECH_DEBT.md G3）。
+                 此前的注释写成"中低优先级告警保留在报告中逐步治理"，但 threshold=High
+                 让报告里一条都没有，等于没有清单可治理。 -->
             <plugin>
                 <groupId>com.github.spotbugs</groupId>
                 <artifactId>spotbugs-maven-plugin</artifactId>
@@ -586,6 +590,33 @@
                                 <TEST_MODE>true</TEST_MODE>
                             </systemPropertyVariables>
                         </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- 中低优先级 SpotBugs 清单（默认构建不跑，见构建门禁注释 G3）：
+             mvn -Pspotbugs-backlog -DskipTests verify  → target/spotbugsXml.xml -->
+        <profile>
+            <id>spotbugs-backlog</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>com.github.spotbugs</groupId>
+                        <artifactId>spotbugs-maven-plugin</artifactId>
+                        <version>${spotbugs.version}</version>
+                        <executions>
+                            <execution>
+                                <id>spotbugs-backlog-report</id>
+                                <phase>verify</phase>
+                                <goals>
+                                    <goal>spotbugs</goal>
+                                </goals>
+                                <configuration>
+                                    <threshold>Medium</threshold>
+                                </configuration>
+                            </execution>
+                        </executions>
                     </plugin>
                 </plugins>
             </build>

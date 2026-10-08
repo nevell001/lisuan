@@ -9,6 +9,8 @@ import com.cashier.util.CurrencyUtil;
 import com.cashier.util.DateTimeFormats;
 import com.cashier.model.Category;
 import com.cashier.model.Product;
+import com.cashier.model.ReturnOrder;
+import com.cashier.model.ReturnOrderItem;
 import com.cashier.model.Transaction;
 import org.slf4j.Logger;
 import com.cashier.util.LoggerFactoryUtil;
@@ -22,6 +24,7 @@ import javafx.scene.control.*;
 import java.math.BigDecimal;
 import java.sql.SQLException;
 import java.time.LocalDate;
+import java.time.ZoneId;
 import java.util.*;
 
 /**
@@ -145,6 +148,10 @@ public class ProfitReportController {
     private Map<String, Double> productActualCostMap; // 商品实际成本（加权平均）
     private Map<String, Product> productNameMap; // 商品名称到商品的映射
     private Set<String> allCategories = new java.util.LinkedHashSet<>();
+    /** 区间内已完成退货（含明细），在后台线程查好；桌面退货不写 transactions.status=REFUNDED，
+     *  只能靠它冲减利润（审计 F4）。同样"声明即初始化"避免异步顺序问题。 */
+    private List<ReturnOrder> periodReturns = new java.util.ArrayList<>();
+    private Map<String, List<ReturnOrderItem>> returnItemsByOrder = new java.util.HashMap<>();
     /** 防止重复触发查询（后台查询执行中忽略新查询） */
     private boolean profitQueryInProgress;
     private final ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
@@ -406,6 +413,9 @@ public class ProfitReportController {
                 productNameMap = loadProductNameMap(allTransactions);
                 productActualCostMap = new HashMap<>();
                 loadProductActualCosts();
+                // 区间内已完成退货：查库必须在 worker 里做，聚合时（FX 线程）只做内存计算
+                periodReturns = findCompletedReturnsByDateRange(startDate, endDate);
+                returnItemsByOrder = loadReturnItems(periodReturns);
                 // 运营成本比例也是一次查库：必须在 worker 里取好，不能在 FX 线程渲染时再查
                 final double operatingCostRatio = loadOperatingCostRatio();
 
@@ -424,6 +434,8 @@ public class ProfitReportController {
                     allTransactions = new ArrayList<>();
                     productNameMap = new HashMap<>();
                     productActualCostMap = new HashMap<>();
+                    periodReturns = new ArrayList<>();
+                    returnItemsByOrder = new HashMap<>();
                 });
             }
         }, "profit-report-query");
@@ -439,6 +451,26 @@ public class ProfitReportController {
             startDate.atStartOfDay().format(DateTimeFormats.STANDARD_DATE_TIME),
             endDate.plusDays(1).atStartOfDay().minusSeconds(1).format(DateTimeFormats.STANDARD_DATE_TIME)
         );
+    }
+
+    /** 区间内**已完成**（COMPLETED）的退货单；按完成日归属，与日报/统计口径一致。 */
+    private List<ReturnOrder> findCompletedReturnsByDateRange(LocalDate startDate, LocalDate endDate) throws SQLException {
+        if (startDate == null || endDate == null) {
+            return new ArrayList<>();
+        }
+        return DAOFactory.getInstance().getReturnOrderDAO().findCompletedReturnsBetween(
+            startDate.atStartOfDay().format(DateTimeFormats.STANDARD_DATE_TIME),
+            endDate.plusDays(1).atStartOfDay().minusSeconds(1).format(DateTimeFormats.STANDARD_DATE_TIME)
+        );
+    }
+
+    private Map<String, List<ReturnOrderItem>> loadReturnItems(List<ReturnOrder> returns) throws SQLException {
+        Map<String, List<ReturnOrderItem>> byOrder = new HashMap<>();
+        for (ReturnOrder order : returns) {
+            byOrder.put(order.returnOrderId,
+                DAOFactory.getInstance().getReturnOrderItemDAO().findByReturnOrderId(order.returnOrderId));
+        }
+        return byOrder;
     }
 
     /**
@@ -478,7 +510,49 @@ public class ProfitReportController {
                 logger.warn("处理交易记录失败: {}", transaction.transactionId, e);
             }
         }
+        // 退货要把销售额与成本一起冲回：只认 transactions.status=REFUNDED 的话，
+        // 桌面退货（从不写该字段）会一直算作利润（审计 F4）
+        deductCompletedReturns(statistics, startDate, endDate, categoryName);
         return statistics;
+    }
+
+    /**
+     * 扣减区间内已完成退货的销售额与成本。
+     *
+     * <p>退货把货收回库存，因此收入与成本都要冲回，否则利润虚高。归属日取**退货完成日**，
+     * 与日报/统计的净额口径一致；分类筛选与销售侧用同一套判定，保证表头与明细自洽。</p>
+     */
+    private void deductCompletedReturns(ProfitStatistics statistics, LocalDate startDate, LocalDate endDate,
+                                        String categoryName) {
+        for (ReturnOrder order : periodReturns) {
+            LocalDate completedDate = returnCompletedDate(order);
+            if (completedDate == null || !isWithinRange(completedDate, startDate, endDate)) {
+                continue;
+            }
+            List<ReturnOrderItem> items = returnItemsByOrder.get(order.returnOrderId);
+            if (items == null) {
+                continue;
+            }
+            for (ReturnOrderItem item : items) {
+                Product product = findProductByName(item.productName);
+                String category = resolveCategory(product);
+                if (!matchesCategoryFilter(categoryName, category)) {
+                    continue;
+                }
+                double unitCost = resolveUnitCost(item.productName, item.unitPrice, product);
+                double revenue = item.returnAmount != null ? item.returnAmount.doubleValue() : 0.0;
+                // 负向累加：收入、成本、数量都回退
+                applyItemProfit(statistics, item.productName, category, completedDate.toString(),
+                    -revenue, -unitCost * item.returnQuantity, -item.returnQuantity);
+            }
+        }
+    }
+
+    private LocalDate returnCompletedDate(ReturnOrder order) {
+        if (order.completedDate != null) {
+            return order.completedDate.atZone(ZoneId.systemDefault()).toLocalDate();
+        }
+        return order.returnDate != null ? order.returnDate.atZone(ZoneId.systemDefault()).toLocalDate() : null;
     }
 
     private LocalDate parseTransactionDate(Transaction transaction) {
@@ -534,18 +608,26 @@ public class ProfitReportController {
 
         double cost = resolveUnitCost(item, product);
         double revenue = item.getPrice().multiply(BigDecimal.valueOf(item.quantity)).doubleValue();
-        double itemCost = cost * item.quantity;
+        applyItemProfit(statistics, item.name, category, dateStr,
+            revenue, cost * item.quantity, item.quantity);
+    }
+
+    /**
+     * 把一行明细的收入/成本/数量累加进汇总（退货传负数即冲减）。
+     */
+    private void applyItemProfit(ProfitStatistics statistics, String itemName, String category, String dateStr,
+                                 double revenue, double itemCost, int quantity) {
         double profit = revenue - itemCost;
 
         statistics.totalRevenue += revenue;
         statistics.totalCost += itemCost;
 
         ProductProfit productProfit = statistics.productProfitMap
-            .computeIfAbsent(item.name, name -> new ProductProfit(name, category));
+            .computeIfAbsent(itemName, name -> new ProductProfit(name, category));
         productProfit.revenue += revenue;
         productProfit.cost += itemCost;
         productProfit.profit += profit;
-        productProfit.quantity += item.quantity;
+        productProfit.quantity += quantity;
 
         CategoryProfit categoryProfit = statistics.categoryProfitMap
             .computeIfAbsent(category, CategoryProfit::new);
@@ -562,13 +644,17 @@ public class ProfitReportController {
     }
 
     private double resolveUnitCost(Product item, Product product) {
-        if (productActualCostMap.containsKey(item.name)) {
-            return productActualCostMap.get(item.name);
+        return resolveUnitCost(item.name, item.getPrice(), product);
+    }
+
+    private double resolveUnitCost(String itemName, BigDecimal fallbackPrice, Product product) {
+        if (productActualCostMap.containsKey(itemName)) {
+            return productActualCostMap.get(itemName);
         }
         if (product != null && product.getCost().compareTo(BigDecimal.ZERO) > 0) {
             return product.getCost().doubleValue();
         }
-        return item.getPrice().multiply(Product.DEFAULT_COST_RATE).doubleValue();
+        return fallbackPrice.multiply(Product.DEFAULT_COST_RATE).doubleValue();
     }
 
     /** 查库读运营成本比例。**只允许在后台线程调用**（FX 线程渲染路径请用已传入的比例参数）。 */

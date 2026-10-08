@@ -556,6 +556,31 @@ class TransactionServiceTest extends DatabaseTestBase {
         assertTrue(TransactionService.returnsByMethod(null).isEmpty());
     }
 
+    @Test
+    @Order(92)
+    @DisplayName("会员余额支付没有会员时整单被拒：不扣库存、不落交易（服务层兜底）")
+    void memberBalancePaymentWithoutMemberIsRejectedByService() throws Exception {
+        Map<String, Product> stock = new HashMap<>();
+        for (Product product : testProducts) {
+            stock.put(product.name, product);
+        }
+        int quantityBefore = DAOFactory.getInstance().getProductDAO().findById(testProducts.get(0).id).quantity;
+
+        Transaction tx = createPreparedTransaction("T20260404140000", "会员余额",
+            TransactionService.calculateTotalAmount(testCartItems), null);
+        tx.totalAmount = TransactionService.calculateTotalAmount(testCartItems);
+        tx.finalAmount = tx.totalAmount;
+
+        TransactionService.TransactionResult result =
+            TransactionService.executeTransaction(testCartItems, null, tx, stock, null);
+
+        assertFalse(result.isSuccess(), "会员余额支付没有会员必须失败");
+        assertEquals(quantityBefore,
+            DAOFactory.getInstance().getProductDAO().findById(testProducts.get(0).id).quantity,
+            "被拒的交易不得扣库存");
+        assertNull(transactionDAO.findById("T20260404140000"), "被拒的交易不得落库");
+    }
+
     private com.cashier.model.ReturnOrder returnOrder(String paymentMethod, String amount, String completedAt) {
         com.cashier.model.ReturnOrder order = new com.cashier.model.ReturnOrder();
         order.paymentMethod = paymentMethod;

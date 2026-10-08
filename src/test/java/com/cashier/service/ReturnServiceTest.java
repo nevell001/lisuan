@@ -536,6 +536,95 @@ class ReturnServiceTest extends DatabaseTestBase {
         assertFalse(ReturnService.isCashPaymentMethod(null));
     }
 
+    @Test
+    @DisplayName("审批人选择的退款方式随审批落库，并决定退款去向：微信单改现金 → 退现金、不冲会员余额")
+    void approvalRefundMethodIsPersistedAndSteersRefund() throws Exception {
+        ReturnOrder returnOrder = createTestReturnOrderWithPayment(30.0, "WECHAT");
+        BigDecimal initialBalance = memberDAO.findByPhone(testMember.phone).balance;
+
+        assertTrue(ReturnService.approveReturnOrder(
+            returnOrder.returnOrderId, "测试审批员", "同意", true, "CASH"));
+
+        ReturnOrder approved = returnOrderDAO.findByReturnOrderId(returnOrder.returnOrderId);
+        assertEquals("APPROVED", approved.status);
+        assertEquals("CASH", approved.paymentMethod, "审批人选择的退款方式必须落库（此前被丢弃）");
+
+        assertTrue(ReturnService.completeReturnOrder(returnOrder.returnOrderId));
+        assertAmountEquals(initialBalance, memberDAO.findByPhone(testMember.phone).balance);
+        assertTrue(operationLogDAO.findAll().stream()
+                .anyMatch(log -> "RETURN_REFUND_CASH".equals(log.operation)),
+            "现金退款必须留 RETURN_REFUND_CASH 痕迹");
+        assertTrue(rechargeRecordDAO.findAll().isEmpty(), "现金退款不得写充值流水");
+    }
+
+    @Test
+    @DisplayName("审批人选择的退款方式反向同样生效：现金单改微信 → 退回会员余额并写充值流水")
+    void approvalRefundMethodSwitchesCashToBalance() throws Exception {
+        ReturnOrder returnOrder = createTestReturnOrderWithPayment(30.0, "CASH");
+        BigDecimal initialBalance = memberDAO.findByPhone(testMember.phone).balance;
+
+        assertTrue(ReturnService.approveReturnOrder(
+            returnOrder.returnOrderId, "测试审批员", "同意", true, "微信"));
+
+        assertEquals("WECHAT", returnOrderDAO.findByReturnOrderId(returnOrder.returnOrderId).paymentMethod);
+
+        assertTrue(ReturnService.completeReturnOrder(returnOrder.returnOrderId));
+        assertAmountEquals(initialBalance.add(new BigDecimal("30.00")),
+            memberDAO.findByPhone(testMember.phone).balance);
+        assertEquals(1, rechargeRecordDAO.findAll().size());
+    }
+
+    @Test
+    @DisplayName("审批时传无法识别的退款方式：审批失败且状态与退款方式都不变")
+    void unknownRefundMethodIsRejected() throws Exception {
+        ReturnOrder returnOrder = createTestReturnOrderWithPayment(30.0, "WECHAT");
+
+        assertFalse(ReturnService.approveReturnOrder(
+            returnOrder.returnOrderId, "测试审批员", "同意", true, "BITCOIN"));
+
+        ReturnOrder unchanged = returnOrderDAO.findByReturnOrderId(returnOrder.returnOrderId);
+        assertEquals("PENDING", unchanged.status);
+        assertEquals("WECHAT", unchanged.paymentMethod);
+    }
+
+    @Test
+    @DisplayName("不传退款方式（旧调用方）沿用建单时的值，行为与修复前一致")
+    void approveWithoutRefundMethodKeepsCreationValue() throws Exception {
+        ReturnOrder returnOrder = createTestReturnOrderWithPayment(30.0, "WECHAT");
+
+        assertTrue(ReturnService.approveReturnOrder(returnOrder.returnOrderId, "测试审批员", "同意", true));
+
+        ReturnOrder approved = returnOrderDAO.findByReturnOrderId(returnOrder.returnOrderId);
+        assertEquals("APPROVED", approved.status);
+        assertEquals("WECHAT", approved.paymentMethod);
+    }
+
+    /**
+     * 辅助方法：创建指定退款方式的测试退货订单（含会员）
+     */
+    private ReturnOrder createTestReturnOrderWithPayment(double amount, String paymentMethod) throws Exception {
+        ReturnOrder returnOrder = new ReturnOrder();
+        returnOrder.originalTransactionId = testTransaction.transactionId;
+        returnOrder.memberId = testMember.id;
+        returnOrder.totalAmount = BigDecimal.valueOf(amount);
+        returnOrder.paymentMethod = paymentMethod;
+        returnOrder.returnReason = "测试退货";
+        returnOrder.operatorName = "测试操作员";
+
+        ReturnOrderItem item = new ReturnOrderItem();
+        item.productId = testProduct1.id;
+        item.productName = testProduct1.name;
+        item.unitPrice = testProduct1.price;
+        item.returnQuantity = BigDecimal.valueOf(amount).divide(testProduct1.price, 0, RoundingMode.DOWN).intValue();
+        item.returnAmount = BigDecimal.valueOf(amount);
+
+        List<ReturnOrderItem> items = new ArrayList<>();
+        items.add(item);
+
+        ReturnService.createReturnOrder(returnOrder, items);
+        return returnOrderDAO.findByReturnOrderId(returnOrder.returnOrderId);
+    }
+
     /**
      * 辅助方法：创建测试退货订单
      */

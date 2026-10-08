@@ -776,23 +776,28 @@ public class TouchCartController implements CartViewHost {
 
     /** 在 JavaFX 线程用最新库存校验后写入购物车。 */
     private void applyAddToCart(Product product, Product fresh) {
-        if (fresh != null) {
-            inventoryMap.put(product.name, fresh);
-        } else {
-            inventoryMap.putIfAbsent(product.name, product);
+        // 读库失败时不得拿旧快照充数（上面那条注释承诺"避免使用陈旧快照"，此前失败分支恰恰这么做了）：
+        // 价格与库存都可能已经变了，宁可让收银员重试，也不能按旧价把货加进购物车
+        if (fresh == null) {
+            playScanErrorSound();
+            warn(i18n.get("runtime.product_load_short_failed", product.name));
+            return;
         }
-        int stock = currentStock(product, inventoryMap);
-        CartItem existing = findCartItem(cartItems, product.id);
+        inventoryMap.put(fresh.name, fresh);
+        int stock = currentStock(fresh, inventoryMap);
+        CartItem existing = findCartItem(cartItems, fresh.id);
         int inCart = existing != null ? existing.quantity : 0;
         if (inCart + 1 > stock) {
             playScanErrorSound();
-            warn(i18n.get("tpos.out_of_stock_warn", product.name));
+            warn(i18n.get("tpos.out_of_stock_warn", fresh.name));
             return;
         }
         if (existing != null) {
+            // 行内商品对象换成刚读到的行：否则改价后该行仍按首次加购时的旧价结算（审计 F5）
+            existing.refreshProduct(fresh);
             existing.addQuantity(1);
         } else {
-            cartItems.add(new CartItem(product, 1));
+            cartItems.add(new CartItem(fresh, 1));
         }
         refreshCartView();
         updateSummary();

@@ -36,13 +36,20 @@ public class AuthController {
                 return;
             }
             
-            if (request.username == null || request.password == null) {
+            // 只挡 null 不够：空/空白口令会被 verifyPassword 当成合法输入，
+            // 于是"空口令账号"（历史数据或建号接口漏校验产生）能被直接登录
+            if (request.username == null || request.username.isBlank()
+                    || request.password == null || request.password.isBlank()) {
                 ctx.status(HttpStatus.BAD_REQUEST)
                    .json(Map.of("success", false, "message", "用户名和密码不能为空"));
                 return;
             }
 
             String clientIp = ctx.ip();
+
+            // 锁定阈值取系统设置 passwordMaxAttempts（此前写死 5，设置页改了不生效，审计 F6）
+            LoginRateLimiter.getInstance().applyMaxFailures(
+                com.cashier.service.DataService.getIntSetting("passwordMaxAttempts", 5, 1, 50));
 
             // 内存按 IP 限流：防止同一来源（脚本/单机）暴力尝试。
             // 不写库 → 攻击者无法借 API 锁死真实账号（与桌面端解耦）。

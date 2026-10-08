@@ -146,6 +146,14 @@ public class TransactionApiController {
                    .json(Map.of("success", false, "message", "会员不存在: " + request.memberPhone));
                 return;
             }
+            // 会员余额支付必须能定位到会员：定位不到时余额既不会校验也不会扣减，
+            // 却会照扣库存、照落成交（服务层同样兜底拒绝，这里给出明确 400）
+            if (member == null && "会员余额".equals(paymentMethod)) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of("success", false,
+                       "message", "会员余额支付必须提供有效的会员（memberId 或 memberPhone）"));
+                return;
+            }
 
             // 操作员一律取认证用户，忽略请求体中的自报身份（防止审计归属被伪造）
             User operator = ctx.attribute("currentUser");

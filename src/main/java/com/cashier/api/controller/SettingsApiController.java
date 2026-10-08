@@ -1,53 +1,44 @@
 package com.cashier.api.controller;
 
+import com.cashier.dao.DAOFactory;
 import com.cashier.util.LoggerFactoryUtil;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Properties;
 
 /**
  * 系统设置 REST API
+ *
+ * <p>读写的是桌面端同一份持久化：{@code settings} 表（{@code DataService.loadSettings/saveSettings}、
+ * {@code SystemSettingsDAORefactored}）。此前这里读写的是 {@code config/settings.properties}，
+ * 而全仓库没有任何代码读那个文件——接口回了 {@code success:true}，桌面端的税率/店名等设置却
+ * 一点没变；写入失败也只在本地 catch 里记一条日志，调用方拿到的是假成功（2026-10 审计 F8）。</p>
  */
 public class SettingsApiController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(SettingsApiController.class);
-    
-    private static final String SETTINGS_FILE = "config/settings.properties";
-    private static Properties settings = new Properties();
-    
-    static {
-        loadSettings();
-    }
-    
-    private static void loadSettings() {
-        File file = new File(SETTINGS_FILE);
-        if (file.exists()) {
-            try (FileInputStream fis = new FileInputStream(file)) {
-                settings.load(fis);
-                logger.info("系统设置加载成功");
-            } catch (Exception e) {
-                logger.warn("加载系统设置失败: {}", e.getMessage());
-            }
+
+    /** 设置项 key 的长度上限，与 settings 表的列宽一致（`key` VARCHAR(100)），避免落库时截断/报错 */
+    private static final int MAX_KEY_LENGTH = 100;
+
+    /** 校验路径参数里的 key；不合法时写响应并返回 false。 */
+    private static boolean validateKey(Context ctx) {
+        String key = ctx.pathParam("key");
+        if (key == null || key.isBlank()) {
+            ctx.status(HttpStatus.BAD_REQUEST)
+               .json(Map.of("success", false, "message", "设置项名称不能为空"));
+            return false;
         }
-    }
-    
-    private static void saveSettings() {
-        File file = new File(SETTINGS_FILE);
-        file.getParentFile().mkdirs();
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            settings.store(fos, "Cashier System Settings");
-            logger.info("系统设置保存成功");
-        } catch (Exception e) {
-            logger.error("保存系统设置失败", e);
+        if (key.length() > MAX_KEY_LENGTH) {
+            ctx.status(HttpStatus.BAD_REQUEST)
+               .json(Map.of("success", false, "message", "设置项名称过长（最多 " + MAX_KEY_LENGTH + " 字符）"));
+            return false;
         }
+        return true;
     }
-    
+
     /**
      * 获取所有设置
      * GET /api/settings
@@ -56,7 +47,7 @@ public class SettingsApiController {
         try {
             Map<String, Object> result = new HashMap<>();
             result.put("success", true);
-            result.put("data", new HashMap<>(settings));
+            result.put("data", new HashMap<>(DAOFactory.getInstance().getSystemSettingsDAO().getAllSettings()));
             ctx.json(result);
         } catch (Exception e) {
             logger.error("获取系统设置失败", e);
@@ -64,22 +55,25 @@ public class SettingsApiController {
                .json(Map.of("success", false, "message", "获取系统设置失败"));
         }
     }
-    
+
     /**
      * 获取单个设置
      * GET /api/settings/:key
      */
     public static void get(Context ctx) {
+        if (!validateKey(ctx)) {
+            return;
+        }
         try {
             String key = ctx.pathParam("key");
-            String value = settings.getProperty(key);
-            
+            String value = DAOFactory.getInstance().getSystemSettingsDAO().getSetting(key);
+
             if (value == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
                    .json(Map.of("success", false, "message", "设置项不存在"));
                 return;
             }
-            
+
             ctx.json(Map.of("success", true, "key", key, "value", value));
         } catch (Exception e) {
             logger.error("获取设置项失败", e);
@@ -87,12 +81,15 @@ public class SettingsApiController {
                .json(Map.of("success", false, "message", "获取设置项失败"));
         }
     }
-    
+
     /**
      * 设置值
      * PUT /api/settings/:key
      */
     public static void set(Context ctx) {
+        if (!validateKey(ctx)) {
+            return;
+        }
         try {
             String key = ctx.pathParam("key");
             Map<?, ?> body = ApiRequest.parse(ctx, Map.class);
@@ -103,16 +100,21 @@ public class SettingsApiController {
             }
             Object rawValue = body.get("value");
             String value = rawValue != null ? rawValue.toString() : null;
-            
+
             if (value == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
                    .json(Map.of("success", false, "message", "缺少 value 参数"));
                 return;
             }
-            
-            settings.setProperty(key, value);
-            saveSettings();
-            
+
+            // 写失败必须如实报错：之前吞掉异常回 success，调用方以为设置生效了
+            if (!DAOFactory.getInstance().getSystemSettingsDAO().setSetting(key, value)) {
+                logger.error("设置未保存: {} = {}", key, value);
+                ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                   .json(Map.of("success", false, "message", "设置未保存"));
+                return;
+            }
+
             logger.info("设置已更新: {} = {}", key, value);
             ctx.json(Map.of("success", true, "key", key, "value", value, "message", "设置已更新"));
         } catch (Exception e) {
@@ -121,25 +123,31 @@ public class SettingsApiController {
                .json(Map.of("success", false, "message", "更新设置失败"));
         }
     }
-    
+
     /**
      * 删除设置
      * DELETE /api/settings/:key
      */
     public static void delete(Context ctx) {
+        if (!validateKey(ctx)) {
+            return;
+        }
         try {
             String key = ctx.pathParam("key");
-            String value = settings.getProperty(key);
-            
-            if (value == null) {
+
+            if (DAOFactory.getInstance().getSystemSettingsDAO().getSetting(key) == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
                    .json(Map.of("success", false, "message", "设置项不存在"));
                 return;
             }
-            
-            settings.remove(key);
-            saveSettings();
-            
+
+            if (!DAOFactory.getInstance().getSystemSettingsDAO().deleteSetting(key)) {
+                logger.error("设置未删除: {}", key);
+                ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                   .json(Map.of("success", false, "message", "设置未删除"));
+                return;
+            }
+
             logger.info("设置已删除: {}", key);
             ctx.json(Map.of("success", true, "message", "设置已删除"));
         } catch (Exception e) {

@@ -12,6 +12,7 @@ import org.junit.jupiter.api.Test;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class UserApiControllerTest extends DatabaseTestBase {
@@ -124,6 +125,40 @@ class UserApiControllerTest extends DatabaseTestBase {
     void createWithNullBodyReturns400() {
         TestContext ctx = new TestContext().withRequest(HandlerType.POST, "/api/users")
             .withAttribute("currentUser", adminUser());
+        UserApiController.create(ctx.context);
+
+        assertEquals(HttpStatus.BAD_REQUEST, ctx.status);
+    }
+
+    @Test
+    @DisplayName("空口令建号返回 400：空串不是有效凭据（否则该账号可用空口令登录）")
+    void createWithEmptyPasswordRejected() throws Exception {
+        for (String blank : new String[] {"", "   "}) {
+            UserApiController.UserRequest request = new UserApiController.UserRequest();
+            request.username = "nopass" + blank.length();
+            request.password = blank;
+
+            TestContext ctx = new TestContext().withRequest(HandlerType.POST, "/api/users")
+                .withAttribute("currentUser", adminUser())
+                .withBody(request);
+            UserApiController.create(ctx.context);
+
+            assertEquals(HttpStatus.BAD_REQUEST, ctx.status, "空口令必须回 400");
+            assertNull(DAOFactory.getInstance().getUserDAO().findByUsername(request.username),
+                "空口令账号不得被创建");
+        }
+    }
+
+    @Test
+    @DisplayName("空用户名建号返回 400")
+    void createWithBlankUsernameRejected() {
+        UserApiController.UserRequest request = new UserApiController.UserRequest();
+        request.username = "   ";
+        request.password = "pass123";
+
+        TestContext ctx = new TestContext().withRequest(HandlerType.POST, "/api/users")
+            .withAttribute("currentUser", adminUser())
+            .withBody(request);
         UserApiController.create(ctx.context);
 
         assertEquals(HttpStatus.BAD_REQUEST, ctx.status);

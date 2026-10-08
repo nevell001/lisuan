@@ -170,7 +170,10 @@ public class RechargeController {
                     historyTable.getItems().setAll(memberRecords);
                 });
             } catch (Exception e) {
+                // 查库失败不能表现成"这个会员没有充值记录"：要说清是加载失败（审计 F11）
                 logger.error("加载充值历史记录失败", e);
+                Platform.runLater(() -> showError(
+                    com.cashier.i18n.I18nManager.getInstance().get(com.cashier.i18n.I18nKeys.Error.LOAD_DATA)));
             }
         }).start();
     }

@@ -181,6 +181,28 @@ public class ReturnService {
      */
     public static boolean approveReturnOrder(String returnOrderId, String approverName,
                                               String approvalComment, boolean approved) {
+        return approveReturnOrder(returnOrderId, approverName, approvalComment, approved, null);
+    }
+
+    /**
+     * 审批退货订单（事务），并落库审批人选择的退款方式。
+     *
+     * <p>{@code completeReturnOrder → settleRefund} 是按 {@code return_orders.payment_method}
+     * 决定"退现金还是退回会员余额"的，而审批界面上的"退款方式"下拉框此前只被读进一个
+     * 局部变量就丢弃，于是审批人改成现金也照样退回会员余额（反之亦然）。这里把选择
+     * 与状态迁移放在同一条 UPDATE 里，保证原子。</p>
+     *
+     * @param refundPaymentMethod 审批人选择的退款方式（中文/代码/英文文案均可）；
+     *                            为 null/空白时沿用建单时的值；无法识别时审批失败（不写脏值）
+     */
+    public static boolean approveReturnOrder(String returnOrderId, String approverName,
+                                              String approvalComment, boolean approved,
+                                              String refundPaymentMethod) {
+        String paymentMethod = normalizeRefundPaymentMethod(refundPaymentMethod);
+        if (refundPaymentMethod != null && !refundPaymentMethod.isBlank() && paymentMethod == null) {
+            logger.warn("审批退货单时收到无法识别的退款方式，已拒绝: {} -> {}", returnOrderId, refundPaymentMethod);
+            return false;
+        }
         try {
             boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
                 ReturnOrder returnOrder = DAOFactory.getInstance().getReturnOrderDAO().findByReturnOrderIdWithConnection(conn, returnOrderId);
@@ -192,7 +214,7 @@ public class ReturnService {
                 // 0 行受影响说明该单已被他人处理，直接失败回滚。
                 String newStatus = approved ? "APPROVED" : "REJECTED";
                 if (!DAOFactory.getInstance().getReturnOrderDAO().markApprovalWithConnection(
-                        conn, returnOrderId, newStatus, approverName, approvalComment)) {
+                        conn, returnOrderId, newStatus, approverName, approvalComment, paymentMethod)) {
                     logger.warn("退货单状态已变更，审批冲突: {}", returnOrderId);
                     return false;
                 }
@@ -310,6 +332,20 @@ public class ReturnService {
     /** 退款方式是否为现金（兼容 POS 落库的中文与接口写入的代码形式）。 */
     public static boolean isCashPaymentMethod(String paymentMethod) {
         return "CASH".equals(com.cashier.util.I18nUiUtils.canonicalPaymentMethod(paymentMethod));
+    }
+
+    /**
+     * 归一化审批人选择的退款方式为落库用的规范代码；空白返回 null（表示不改），无法识别也返回 null。
+     */
+    private static String normalizeRefundPaymentMethod(String value) {
+        if (value == null || value.isBlank()) {
+            return null;
+        }
+        String canonical = com.cashier.util.I18nUiUtils.canonicalPaymentMethod(value.trim());
+        return switch (canonical == null ? "" : canonical) {
+            case "CASH", "WECHAT", "ALIPAY", "CARD", "MEMBER_BALANCE" -> canonical;
+            default -> null;
+        };
     }
 
     private static BigDecimal originalPaidAmount(ReturnOrder returnOrder) throws SQLException {

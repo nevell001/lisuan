@@ -9,6 +9,8 @@ import com.cashier.model.ReturnOrder;
 import com.cashier.model.ReturnOrderItem;
 import com.cashier.printer.PrinterManager;
 import com.cashier.printer.PrintTask;
+import com.cashier.printer.PrintUtil;
+import com.cashier.service.DataService;
 
 import java.io.File;
 import java.math.BigDecimal;
@@ -18,6 +20,7 @@ import java.time.format.DateTimeFormatter;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.List;
+import java.util.Map;
 import org.slf4j.Logger;
 
 /**
@@ -57,8 +60,12 @@ public class ReceiptPrinter {
 
             File receiptFile = new File(dir, fileName);
 
+            // 门店地址/电话取自系统设置（与触屏小票同源）；文本/文件小票不打印条码
+            Map<String, String> settings = DataService.loadSettings();
+
             // 生成小票内容
-            String content = generateReceiptContent(transaction, cartItems, member, memberDiscountAtSale);
+            String content = generateReceiptContent(transaction, cartItems, member, memberDiscountAtSale,
+                settings.get("storeAddress"), settings.get("storePhone"));
 
             // 写入文件
             try (java.io.BufferedWriter writer = Files.newBufferedWriter(receiptFile.toPath(), StandardCharsets.UTF_8)) {
@@ -82,6 +89,17 @@ public class ReceiptPrinter {
     /** 生成小票正文（包内可见，便于无界面单测；只拼字符串，不打印、不落盘）。 */
     static String generateReceiptContent(Transaction transaction, List<CartItem> cartItems, Member member,
                                          BigDecimal memberDiscountAtSale) {
+        return generateReceiptContent(transaction, cartItems, member, memberDiscountAtSale, null, null);
+    }
+
+    /**
+     * 生成小票正文（带门店地址/电话）。
+     *
+     * <p>地址/电话由调用方从系统设置传入：为空时不打印对应行（不留"地址: "这种空标签行，
+     * 也不多出空行），格式与触屏小票（{@link PrintUtil#storeContactLines}）保持一致。</p>
+     */
+    static String generateReceiptContent(Transaction transaction, List<CartItem> cartItems, Member member,
+                                         BigDecimal memberDiscountAtSale, String storeAddress, String storePhone) {
         StringBuilder sb = new StringBuilder();
 
         // 店铺信息（带 Logo）
@@ -92,6 +110,9 @@ public class ReceiptPrinter {
         sb.append("              ╚═══╝                    \n");
         sb.append("        狸算(LiSuan)收银系统小票\n");
         sb.append(THICK_SEPARATOR).append("\n");
+
+        // 门店地址/电话（留空则整行都不出现）
+        sb.append(PrintUtil.storeContactLines(storeAddress, storePhone));
 
         // 交易信息
         sb.append("订单号: ").append(transaction.transactionId).append("\n");
@@ -257,8 +278,12 @@ public class ReceiptPrinter {
 
             File receiptFile = new File(dir, fileName);
 
+            // 门店地址/电话取自系统设置（与触屏小票同源）
+            Map<String, String> settings = DataService.loadSettings();
+
             // 生成小票内容
-            String content = generateReceiptContent(transaction, cartItems, member, memberDiscountAtSale);
+            String content = generateReceiptContent(transaction, cartItems, member, memberDiscountAtSale,
+                settings.get("storeAddress"), settings.get("storePhone"));
 
             // 写入文件
             try (java.io.BufferedWriter writer = Files.newBufferedWriter(receiptFile.toPath(), StandardCharsets.UTF_8)) {
@@ -521,6 +546,9 @@ public class ReceiptPrinter {
         PrinterManager printerManager = PrinterManager.getInstance();
 
         try {
+            // 门店地址/电话与"打印条码"开关都取自系统设置（默认 true，与设置页复选框默认勾选一致）
+            Map<String, String> settings = DataService.loadSettings();
+
             // 构建小票内容（ESC/POS 格式）
             StringBuilder content = new StringBuilder();
 
@@ -534,6 +562,9 @@ public class ReceiptPrinter {
             content.append(new String(EscPosUtils.FONT_NORMAL, StandardCharsets.ISO_8859_1));
             content.append(new String(EscPosUtils.ALIGN_LEFT, StandardCharsets.ISO_8859_1));
             content.append(new String(EscPosUtils.LINE_FEED, StandardCharsets.ISO_8859_1));
+
+            // 门店地址/电话（留空则整行都不出现）
+            content.append(PrintUtil.storeContactLines(settings.get("storeAddress"), settings.get("storePhone")));
 
             // 分隔线
             content.append(THICK_SEPARATOR);
@@ -593,6 +624,15 @@ public class ReceiptPrinter {
             content.append("谢谢惠顾！欢迎再次光临！\n");
             content.append(THICK_SEPARATOR);
 
+            // 条码：只有本方法（把原始字节交给 ESC/POS 网络打印机的路径）会输出，
+            // 文本/文件小票（printReceipt/generateReceiptOnly）不带条码。
+            // 用全限定名调用：本类内部的私有 EscPosUtils 只放了几个对齐指令，没有条码指令。
+            byte[] barcodeBytes = null;
+            if (Boolean.parseBoolean(settings.getOrDefault("printBarcode", "true"))) {
+                // 交易号由 TransactionService.generateTransactionId 生成，恒为 ASCII，符合 Code128 要求
+                barcodeBytes = com.cashier.printer.EscPosUtils.barcodeCode128(transaction.transactionId);
+            }
+
             // 创建打印任务
             PrintTask task = new PrintTask(
                 "receipt_" + transaction.transactionId,
@@ -603,7 +643,8 @@ public class ReceiptPrinter {
                 true, // 打印 Logo
                 false, // 不打开钱箱
                 true,  // 切纸
-                false  // 不需要预览
+                false, // 不需要预览
+                barcodeBytes // 正文之后直写的条码字节（NetworkPrinterDevice 写出）
             );
 
             // 执行打印

@@ -24,7 +24,7 @@ public final class LoginRateLimiter {
     private static final long DEFAULT_IDLE_RESET_MILLIS = 10 * 60_000; // 10 分钟
     private static final int MAX_TRACKED_IPS = 10_000;
 
-    private final int maxFailures;
+    private volatile int maxFailures;
     private final long baseLockMillis;
     private final long maxLockMillis;
     private final long idleResetMillis;
@@ -46,6 +46,23 @@ public final class LoginRateLimiter {
         this.baseLockMillis = baseLockMillis;
         this.maxLockMillis = maxLockMillis;
         this.idleResetMillis = idleResetMillis;
+    }
+
+    /**
+     * 用系统设置里的 {@code passwordMaxAttempts} 覆盖默认阈值（登录入口每次调用）。
+     *
+     * <p>此前阈值写死在常量里，设置页改了锁定次数对 API 完全无效（2026-10 审计 F6）。
+     * 传入非正数时保持原值，避免一条脏设置把限流关掉。</p>
+     */
+    public void applyMaxFailures(int configuredMaxFailures) {
+        if (configuredMaxFailures > 0) {
+            this.maxFailures = configuredMaxFailures;
+        }
+    }
+
+    /** 当前生效的失败阈值（供测试与诊断） */
+    public int getMaxFailures() {
+        return maxFailures;
     }
 
     private static final class Entry {

@@ -565,6 +565,55 @@ public class BackupService {
     }
 
     /**
+     * 把设置页的「自动备份 / 备份频率」落到 {@code backup_config} 并**立即重启调度器**。
+     *
+     * <p>备份配置的唯一权威是 {@code backup_config}（备份页与 REST API 都读它），而设置页此前
+     * 只把 autoBackup/backupFrequency 写进 settings 表、没有任何读取方 —— 管理员以为开了自动备份，
+     * 调度器其实还在按旧配置跑（2026-10 审计 F6）。这里把两边接上：写配置 + 重启。</p>
+     *
+     * @param autoBackupEnabled 设置页「自动备份」勾选状态
+     * @param frequency         设置页「备份频率」文案（中文或英文，落库原值）
+     */
+    public static void applyScheduleFromSettings(boolean autoBackupEnabled, String frequency) {
+        try {
+            BackupConfig current = DAOFactory.getInstance().getBackupDAO().getConfig();
+            BackupConfig updated = current != null ? current : new BackupConfig();
+            updated.autoBackupEnabled = autoBackupEnabled;
+            int hours = intervalHoursForFrequency(frequency);
+            if (hours > 0) {
+                updated.backupIntervalHours = hours;
+            }
+            updateConfig(updated);
+
+            // 重启调度器让新周期立即生效（start() 会重新从库里读配置）
+            BackupService service = getInstance();
+            service.stop();
+            service.start();
+            logger.info("备份设置已生效: 自动备份={}, 周期={} 小时", autoBackupEnabled, updated.backupIntervalHours);
+        } catch (Exception e) {
+            logger.error("应用备份设置失败", e);
+        }
+    }
+
+    /**
+     * 备份频率文案 → 小时数。文案来自语言包（{@code settings.backup_daily/weekly/monthly}）：
+     * 简繁为「每天/每周/每月」，英文为 Daily/Weekly/Monthly。
+     *
+     * @return 小时数；无法识别返回 0（调用方保持原周期不动）
+     */
+    static int intervalHoursForFrequency(String frequency) {
+        if (frequency == null || frequency.isBlank()) {
+            return 0;
+        }
+        return switch (frequency.trim()) {
+            case "每天", "每日", "Daily" -> 24;
+            case "每周", "每週", "Weekly" -> 24 * 7;
+            case "每月", "Monthly" -> 24 * 30;
+            default -> 0;
+        };
+    }
+
+    /**
      * 停止自动备份服务
      */
     public void stop() {

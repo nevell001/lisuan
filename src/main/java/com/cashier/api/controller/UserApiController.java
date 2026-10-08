@@ -106,6 +106,19 @@ public class UserApiController {
         }
         
         try {
+            // 用户名与口令都必须非空：空口令会被 BCrypt 哈希成一个"有效凭据"，
+            // 而登录接口只挡 null，于是这个账号能用空口令登录（审计 F7）
+            if (request.username == null || request.username.isBlank()) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE, "用户名不能为空"));
+                return;
+            }
+            if (request.password == null || request.password.isBlank()) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE, "密码不能为空"));
+                return;
+            }
+
             // 检查用户名是否已存在
             if (DAOFactory.getInstance().getUserDAO().findByUsername(request.username) != null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
@@ -158,7 +171,8 @@ public class UserApiController {
             }
             
             if (request.name != null) user.name = request.name;
-            boolean passwordChanged = request.password != null && !request.password.isEmpty();
+            // 空白口令视为"不修改"，避免把 "   " 哈希成一个可用凭据
+            boolean passwordChanged = request.password != null && !request.password.isBlank();
             if (passwordChanged) {
                 user.password = PasswordUtil.hashPassword(request.password);
             }

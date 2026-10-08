@@ -245,6 +245,14 @@ public class ReturnApprovalController {
             ? com.cashier.util.I18nUiUtils.paymentMethod(order.paymentMethod)
             : com.cashier.i18n.I18nManager.getInstance().get("runtime.not_set"));
 
+        // 退款方式下拉框要与该单的实际支付方式对齐：审批时会把这里的值落库、决定退款去向，
+        // 不刷新就会出现"打开的是微信单、下拉框还停在现金"的错位
+        String orderRefundMethod = order.paymentMethod != null
+            ? com.cashier.util.I18nUiUtils.canonicalPaymentMethod(order.paymentMethod)
+            : "CASH";
+        refundMethodComboBox.setValue(refundMethodComboBox.getItems().contains(orderRefundMethod)
+            ? orderRefundMethod : "CASH");
+
         // 加载退货明细
         loadOrderItems(order.returnOrderId);
     }
@@ -284,8 +292,8 @@ public class ReturnApprovalController {
             return;
         }
 
+        // 审批人选择的退款方式：随审批一起落库，completeReturnOrder 按它决定退现金还是退回会员余额
         String refundMethod = refundMethodComboBox.getValue();
-        String paymentMethod = refundMethod;
 
         // 获取审批人名称（从当前登录用户获取）
         String approverName = getApproverName();
@@ -295,7 +303,8 @@ public class ReturnApprovalController {
             returnOrderId,
             approverName,
             approvalComment,
-            true  // 审批通过
+            true,  // 审批通过
+            refundMethod
         );
 
         if (result) {

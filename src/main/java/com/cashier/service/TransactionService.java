@@ -125,6 +125,16 @@ public class TransactionService {
         // 只有提交成功才写回原对象。库存同理（见 deductInventoryInTransaction 的 updatedProducts）。
         Member workingMember = member == null ? null : copyMember(member);
 
+        // 会员余额支付必须带会员：余额校验与扣减都在 applyMemberInTransaction 里，而它只在
+        // workingMember != null 时才执行。少了这道闸，库存会照扣、单会照落，却没有任何账户被扣款
+        // （REST 接口此前可直接用「会员余额」且不带会员下单，货等于白送）。
+        if (workingMember == null && "MEMBER_BALANCE".equals(
+                com.cashier.util.I18nUiUtils.canonicalPaymentMethod(transaction.paymentMethod))) {
+            logger.warn("会员余额支付缺少会员，交易被拒绝: transactionId={}", transactionId);
+            return new TransactionResult(false, null,
+                I18nManager.getInstance().get("service.member_balance_requires_member"), null);
+        }
+
         try {
             boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
                 deductInventoryInTransaction(conn, cartItems, inventory, updatedProducts);

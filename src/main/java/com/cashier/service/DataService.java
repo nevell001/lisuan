@@ -304,6 +304,44 @@ public class DataService {
     }
 
     /**
+     * 读取整数型设置并做区间钳制。
+     *
+     * <p>给"登录失败锁定次数""空闲自动登出分钟数"这类**必须有安全默认值**的配置用：
+     * 设置缺失、非法或超出范围时一律回落到安全值，绝不让一条脏设置把防护关掉
+     * （2026-10 审计 F6：这些设置项此前只写不读）。</p>
+     *
+     * @param key          设置键
+     * @param defaultValue 缺失/非法时的默认值
+     * @param min          允许的最小值
+     * @param max          允许的最大值
+     * @return 落在 [min, max] 内的整数
+     */
+    public static int getIntSetting(String key, int defaultValue, int min, int max) {
+        String raw = loadSettings().get(key);
+        if (raw == null || raw.isBlank()) {
+            return defaultValue;
+        }
+        try {
+            int value = Integer.parseInt(raw.trim());
+            return Math.max(min, Math.min(max, value));
+        } catch (NumberFormatException e) {
+            logger.warn("设置 {} 无法解析为整数，按默认 {} 处理: {}", key, defaultValue, raw);
+            return defaultValue;
+        }
+    }
+
+    /**
+     * 读取开关型设置。
+     *
+     * @param key          设置键
+     * @param defaultValue 缺失时的默认值（与设置页里复选框的默认勾选状态保持一致）
+     */
+    public static boolean getBooleanSetting(String key, boolean defaultValue) {
+        String raw = loadSettings().get(key);
+        return raw == null || raw.isBlank() ? defaultValue : Boolean.parseBoolean(raw.trim());
+    }
+
+    /**
      * 加载主题偏好
      */
     public static String loadThemePreference() {

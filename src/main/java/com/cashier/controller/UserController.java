@@ -348,6 +348,18 @@ public class UserController {
         dialog.getDialogPane().lookupButton(okButtonType).getStyleClass().addAll("primary-button", "button-normal");
         dialog.getDialogPane().lookupButton(cancelButtonType).getStyleClass().addAll("secondary-button", "button-normal");
 
+        // 新建用户必须填口令：留空会写入"空口令"的 BCrypt 哈希 —— 桌面登录页会拦下空口令
+        // （看着像没配好），而 REST 登录会放行，等于造了一个空口令账号（TD 审计 F7）。
+        // 编辑用户留空表示"不改口令"，所以只在新建时校验。
+        Button okButton = (Button) dialog.getDialogPane().lookupButton(okButtonType);
+        if (user == null) {
+            Runnable validateNewUserPassword = () -> okButton.setDisable(
+                passwordField.getText().trim().isEmpty() || usernameField.getText().trim().isEmpty());
+            passwordField.textProperty().addListener((obs, oldVal, newVal) -> validateNewUserPassword.run());
+            usernameField.textProperty().addListener((obs, oldVal, newVal) -> validateNewUserPassword.run());
+            validateNewUserPassword.run();
+        }
+
         dialog.setResultConverter(dialogButton -> dialogButton == okButtonType
             ? buildUserFromDialog(user, autoIdCheckBox, idField, usernameField, passwordField, nameField, roleComboBox)
             : null);
@@ -373,8 +385,13 @@ public class UserController {
             newUser.username = usernameField.getText().trim();
         }
 
+        // 空口令一律不哈希：新建用户必须填口令（对话框已禁用 OK，这里再兜一道 fail-closed），
+        // 编辑用户留空表示"不修改口令"，保持原哈希不变
         String passwordInput = passwordField.getText().trim();
-        if (existingUser == null || !passwordInput.isEmpty()) {
+        if (existingUser == null && passwordInput.isEmpty()) {
+            return null;
+        }
+        if (!passwordInput.isEmpty()) {
             newUser.password = PasswordUtil.hashPassword(passwordInput);
         }
 

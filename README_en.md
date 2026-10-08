@@ -4,11 +4,12 @@
 
 LiSuan Cashier System is a desktop POS (Point of Sale) cashier system built with JavaFX 17. It is designed for daily retail operations, covering checkout, products, members, purchasing, inventory, returns, reports, user permissions, data backup, and hardware integration.
 
-**Current Version**: v2.6.0 | **Latest Update**: 2026-08-29 | **Test Coverage**: 589 test cases
+**Current Version**: v2.6.0 | **Latest Update**: 2026-10-08 | **Test Coverage**: see the build output
 
-> Test scope: `mvn -q clean verify` runs 589 test cases by default (including SpotBugs and JaCoCo gates);
+> Test scope: `mvn -q clean verify` runs the full suite (tests + SpotBugs + JaCoCo gates). The case count
+> is deliberately not written down here — read `Tests run:` from the build output.
 > `LoginControllerUITest` (17 cases) requires a real display environment and is run explicitly with
-> `mvn -Pui-tests -Dtest=LoginControllerUITest test`, for a total of 606 cases.
+> `mvn -Pui-tests -Dtest=LoginControllerUITest test`.
 
 ![Java](https://img.shields.io/badge/Java-17-orange)
 ![JavaFX](https://img.shields.io/badge/JavaFX-17.0.12-blue)

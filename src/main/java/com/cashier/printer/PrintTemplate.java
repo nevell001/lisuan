@@ -84,6 +84,11 @@ public class PrintTemplate {
             "          收银小票           \n" +
             THICK_SEPARATOR +
             "门店名称: {{storeName}}\n" +
+            // 门店地址/电话：整行（含换行）都放在变量值里，设置里留空时替换成空串，
+            // 既不会印出"地址: "这种没有内容的行，也不会多出一条空行。
+            // 注意 generate() 只替换**变量表里有**的 key，漏传会原样印出 {{storeInfo}}，
+            // 所以每个调用 createReceiptTemplate() 的地方都必须提供该变量（目前只有 PrintUtil）。
+            "{{storeInfo}}" +
             "收银员: {{cashierName}}\n" +
             "交易号: {{transactionId}}\n" +
             "交易时间: {{transactionTime}}\n" +

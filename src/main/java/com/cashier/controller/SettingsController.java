@@ -1360,6 +1360,16 @@ public class SettingsController {
         String fontSizeCode = convertFontSizeNameToCode(fontSizeName);
         DataService.saveFontSizePreference(username, fontSizeCode);
 
+        // 让「自动备份 / 备份频率」真正生效：写进 backup_config 并重启调度器（审计 F6）。
+        // 重启涉及线程池收尾，放到守护线程，别卡住设置页
+        final boolean autoBackupEnabled = autoBackupCheckBox.isSelected();
+        final String backupFrequency = settings.getOrDefault("backupFrequency", "");
+        Thread backupApplyThread = new Thread(
+            () -> com.cashier.service.BackupService.applyScheduleFromSettings(autoBackupEnabled, backupFrequency),
+            "apply-backup-settings");
+        backupApplyThread.setDaemon(true);
+        backupApplyThread.start();
+
         logger.info("SettingsController: 设置保存成功，主题: {}, 语言: {}, 字号: {}, 用户: {}", themeCode, languageTag, fontSizeCode, username);
         com.cashier.service.AuditService.success(username, "SETTINGS", "SETTINGS_UPDATED",
             "主题=" + themeCode + ", 语言=" + languageTag + ", 字号=" + fontSizeCode,

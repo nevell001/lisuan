@@ -55,11 +55,18 @@ class HardcodedUiTextPolicyTest {
         "TouchCartView.fxml:便利店",            // storeNameLabel ← TouchCartController:559 用设置里的店名覆盖
         "TouchCartView.fxml:2026-08-23 星期日"); // dateLabel     ← TouchCartController:296 用当前日期覆盖
 
-    /** 面向用户的调用：标题/正文/按钮/提示/弹窗内容等，参数是字符串字面量时不得含中文。 */
-    private static final Pattern UI_CALL = Pattern.compile(
-        "(setTitle|setHeaderText|setContentText|setPromptText|setTooltipText|setText|showErrorAlert|"
+    /**
+     * 面向用户的调用（只匹配调用头，实参形状不设限）。参数里的中文**字面量**一律算硬编码，
+     * 除非它是 i18n key（{@code get("...")} 的字面量，key 本身可能含中文，如 "快捷键.title"）。
+     *
+     * <p>为什么改成"平衡括号取全部实参"：旧写法要求中文**紧跟左括号**，于是
+     * ① {@code showErrorAlert(title, "中文正文")} 的第二实参、② {@code setTitle(常量 + "中文")}
+     * 这类拼接写法全都漏掉了——2026-10 审计实测：白名单文件里仍有 3 处可见中文，门禁却是绿的。</p>
+     */
+    private static final Pattern UI_CALL_HEAD = Pattern.compile(
+        "\\.?(setTitle|setHeaderText|setContentText|setPromptText|setTooltipText|setText|showErrorAlert|"
             + "showInfoAlert|showWarningAlert|showError|showWarning|showInformation|showPlaceholder|"
-            + "showConfirm|updateStatus|updateWarning)\\s*\\(\\s*\"((?:[^\"\\\\]|\\\\.)*)\"");
+            + "showConfirm|updateStatus|updateWarning|updateSuccess|updateError|updateInfo)\\s*\\(");
 
     /** 直接构造控件时传入的可见文案。 */
     private static final Pattern NEW_CONTROL = Pattern.compile(
@@ -76,15 +83,48 @@ class HardcodedUiTextPolicyTest {
         List<String> violations = new ArrayList<>();
         for (String file : MIGRATED_FILES) {
             String text = Files.readString(Path.of(file));
-            Pattern pattern = file.endsWith(".fxml") ? FXML_TEXT : UI_CALL;
-            collect(text, pattern, file, violations, 2);
-            if (!file.endsWith(".fxml")) {
-                collect(text, NEW_CONTROL, file, violations, 2);
+            if (file.endsWith(".fxml")) {
+                collect(text, FXML_TEXT, file, violations, 2);
+                continue;
             }
+            collectUiCallLiterals(text, file, violations);
+            collect(text, NEW_CONTROL, file, violations, 2);
         }
         assertTrue(violations.isEmpty(),
             "以下界面文案仍硬编码中文（切到 en/zh_TW 后不会翻译；日志与注释里的中文不算）：\n  "
                 + String.join("\n  ", violations));
+    }
+
+    /**
+     * 逐个可见调用取**完整实参列表**（平衡括号，跳过字符串与行注释），
+     * 再检查实参里的每个中文字面量；i18n key 本身不算硬编码。
+     */
+    private static void collectUiCallLiterals(String text, String file, List<String> violations) {
+        Matcher call = UI_CALL_HEAD.matcher(text);
+        int checked = 0;
+        while (call.find()) {
+            int open = text.indexOf('(', call.start());
+            int end = matchingParen(text, open);
+            if (open < 0 || end < 0) {
+                continue;
+            }
+            checked++;
+            String arguments = text.substring(open + 1, end);
+            for (String literal : stringLiterals(arguments)) {
+                if (!CJK.matcher(literal).find()) {
+                    continue;
+                }
+                // i18n key（get("...") / getOrDefault("...") 的字面量）不是可见文案
+                if (arguments.contains("get(\"" + literal + "\"")
+                        || arguments.contains("getOrDefault(\"" + literal + "\"")) {
+                    continue;
+                }
+                int line = text.substring(0, open).split("\n", -1).length;
+                violations.add(file + ":" + line + "  →  " + literal);
+            }
+        }
+        // 防空转：解析规则失效时必须报出来，而不是静默 0 违规
+        assertTrue(checked > 0, file + " 未识别到任何可见调用，门禁解析规则可能失效");
     }
 
     @Test
