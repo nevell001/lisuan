@@ -26,6 +26,11 @@ jobs:
 
       - name: Force sync from Gitee
         run: |
+          # 本作业是**单向镜像**：Gitee → GitHub。
+          # 注意：下面的 reset --hard 会丢弃 GitHub 侧任何不来自 Gitee 的提交，
+          # 因此**不要在 GitHub 上直接提交/合并 PR**——下次同步（每日 3 次）会把它冲掉。
+          # 唯一例外是 .github/workflows/ 下的文件：它们靠"备份 → 恢复"保住。
+          
           # 添加 Gitee 远程
           git remote add gitee https://gitee.com/nevell/lisuan.git || true
           
@@ -34,17 +39,37 @@ jobs:
           
           # 备份 GitHub 的 workflows
           mkdir -p /tmp/workflows-backup
-          cp .github/workflows/* /tmp/workflows-backup/ 2>/dev/null || true
+          rm -f /tmp/workflows-backup/*
+          if [ -d .github/workflows ]; then
+            cp .github/workflows/* /tmp/workflows-backup/ 2>/dev/null || true
+            # 备份必须成功且非空：若这里静默失败，紧接着的 reset --hard 会删掉 GitHub 独有的
+            # workflow，再 push --force 上去就等于毁掉 CI（且要等下次同步才发现）。
+            if [ -z "$(ls -A /tmp/workflows-backup 2>/dev/null)" ]; then
+              echo "::error::workflow 备份为空，中止同步以免删掉 GitHub 独有的 workflow"
+              exit 1
+            fi
+            echo "已备份 $(ls -A /tmp/workflows-backup | wc -l) 个 workflow 文件"
+          else
+            echo "::warning::.github/workflows 不存在，跳过后面的恢复步骤"
+          fi
           
           # 强制重置到 Gitee 的 main 分支
           git reset --hard gitee/main
           
           # 恢复 GitHub 独有的 workflows：只覆盖同名文件，不删除 Gitee 带来的 workflow
           # （此前是 rm -rf + restore，会把只在 Gitee 侧新增的 build.yaml 一起删掉并强推）
-          mkdir -p .github/workflows
-          cp -f /tmp/workflows-backup/* .github/workflows/ 2>/dev/null || true
+          if [ -n "$(ls -A /tmp/workflows-backup 2>/dev/null)" ]; then
+            mkdir -p .github/workflows
+            cp -f /tmp/workflows-backup/* .github/workflows/
+            # 恢复也要校验：恢复失败会静默丢掉 GitHub 的 CI 配置
+            restored=$(ls -A .github/workflows | wc -l)
+            if [ "$restored" -eq 0 ]; then
+              echo "::error::workflow 恢复失败，中止同步"
+              exit 1
+            fi
+          fi
           
-          # 提交并强制推送
+          # 提交并强制推送（时间戳用北京时间，便于与 cron 注释对照）
           git add .
-          git commit -m "Sync from Gitee $(date +%Y-%m-%d-%H:%M)" || echo "No changes"
+          git commit -m "Sync from Gitee $(TZ=Asia/Shanghai date +%Y-%m-%d-%H:%M)" || echo "No changes"
           git push origin main --force
