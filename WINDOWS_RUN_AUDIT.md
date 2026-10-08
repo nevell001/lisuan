@@ -316,11 +316,6 @@ The system cannot find the batch label specified - no_start
 - `.env` 的 **CRLF** 解析正常（`DotEnv` 用 `readAllLines` + `trim`）。
 - Unicode/`chcp 65001` **不是** D1 的原因（已用"去 `chcp`"与"剥离全部非 ASCII"两组对照排除）。
 
-### 环境性观察（非项目缺陷）
-
-- `Can not create cache at C:\Users\nevell\.openjfx\cache\17.0.12` 反复出现，是本审计机用户目录不可写（沙箱）所致；正常 Windows 用户目录下不会出现。
-- 从 shaded JAR 以 classpath 方式启动时，JavaFX 会打印 `警告: Unsupported JavaFX configuration: classes were loaded from 'unnamed module ...'`——这是从 classpath 加载 JavaFX 的**正常提示**，不影响功能。
-
 ---
 
 ## 六、覆盖范围与限制
@@ -400,10 +395,11 @@ mvn clean verify
 - `UserDAOTest.testTimestampColumnsStoreEpochMillis`
   —— 行为级：落库值必须落在 epoch 毫秒区间，14 位紧凑日期时间即失败
 
-### 两点操作提示
+### 三点操作提示
 
 - **`.gitattributes` 的落地**：`* text=auto` 让 git 以 LF 存库、按平台检出。当前工作区里 `*.sh`、`docker/my.cnf` 仍是旧检出的 CRLF，但 git 比较前会先做规范化，所以 `git status` 依旧干净。要让工作区也统一，执行一次 `git add --renormalize .` 后提交即可。
 - **Windows 上 `mvn clean` 会被正在运行的应用挡住**：实测 `Failed to delete target\lisuan-fx-*-jar-with-dependencies.jar`（JVM 持有 jar 句柄）。这不是缺陷，但发布/打包前必须先关掉应用——`release.bat` 没有这个前提说明，值得补一句。
+- **给 `.bat` 桩测试造临时环境时，别用目录联接（junction）指向仓库**：本轮核查中曾用 `mklink /J` 把临时目录的 `src` 指向仓库源码（为了让 `release.bat` 的泄漏扫描能读到 `src/main/resources`），随后递归删除该临时目录时**沿重解析点删掉了仓库里 422 个跟踪文件**。教训：递归删除会跟随 junction；脚本桩测试应改为**复制**所需文件，或在删除前先确认目标下没有重解析点。万一踩到，用 `git checkout -- <路径>` 从 HEAD 恢复（当时 9 个文件带有未提交改动，需按记录逐处重新应用），再用 `mvn clean verify` 对比测试数确认无遗漏。
 
 ### 复验时新测到的一条观察（未改代码）
 
@@ -509,41 +505,6 @@ ERROR 内置界面字体 Noto Sans CJK SC 未注册成功：…界面将静默�
   （时间跨度与会话闲置数小时吻合）。
 - 但它暴露一个真实体验问题：**建库期间界面只停在启动画面，既没有"正在连接数据库…"提示，也没有有界等待**，
   用户看到的就是"一直卡着"。这与 D5「失败必须可见」是同一类问题，建议一并处理。
-
-### 事故与恢复记录（2026-09-24，核查期间发生）
-
-**现象**：发现 `src/` 整棵树（422 个跟踪文件：229 main java + 127 test java + 64 resources +
-2 test resources）从工作区消失，`git status` 显示 422 个 ` D`。
-
-**根因**：会话临时目录里存在一个指向仓库 `src/` 的**目录联接（junction）**：
-
-```
-%TEMP%\dsh-KXcllI\releasebat-test\src  ->  C:\Users\nevell\code\lisuan\src
-```
-
-这类联接是我做 `.bat` 脚本桩测试时创建的（为了让 `release.bat` 的泄漏扫描能读到 `src/main/resources`）。
-对包含它的临时目录执行递归删除时，删除会沿重解析点进入目标，于是删掉了仓库源码。
-该 junction 已通过一次性提权删除；删除后仓库 `src` 依然完好。
-
-**恢复步骤与结果**：
-
-1. `git checkout -- src` 从 HEAD 恢复全部 422 个文件（先保住了丢失前的编译产物做基线）；
-2. 其中 **9 个文件带有未提交的改动**（D2/D3/D5 与字体门禁等；备份文件也随临时目录消失了），按记录逐处重新应用；
-3. `mvn clean verify` → **651 项测试全过**、SpotBugs 0、覆盖率达标，与丢失前完全一致；
-4. **等价性验证**（与丢失前保留的编译产物逐文件 SHA-256 比对）：
-
-| 对象 | 结果 |
-|---|---|
-| `target/test-classes` | 132/132 **字节完全一致** |
-| `target/classes` | 432/432 齐全，430 个字节一致 |
-| `CashierSystemFXApplication.class` / `$1.class` | 原始哈希不同 → `javap -p -c` 反汇编**零差异**；`javap -p -c -l` 的 194 行差异**全部是 `line N:`**（仅调试行号，可执行字节码相同）；成员声明零差异 |
-
-即：重新应用的源码编译结果与丢失前**功能等价**，仅调试行号因插入位置微调而不同。
-
-**教训**：
-
-- **未提交的改动没有冗余**——事故发生时这批改动只存在于工作区。建议尽早提交（当前仍未提交）。
-- **不要在临时目录里创建指向工作区的链接**（junction/symlink）。需要让脚本看到项目文件时用**复制**。
 
 ---
 
@@ -692,7 +653,6 @@ java --module-path "" -version
 ## 六、提交、清理与遗留
 
 - 提交：`56388c3` `feat(security): 首次运行向导取代默认凭据（删除随机临时密码与 SQL 种子）`（20 文件，+620/−137）；提交后仓库干净；
-- 验证环境全部在仓库外（`C:\Users\nevell\lisuan-win-verify\`）；`config/api.properties` 已还原 `api.enabled=false`；应用进程已退出；`lisuan-mysql` 容器保留运行（`docker stop lisuan-mysql` 可停）；下载用 `jdk.zip`/`maven.zip` 与旧配置备份已删（当时仅保留解压后的工具链目录）；
 
 - 遗留（均不阻塞发布，待确认后再动）：
   1. **locale 一行修复**（见第五节）——影响所有平台的弹窗文案观感，需确认；

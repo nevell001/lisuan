@@ -741,6 +741,10 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   并用 `findstr /r "^[0-9][0-9]*$"` 校验解析结果），门禁第 9 条钉住这个配对。**结论：这几个脚本的注释一律写英文**（`start.bat`/`install.bat`/`DataConfig.bat`/
   `create-shortcut.bat`/`diagnose.bat` 现为纯 ASCII；`release.bat`/`docker/start-mysql.bat` 是中文文案 +
   `chcp 65001` 的既有做法，不要再往里加需要转义的 `^(` 之类）
+  **做脚本桩测试时不要用目录联接（junction）把临时目录指向仓库**：`mklink /J` 造的联接会让
+  "递归删除临时目录"变成"沿重解析点删掉仓库源码"——2026-09 实机核查时因此删掉过 422 个跟踪文件
+  （改用**复制**所需文件，或删除前确认目标下无重解析点；踩到用 `git checkout -- <路径>` 恢复，
+  再用 `mvn verify` 的测试数对比确认没有漏恢复）。完整记录见 `WINDOWS_RUN_AUDIT.md` 的"三点操作提示"
 - 安装/运维脚本门禁：`InstallScriptPolicyTest`（`com.cashier.security`）钉住三条不变量——
   ① `install.sh` 的建库/SQL 导入失败必须报错并 `exit 1`（不得再用 `2>/dev/null || true` 静默成功，
   失败时要打印 mysql 的真实输出）；② `docker/docker-init.sh` 必须先 `. ./.env`，且空/占位口令
