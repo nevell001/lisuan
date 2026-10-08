@@ -203,6 +203,20 @@ public class I18nManager {
     }
     
     /**
+     * 按指定语言获取翻译文本（带参数），不改变当前语言（TD-041）。
+     *
+     * <p>REST API 的错误/提示文案要跟随请求语言：只有 {@code get(Locale,key)} 时无法渲染
+     * 带占位符的文案（如"退款金额超过可退余额（剩余 {0}）"），会直接漏出 {@code {0}}。</p>
+     */
+    public String get(Locale locale, String key, Object... params) {
+        String template = get(locale, key);
+        if (params == null || params.length == 0) {
+            return template;
+        }
+        return MessageFormat.format(template, params);
+    }
+
+    /**
      * 判断是否存在翻译
      */
     public boolean has(String key) {

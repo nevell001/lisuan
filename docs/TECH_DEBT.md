@@ -45,7 +45,7 @@
 | TD-038 | `POST /api/invoices/from-transaction` 请求体可自报开票方信息/`createBy`/`taxRate` | 安全 | **已修（2026-10）**：服务层 `trustedRequest` 只保留买家信息（顾客提供），开票方/税率取管理员配置、开票人取认证用户；请求体带这些字段时记 WARN；行为测试 1 项（伪造销方/0.99 税率/冒充开票人全部被忽略） | 发票 |
 | TD-039 | `POST /api/invoices/{id}/print` 可写任意 `pdfPath`/`imagePath`；mock 支付模式回调密钥熵低 | 安全 | **已修（2026-10）**：打印记录不再采纳客户端路径（只更新状态/时间/次数，带路径时记 WARN）；mock 渠道回调密钥 <16 位或为占位符时**直接判渠道不可用**（fail-closed）+ 2 组行为测试 | 发票/支付 |
 | TD-040 | 设置页下拉/落库值把**本地化显示串**当数据（切语言后设置失配、被静默重置成默认值） | 正确性/口径 | **已修复（2026-10）**：7 个下拉改稳定代码 + `I18nUiUtils` 显示层映射；`settings` 表落代码、`paperSize`/备份频率老值归一；`BackupService.intervalHoursForFrequency` 补代码分支；**桌面冒烟另抓出"备份频率从不回读"并修掉**；门禁 2 项 + 冒烟 2 项 + 行为测试 2 组 | 多语言设置 |
-| TD-041 | REST API 的语言策略未定：**枚举显示名/错误与打印文案写死中文**却直接进响应（`deviceType`/`status`/`taskType`） | 口径/契约定稿 | **待决定（2026-10）**：仓库内无 API 消费方，需先确认外部终端；`ApiLocaleResolver` + `I18nManager.get(Locale,key)` 基建已具备。三条路（只返代码 / 按请求语言本地化 / 双字段）见专节 | API 多语言 |
+| TD-041 | REST API 的语言策略未定：**枚举显示名/错误与打印文案写死中文**却直接进响应（`deviceType`/`status`/`taskType`） | 口径/契约定稿 | **契约已定并实施（2026-10，产品决定：双字段）**：枚举返回稳定代码 + `*Name` 本地化显示名（printer 四个枚举全量）；新增 `I18nManager.get(Locale,key,params)` 与 `ApiMessages`；门禁 `ApiLanguageContractPolicyTest`。**剩余**：其余控制器的错误/提示文案仍是中文字面量（~365 处，含日志），按 ratchet 逐个迁移 | API 多语言 |
 
 > 本节条目来自 2026-09 的全量审计（`mvn verify` 三关全绿的前提下，逐条回读代码 + 真实
 > Javalin 最小复现验证）。
@@ -1980,7 +1980,30 @@ item 改稳定代码、`settings` 表落代码、`paperSize` 老显示串归一�
 `PrintApiController` 自己的文案/测试打印正文也仍是中文。本批只改了设置页打印的**字段名标签**，
 枚举**值**与 API 响应保持原样。
 
-## TD-041 REST API 的语言策略未定（枚举显示名 / 错误与打印文案）（待决定，2026-10）
+## TD-041 REST API 的语言策略（**已定：双字段**，2026-10 实施）
+
+**决定（2026-10，产品确认）**：枚举字段返回**稳定代码**，另给 `*Name` 字段返回按请求语言本地化的
+显示名；错误/提示文案按 `Accept-Language`/`?locale=` 本地化。理由：仓库内没有已知外部消费方，
+双字段既让客户端逻辑只依赖代码，又能直接展示文案，且对已按中文解析的老客户端是"多一个字段"而非破坏。
+
+**本次实施范围**：
+
+| 件 | 位置 |
+|---|---|
+| 双字段契约 | `PrintApiController`：`deviceType`/`status`/`taskType` 改 `enum.name()`，新增 `deviceTypeName`/`statusName`/`taskTypeName`（四处列表/详情/状态/任务历史） |
+| 语言解析 | `ApiLocaleResolver`（`?locale=` → `Accept-Language` → 用户偏好，**不改进程语言**）+ 新增 `ApiMessages.enumName(ctx, key, fallback)` |
+| i18n 基建 | 新增 `I18nManager.get(Locale, key, Object... params)`——只有 `get(Locale,key)` 时带占位符的文案会直接漏出 `{0}` |
+| 语言包 | printer 四个枚举共 31 个 key × 4 份语言包（英文包为真翻译，门禁会挡住"复制中文充数"） |
+| 门禁 | `ApiLanguageContractPolicyTest`（4 项：JSON 不得直接塞 `getDisplayName()`、必须经 `ApiMessages`、四包 key 齐全且英文是真的英文、按语言取值支持占位符） |
+| 行为测试 | `PrintApiControllerTest.enumFieldsAreCodePlusLocalizedName`（zh-CN → `网络打印机`、en → `Network printer`、代码恒为 `NETWORK`） |
+
+**剩余（下一步增量）**：各 API 控制器的错误/提示文案仍是中文字面量（约 365 处，其中一部分是日志/注释）。
+契约与基建已就位，迁移方式是对每个响应文案建 `api.<controller>.<name>` key 并改用
+`ApiMessages.text(ctx, key, params)`；建议按控制器逐个 ratchet（先 `PrintApiController`，再资金类）。
+
+---
+
+## TD-041 原始分析（保留备查）
 
 **现状（实测）**：API 侧**已经有**按请求解析语言的基建，而且刻意不改进程级状态——
 `ApiLocaleResolver.of(ctx)`（`?locale=` → `Accept-Language` → 当前登录用户偏好 → 进程语言，

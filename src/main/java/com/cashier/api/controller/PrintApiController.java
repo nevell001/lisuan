@@ -61,8 +61,10 @@ public class PrintApiController {
                 Map<String, Object> info = new HashMap<>();
                 info.put(DEVICE_ID_FIELD, device.getDeviceId());
                 info.put(DEVICE_NAME_FIELD, device.getDeviceName());
-                info.put("deviceType", device.getDeviceType().getDisplayName());
-                info.put("status", device.getStatus().getDisplayName());
+                info.put("deviceType", device.getDeviceType().name());
+        info.put("deviceTypeName", deviceTypeName(ctx, device.getDeviceType()));
+                info.put("status", device.getStatus().name());
+        info.put("statusName", deviceStatusName(ctx, device.getStatus()));
                 info.put(CONNECTED_FIELD, device.isConnected());
                 
                 if (device instanceof NetworkPrinterDevice) {
@@ -98,8 +100,10 @@ public class PrintApiController {
                 Map<String, Object> info = new HashMap<>();
                 info.put(DEVICE_ID_FIELD, device.getDeviceId());
                 info.put(DEVICE_NAME_FIELD, device.getDeviceName());
-                info.put("deviceType", device.getDeviceType().getDisplayName());
-                info.put("status", device.getStatus().getDisplayName());
+                info.put("deviceType", device.getDeviceType().name());
+        info.put("deviceTypeName", deviceTypeName(ctx, device.getDeviceType()));
+                info.put("status", device.getStatus().name());
+        info.put("statusName", deviceStatusName(ctx, device.getStatus()));
                 
                 PrinterStatus status = device.checkStatus();
                 if (status != null) {
@@ -139,8 +143,10 @@ public class PrintApiController {
         Map<String, Object> info = new HashMap<>();
         info.put(DEVICE_ID_FIELD, device.getDeviceId());
         info.put(DEVICE_NAME_FIELD, device.getDeviceName());
-        info.put("deviceType", device.getDeviceType().getDisplayName());
-        info.put("status", device.getStatus().getDisplayName());
+        info.put("deviceType", device.getDeviceType().name());
+        info.put("deviceTypeName", deviceTypeName(ctx, device.getDeviceType()));
+        info.put("status", device.getStatus().name());
+        info.put("statusName", deviceStatusName(ctx, device.getStatus()));
         info.put(CONNECTED_FIELD, device.isConnected());
         info.put("configuration", device.getConfiguration());
         
@@ -223,7 +229,8 @@ public class PrintApiController {
                     "hostAddress", host,
                     "port", port,
                     "initialized", initialized,
-                    "status", printer.getStatus().getDisplayName()
+                    "status", printer.getStatus().name(),
+                    "statusName", deviceStatusName(ctx, printer.getStatus())
                 ),
                 "message", initialized ? "打印机添加成功" : "打印机添加成功，但连接失败"
             ));
@@ -264,7 +271,8 @@ public class PrintApiController {
             "success", connected,
             "data", Map.of(
                 DEVICE_ID_FIELD, deviceId,
-                "status", device.getStatus().getDisplayName(),
+                "status", device.getStatus().name(),
+                    "statusName", deviceStatusName(ctx, device.getStatus()),
                 CONNECTED_FIELD, device.isConnected()
             ),
             "message", connected ? "打印机连接成功" : "打印机连接失败"
@@ -299,7 +307,8 @@ public class PrintApiController {
             "success", disconnected,
             "data", Map.of(
                 DEVICE_ID_FIELD, deviceId,
-                "status", device.getStatus().getDisplayName(),
+                "status", device.getStatus().name(),
+                    "statusName", deviceStatusName(ctx, device.getStatus()),
                 CONNECTED_FIELD, device.isConnected()
             ),
             "message", disconnected ? "打印机已断开" : "打印机断开失败"
@@ -383,26 +392,26 @@ public class PrintApiController {
                 "data", Map.of(
                     DEVICE_ID_FIELD, deviceId,
                     CONNECTED_FIELD, device.isConnected(),
-                    "status", device.getStatus().getDisplayName(),
+                    "status", device.getStatus().name(),
+                    "statusName", deviceStatusName(ctx, device.getStatus()),
                     "available", false
                 )
             ));
         } else {
-            ctx.json(Map.of(
-                "success", true,
-                "data", Map.of(
-                    DEVICE_ID_FIELD, deviceId,
-                    CONNECTED_FIELD, device.isConnected(),
-                    "status", status.getStatus().getDisplayName(),
-                    "paperRemaining", status.getPaperRemaining(),
-                    "inkRemaining", status.getInkRemaining(),
-                    "headTemperature", status.getHeadTemperature(),
-                    "errorMessage", status.getErrorMessage(),
-                    "needsMaintenance", status.needsMaintenance(),
-                    "timestamp", status.getTimestamp(),
-                    "available", !status.getStatus().isError()
-                )
-            ));
+            // 字段数超过 Map.of 的 10 对上限，改用 LinkedHashMap（TD-041 新增了 statusName）
+            Map<String, Object> statusData = new java.util.LinkedHashMap<>();
+            statusData.put(DEVICE_ID_FIELD, deviceId);
+            statusData.put(CONNECTED_FIELD, device.isConnected());
+            statusData.put("status", status.getStatus().name());
+            statusData.put("statusName", deviceStatusName(ctx, status.getStatus()));
+            statusData.put("paperRemaining", status.getPaperRemaining());
+            statusData.put("inkRemaining", status.getInkRemaining());
+            statusData.put("headTemperature", status.getHeadTemperature());
+            statusData.put("errorMessage", status.getErrorMessage());
+            statusData.put("needsMaintenance", status.needsMaintenance());
+            statusData.put("timestamp", status.getTimestamp());
+            statusData.put("available", !status.getStatus().isError());
+            ctx.json(Map.of("success", true, "data", statusData));
         }
     }
     
@@ -721,12 +730,14 @@ public class PrintApiController {
                 Map<String, Object> info = new HashMap<>();
                 info.put("taskId", task.getTaskId());
                 info.put("taskName", task.getTaskName());
-                info.put("taskType", task.getTaskType().getDisplayName());
+                info.put("taskType", task.getTaskType().name());
+        info.put("taskTypeName", taskTypeName(ctx, task.getTaskType()));
                 info.put("createdAt", task.getCreatedAt());
                 info.put("startedAt", task.getStartedAt());
                 info.put("finishedAt", task.getFinishedAt());
                 info.put("copies", task.getCopies());
-                info.put("status", task.getStatus().getDisplayName());
+                info.put("status", task.getStatus().name());
+        info.put("statusName", taskStatusName(ctx, task.getStatus()));
                 info.put("errorMessage", task.getErrorMessage());
                 return info;
             })
@@ -819,6 +830,27 @@ public class PrintApiController {
     private static String currentUsername(Context ctx) {
         User user = ctx.attribute("currentUser");
         return user == null ? "unknown" : user.username;
+    }
+
+    /** 设备类型显示名（TD-041：JSON 里 deviceType 是稳定代码，deviceTypeName 是按请求语言的名字）。 */
+    private static String deviceTypeName(Context ctx, PrinterDeviceType type) {
+        return com.cashier.api.ApiMessages.enumName(ctx,
+            "api.printer.device_type." + type.name(), type.getDisplayName());
+    }
+
+    private static String deviceStatusName(Context ctx, PrinterDeviceStatus status) {
+        return com.cashier.api.ApiMessages.enumName(ctx,
+            "api.printer.device_status." + status.name(), status.getDisplayName());
+    }
+
+    private static String taskTypeName(Context ctx, PrintTaskType type) {
+        return com.cashier.api.ApiMessages.enumName(ctx,
+            "api.print_task.type." + type.name(), type.getDisplayName());
+    }
+
+    private static String taskStatusName(Context ctx, PrintTaskStatus status) {
+        return com.cashier.api.ApiMessages.enumName(ctx,
+            "api.print_task.status." + status.name(), status.getDisplayName());
     }
 
     private static String getString(Map<?, ?> body, String key, String defaultValue) {

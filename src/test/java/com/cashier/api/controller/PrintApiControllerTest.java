@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -28,6 +29,44 @@ class PrintApiControllerTest {
             .withRequest(HandlerType.POST, "/api/printers/P1/receipt")
             .withPathParam("id", "P1")
             .withBody(body);
+    }
+
+    @Test
+    @DisplayName("枚举双字段（TD-041）：deviceType/status 是稳定代码，*Name 跟随请求语言")
+    void enumFieldsAreCodePlusLocalizedName() {
+        com.cashier.printer.NetworkPrinterDevice device =
+            new com.cashier.printer.NetworkPrinterDevice("P-TD41", "收银台打印机", "192.168.1.50", 9100);
+        com.cashier.printer.PrinterManager.getInstance().registerDevice(device);
+
+        TestContext zh = new TestContext()
+            .withRequest(HandlerType.GET, "/api/printers/P-TD41")
+            .withPathParam("id", "P-TD41")
+            .withQueryParam("locale", "zh-CN");
+        PrintApiController.getPrinter(zh.context);
+        TestContext en = new TestContext()
+            .withRequest(HandlerType.GET, "/api/printers/P-TD41")
+            .withPathParam("id", "P-TD41")
+            .withQueryParam("locale", "en");
+        PrintApiController.getPrinter(en.context);
+
+        Object zhData = response(zh).get("data");
+        Object enData = response(en).get("data");
+        assertNotNull(zhData);
+        assertEquals("NETWORK", deviceTypeOf(zhData), "代码字段必须稳定，与语言无关");
+        assertEquals("NETWORK", deviceTypeOf(enData));
+        assertEquals("网络打印机", nameOf(zhData, "deviceTypeName"));
+        assertEquals("Network printer", nameOf(enData, "deviceTypeName"),
+            "显示名必须跟随请求语言（此前无论客户端语言都只返回中文）");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static String deviceTypeOf(Object data) {
+        return (String) ((Map<String, Object>) data).get("deviceType");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static String nameOf(Object data, String field) {
+        return (String) ((Map<String, Object>) data).get(field);
     }
 
     private static TestContext cashDrawerRequest(String role) {
@@ -73,6 +112,11 @@ class PrintApiControllerTest {
         PrintApiController.printReceipt(ctx.context);
 
         assertTrue(ctx.status != HttpStatus.FORBIDDEN, "管理员不应被开钱箱的角色检查拦下");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static Map<String, Object> response(TestContext ctx) {
+        return (Map<String, Object>) ctx.json;
     }
 
     @SuppressWarnings("unchecked")
