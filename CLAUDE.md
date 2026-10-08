@@ -763,7 +763,8 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `setTitle/setContentText/setText/setPromptText/show*Alert/showPlaceholder` 与 `new Label/Button("中文")`
   不得含中文（**日志与注释里的中文不算**）；FXML 的 `text/promptText/title` 必须是 `%key`
   （运行时会被覆盖的设计期占位走白名单，且白名单每一条都要注明覆盖它的代码位置）；
-  `updateStatus`/`updateWarning` 也在守卫范围内（现已覆盖 13 个文件，全仓库状态栏硬编码为 0）——
+  `updateStatus`/`updateWarning` 也在守卫范围内（现已覆盖 **14** 个文件；"全仓库状态栏硬编码为 0"
+  只对**字面量实参**成立——`RechargeController` 把校验文案拼进变量再交给 `updateError`，属下面的边界）——
   状态栏文案应**复用** `status_message.*`/`nav.*` 等既有 key，别新建同值 key。
   迁移新文件时把路径加进该测试的 `MIGRATED_FILES`。
   **2026-10 订正（审计 G1）**：这条规则原先只匹配"中文紧跟左括号"，于是第二实参
@@ -771,6 +772,12 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   白名单文件里实测仍有 3 处可见中文而门禁是绿的。现在已改为**平衡括号取全部实参 + 跳过 i18n key
   字面量**，`updateSuccess/updateError/updateInfo` 也纳入范围；那 3 处已迁到
   `runtime.dialog_open_failed` / `runtime.tpos_window_title`。
+  **覆盖边界（2026-10 F14 实测）**：它只看**可见调用点实参里**的字面量，因此
+  ① 辅助方法返回再显示的文案（`formatDuration` 改回 `hours + "小时"` 不会变红）、
+  ② 变量拼接后显示（`RechargeController` 的 `errorMessage += "…"`、
+  `MainController` 的关于弹窗正文）两类**抓不到**，靠逐文件定点锚点兜。
+  `MIGRATED_FILES` 现为 **14 个文件**；其余文件里这类残留的实测清单见
+  `docs/TECH_DEBT.md` 的"F14 附录"（下一批要迁的 7 个文件、逐条带行号）。
   **写 i18n 调用时要顺着门禁的形状写**：`I18nManager.get(...)` 的首参必须是字面量或常量
   （`get(cond ? A : B, x)` 会让 `I18nBundleConsistencyTest` 把条件里的字面量当成 key）；
   用户可见文案也可能不在 `updateStatus` 里——`showError`/`showWarning` 同样是文案出口，

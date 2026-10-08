@@ -24,6 +24,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
  *
  * <p>覆盖范围是逐步扩大的：下面 {@code MIGRATED_FILES} 里的文件都应保持"零硬编码可见文案"，
  * 新迁移一个文件就往列表里加一个。</p>
+ *
+ * <p><b>已知覆盖边界（2026-10 实测，务必知道）</b>：本门禁只看**可见调用点的实参里**的中文字面量
+ * （含拼接/三元/续行，见 {@code collectUiCallLiterals}）。因此"中文在别处拼好、再作为变量/返回值
+ * 传进来显示"的形状抓不到，实测两类都不变红：① 辅助方法返回（{@code formatDuration} 改回
+ * {@code hours + "小时"}）；② 变量拼接后显示（{@code RechargeController.isInputValid} 的
+ * {@code errorMessage += "充值金额不能为空！"} 与 {@code MainController.handleAbout} 的 about 正文）。
+ * 这两类目前靠**逐文件定点锚点**兜（见下面 {@code inventoryAlert*} 两项），
+ * 剩余未迁文件的实测清单登记在 {@code docs/TECH_DEBT.md} 的 TD-014/F14 附录。</p>
  */
 @DisplayName("界面文案硬编码门禁")
 class HardcodedUiTextPolicyTest {
@@ -32,6 +40,7 @@ class HardcodedUiTextPolicyTest {
     private static final List<String> MIGRATED_FILES = List.of(
         "src/main/java/com/cashier/controller/MainController.java",
         "src/main/java/com/cashier/controller/RechargeController.java",
+        "src/main/java/com/cashier/controller/InventoryAlertController.java",
         "src/main/java/com/cashier/printer/PrintPreviewDialog.java",
         "src/main/java/com/cashier/SplashWindow.java",
         "src/main/java/com/cashier/CashierSystemFXApplication.java",
@@ -125,6 +134,37 @@ class HardcodedUiTextPolicyTest {
         }
         // 防空转：解析规则失效时必须报出来，而不是静默 0 违规
         assertTrue(checked > 0, file + " 未识别到任何可见调用，门禁解析规则可能失效");
+    }
+
+    @Test
+    @DisplayName("库存预警级别展示名必须走 i18n（枚举常量不得缓存中文文案）")
+    void inventoryAlertLevelNamesAreLocalized() throws Exception {
+        // 上面那条规则只看"面向用户的调用点"，抓不到"枚举常量里存中文、再被赋给单元格"这种形状：
+        // AlertLevel 一旦把「严重警告/警告/提示」写回常量，切语言后那一列就不再翻译（2026-10 F14）
+        String text = Files.readString(Path.of(
+            "src/main/java/com/cashier/controller/InventoryAlertController.java"));
+
+        assertTrue(text.contains("get(\"inventory_alert.critical\")")
+                && text.contains("get(\"inventory_alert.warning\")")
+                && text.contains("get(\"inventory_alert.info\")"),
+            "预警级别展示名必须在 getDisplayName() 里按当前语言解析，不能写进枚举常量");
+    }
+
+    @Test
+    @DisplayName("库存预警页的时长文案必须走 i18n（辅助方法返回再显示的文案门禁看不见）")
+    void inventoryAlertDurationTextsAreLocalized() throws Exception {
+        // 变异实测（2026-10 F14）：把 formatDuration 改回 hours + "小时" **不会**让上面那条
+        // "调用点实参"规则变红——字面量在 return 语句里，不在 setText 的实参里。补定点锚点。
+        String text = Files.readString(Path.of(
+            "src/main/java/com/cashier/controller/InventoryAlertController.java"));
+
+        assertTrue(text.contains("get(\"inventory_alert.duration_hours\", hours)")
+                && text.contains("get(\"inventory_alert.duration_minutes\", minutes)")
+                && text.contains("get(\"inventory_alert.duration_seconds\", seconds)"),
+            "时长文案必须走带参的 i18n key");
+        assertFalse(text.contains("hours + \"小时\"") || text.contains("minutes + \"分钟\"")
+                || text.contains("seconds + \"秒\""),
+            "时长拼接回硬编码中文会绕过调用点规则，不得回归");
     }
 
     @Test

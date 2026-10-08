@@ -1818,6 +1818,45 @@ PUT /API/members/1    -> HTTP 404
   `CashierSystemFXApplication.loadMainScene()` 与 `NotificationManager.addListener/removeListener`
   仍无生产调用方，登记为待清理。
 
+### F14 库存预警页硬编码中文迁移（2026-10，已修）
+
+`InventoryAlertController` 原有的用户可见中文已全部迁到 i18n，并把该文件加进
+`HardcodedUiTextPolicyTest.MIGRATED_FILES`（现 14 个文件）：
+
+| 位置 | 原文案 | 处理 |
+|---|---|---|
+| 级别展示名（枚举常量） | 严重警告/警告/提示 | 改为 `getDisplayName()` 内按当前语言解析（复用既有 `inventory_alert.critical/warning/info`） |
+| 商品编号/单位兜底 | 无 / 个 | 复用 `common.none` + 新增 `common.unit_default` |
+| 时长展示 | `小时/分钟/秒` | 新增 `inventory_alert.duration_hours/minutes/seconds`（带参） |
+| 立即检查/清除冷却弹窗 | 检查完成、库存预警检查已完成！、清除成功、所有预警冷却时间已清除！ | 4 个新 key |
+| 导出 | 6 个表头、文件名"库存预警报告"、空数据提示、成功/失败提示 | 表头复用 FXML 同款 key（`inventory_alert.product_name` 等）；其余 4 个新 key，空数据沿用 `runtime.no_export_*` 家族新增 `runtime.no_export_inventory_alerts` |
+
+**同时暴露了门禁的两处真实盲区（已用定点锚点补上）**：门禁只检查**可见调用点实参里**的字面量，
+所以"中文在别处拼好再传进来显示"截不到。变异实测：把 `formatDuration` 改回 `hours + "小时"`
+**不会**让主规则变红。为此在 `HardcodedUiTextPolicyTest` 新增两条定点锚点：
+`inventoryAlertLevelNamesAreLocalized`（枚举常量不得存中文）与
+`inventoryAlertDurationTextsAreLocalized`（时长必须走带参 key，且不得拼接回去）。
+
+### F14 附录：其余"已迁移"文件里**门禁看不见**的残留（2026-10 实测，待下一批）
+
+按"中文在别处拼好/返回再显示"的形状扫描 `MIGRATED_FILES` 全部 14 个文件，确认以下**用户可见**残留
+（`行号` 为 2026-10-08 实测位置；`现金/简体中文/每天/全部/待审批` 这类**落库规范值**不计入，它们必须保持中文）：
+
+| 文件 | 残留（行号） | 形状 |
+|---|---|---|
+| `RechargeController` | 252-284：5 条充值校验文案（充值金额不能为空！/必须大于0！/不能超过10000元！/格式不正确！/请选择支付方式！） | `errorMessage += "…"` → `StatusBarManager.updateError(errorMessage)` + `alert.setContentText(errorMessage)` |
+| `MainController` | 820-830：关于弹窗正文（版本:/开发:/技术栈:/许可证:） | 拼接进 `about` 变量后 `showInformationOnlyAlert(title, about)` |
+| `CashierSystemFXApplication` | 157/200/261/277/287：启动闪屏进度文案；451-453：UI 字体缺失弹窗正文 | `splash.updateProgress(0.2, "正在连接数据库...")`（`updateProgress` 不在门禁的出口名单里） |
+| `ShiftController` | 496-497/533/537：导出表头 + 报表文件名；506/507/510/527：未开始/未结束/未完成/无 | `Arrays.asList("班次编号", …)` / 三元兜底变量 |
+| `TransactionController` | 535/587/591：导出表头 + 报表文件名；546/581：无商品/非会员 | 同上 |
+| `SettingsController` | 873/1533/1536：文件选择器过滤标签；1402-1410：测试打印正文（设备名称:/IP地址:/端口:…）；1214/1217：税率校验文案 | `new ExtensionFilter("CSV 文件", …)` / `content.append("设备名称: ")` / `errorMessage +=` |
+| `PurchaseOrderController` | 489：`String.format("%s - %s (%s级)")`；995：`getText().startsWith("总金额:")` | 展示串拼接 + **用中文匹配自己界面上的标签**（切语言后该匹配会失效，属潜在缺陷） |
+
+**下一批的建议做法**：优先修 ①②（充值校验、关于弹窗：用户每次都能看到），
+然后 ③④⑤（闪屏/报表导出）。若要根治，需把门禁升级为"除白名单数据值外，迁移文件里不得出现中文
+字面量"——白名单要逐条写明理由（落库规范值、FXML 设计期占位等），预计 40 条左右；
+该方案能覆盖上述全部形状，但必须先把白名单核准确，否则会误报大量落库值。
+
 ### 本轮**未修**（状态与理由）
 
 - **F9 微信异步退款永不落终态**：`WechatNativePaymentProvider` 对非 SUCCESS 状态写 `PROCESSING`，
@@ -1827,8 +1866,8 @@ PUT /API/members/1    -> HTTP 404
   两个终端同时提交可各退满额。窗口窄，串行操作会被拦；彻底修需要"已退数量台账 + 唯一约束"的设计。
 - **F13 `ProductDAORefactored.batchUpdateWithConnection` 丢弃 `executeBatch()` 结果**并无条件 `version++`：
   当前唯一调用方 `DataService.saveInventory` 无生产调用方，属埋雷，未动。
-- **F14 `InventoryAlertController` 的硬编码中文**（弹窗正文、导出表头等约 10 处）：
-  该文件不在 `HardcodedUiTextPolicyTest.MIGRATED_FILES` 里，属 TD-014 的待迁移范围，本次未扩围。
+- **F14 `InventoryAlertController` 的硬编码中文**：**已修**（弹窗/导出/时长/级别名全部迁 i18n，
+  该文件已进 `MIGRATED_FILES`；其余迁移文件的同类残留见上文"F14 附录"，属下一批）。
 - **F15 依赖版本**：Javalin 6.1.3 传递来 **Jetty 11.0.20**（早于修 CVE-2024-8184/6763 的 11.0.24）；
   **logback 1.5.18** 命中 CVE-2025-11226（本仓库无 Janino + 无 Spring → 不可达）。
   升级需要联网解析依赖并复跑全量回归，未在本次动。

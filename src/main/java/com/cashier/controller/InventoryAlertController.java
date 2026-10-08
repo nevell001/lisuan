@@ -117,10 +117,12 @@ public class InventoryAlertController {
         public AlertItem(Product product) {
             this.product = product;
             this.name = new SimpleStringProperty(product.name);
-            this.productCode = new SimpleStringProperty(product.productCode != null ? product.productCode : "无");
+            this.productCode = new SimpleStringProperty(product.productCode != null
+                ? product.productCode : I18nManager.getInstance().get(I18nKeys.Common.NONE));
             this.currentStock = new SimpleStringProperty(String.valueOf(product.quantity));
             this.minStock = new SimpleStringProperty(String.valueOf(product.minStock));
-            this.unit = new SimpleStringProperty(product.unit != null ? product.unit : "个");
+            this.unit = new SimpleStringProperty(product.unit != null
+                ? product.unit : I18nManager.getInstance().get("common.unit_default"));
             this.level = calculateAlertLevel(product);
             this.alertLevel = new SimpleStringProperty(level.getDisplayName());
             this.lastAlertTime = new SimpleStringProperty("--");
@@ -184,20 +186,26 @@ public class InventoryAlertController {
      * 预警级别枚举
      */
     public enum AlertLevel {
-        CRITICAL("严重警告", "alert-level-critical"),
-        WARNING("警告", "alert-level-warning"),
-        INFO("提示", "alert-level-info");
+        CRITICAL("alert-level-critical"),
+        WARNING("alert-level-warning"),
+        INFO("alert-level-info");
 
-        private final String displayName;
         private final String styleClass;
 
-        AlertLevel(String displayName, String styleClass) {
-            this.displayName = displayName;
+        AlertLevel(String styleClass) {
             this.styleClass = styleClass;
         }
 
+        /**
+         * 展示名按**当前语言**解析：枚举常量在类加载时就固定，把中文写进常量会让这一列
+         * 切到 en/zh_TW 后永远是中文（2026-10 F14 迁移）。
+         */
         public String getDisplayName() {
-            return displayName;
+            return switch (this) {
+                case CRITICAL -> I18nManager.getInstance().get("inventory_alert.critical");
+                case WARNING -> I18nManager.getInstance().get("inventory_alert.warning");
+                case INFO -> I18nManager.getInstance().get("inventory_alert.info");
+            };
         }
 
         public String getStyleClass() {
@@ -395,11 +403,11 @@ public class InventoryAlertController {
         long hours = minutes / 60;
 
         if (hours > 0) {
-            return hours + "小时";
+            return I18nManager.getInstance().get("inventory_alert.duration_hours", hours);
         } else if (minutes > 0) {
-            return minutes + "分钟";
+            return I18nManager.getInstance().get("inventory_alert.duration_minutes", minutes);
         } else {
-            return seconds + "秒";
+            return I18nManager.getInstance().get("inventory_alert.duration_seconds", seconds);
         }
     }
 
@@ -412,7 +420,9 @@ public class InventoryAlertController {
         alertService.triggerCheck();
         updateServiceStatus();
         loadAlertItems();
-        FXUtils.showInfoAlert("检查完成", "库存预警检查已完成！");
+        FXUtils.showInfoAlert(
+            I18nManager.getInstance().get("inventory_alert.check_done_title"),
+            I18nManager.getInstance().get("inventory_alert.check_done_message"));
     }
 
     /**
@@ -428,7 +438,9 @@ public class InventoryAlertController {
         if (confirmAlert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
             logger.info("清除所有预警冷却");
             alertService.clearAllAlertCooldowns();
-            FXUtils.showInfoAlert("清除成功", "所有预警冷却时间已清除！");
+            FXUtils.showInfoAlert(
+                I18nManager.getInstance().get("inventory_alert.clear_done_title"),
+                I18nManager.getInstance().get("inventory_alert.clear_done_message"));
         }
     }
 
@@ -438,34 +450,45 @@ public class InventoryAlertController {
     @FXML
     public void handleExport() {
         if (alertList.isEmpty()) {
-            FXUtils.showErrorAlert(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.EXPORT_DATA), "当前没有预警商品可导出！");
+            FXUtils.showErrorAlert(I18nManager.getInstance().get(I18nKeys.Error.EXPORT_DATA),
+                I18nManager.getInstance().get("runtime.no_export_inventory_alerts"));
             return;
         }
 
         try {
+            // 表头复用 FXML 列标题的同一批 key，保证界面与导出文件用词一致
             List<String> headers = Arrays.asList(
-                "商品名称", "商品编号", "当前库存", "最低库存", "单位", "预警级别"
+                I18nManager.getInstance().get("inventory_alert.product_name"),
+                I18nManager.getInstance().get("inventory_alert.product_code"),
+                I18nManager.getInstance().get("inventory_alert.current_stock"),
+                I18nManager.getInstance().get("inventory_alert.min_stock"),
+                I18nManager.getInstance().get("inventory_alert.unit"),
+                I18nManager.getInstance().get("inventory_alert.alert_level")
             );
 
             List<String[]> data = new ArrayList<>();
             for (AlertItem item : alertList) {
                 data.add(new String[]{
                     item.getProduct().name,
-                    item.getProduct().productCode != null ? item.getProduct().productCode : "无",
+                    item.getProduct().productCode != null
+                        ? item.getProduct().productCode : I18nManager.getInstance().get(I18nKeys.Common.NONE),
                     String.valueOf(item.getProduct().quantity),
                     String.valueOf(item.getProduct().minStock),
-                    item.getProduct().unit != null ? item.getProduct().unit : "个",
+                    item.getProduct().unit != null
+                        ? item.getProduct().unit : I18nManager.getInstance().get("common.unit_default"),
                     item.getLevel().getDisplayName()
                 });
             }
 
-            ExportUtil.export("库存预警报告", headers, data,
+            ExportUtil.export(I18nManager.getInstance().get("inventory_alert.export_file_name"), headers, data,
                 com.cashier.util.ExportUtil.ExportFormat.EXCEL, "reports");
-            FXUtils.showInfoAlert(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Success.EXPORT), "库存预警报告已导出到 reports 目录！");
+            FXUtils.showInfoAlert(I18nManager.getInstance().get(I18nKeys.Success.EXPORT),
+                I18nManager.getInstance().get("inventory_alert.export_success_message"));
 
         } catch (Exception e) {
             logger.error("导出预警报告失败", e);
-            FXUtils.showErrorAlert(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Error.EXPORT_DATA), "导出预警报告失败：" + e.getMessage());
+            FXUtils.showErrorAlert(I18nManager.getInstance().get(I18nKeys.Error.EXPORT_DATA),
+                I18nManager.getInstance().get("inventory_alert.export_failed", e.getMessage()));
         }
     }
 
