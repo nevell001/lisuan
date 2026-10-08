@@ -744,7 +744,7 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   **做脚本桩测试时不要用目录联接（junction）把临时目录指向仓库**：`mklink /J` 造的联接会让
   "递归删除临时目录"变成"沿重解析点删掉仓库源码"——2026-09 实机核查时因此删掉过 422 个跟踪文件
   （改用**复制**所需文件，或删除前确认目标下无重解析点；踩到用 `git checkout -- <路径>` 恢复，
-  再用 `mvn verify` 的测试数对比确认没有漏恢复）。完整记录见 `WINDOWS_RUN_AUDIT.md` 的"三点操作提示"
+  再用 `mvn verify` 的测试数对比确认没有漏恢复）。完整记录见 `docs/WINDOWS_RUN_AUDIT.md` 的"三点操作提示"
 - 安装/运维脚本门禁：`InstallScriptPolicyTest`（`com.cashier.security`）钉住三条不变量——
   ① `install.sh` 的建库/SQL 导入失败必须报错并 `exit 1`（不得再用 `2>/dev/null || true` 静默成功，
   失败时要打印 mysql 的真实输出）；② `docker/docker-init.sh` 必须先 `. ./.env`，且空/占位口令
