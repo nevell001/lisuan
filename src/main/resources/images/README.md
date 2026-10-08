@@ -1,10 +1,10 @@
-# Application Icon Placeholder
+# Application Icons
 
-## 状态：图标待添加
+## 状态：图标已提供
 
-当前应用使用 JavaFX 默认图标。
+图标文件位于子目录 `logos/`，应用启动时会加载；文件缺失时回退 JavaFX 默认图标。
 
-## 临时解决方案
+## 容错处理
 
 代码已包含容错处理：如果图标文件不存在，应用会正常启动，仅显示默认图标。
 
@@ -13,7 +13,7 @@
 1. **app-icon.png** (256x256) - JavaFX 跨平台图标
 2. **app-icon.ico** - Windows 快捷方式图标
 
-参考 `README.md` 了解如何创建这些图标。
+参考 [logos/README.md](logos/README.md) 了解图标资产与再生成方法。
 
 ## 快速生成图标
 

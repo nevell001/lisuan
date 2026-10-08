@@ -1,7 +1,7 @@
 # LiSuan 上线走查清单
 
 > 用途：正式环境上线前的逐项验收清单。每项完成后在 `[ ]` 内打勾并记录执行人/日期。
-> 当前代码门禁基线（`mvn -q clean verify`）：520 用例全绿，JaCoCo 行覆盖 ≥10%（现约 19.0%），SpotBugs High 0 缺陷。
+> 当前代码门禁基线（`mvn -q clean verify`）：用例全绿、JaCoCo 行覆盖 ≥10%、SpotBugs High 0 缺陷；用例数量与覆盖率以实际命令输出为准。
 
 ## 0. 版本与产物
 

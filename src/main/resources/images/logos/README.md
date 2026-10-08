@@ -1,28 +1,40 @@
 # Application Icons
 
-This directory contains application icons for the Cashier System.
+This directory contains application icons for the LiSuan (狸算) POS system.
 
-## Required Icons
+## Icon Assets
 
-### 1. app-icon.png
+### 1. app-icon.svg
+- **Purpose**: Vector source, used as the regeneration base
+- **Format**: SVG
+
+### 2. app-icon.png
 - **Purpose**: JavaFX application icon (cross-platform)
-- **Recommended Size**: 256x256 pixels
-- **Format**: PNG with transparency
-- **Usage**: Loaded by JavaFX for application window
+- **Size**: 256x256 pixels
+- **Format**: PNG
+- **Usage**: JavaFX window icon, splash screen, `PackageWizardView.fxml`, Linux `.desktop` icon (`install.sh`)
 
-### 2. app-icon.ico
-- **Purpose**: Windows shortcut and executable icon
-- **Recommended Sizes**: Multi-resolution (16x16, 32x32, 48x48, 256x256)
-- **Format**: ICO format
-- **Usage**: Desktop shortcuts, start menu, taskbar
+### 3. app-icon.ico
+- **Purpose**: Windows executable / shortcut icon
+- **Format**: ICO, multi-resolution
+- **Usage**: jpackage `icon` (pom.xml), installer shortcuts
+
+### 4. app-icon.icns
+- **Purpose**: macOS icon asset
+- **Format**: ICNS
 
 ## Current Status
 
-✅ **app-icon.svg** - SVG vector icon provided (for reference)
-❌ **app-icon.png** - Needs to be created (256x256 PNG)
-❌ **app-icon.ico** - Needs to be created (multi-resolution ICO)
+All icon assets are present in this directory:
 
-## How to Create Icons
+✅ `app-icon.svg` — vector source
+✅ `app-icon.png` — 256x256 PNG (used by JavaFX)
+✅ `app-icon.ico` — multi-resolution ICO (used by Windows packaging)
+✅ `app-icon.icns` — macOS ICNS
+
+## How to Regenerate Icons
+
+The PNG/ICO can be regenerated from `app-icon.svg`, or with `generate-icon.html` in this directory.
 
 ### Option 1: Online Tools
 1. Visit https://www.favicon.cc/ or https://www.icoconverter.com/
@@ -60,14 +72,9 @@ convert app-icon.svg -define icon:auto-resize=256,128,96,64,48,32,16 app-icon.ic
 4. **Readability**: Must be recognizable at small sizes (16x16)
 5. **Background**: Transparent for PNG, appropriate for ICO
 
-## Temporary Workaround
+## After Regenerating Icons
 
-Until proper icons are created, the application will use JavaFX's default icon.
-This doesn't affect functionality, only the visual appearance.
-
-## After Adding Icons
-
-Once you've added `app-icon.png` and `app-icon.ico`:
+Once you've regenerated `app-icon.png` and `app-icon.ico`:
 
 1. Rebuild the project:
    ```bash

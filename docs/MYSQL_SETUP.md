@@ -33,26 +33,7 @@
 
 ### Windows 安装
 
-1. **下载 MySQL Installer**
-   - 访问: https://dev.mysql.com/downloads/installer/
-   - 下载 "mysql-installer-community"
-
-2. **运行安装程序**
-   ```
-   双击 mysql-installer-community-8.x.x.x.msi
-   选择 "Developer Default" 或 "Server only"
-   ```
-
-3. **配置 MySQL Server**
-   - **Type**: Standalone MySQL Server
-   - **Config Type**: Development Computer
-   - **Port**: 3306 (默认)
-   - **Root Password**: 设置一个强密码并记住它！
-   - **Windows Service**: 启用
-
-4. **完成安装**
-   - 点击 "Execute" 完成配置
-   - 确保所有步骤显示 "Complete"
+推荐使用官方 MSI 安装包（Developer Default，含 MySQL Workbench）。详细的图文安装步骤见 [WINDOWS_MYSQL_SETUP.md](WINDOWS_MYSQL_SETUP.md)。
 
 ### macOS 安装
 
@@ -108,14 +89,14 @@ mysql -u root -p
 ### 2. 执行 SQL 命令
 
 ```sql
--- 创建收银系统专用用户
-CREATE USER 'cashier'@'%' IDENTIFIED BY 'REPLACE_WITH_STRONG_RANDOM_PASSWORD';
+-- 创建收银系统专用用户（用户名需与后续 config/database.properties 的 db.username 一致）
+CREATE USER 'lisuan'@'%' IDENTIFIED BY 'REPLACE_WITH_STRONG_RANDOM_PASSWORD';
 
 -- 创建数据库
 CREATE DATABASE lisuan_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- 授予权限
-GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'%';
+GRANT ALL PRIVILEGES ON lisuan_system.* TO 'lisuan'@'%';
 
 -- 刷新权限
 FLUSH PRIVILEGES;
@@ -123,6 +104,10 @@ FLUSH PRIVILEGES;
 -- 退出
 EXIT;
 ```
+
+> Docker 部署无需手工执行以上 SQL：`docker-compose.yml` 会用 `.env` 的 `MYSQL_DATABASE`/`MYSQL_USER`/`CASHIER_DB_PASSWORD` 自动建库建用户（默认用户名即 `lisuan`）。
+>
+> 这里只需准备数据库和用户，**表结构不用手工创建**：应用每次启动都会幂等建表/升级，Docker 首次启动还会先执行 `docker/mysql-init/00-init-complete.sql`（机制见 [DATABASE_INIT.md](DATABASE_INIT.md)）。
 
 ### 3. 配置远程访问（可选）
 
@@ -174,8 +159,8 @@ cp config/database.properties.example config/database.properties
 # 修改为实际的主机地址
 db.url=jdbc:mysql://192.168.1.100:3306/lisuan_system?sslMode=PREFERRED&serverTimezone=Asia/Shanghai
 
-# 修改为实际的用户名和密码
-db.username=cashier
+# 修改为实际的用户名和密码（与创建数据库时的用户名一致）
+db.username=lisuan
 # 推荐留空，并通过 CASHIER_DB_PASSWORD 环境变量提供
 db.password=
 
@@ -188,9 +173,11 @@ db.pool.size=10
 | 参数 | 说明 | 示例值 |
 |-----|------|--------|
 | db.url | 数据库连接地址 | jdbc:mysql://localhost:3306/lisuan_system |
-| db.username | 数据库用户名 | cashier |
+| db.username | 数据库用户名 | lisuan |
 | db.password | 数据库密码 | **留空**（由 `CASHIER_DB_PASSWORD` 环境变量或根目录 `.env` 提供；写入明文会被发布门禁拒绝） |
 | db.pool.size | 连接池大小 | 10 (2-3台收银机) |
+
+> 表结构无需在此步处理：应用启动时自动创建/升级（见 [DATABASE_INIT.md](DATABASE_INIT.md)）。
 
 ---
 
@@ -268,7 +255,7 @@ sudo ufw reload
 创建基本任务 → 每天 02:00
 → 操作: 启动程序
 → 程序: mysqldump
-→ 参数: --user=root --password=YourPass --result-file=D:\backup\cashier_%date:~0,10%.sql lisuan_system
+→ 参数: --user=root --password=YourPass --result-file=D:\backup\lisuan_%date:~0,10%.sql lisuan_system
 ```
 
 **macOS/Linux - Cron**:
@@ -277,7 +264,7 @@ sudo ufw reload
 crontab -e
 
 # 每天凌晨 2 点备份
-0 2 * * * mysqldump -u root -pYourPass lisuan_system > /backup/cashier_$(date +\%Y\%m\%d).sql
+0 2 * * * mysqldump -u root -pYourPass lisuan_system > /backup/lisuan_$(date +\%Y\%m\%d).sql
 ```
 
 ### 手动备份
@@ -292,7 +279,32 @@ mysqldump -u root -p lisuan_system | gzip > backup_$(date +%Y%m%d).sql.gz
 ```
 
 **使用应用内置备份**:
-应用设置界面有"数据备份"功能，可一键备份。
+应用设置界面有"数据备份"功能，可一键备份（底层为 `DatabaseManager.backup(File)`/`restore(File)`）。
+
+### Docker 部署的备份与恢复
+
+Docker 部署的 MySQL 数据在容器数据卷中，容器名默认 `lisuan-mysql`（可用 `db` 配置项 `backup.mysql.container` 覆盖）。
+
+**备份**（导出 SQL 到宿主机）:
+```bash
+docker exec lisuan-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" lisuan_system' > backup_$(date +%Y%m%d).sql
+# compose 已把宿主机 backups/sql 挂载到容器 /backup，也可直接写进去：
+docker exec lisuan-mysql sh -c 'exec mysqldump -uroot -p"$MYSQL_ROOT_PASSWORD" lisuan_system > /backup/backup_$(date +%Y%m%d).sql'
+```
+
+**恢复**（把 SQL 灌回容器）:
+```bash
+docker exec -i lisuan-mysql sh -c 'exec mysql -uroot -p"$MYSQL_ROOT_PASSWORD" lisuan_system' < backup_20250203.sql
+```
+
+**数据卷级备份**（整卷打包，含所有库）:
+```bash
+# 建议先停容器，保证数据文件一致
+docker compose stop mysql
+# compose 会在卷名前加项目前缀，实际卷名以 docker volume ls 为准
+docker run --rm -v "$(docker volume ls -q -f name=lisuan-mysql-data | head -n1)":/data -v "$PWD":/backup alpine tar czf /backup/mysql-volume-$(date +%Y%m%d).tar.gz -C /data .
+docker compose start mysql
+```
 
 ### 恢复数据
 
@@ -322,6 +334,10 @@ SOURCE /path/to/backup.sql;
 
    # macOS/Linux
    sudo systemctl status mysql
+
+   # Docker
+   docker compose ps
+   docker compose logs mysql --tail 50
    ```
 
 2. 检查防火墙是否允许 3306 端口
@@ -353,9 +369,10 @@ SET GLOBAL time_zone = 'Asia/Shanghai';
 **解决方案**:
 ```sql
 -- 修改用户使用旧版认证
-ALTER USER 'cashier'@'%' IDENTIFIED WITH mysql_native_password BY 'YourPassword123!';
+ALTER USER 'lisuan'@'%' IDENTIFIED WITH mysql_native_password BY 'YourPassword123!';
 FLUSH PRIVILEGES;
 ```
+> 用户名替换为实际的 `db.username`。Docker 部署已通过启动参数 `--mysql-native-password=ON` 兼容此场景。
 
 ### 问题 4: 字符集问题
 
@@ -372,6 +389,19 @@ SHOW VARIABLES LIKE 'character%';
 
 -- 如果不是，修改配置文件并重启
 ```
+
+### 问题 5: 权限不足
+
+**错误信息**: `Access denied for user 'lisuan'@'%'`（错误中的用户名即 `db.username` 的配置值）
+
+**解决方案**:
+1. 确认应用 `db.username` 与数据库用户一致，且口令与 `CASHIER_DB_PASSWORD`（或 `.env`）一致
+2. 补授权限:
+   ```sql
+   GRANT ALL PRIVILEGES ON lisuan_system.* TO 'lisuan'@'%';
+   FLUSH PRIVILEGES;
+   ```
+   > 用户名/库名替换为实际值（Docker 部署默认均为 `lisuan` / `lisuan_system`）。
 
 ---
 
@@ -402,14 +432,19 @@ long_query_time = 2
 
 ### 应用连接池优化
 
-**config/database.properties**:
-```properties
-# 根据实际并发需求调整
-db.pool.size=15
-db.connection.timeout=30000
-db.idle.timeout=300000
-db.max.lifetime=1800000
-```
+连接池参数（HikariCP）及其默认值如下，按需在 **config/database.properties** 覆盖：
+
+| 参数 | 默认值 | 说明 |
+|-----|-------|------|
+| `db.pool.size` | `10` | 最大连接数（2-3 台收银机 10 足够） |
+| `db.connection.timeout` | `15000` | 等待连接的毫秒数。冷启动首次建连可能数秒，不建议调得太小 |
+| `db.idle.timeout` | `600000` | 空闲连接回收阈值（ms） |
+| `db.max.lifetime` | `1800000` | 连接最大存活时间（ms） |
+| `db.connection.leakDetectionThreshold` | `30000` | 连接泄漏检测阈值（ms），0 关闭 |
+| `db.validationTimeout` | `3000` | 连接校验超时（ms） |
+
+> 最小空闲连接固定为 `max(2, 连接池大小 / 4)`、连接测试语句为 `SELECT 1`，均不可配置。
+> 完整参数解析逻辑见 `com.cashier.util.DatabaseManager#loadConfig`。
 
 ---
 
@@ -419,7 +454,7 @@ db.max.lifetime=1800000
 2. **强密码**: 使用复杂的密码（大小写字母+数字+符号）
 3. **限制网络访问**: 只允许局域网访问，不要暴露到公网
 4. **定期备份**: 每天自动备份数据库
-5. **SSL 连接**: 生产环境建议使用 SSL (`useSSL=true`)
+5. **SSL 连接**: 生产环境建议使用 SSL（在 `db.url` 中设置 `sslMode=REQUIRED`）
 6. **更新 MySQL**: 定期更新到最新稳定版本
 
 ---
@@ -485,5 +520,5 @@ jdbc:mysql://192.168.1.100:3306/lisuan_system
 jdbc:mysql://localhost:3306/lisuan_system?connectTimeout=10000&socketTimeout=30000
 
 # SSL 连接
-jdbc:mysql://localhost:3306/lisuan_system?useSSL=true&requireSSL=true
+jdbc:mysql://localhost:3306/lisuan_system?sslMode=REQUIRED
 ```

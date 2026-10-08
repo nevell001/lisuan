@@ -111,59 +111,21 @@
    ```
 4. 输入 root 密码
 
-5. 创建数据库和用户：
-   ```sql
-   -- 创建数据库
-   CREATE DATABASE IF NOT EXISTS lisuan_system
-   CHARACTER SET utf8mb4
-   COLLATE utf8mb4_unicode_ci;
-
-   -- 创建专用用户（推荐）
-   CREATE USER IF NOT EXISTS 'cashier'@'localhost'
-   IDENTIFIED BY 'REPLACE_WITH_STRONG_RANDOM_PASSWORD';
-
-   -- 授予权限
-   GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'localhost';
-   GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'%';
-
-   -- 刷新权限
-   FLUSH PRIVILEGES;
-
-   -- 退出
-   EXIT;
-   ```
+5. 创建数据库和专用用户（用户名需与 `config\database.properties` 的 `db.username` 一致，默认 `lisuan`）：完整 SQL 见 [MYSQL_SETUP.md 的「配置数据库」](MYSQL_SETUP.md#配置数据库)，本文不再重复。
 
 ### 方式二：使用 MySQL Workbench
 
 1. 打开 MySQL Workbench
 2. 点击 "+" 创建新连接
 3. 输入连接信息：
-   - **Connection Name**: Cashier System
+   - **Connection Name**: LiSuan System
    - **Hostname**: 127.0.0.1
    - **Port**: 3306
    - **Username**: root
    - **Password**: [输入 root 密码]
 4. 点击 "Test Connection" 测试连接
 5. 连接成功后，点击 "OK"
-6. 打开连接，在 SQL 编辑器中执行以下 SQL：
-
-```sql
--- 创建数据库
-CREATE DATABASE IF NOT EXISTS lisuan_system
-CHARACTER SET utf8mb4
-COLLATE utf8mb4_unicode_ci;
-
--- 创建专用用户（推荐）
-CREATE USER IF NOT EXISTS 'cashier'@'localhost'
-IDENTIFIED BY 'REPLACE_WITH_STRONG_RANDOM_PASSWORD';
-
--- 授予权限
-GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'localhost';
-GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'%';
-
--- 刷新权限
-FLUSH PRIVILEGES;
-```
+6. 打开连接，在 SQL 编辑器中执行建库建用户 SQL：见 [MYSQL_SETUP.md 的「配置数据库」](MYSQL_SETUP.md#配置数据库)（用户名 `lisuan`，需与 `db.username` 一致）。
 
 ### 方式三：使用 phpMyAdmin（如果已安装）
 
@@ -176,7 +138,7 @@ FLUSH PRIVILEGES;
 5. 点击 "创建"
 6. 点击 "用户账户" 标签
 7. 添加新用户：
-   - 用户名：`cashier`
+   - 用户名：`lisuan`
    - 主机名：`任意主机 (%)`
    - 密码：使用密码管理器生成的应用专用强随机密码
 8. 在 "数据库特定权限" 部分，选择 `lisuan_system` 数据库
@@ -184,52 +146,38 @@ FLUSH PRIVILEGES;
 
 ## 配置应用连接
 
-1. 打开项目目录中的 `config\database.properties` 文件
-2. 修改数据库连接配置：
+1. 打开项目目录中的 `config\database.properties` 文件（可从 `config\database.properties.example` 复制）
+2. 确认用户名与前面创建的数据库用户一致：
 
 ```properties
 # 数据库连接配置
 db.url=jdbc:mysql://localhost:3306/lisuan_system?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
-db.username=cashier
-# 推荐留空，并通过 CASHIER_DB_PASSWORD 环境变量提供
-db.password=
-db.pool.size=10
-```
-
-3. 如果使用 root 用户（不推荐）：
-
-```properties
-db.username=root
+db.username=lisuan
 # 推荐留空，并通过 CASHIER_DB_PASSWORD 环境变量提供
 db.password=
 ```
 
-4. 保存文件
+3. 保存文件
+
+> 不要使用 root 用户连接应用（不推荐）；即使临时使用，也必须同步改 `db.username`。
+> 完整参数说明与连接池优化见 [MYSQL_SETUP.md 的「配置应用」](MYSQL_SETUP.md#配置应用)。
 
 ## 测试连接
-
-### 使用应用自带的测试工具
-
-1. 打开命令提示符
-2. 进入项目目录
-3. 运行测试程序：
-
-```cmd
-mvn test-compile exec:java -Dexec.mainClass="com.cashier.TestMySQLConnection"
-```
 
 ### 使用 MySQL Workbench
 
 1. 打开 MySQL Workbench
-2. 使用 `cashier` 用户创建连接
+2. 使用 `lisuan` 用户创建连接
 3. 测试连接是否成功
 
 ### 使用命令行
 
 ```cmd
 cd "C:\Program Files\MySQL\MySQL Server 8.0\bin"
-mysql -u cashier -p lisuan_system
+mysql -u lisuan -p lisuan_system
 ```
+
+> 连接失败时先看下文常见问题，或 [MYSQL_SETUP.md 的「故障排查」](MYSQL_SETUP.md#故障排查)。
 
 ## 常见问题
 
@@ -253,44 +201,13 @@ mysql -u cashier -p lisuan_system
    netstat -ano | findstr 3306
    ```
 
-### 问题 2: 认证插件错误
-
-**错误信息**: `Authentication plugin 'caching_sha2_password' cannot be loaded`
-
-**解决方案**:
-
-1. 登录 MySQL：
-   ```cmd
-   mysql -u root -p
-   ```
-
-2. 修改用户认证方式：
-   ```sql
-   ALTER USER 'cashier'@'localhost' IDENTIFIED WITH mysql_native_password BY 'REPLACE_WITH_STRONG_RANDOM_PASSWORD';
-   FLUSH PRIVILEGES;
-   ```
-
-### 问题 3: 中文字符乱码
-
-**解决方案**:
-
-确保使用 `utf8mb4` 字符集：
-
-```sql
--- 检查数据库字符集
-SHOW VARIABLES LIKE 'character_set%';
-
--- 修改数据库字符集（如果需要）
-ALTER DATABASE lisuan_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-```
-
-### 问题 4: 连接超时
+### 问题 2: 连接超时
 
 **错误信息**: `Communications link failure` 或连接超时
 
 **解决方案**:
 
-修改 MySQL 配置文件 `my.ini`：
+修改 MySQL 配置文件 `my.ini`（默认位于 `C:\ProgramData\MySQL\MySQL Server 8.0\`）：
 
 ```ini
 [mysqld]
@@ -299,26 +216,19 @@ interactive_timeout = 28800
 max_connections = 200
 ```
 
-重启 MySQL 服务。
+重启 MySQL 服务（services.msc → MySQL80 → 重启）。
 
-### 问题 5: 权限不足
+> 若只是应用**冷启动首次建连慢**，优先调大 `config\database.properties` 的 `db.connection.timeout`，而不是改 my.ini。
 
-**错误信息**: `Access denied for user 'cashier'@'localhost'`
+### 更多问题
 
-**解决方案**:
-
-1. 使用 root 登录 MySQL
-2. 重新授予权限：
-   ```sql
-   GRANT ALL PRIVILEGES ON lisuan_system.* TO 'cashier'@'localhost';
-   FLUSH PRIVILEGES;
-   ```
+认证插件错误、中文字符乱码、权限不足等见 [MYSQL_SETUP.md 的「故障排查」](MYSQL_SETUP.md#故障排查)。
 
 ## 下一步
 
 1. 完成 MySQL 安装和配置后，运行 `install.bat` 安装应用
 2. 运行 `start.bat` 启动收银系统
-3. 首次启动时，系统会自动初始化数据库表结构
+3. 首次以空库启动时会先弹出**首次运行向导**，用于创建管理员账号（仓库不提供默认口令）；表结构由应用启动时自动创建/升级
 
 ## 相关文档
 
