@@ -2,7 +2,7 @@
 
 - **审计日期**：2026-09-24（第一轮）；2026-10-08（第二轮复验，见文末）
 - **代码版本**：第一轮 `main` @ `b09dc9b`；第二轮 `main` @ `75edc45` → `56388c3`（v2.6.0）
-- **审计主机**：Windows 11（`Microsoft Windows NT 10.0.26200.0`），x64，16 核
+- **审计主机**：Windows 11（x64）
 - **审计方式**：全新搭建 JDK/Maven/MySQL → 真机编译 → 全量测试 → 打包 → **真实启动应用并连库操作**
 
 > 本报告第一轮（2026-09-24）成稿于源码树外，后随 `a2b5afe` 提交至仓库根目录；第二轮（2026-10-08）直接增补于文末。
@@ -603,7 +603,7 @@ java --module-path "" -version
 
 - **复验日期**：2026-10-08
 - **代码版本**：`main` @ `75edc45`（阶段一：原代码实机验证）→ `56388c3`（阶段二：首启向导改造）
-- **复验主机**：Windows（`Microsoft Windows NT 10.0.26300.0`，x64，DPI 100%）原生；另加 Linux 实机——WSL2 Debian 13（WSLg，`DISPLAY=:0`）
+- **复验主机**：Windows（x64，DPI 100%）原生；另加 Linux 实机——WSL2 Debian（WSLg，`DISPLAY=:0`）
 - **数据库**：MySQL 8.0.46，跑在 WSL2 docker 容器 `lisuan-mysql`（`127.0.0.1:3306`；`docker run mysql:8.0` 创建，**未挂载** `docker/mysql-init/`，schema 全部由应用 `DatabaseManager` 自建）
 - **工具链**（仓库外便携目录 `C:\Users\nevell\lisuan-win-verify\`）：JDK Temurin **17.0.20.1+1**、Maven **3.9.16**（Linux 侧为 apt Maven 3.9.9 + Temurin 17）
 
@@ -683,9 +683,9 @@ java --module-path "" -version
 
 （截图均在仓库外 `C:\Users\nevell\lisuan-win-verify\`。）
 
-## 五、Linux 实机验证（WSL2 Debian 13 + WSLg）
+## 五、Linux 实机验证（WSL2 Debian + WSLg）
 
-- 环境：WSL2 Debian 13 自带 WSLg（`DISPLAY=:0`）+ Temurin 17；apt Maven 3.9.9（pom 自带 Aliyun 仓库，无需 settings.xml）；补装 GTK3/GL/X11/字体/工具：`libgtk-3-0t64 libgl1 libglib2.0-0t64 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libfreetype6 libasound2t64 fontconfig fonts-noto-cjk fonts-dejavu xdotool imagemagick x11-utils`；
+- 环境：WSL2 Debian 自带 WSLg（`DISPLAY=:0`）+ Temurin 17；apt Maven 3.9.9（pom 自带 Aliyun 仓库，无需 settings.xml）；补装 GTK3/GL/X11/字体/工具：`libgtk-3-0t64 libgl1 libglib2.0-0t64 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libfreetype6 libasound2t64 fontconfig fonts-noto-cjk fonts-dejavu xdotool imagemagick x11-utils`；
 - 运行：`export JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64; mvn -B -ntp javafx:run`（首次约 52 秒）；
 - **空库 → 向导 → 建号 → 「初始化完成」→ 登录 → 主界面**全流程走通（`shot-wsl-wizard.png`、`shot-wsl-wizard-filled.png`、`shot-wsl-done-alert.png`、`shot-wsl-login-filled.png`、`shot-wsl-login-main.png` 等）；
 - UI 自动化：xdotool 必须先 `windowactivate <id>` 再 click/type，否则首击被吞（与 Windows `SendKeys` 同类坑）；截图 `import -window <id>` 直接可用（GL 渲染不黑屏）；找窗口 `xdotool search --name 狸算`；
