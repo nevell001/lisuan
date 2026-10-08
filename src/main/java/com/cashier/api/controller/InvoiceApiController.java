@@ -116,7 +116,17 @@ public class InvoiceApiController {
                 return;
             }
             
-            Invoice invoice = InvoiceService.createInvoiceFromTransaction(request.transactionId, request);
+            // TD-038：开票方/税率/开票人不接受请求体自报，开票人取认证用户
+            com.cashier.model.User operator = ctx.attribute("currentUser");
+            String operatorName = operator != null
+                ? (operator.name != null && !operator.name.isBlank() ? operator.name : operator.username)
+                : null;
+            if (request.sellerName != null || request.sellerTaxId != null || request.taxRate != null
+                    || request.createBy != null) {
+                logger.warn("忽略 from-transaction 请求体里的开票方/税率/开票人自报字段: operator={}, taxRate={}, createBy={}",
+                    operatorName, request.taxRate, request.createBy);
+            }
+            Invoice invoice = InvoiceService.createInvoiceFromTransaction(request.transactionId, request, operatorName);
             
             logger.info("发票创建成功: {}", invoice.invoiceId);
             ctx.status(HttpStatus.CREATED)
@@ -204,13 +214,14 @@ public class InvoiceApiController {
                 return;
             }
             
-            // Deliberate: pdfPath/imagePath are stored as opaque strings and never dereferenced as
-            // filesystem paths today, so no whitelist is applied (see docs/TECH_DEBT.md TD-001).
-            // If you start reading/writing these paths (invoice preview/download), implement the
-            // path validation in the SAME change: relative path + fixed root + extension whitelist
-            // + normalized prefix check (see ExportUtil / BackupService) and register the site in
-            // InvoicePathGuardPolicyTest.VALIDATED_READ_SITES.
-            DAOFactory.getInstance().getInvoiceDAO().updatePrintInfo(invoiceId, request.pdfPath, request.imagePath);
+            // TD-039：不再接受客户端自报的 pdfPath/imagePath。这两个字段服务端从不使用（TD-001 守着），
+            // 接受它们只会让任意认证用户往任何发票上写入伪造的文件路径；打印记录本身（状态/时间/次数）
+            // 仍然照常更新。若将来要由服务端产出文件，路径必须由服务端计算并做白名单/前缀校验
+            // （见 ExportUtil / BackupService），同批登记到 InvoicePathGuardPolicyTest.VALIDATED_READ_SITES。
+            if (request.pdfPath != null || request.imagePath != null) {
+                logger.warn("忽略发票打印记录里自报的文件路径（服务端不采纳客户端路径）: invoiceId={}", invoiceId);
+            }
+            DAOFactory.getInstance().getInvoiceDAO().updatePrintInfo(invoiceId, null, null);
             
             logger.info("发票打印记录: {}", invoiceId);
             ctx.json(Map.of("success", true, "message", "打印记录已更新"));
@@ -332,6 +343,7 @@ public class InvoiceApiController {
      * 打印请求 DTO
      */
     public static class PrintRequest {
+        /** 已不再采纳（TD-039）：服务端不使用客户端提供的路径，仅保留字段以容忍旧客户端请求体。 */
         public String pdfPath;
         public String imagePath;
     }

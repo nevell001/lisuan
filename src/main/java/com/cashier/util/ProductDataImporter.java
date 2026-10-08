@@ -12,8 +12,6 @@ import java.math.BigDecimal;
 import java.io.File;
 import java.io.FileReader;
 import java.io.InputStreamReader;
-import java.net.HttpURLConnection;
-import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.sql.SQLException;
 import java.util.ArrayList;
@@ -93,15 +91,6 @@ public class ProductDataImporter {
         Map.entry("罐", "罐")
     );
     
-    // GitHub 商品条码库 URL
-    private static final String GITHUB_BARCODE_URL = "https://raw.githubusercontent.com/EricLiuCN/barcode/master/";
-    
-    // 数据文件列表（注意：仓库中的文件是压缩格式，需要处理）
-    private static final String[] DATA_FILES = {
-        "barcodes.csv.zip",  // 商品条码数据（压缩格式）
-        "medicine_info.zip"   // 药品条码数据（压缩格式）
-    };
-    
     // 统计信息
     private int totalProcessed = 0;
     private int successCount = 0;
@@ -116,76 +105,6 @@ public class ProductDataImporter {
     private static final String KEY_ERROR_COUNT = "errorCount";
 
     private record CategoryKeywords(String category, List<String> keywords) {
-    }
-    
-    /**
-     * 从 GitHub 导入商品数据
-     * @return 导入结果统计
-     */
-    public Map<String, Object> importFromGitHub() {
-        logger.info("开始从 GitHub 导入商品数据...");
-        
-        Map<String, Object> result = new HashMap<>();
-        List<String> messages = new ArrayList<>();
-        
-        try {
-            // 预先加载分类和单位映射
-            Map<String, Category> categoryMap = loadCategoryMap();
-            Map<String, Unit> unitMap = loadUnitMap();
-            
-            // 收集所有商品
-            List<Product> allProducts = new ArrayList<>();
-            
-            for (String dataFile : DATA_FILES) {
-                try {
-                    logger.info("正在下载文件: {}", dataFile);
-                    List<Product> products = downloadAndParseData(dataFile, categoryMap, unitMap);
-                    
-                    if (!products.isEmpty()) {
-                        logger.info("成功解析 {} 条商品数据", products.size());
-                        allProducts.addAll(products);
-                    } else {
-                        messages.add(String.format("%s: 无数据", dataFile));
-                    }
-                } catch (Exception e) {
-                    logger.error("导入文件 {} 失败", dataFile, e);
-                    messages.add(String.format("%s: 导入失败 - %s", dataFile, e.getMessage()));
-                }
-            }
-            
-            // 创建缺失的分类和单位
-            if (!allProducts.isEmpty()) {
-                int categoriesCreated = ensureCategoriesExist(allProducts, categoryMap);
-                int unitsCreated = ensureUnitsExist(allProducts, unitMap);
-                
-                if (categoriesCreated > 0) {
-                    messages.add(String.format("创建了 %d 个新分类", categoriesCreated));
-                }
-                if (unitsCreated > 0) {
-                    messages.add(String.format("创建了 %d 个新单位", unitsCreated));
-                }
-                
-                int inserted = insertProducts(allProducts);
-                messages.add(String.format("成功导入 %d 条商品", inserted));
-            }
-            
-            result.put(KEY_SUCCESS, true);
-            result.put(KEY_TOTAL_PROCESSED, totalProcessed);
-            result.put(KEY_SUCCESS_COUNT, successCount);
-            result.put(KEY_SKIPPED_COUNT, skippedCount);
-            result.put(KEY_ERROR_COUNT, errorCount);
-            result.put(KEY_MESSAGES, messages);
-            
-            logger.info("GitHub 数据导入完成 - 处理: {}, 成功: {}, 跳过: {}, 错误: {}", 
-                totalProcessed, successCount, skippedCount, errorCount);
-            
-        } catch (Exception e) {
-            logger.error("GitHub 数据导入失败", e);
-            result.put(KEY_SUCCESS, false);
-            result.put(KEY_ERROR, e.getMessage());
-        }
-        
-        return result;
     }
     
     /**
@@ -251,114 +170,6 @@ public class ProductDataImporter {
         }
         
         return result;
-    }
-    
-    /**
-     * 下载并解析数据
-     */
-    private List<Product> downloadAndParseData(String dataFile, Map<String, Category> categoryMap, Map<String, Unit> unitMap) 
-            throws Exception {
-        
-        String url = GITHUB_BARCODE_URL + dataFile;
-        logger.info("正在下载: {}", url);
-        
-        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
-        connection.setRequestMethod("GET");
-        connection.setConnectTimeout(30000);  // 增加超时时间
-        connection.setReadTimeout(120000);   // 增加超时时间
-        
-        int responseCode = connection.getResponseCode();
-        if (responseCode != HttpURLConnection.HTTP_OK) {
-            logger.warn("下载失败，HTTP 响应码: {}", responseCode);
-            throw new Exception("下载失败，HTTP 响应码: " + responseCode);
-        }
-        
-        List<Product> products = new ArrayList<>();
-        
-        // 检查是否是 ZIP 文件
-        if (dataFile.endsWith(".zip")) {
-            logger.info("检测到 ZIP 文件，开始解压...");
-            products = parseZipData(connection.getInputStream(), categoryMap, unitMap);
-        } else {
-            // 直接解析 CSV 文件
-            try (BufferedReader reader = new BufferedReader(
-                    new InputStreamReader(connection.getInputStream(), StandardCharsets.UTF_8))) {
-                
-                String line;
-                int lineNum = 0;
-                while ((line = reader.readLine()) != null) {
-                    lineNum++;
-                    line = line.trim();
-                    
-                    // 跳过空行和注释行
-                    if (line.isEmpty() || line.startsWith("#")) {
-                        continue;
-                    }
-                    
-                    try {
-                        Product product = parseProductLine(line, categoryMap, unitMap);
-                        if (product != null) {
-                            products.add(product);
-                        }
-                    } catch (Exception e) {
-                        logger.warn("解析第 {} 行失败: {}", lineNum, e.getMessage());
-                    }
-                }
-            }
-        }
-        
-        return products;
-    }
-    
-    /**
-     * 解析 ZIP 文件中的数据
-     */
-    private List<Product> parseZipData(java.io.InputStream zipInputStream, Map<String, Category> categoryMap, Map<String, Unit> unitMap) 
-            throws Exception {
-        
-        List<Product> products = new ArrayList<>();
-        
-        try (java.util.zip.ZipInputStream zipStream = new java.util.zip.ZipInputStream(zipInputStream)) {
-            java.util.zip.ZipEntry entry;
-            
-            while ((entry = zipStream.getNextEntry()) != null) {
-                String entryName = entry.getName();
-                
-                // 只处理 CSV 文件
-                if (entryName.endsWith(".csv") || entryName.endsWith(".txt")) {
-                    logger.info("解压文件: {}", entryName);
-                    
-                    try (BufferedReader reader = new BufferedReader(
-                            new InputStreamReader(zipStream, StandardCharsets.UTF_8))) {
-                        
-                        String line;
-                        int lineNum = 0;
-                        while ((line = reader.readLine()) != null) {
-                            lineNum++;
-                            line = line.trim();
-                            
-                            // 跳过空行和注释行
-                            if (line.isEmpty() || line.startsWith("#")) {
-                                continue;
-                            }
-                            
-                            try {
-                                Product product = parseProductLine(line, categoryMap, unitMap);
-                                if (product != null) {
-                                    products.add(product);
-                                }
-                            } catch (Exception e) {
-                                logger.warn("解析 {} 第 {} 行失败: {}", entryName, lineNum, e.getMessage());
-                            }
-                        }
-                    }
-                }
-                
-                zipStream.closeEntry();
-            }
-        }
-        
-        return products;
     }
     
     /**

@@ -565,8 +565,18 @@ public final class PaymentService {
         registerConfiguredProvider(PaymentOrder.PaymentChannel.ALIPAY, config.alipayEnabled);
     }
 
+    /** mock 回调密钥的最小长度：短密钥可被暴力猜到，猜中即可把待支付订单标记为已付（TD-039）。 */
+    private static final int MIN_MOCK_SECRET_LENGTH = 16;
+
     private static void registerConfiguredProvider(PaymentOrder.PaymentChannel channel, boolean enabled) {
         if (enabled && "mock".equals(config.mode) && config.mockEnabled) {
+            // 弱密钥的 mock 渠道直接判不可用（fail-closed）：宁可拒收，也不要"谁都能确认支付成功"
+            String weakReason = weakMockSecretReason(config.mockCallbackSecret);
+            if (weakReason != null) {
+                logger.error("mock 支付渠道因回调密钥不合规而禁用: {}", weakReason);
+                providers.put(channel, new UnavailablePaymentChannelProvider(channel, weakReason));
+                return;
+            }
             providers.put(channel, new MockPaymentChannelProvider(channel, config.mockCallbackSecret));
             return;
         }
@@ -577,6 +587,31 @@ public final class PaymentService {
         String reason = !enabled ? "支付渠道未启用"
             : "支付模式未启用生产适配器";
         providers.put(channel, new UnavailablePaymentChannelProvider(channel, reason));
+    }
+
+    /**
+     * mock 密钥合规性检查（TD-039）：返回 null 表示合格，否则返回给用户看的原因。
+     *
+     * <p>仓库示例默认是 {@code disabled} + 占位符，但本地未跟踪的配置里确实出现过 mock + 低熵密钥。
+     * mock 渠道的回调只校验这个共享密钥，短密钥/占位符等于把"确认收款"开放给任何能发 HTTP 的人。</p>
+     */
+    static String weakMockSecretReason(String secret) {
+        if (secret == null || secret.isBlank()) {
+            return "mock 模式必须配置 payment.mock.callback.secret（当前为空）";
+        }
+        String trimmed = secret.trim();
+        if (trimmed.length() < MIN_MOCK_SECRET_LENGTH) {
+            return "mock 回调密钥过短（至少 " + MIN_MOCK_SECRET_LENGTH + " 位），易被猜到后伪造支付成功";
+        }
+        // 只按"占位符/示例值"判：不做 contains("test") 这类宽泛匹配——测试与本地环境用
+        // 形如 test-xxx 的密钥是合理的，而真正危险的是长度不足与照抄示例的占位符
+        String lower = trimmed.toLowerCase(java.util.Locale.ROOT);
+        if (lower.equals("changeme") || lower.equals("placeholder") || lower.equals("secret")
+                || lower.equals("123456") || lower.matches("your[_-].*[_-]?here")
+                || lower.startsWith("your_")) {
+            return "mock 回调密钥是占位符/示例值，等于没有校验";
+        }
+        return null;
     }
 
     private static void registerProductionProvider(PaymentOrder.PaymentChannel channel) {

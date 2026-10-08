@@ -435,6 +435,41 @@ public class TransactionDAORefactored extends BaseDAO {
      * <p>退货校验必须按商品合计，不能按明细行比较：同一商品在交易里出现多行时，
      * 按行比较会把"这一行退了 1 件"误判成"只退了这一行的量"。</p>
      */
+    /**
+     * 区间内**按日聚合**的有效销售（TD-029）：每天一行 `{日期, 金额合计, 笔数}`。
+     *
+     * <p>月报只要"每天多少钱、多少笔"，此前却把整月每一笔交易连同明细 JOIN 出来再在 Java 侧累加
+     * （月报/大数据量门店很容易把堆吃满）。这里直接在 SQL 里 SUM/GROUP BY，返回行数 = 当月天数。
+     * 已整单退款（{@code status='REFUNDED'}）不计营业额，与净额口径一致（TD-003）。</p>
+     *
+     * <p>{@code timestamp} 是 VARCHAR(50)（{@code yyyy-MM-dd HH:mm:ss}），故用 LEFT(...,10) 取日期，
+     * MySQL 与 H2 行为一致。</p>
+     */
+    public List<Map<String, Object>> summarizeDailyBetween(String startDateTime, String endDateTime)
+            throws SQLException {
+        // 别名不能叫 day：H2 里 DAY 是保留字，MySQL 允许但没必要两边不一致
+        String sql = "SELECT LEFT(timestamp, 10) AS day_key, COALESCE(SUM(final_amount), 0) AS amount, "
+            + "COUNT(*) AS cnt FROM transactions WHERE timestamp BETWEEN ? AND ? "
+            + "AND COALESCE(status, 'NORMAL') <> 'REFUNDED' "
+            + "GROUP BY LEFT(timestamp, 10) ORDER BY day_key";
+        List<Map<String, Object>> daily = new ArrayList<>();
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, startDateTime);
+            pstmt.setString(2, endDateTime);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    Map<String, Object> row = new LinkedHashMap<>();
+                    row.put("day", rs.getString("day_key"));
+                    row.put("amount", rs.getBigDecimal("amount"));
+                    row.put("count", rs.getInt("cnt"));
+                    daily.add(row);
+                }
+            }
+        }
+        return daily;
+    }
+
     /** 原交易每**行**的销售数量（行 id → 数量），供 F10-c 的行级可退量校验。 */
     public Map<Integer, Integer> findItemQuantitiesByLineWithConnection(Connection conn, String transactionId)
             throws SQLException {

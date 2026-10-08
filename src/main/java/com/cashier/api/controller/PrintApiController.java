@@ -4,6 +4,7 @@ import com.cashier.printer.*;
 import com.cashier.service.InvoicePrintService;
 import com.cashier.model.Invoice;
 import com.cashier.model.InvoiceItem;
+import com.cashier.model.User;
 import com.cashier.dao.DAOFactory;
 import com.cashier.api.sync.SyncManager;
 import com.cashier.api.sync.SyncEventType;
@@ -487,6 +488,18 @@ public class PrintApiController {
             String content = getString(body, "content", null);
             boolean printLogo = getBoolean(body, "printLogo", false);
             boolean openCashDrawer = getBoolean(body, "openCashDrawer", false);
+
+            // TD-037：开钱箱是受控操作（POST /api/printers/{id}/cashdrawer 一直是管理员专属），
+            // 但请求体带 openCashDrawer=true 的小票打印能绕开那条限制（同一台打印机同一条指令）。
+            // 角色门禁在中间件里按路径判定，看不到请求体，所以这里按当前用户角色兜住，fail-closed。
+            if (openCashDrawer && !isAdmin(ctx)) {
+                logger.warn("拒绝非管理员通过小票打印开启钱箱: deviceId={}, user={}", deviceId, currentUsername(ctx));
+                ctx.status(403).json(Map.of(
+                    "success", false,
+                    "error", "只有管理员可以开启钱箱"
+                ));
+                return;
+            }
             
             if (content == null || content.isEmpty()) {
                 ctx.status(400).json(Map.of(
@@ -794,6 +807,18 @@ public class PrintApiController {
         } catch (Exception e) {
             return false;
         }
+    }
+
+    /** 当前认证用户是否管理员（取不到用户时按非管理员处理：开钱箱必须 fail-closed）。 */
+    private static boolean isAdmin(Context ctx) {
+        User user = ctx.attribute("currentUser");
+        return user != null && user.role != null
+            && "admin".equalsIgnoreCase(user.role.trim());
+    }
+
+    private static String currentUsername(Context ctx) {
+        User user = ctx.attribute("currentUser");
+        return user == null ? "unknown" : user.username;
     }
 
     private static String getString(Map<?, ?> body, String key, String defaultValue) {

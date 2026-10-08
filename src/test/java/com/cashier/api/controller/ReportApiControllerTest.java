@@ -70,6 +70,39 @@ class ReportApiControllerTest extends DatabaseTestBase {
     }
 
     @Test
+    @DisplayName("月报改为 SQL 按日聚合后数字仍准确：多天多笔累加、已退款不计（TD-029）")
+    void monthlySalesAggregationStaysExact() throws Exception {
+        insertTransaction("R-AGG-001", "2026-08-06 09:00:00", "现金");
+        insertTransaction("R-AGG-002", "2026-08-06 15:00:00", "现金");
+        insertTransaction("R-AGG-003", "2026-08-07 10:00:00", "微信");
+
+        // 已整单退款的交易不计营业额（净额口径 TD-003）：聚合 SQL 必须与逐笔口径一致
+        insertTransaction("R-AGG-004", "2026-08-07 11:00:00", "现金");
+        // 注意：TransactionDAO.insert 不写 status 列，必须用原子抢占方法真正置为 REFUNDED
+        assertTrue(DatabaseManager.executeBooleanTransaction(
+            conn -> transactionDAO.claimRefundWithConnection(conn, "R-AGG-004")));
+
+        TestContext ctx = new TestContext().withRequest(HandlerType.GET, "/api/reports/monthly-sales")
+            .withQueryParam("month", "2026-08");
+        ReportApiController.monthlySales(ctx.context);
+
+        assertEquals(HttpStatus.OK, ctx.status);
+        assertAmountEquals("30.00", response(ctx).get("totalAmount"));
+        assertEquals(3, ((Number) response(ctx).get("totalTransactions")).intValue(),
+            "已退款那笔不能计入笔数");
+        assertEquals(2, ((Number) response(ctx).get("dayCount")).intValue(), "只有 8-06 与 8-07 两天");
+
+        @SuppressWarnings("unchecked")
+        Map<String, Integer> dailyCounts = (Map<String, Integer>) response(ctx).get("dailyCounts");
+        assertEquals(2, dailyCounts.get("2026-08-06").intValue(), "8-06 两笔");
+        assertEquals(1, dailyCounts.get("2026-08-07").intValue(), "8-07 只有一笔有效");
+        @SuppressWarnings("unchecked")
+        Map<String, BigDecimal> dailyAmounts = (Map<String, BigDecimal>) response(ctx).get("dailyAmounts");
+        assertAmountEquals("20.00", dailyAmounts.get("2026-08-06"));
+        assertAmountEquals("10.00", dailyAmounts.get("2026-08-07"));
+    }
+
+    @Test
     @DisplayName("商品销售排行返回成功")
     void topProductsReturnsSuccess() throws Exception {
         insertTransaction("R-TOP-001", "2026-08-06 12:00:00", "现金");

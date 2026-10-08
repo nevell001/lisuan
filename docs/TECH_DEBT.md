@@ -31,9 +31,9 @@
 | TD-024 | 退款还原库存丢弃 UPDATE 结果；相对增减库存不递增 version 被并发覆盖 | 正确性/并发 | **已修复（2026-09）**：消费返回值并留 WARN；`updateQuantityWithConnection` 补 `version = version + 1`（退款/入库/盘点三处受益）；门禁 + 行为测试 | 库存与退款 |
 | TD-025 | 手工开票表头与明细不在同一事务（会留"有金额无明细"的孤儿发票） | 正确性 | **已修复（2026-09）**：改走 `insertWithConnection` + 事务；门禁 + 变异 | 发票 |
 | TD-026 | 建库/建表/迁移失败被 catch 吞掉（启动看似成功，随后页面全报 SQL 错） | 运维/可诊断性 | **已修复（2026-09）**：`initializeDatabase` 抛 `SQLException`，由静态块转成"初始化失败 + 排查指引"；门禁 + 变异 | 启动排障 |
-| TD-027 | `ProductDataImporter` 的 ZIP 分支必抛 `Stream closed`（已实测复现），`importFromGitHub` 零调用方 | 死代码/潜在缺陷 | **待产品决定（2026-09）**：功能是否保留——删死代码，或修 ZIP 解析（关闭 BufferedReader 会连带关掉 ZipInputStream） | 是否还要"从 GitHub 拉商品数据" |
+| TD-027 | `ProductDataImporter` 的 ZIP 分支必抛 `Stream closed`（已实测复现），`importFromGitHub` 零调用方 | 死代码/潜在缺陷 | **已关闭（2026-10，产品决定：删）**：删除 `importFromGitHub`/`downloadAndParseData`/`parseZipData`/`DATA_FILES`/GitHub URL 与随之无用的 import（782→595 行）；只保留在用的 `importFromCSV` | — |
 | TD-028 | Apache POI 5.2.5 受 CVE-2025-31672 影响（poi-ooxml < 5.4.0） | 依赖安全 | **已评估（2026-09）**：本仓库只用 POI **写** xlsx，全仓库没有解析外部 Office 文件的路径 → 该 CVE 不可达；升级到 ≥5.4.0 属加固，非必须 | 依赖升级窗口 |
-| TD-029 | 月报/任意区间报表用 `findByDateRange(start,end)` 全量 JOIN 物化到内存 | 性能 | **待处理（2026-09 审计发现）**：列表接口已有 `limit` 重载，报表侧未用 | 大数据量门店 |
+| TD-029 | 月报/任意区间报表用 `findByDateRange(start,end)` 全量 JOIN 物化到内存 | 性能 | **已修（2026-10，月报部分）**：月报改 `summarizeDailyBetween` SQL 聚合（返回行数 = 当月天数）；**日报与桌面统计/交班仍需逐笔明细**（日报响应带 `transactions`、统计页与交班要展示/结算明细，窗口天然有界），登记为剩余 | 大数据量门店 |
 | TD-030 | 首次登录改密对话框取消后，登录界面永久禁用（只能杀进程） | UI 缺陷 | **已修复（2026-09）**：改密对话框返回后，凡未真正切到主界面（取消/关窗/改密失败/无 application）一律 `setLoginState(false)`；1 项门禁 + 变异验证 | 强制改密 |
 | TD-031 | 网关下单在 FX 线程且 HttpClient 无任何超时 → 收银台可无限卡死 | 体验/健壮性 | **已修复（2026-09）**：两个渠道都加 `connectTimeout(5s)` + 请求 `timeout(15s)`；两个收银台的下单改走 `UIOptimizer.runInBackground`（异步窗口内置 `paymentInProgress` 防重复提交）；2 项门禁 + 变异验证 | 电子支付 |
 | TD-032 | FX 线程同步查库若干处（选品框逐字符搜索、每次购物车变更查促销、登录时同步启动两个服务） | 性能 | **待处理** | 界面流畅度 |
@@ -41,9 +41,9 @@
 | TD-034 | 金额/数量口径一批（7 项：发票税额百分比 `setScale(0)` 抛异常、挂单折扣走 double、退款单价取整使 Σ明细≠实付、积分冲减按次取整、充值小数积分被编辑保存截断、`promotions.discount` 列精度与输入不匹配、发票行税与表头差 1 分） | 正确性 | **已修复（2026-09）**：7 项全部处理（退款改为"总额权威、明细只许少算"，积分/充值改 FLOOR）；4 项门禁 + 5 项行为测试，11 处变异全红 | 对账 |
 | TD-035 | 其它（打包向导 FX 线程违规、`NotificationManager` 定时任务无 try/catch、`hasActiveShift` 吞异常让收银员看到"请先开班"、非 daemon 线程、`CurrencyUtil` HALF_EVEN…） | 杂项 | **待处理** | — |
 | TD-036 | 结尾斜杠绕过**全部**角色门禁（收银员可退款/改会员折扣/改支付配置） | 安全 | **已修复（2026-09）**：`isAllowed` 先归一化末尾斜杠；回归测试覆盖 13 条受控路由 × {正常,`/`,`//`} + 变异验证 | 越权 |
-| TD-037 | 收银员可用 `POST /api/printers/{id}/receipt` 的 `openCashDrawer` 打开钱箱（而 `/cashdrawer` 是管理员专属） | 安全/权限策略 | **待产品决定（2026-09）**：堵住这条等价路径，还是按"收银员本就要开钱箱找零"放开 `/cashdrawer`——两条路的业务含义不同，不擅自改 | 钱箱权限 |
-| TD-038 | `POST /api/invoices/from-transaction` 请求体可自报开票方信息/`createBy`/`taxRate` | 安全 | **待处理（2026-09）**：同一条路由的 `PUT /api/invoices/seller-info` 是管理员专属，此处却可覆盖全局开票方并伪造开票人 | 发票 |
-| TD-039 | `POST /api/invoices/{id}/print` 可写任意 `pdfPath`/`imagePath`；mock 支付模式回调密钥熵低 | 安全 | **待处理（2026-09，低危）**：路径字段目前不被当文件读取（TD-001 门禁守着），影响限于数据伪造；mock 模式仅出现在本地未跟踪配置 | 发票/支付 |
+| TD-037 | 收银员可用 `POST /api/printers/{id}/receipt` 的 `openCashDrawer` 打开钱箱（而 `/cashdrawer` 是管理员专属） | 安全 | **已修（2026-10，产品决定：两条路都限管理员）**：`printReceipt` 在解析后、打印前按当前用户角色拦下 `openCashDrawer:true`（403，取不到用户按非管理员 fail-closed）；3 项行为测试 | 钱箱权限 |
+| TD-038 | `POST /api/invoices/from-transaction` 请求体可自报开票方信息/`createBy`/`taxRate` | 安全 | **已修（2026-10）**：服务层 `trustedRequest` 只保留买家信息（顾客提供），开票方/税率取管理员配置、开票人取认证用户；请求体带这些字段时记 WARN；行为测试 1 项（伪造销方/0.99 税率/冒充开票人全部被忽略） | 发票 |
+| TD-039 | `POST /api/invoices/{id}/print` 可写任意 `pdfPath`/`imagePath`；mock 支付模式回调密钥熵低 | 安全 | **已修（2026-10）**：打印记录不再采纳客户端路径（只更新状态/时间/次数，带路径时记 WARN）；mock 渠道回调密钥 <16 位或为占位符时**直接判渠道不可用**（fail-closed）+ 2 组行为测试 | 发票/支付 |
 | TD-040 | 设置页下拉/落库值把**本地化显示串**当数据（切语言后设置失配、被静默重置成默认值） | 正确性/口径 | **已修复（2026-10）**：7 个下拉改稳定代码 + `I18nUiUtils` 显示层映射；`settings` 表落代码、`paperSize`/备份频率老值归一；`BackupService.intervalHoursForFrequency` 补代码分支；**桌面冒烟另抓出"备份频率从不回读"并修掉**；门禁 2 项 + 冒烟 2 项 + 行为测试 2 组 | 多语言设置 |
 | TD-041 | REST API 的语言策略未定：**枚举显示名/错误与打印文案写死中文**却直接进响应（`deviceType`/`status`/`taskType`） | 口径/契约定稿 | **待决定（2026-10）**：仓库内无 API 消费方，需先确认外部终端；`ApiLocaleResolver` + `I18nManager.get(Locale,key)` 基建已具备。三条路（只返代码 / 按请求语言本地化 / 双字段）见专节 | API 多语言 |
 

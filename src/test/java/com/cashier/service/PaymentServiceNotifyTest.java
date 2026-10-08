@@ -28,7 +28,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 @DisplayName("支付回调业务处理测试")
 class PaymentServiceNotifyTest extends DatabaseTestBase {
 
-    private static final String CALLBACK_SECRET = "test-callback-secret";
+    private static final String CALLBACK_SECRET = "test-callback-secret-0123456789";
 
     private final PaymentDAORefactored paymentDAO = DAOFactory.getInstance().getPaymentDAO();
 

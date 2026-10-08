@@ -125,25 +125,24 @@ public class ReportApiController {
                 .format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME);
             String monthEndDateTime = monthEnd.plusDays(1).atStartOfDay().minusSeconds(1)
                 .format(com.cashier.util.DateTimeFormats.STANDARD_DATE_TIME);
-            List<Transaction> monthTransactions = DAOFactory.getInstance().getTransactionDAO().findByDateRange(monthStartDateTime, monthEndDateTime);
-            
+            // TD-029：月报只要"每天多少钱/多少笔"，直接在 SQL 里聚合（此前把整月交易连同明细
+            // JOIN 出来在 Java 侧累加，大数据量门店会把堆吃满）。返回行数 = 当月天数。
             BigDecimal totalAmount = BigDecimal.ZERO;
             Map<String, BigDecimal> dailyAmounts = new TreeMap<>();
             Map<String, Integer> dailyCounts = new TreeMap<>();
             int effectiveTransactions = 0;
-            
-            for (Transaction t : monthTransactions) {
-                if (isRefunded(t)) {
-                    continue; // 已整单退款不计营业额（净额口径，TD-003）
+            for (Map<String, Object> row : DAOFactory.getInstance().getTransactionDAO()
+                    .summarizeDailyBetween(monthStartDateTime, monthEndDateTime)) {
+                String day = (String) row.get("day");
+                BigDecimal amount = (BigDecimal) row.get("amount");
+                int count = (Integer) row.get("count");
+                if (day == null || amount == null) {
+                    continue;
                 }
-                if (t.finalAmount != null && t.timestamp != null && t.timestamp.length() >= 10) {
-                    effectiveTransactions++;
-                    totalAmount = totalAmount.add(t.finalAmount);
-                    
-                    String day = t.timestamp.substring(0, 10);
-                    dailyAmounts.merge(day, t.finalAmount, BigDecimal::add);
-                    dailyCounts.merge(day, 1, Integer::sum);
-                }
+                effectiveTransactions += count;
+                totalAmount = totalAmount.add(amount);
+                dailyAmounts.merge(day, amount, BigDecimal::add);
+                dailyCounts.merge(day, count, Integer::sum);
             }
 
             // 按退货完成日冲减日趋势，保证 ΣdailyAmounts == netAmount 可对账

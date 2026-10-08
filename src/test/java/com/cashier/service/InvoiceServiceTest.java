@@ -141,7 +141,7 @@ class InvoiceServiceTest extends DatabaseTestBase {
         request.buyerName = "测试公司";
         request.createBy = "admin";
 
-        Invoice invoice = InvoiceService.createInvoiceFromTransaction(transactionId, request);
+        Invoice invoice = InvoiceService.createInvoiceFromTransaction(transactionId, request, "admin");
 
         // 2 × 113.00 打 9.5 折 = 214.70；按 13% 拆分 → 不含税 190.00 + 税 24.70
         assertEquals(0, new BigDecimal("190.00").compareTo(invoice.totalAmount),
@@ -149,6 +149,31 @@ class InvoiceServiceTest extends DatabaseTestBase {
         assertEquals(0, new BigDecimal("24.70").compareTo(invoice.taxAmount));
         assertEquals(0, new BigDecimal("214.70").compareTo(invoice.finalAmount),
             "价税合计必须等于顾客实付 214.70，而不是原价 226.00");
+    }
+
+    @Test
+    @DisplayName("从交易开票不接受客户端自报开票方/税率/开票人（TD-038）")
+    void invoiceFromTransactionIgnoresClientSuppliedSellerAndTaxRate() throws Exception {
+        DataService.saveSettings(java.util.Map.of("taxRate", "0.06"));
+        InvoiceService.setDefaultSellerInfo("真销方有限公司", "91310000REAL", "真地址", "真电话", "真银行");
+        String transactionId = insertDiscountedTransaction("T-INV-TD038");
+
+        InvoiceService.InvoiceRequest request = new InvoiceService.InvoiceRequest();
+        request.buyerName = "买家";
+        // 冒用管理员配置：伪造销方主体、用任意税率决定税额、把开票人写成别人
+        request.sellerName = "假销方有限公司";
+        request.sellerTaxId = "91310000FAKE";
+        request.taxRate = new BigDecimal("0.99");
+        request.createBy = "admin";
+
+        Invoice invoice = InvoiceService.createInvoiceFromTransaction(transactionId, request, "cashier01");
+
+        assertEquals("真销方有限公司", invoice.sellerName, "开票方必须取管理员配置，不能被请求体覆盖");
+        assertEquals("91310000REAL", invoice.sellerTaxId);
+        assertEquals(0, new BigDecimal("0.06").compareTo(invoice.taxRate),
+            "税率必须取系统设置，不能被请求体的 0.99 覆盖（那会直接改掉税额与价税合计）");
+        assertEquals("cashier01", invoice.createBy, "开票人必须是认证用户，不能自报");
+        assertEquals("买家", invoice.buyerName, "买家信息是顾客提供的，仍按请求体写入");
     }
 
     @Test
@@ -161,7 +186,7 @@ class InvoiceServiceTest extends DatabaseTestBase {
         request.buyerName = "测试公司";
         request.createBy = "admin";
 
-        Invoice invoice = InvoiceService.createInvoiceFromTransaction(transactionId, request);
+        Invoice invoice = InvoiceService.createInvoiceFromTransaction(transactionId, request, "admin");
 
         assertEquals(0, new BigDecimal("0.06").compareTo(invoice.taxRate),
             "未指定税率时必须取系统设置里的 taxRate，而不是写死的 0.13");

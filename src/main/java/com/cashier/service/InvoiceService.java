@@ -53,20 +53,32 @@ public class InvoiceService {
     }
     
     /**
-     * 从交易创建发票
+     * 从交易创建发票（TD-038）。
+     *
+     * <p>这条路径只允许认证用户（含收银员）调用，因此**开票方信息、税率、开票人一律不接受客户端自报**：
+     * 开票方与税率取管理员配置（{@code PUT /api/invoices/seller-info} / 系统设置），开票人取认证用户。
+     * 此前请求体可覆盖全局开票方（伪造销方主体）、用任意 {@code taxRate} 决定税额与价税合计、
+     * 并把 {@code createBy} 伪造成别人。</p>
+     *
+     * <p>需要自定义这些字段的场景走 {@code POST /api/invoices/manual}（finance/admin 专属）。</p>
+     *
+     * @param operatorName 认证用户名（开票人）；缺省时回退交易的操作员
      */
-    public static Invoice createInvoiceFromTransaction(String transactionId, InvoiceRequest request) throws SQLException {
+    public static Invoice createInvoiceFromTransaction(String transactionId, InvoiceRequest request,
+                                                       String operatorName) throws SQLException {
         // 获取交易信息
         Transaction transaction = DAOFactory.getInstance().getTransactionDAO().findById(transactionId);
         if (transaction == null) {
             throw new SQLException("交易不存在: " + transactionId);
         }
 
-        Invoice invoice = createBaseInvoice(request);
+        InvoiceRequest trusted = trustedRequest(request);
+        Invoice invoice = createBaseInvoice(trusted);
         invoice.transactionId = transactionId;
         invoice.items = createInvoiceItems(transaction, invoice.taxRate);
         invoice.calculateAmounts();
-        invoice.createBy = request.createBy != null ? request.createBy : transaction.operatorUsername;
+        invoice.createBy = operatorName != null && !operatorName.isBlank()
+            ? operatorName : transaction.operatorUsername;
 
         // 检查+插入在同一事务内，消除 TOCTOU 竞态
         DatabaseManager.executeBooleanTransaction(conn -> {
@@ -109,6 +121,29 @@ public class InvoiceService {
         logger.info("手工发票创建成功: {} - 金额: {}", invoice.invoiceId, invoice.finalAmount);
         
         return invoice;
+    }
+
+    /**
+     * 抹掉「只能来自服务端」的字段（TD-038）：开票方、税率、开票人。
+     *
+     * <p>买家信息（名称/税号/地址…）是顾客提供的，仍按请求体写入。</p>
+     */
+    private static InvoiceRequest trustedRequest(InvoiceRequest request) {
+        InvoiceRequest trusted = new InvoiceRequest();
+        if (request == null) {
+            return trusted;
+        }
+        trusted.transactionId = request.transactionId;
+        trusted.invoiceCode = request.invoiceCode;
+        trusted.buyerName = request.buyerName;
+        trusted.buyerTaxId = request.buyerTaxId;
+        trusted.buyerAddress = request.buyerAddress;
+        trusted.buyerPhone = request.buyerPhone;
+        trusted.buyerBank = request.buyerBank;
+        trusted.remark = request.remark;
+        // seller* / taxRate / createBy / items / payee / checker 一律不采纳：
+        // 由 createBaseInvoice 从配置取值（payee/checker 为空），金额由交易重算
+        return trusted;
     }
 
     private static Invoice createBaseInvoice(InvoiceRequest request) {

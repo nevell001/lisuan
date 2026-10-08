@@ -84,7 +84,7 @@ class PaymentApiControllerTest extends DatabaseTestBase {
         PaymentService.PaymentConfig config = new PaymentService.PaymentConfig();
         config.mode = "mock";
         config.mockEnabled = true;
-        config.mockCallbackSecret = "test-secret";
+        config.mockCallbackSecret = "test-secret-0123456789";
         config.wechatEnabled = true;
         PaymentService.setConfig(config);
         insertTransaction("T-2", "88.00");
@@ -113,7 +113,7 @@ class PaymentApiControllerTest extends DatabaseTestBase {
         PaymentService.PaymentConfig config = new PaymentService.PaymentConfig();
         config.mode = "mock";
         config.mockEnabled = true;
-        config.mockCallbackSecret = "test-secret";
+        config.mockCallbackSecret = "test-secret-0123456789";
         config.wechatEnabled = true;
         PaymentService.setConfig(config);
         insertTransaction("T-3", "1000.00");

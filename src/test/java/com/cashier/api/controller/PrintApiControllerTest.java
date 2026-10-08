@@ -10,6 +10,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
  * 网络小票打印接口的入参加固测试。
@@ -27,6 +28,51 @@ class PrintApiControllerTest {
             .withRequest(HandlerType.POST, "/api/printers/P1/receipt")
             .withPathParam("id", "P1")
             .withBody(body);
+    }
+
+    private static TestContext cashDrawerRequest(String role) {
+        Map<String, Object> body = new HashMap<>();
+        body.put("content", "小票内容");
+        body.put("openCashDrawer", true);
+        TestContext ctx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/printers/P1/receipt")
+            .withPathParam("id", "P1")
+            .withBody(body);
+        if (role != null) {
+            com.cashier.model.User user = new com.cashier.model.User();
+            user.username = role + "01";
+            user.role = role;
+            ctx.withAttribute("currentUser", user);
+        }
+        return ctx;
+    }
+
+    @Test
+    @DisplayName("收银员不能借小票打印开启钱箱（TD-037）：403 且不落到打印环节")
+    void cashierCannotOpenCashDrawerThroughReceipt() {
+        TestContext ctx = cashDrawerRequest("cashier");
+        PrintApiController.printReceipt(ctx.context);
+
+        assertEquals(HttpStatus.FORBIDDEN, ctx.status, "开钱箱是受控操作，必须与 /cashdrawer 同口径");
+        assertEquals("只有管理员可以开启钱箱", errorOf(ctx));
+    }
+
+    @Test
+    @DisplayName("取不到认证用户时同样拒绝开钱箱（fail-closed）")
+    void missingUserCannotOpenCashDrawer() {
+        TestContext ctx = cashDrawerRequest(null);
+        PrintApiController.printReceipt(ctx.context);
+
+        assertEquals(HttpStatus.FORBIDDEN, ctx.status);
+    }
+
+    @Test
+    @DisplayName("管理员可以开钱箱：不再被 403 拦下（后续按打印机状态处理）")
+    void adminMayOpenCashDrawer() {
+        TestContext ctx = cashDrawerRequest("admin");
+        PrintApiController.printReceipt(ctx.context);
+
+        assertTrue(ctx.status != HttpStatus.FORBIDDEN, "管理员不应被开钱箱的角色检查拦下");
     }
 
     @SuppressWarnings("unchecked")

@@ -40,12 +40,36 @@ class PaymentChannelProviderTest {
         PaymentService.PaymentConfig config = new PaymentService.PaymentConfig();
         config.mode = "mock";
         config.mockEnabled = true;
-        config.mockCallbackSecret = "test-secret";
+        config.mockCallbackSecret = "test-secret-0123456789";
         config.wechatEnabled = true;
         PaymentService.setConfig(config);
 
         assertTrue(PaymentService.isChannelAvailable(PaymentOrder.PaymentChannel.WECHAT));
         assertFalse(PaymentService.isChannelAvailable(PaymentOrder.PaymentChannel.ALIPAY));
+    }
+
+    @Test
+    @DisplayName("mock 渠道的弱回调密钥直接判不可用（TD-039，fail-closed）")
+    void weakMockSecretDisablesMockChannel() {
+        for (String weak : new String[]{null, "", "   ", "short", "changeme", "your_secret_here"}) {
+            PaymentService.PaymentConfig config = new PaymentService.PaymentConfig();
+            config.mode = "mock";
+            config.mockEnabled = true;
+            config.mockCallbackSecret = weak;
+            config.wechatEnabled = true;
+            PaymentService.setConfig(config);
+
+            assertFalse(PaymentService.isChannelAvailable(PaymentOrder.PaymentChannel.WECHAT),
+                "弱密钥(" + weak + ")不得启用 mock 渠道：猜中密钥就能把待支付订单标记为已付");
+        }
+        // 合规密钥仍然可用（长度足够 + 非占位符）
+        PaymentService.PaymentConfig ok = new PaymentService.PaymentConfig();
+        ok.mode = "mock";
+        ok.mockEnabled = true;
+        ok.mockCallbackSecret = "m0ck-5ecret-9f2b7c41a8de";
+        ok.wechatEnabled = true;
+        PaymentService.setConfig(ok);
+        assertTrue(PaymentService.isChannelAvailable(PaymentOrder.PaymentChannel.WECHAT));
     }
 
     @Test
@@ -86,12 +110,12 @@ class PaymentChannelProviderTest {
     @DisplayName("模拟回调也必须校验测试密钥")
     void mockNotificationRequiresSecret() {
         MockPaymentChannelProvider provider = new MockPaymentChannelProvider(
-            PaymentOrder.PaymentChannel.WECHAT, "test-secret");
+            PaymentOrder.PaymentChannel.WECHAT, "test-secret-0123456789");
 
         assertFalse(provider.verifyNotification(Map.of("mock_signature", "wrong")));
         assertFalse(provider.verifyNotification(Map.of()));
         assertFalse(provider.verifyNotification(Map.of("mock_signature", "test-secret-longer")));
-        assertTrue(provider.verifyNotification(Map.of("mock_signature", "test-secret")));
+        assertTrue(provider.verifyNotification(Map.of("mock_signature", "test-secret-0123456789")));
     }
 
     @Test
