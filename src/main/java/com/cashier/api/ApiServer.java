@@ -279,6 +279,7 @@ public class ApiServer {
         app.post("/api/payment/{paymentId}/refund", PaymentApiController::applyRefund);
         app.get("/api/payment/waiting", PaymentApiController::getWaitingOrders);
         app.post("/api/payment/close-expired", PaymentApiController::closeExpired);
+        app.get("/api/payment/refunds", PaymentApiController::listRefunds);
         app.get("/api/payment/stats/daily", PaymentApiController::getDailyStats);
         app.get("/api/payment/config", PaymentApiController::getConfig);
         app.put("/api/payment/config", PaymentApiController::setConfig);

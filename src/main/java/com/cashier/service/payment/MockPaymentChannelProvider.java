@@ -57,4 +57,10 @@ public final class MockPaymentChannelProvider implements PaymentChannelProvider 
         refund.channelRefundNo = "MOCK_RFD_" + System.currentTimeMillis();
         refund.refundTime = new Date();
     }
+
+    /** 模拟渠道同样只产生终态退款（F9 对账回查直接返回 SUCCESS）。 */
+    @Override
+    public RefundRecord.RefundStatus queryRefund(PaymentOrder order, RefundRecord refund) {
+        return RefundRecord.RefundStatus.SUCCESS;
+    }
 }

@@ -136,6 +136,15 @@ public final class AlipayPrecreatePaymentProvider implements PaymentChannelProvi
         }
     }
 
+    /**
+     * 支付宝退款是同步接口：{@code alipay.trade.refund} 返回即终态，{@link #refund} 只写
+     * SUCCESS/抛异常，本地不会留下非终态行。因此对账回查直接返回 SUCCESS（F9）。
+     */
+    @Override
+    public RefundRecord.RefundStatus queryRefund(PaymentOrder order, RefundRecord refund) {
+        return RefundRecord.RefundStatus.SUCCESS;
+    }
+
     private JsonNode call(Map<String, String> params, String responseNode) throws Exception {
         sign(params);
         HttpRequest request = HttpRequest.newBuilder(URI.create(gateway()))

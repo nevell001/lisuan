@@ -21,6 +21,7 @@ public final class UnavailablePaymentChannelProvider implements PaymentChannelPr
     @Override public PaymentOrder.PaymentStatus queryStatus(PaymentOrder order) { throw unavailable(); }
     @Override public boolean verifyNotification(Map<String, String> notification) { return false; }
     @Override public void refund(PaymentOrder order, RefundRecord refund) { throw unavailable(); }
+    @Override public RefundRecord.RefundStatus queryRefund(PaymentOrder order, RefundRecord refund) { throw unavailable(); }
 
     private IllegalStateException unavailable() {
         return new IllegalStateException(reason);

@@ -933,7 +933,22 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   漏了它，桌面退货查不到这笔占用，同一交易就能再退一次。超量提示由服务层
   `ReturnQuantityExceededException` 用 i18n 组装（含商品名/原单量/已退量/本次量），
   建单界面**不再自己实现一份校验**（那是规则的第二个实现，也是 check-then-act 的源头）。
-  设计与剩余项（F10-c/F9）见 `docs/DESIGN_F9_F10.md`
+  设计与剩余项（F10-c）见 `docs/DESIGN_F9_F10.md`；F9（退款终态）见下一条
+- **异步退款必须能收敛到终态**（F9，2026-10）：微信退款是异步的（非 SUCCESS 只能先记
+  `PROCESSING`），且退款请求**没带 `notify_url`**（微信不推送退款结果）——没有回查时这笔记录永远
+  停在处理中：预占额度永久占用（同一笔支付再也退不了），订单还会被错标"部分退款"。
+  现在：`PaymentChannelProvider.queryRefund`（微信 `GET /v3/refund/domestic/refunds/{out_refund_no}`，
+  状态映射集中 `WechatNativePaymentProvider.mapRefundStatus`）+ `PaymentRefundReconcileService`
+  定期对账（登录后启动、`isRunning` 守卫、daemon 线程、`catch (Throwable)`——调度任务抛一次异常会被
+  **永久取消**）。三条不变量：① 状态迁移必须**带 from 条件**
+  （`updateRefundStatusIfNotFinalWithConnection` 的 `WHERE refund_id = ? AND status = ?`，裸 UPDATE 会被
+  并发调整退回退 → 重复结算）；② **成功退款合计为 0 时不得把订单改成 `PARTIAL_REFUND`**
+  （渠道只是受理≠部分退款）；③ 微信 `ABNORMAL`（资金去向需人工确认）**刻意留在处理中**，标 FAILED 会
+  立刻释放额度允许再退。放弃边界：超过 `refund.max.track.hours`（默认 24h）不再自动重试，只告警转人工
+  核对；运维入口 `GET /api/payment/refunds?status=PROCESSING`（finance/admin）。
+  门禁 `RefundTerminalStatePolicyTest`（4 项源码）+ 行为 `PaymentRefundReconcileTest`（7 项，用假渠道注入）；
+  变异验证：删零成功退款短路 → 订单变 `PARTIAL_REFUND`（2 项红），去掉 `AND status = ?` → 门禁红。
+  **未做**：F9-c 退款回调（`notify_url`，需生产回调地址；有 60s 对账只是慢一点，不影响正确性）
 - **多表/多行写入必须走 `*WithConnection` + `executeBooleanTransaction`**（TD-023~025）：本仓库 DAO 有
   两套写法，`xxx(...)` 自带 autocommit 连接并立即提交，`xxxWithConnection(conn, ...)` 参与调用方事务。
   审计实测的三处事故：盘点单保存（先删全部旧明细再逐条插，中途失败留下"已提交的 DELETE + 半截明细"，

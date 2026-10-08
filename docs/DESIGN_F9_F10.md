@@ -9,7 +9,7 @@
 | 项 | 性质 | 后果 | 建议 |
 |---|---|---|---|
 | **F10** | 正确性 / 资损 | 同一交易可被退两次：**库存恢复两次 + 退款两次**（不可逆） | **F10-a / F10-b 已实施（2026-10）**：台账表 + 建单事务内锁与校验 + 幂等回填 + 三条写路径状态同步 + 服务层错误文案；F10-c（行级明细）与 F9 待做 |
-| **F9** | 正确性 / 资金占用 | 微信退款停在 `PROCESSING`：**该额度永久不能再退**，订单还被错标"部分退款" | 次做：`queryRefund` + 对账调度 + 状态机收敛；约 2~2.5 人日 |
+| **F9** | 正确性 / 资金占用 | 微信退款停在 `PROCESSING`：**该额度永久不能再退**，订单还被错标"部分退款" | **F9-a / F9-b 已实施（2026-10）**：`queryRefund` + 对账调度 + 状态机收敛 + 零成功退款不标部分退款；F9-c（退款回调）未做 |
 
 两者互不依赖，可并行。都不需要前端改版（F10 需要把一条既有错误文案的触发点挪进服务层）。
 
@@ -28,7 +28,9 @@
   新增 `TransactionApiControllerTest.apiRefundOccupiesLedgerSoDesktopReturnIsRejected`（跨路径）；
   **两处变异（API 不写台账、审批不同步）分别让对应测试变红**，已还原。
 - ⏳ **F10-c（可选）**：`return_order_items` 升级为行级（加 `transaction_item_id`），更精确但要迁移。
-- ⏳ **F9**：未开工。
+- ✅ **F9-a / F9-b**：`queryRefund` 回查 + `PaymentRefundReconcileService` 对账 + `settleRefund` 零成功退款
+  短路修正（详见下面 §2 的"实施结果"）。**F9-c（退款回调）未做**：需要生产回调地址与 `REFUND.SUCCESS`
+  事件处理，有了 60 秒对账只是把收敛从"分钟级"降到"秒级"，不影响正确性。
 
 ---
 
@@ -240,9 +242,30 @@
 
 1. **F10-a**：台账表 + 建单事务内校验（含 backfill、并发测试）——解决资损。
 2. **F10-b**：审批/完成/API 路径接台账 + 错误文案统一。
-3. **F9-a**：`queryRefund` + 状态机收敛（`settled==0` 修正）+ 幂等更新。
-4. **F9-b**：对账调度服务 + 配置 + 运维查询接口。
-5. 可选：**F9-c** 退款回调、**F10-c** 行级明细（`transaction_item_id`）。
+3. ✅ **F9-a**：`queryRefund` + 状态机收敛（`settled==0` 修正）+ 幂等更新（**已实施**）。
+4. ✅ **F9-b**：对账调度服务 + 配置 + 运维查询接口（**已实施**）。
+5. 可选：**F9-c** 退款回调、**F10-c** 行级明细（`transaction_item_id`）（未做）。
+
+### 2.5 实施结果（2026-10）
+
+落在这些位置：
+
+| 件 | 位置 |
+|---|---|
+| 渠道回查 | `PaymentChannelProvider.queryRefund`；微信 `GET /v3/refund/domestic/refunds/{out_refund_no}`，状态映射集中在 `mapRefundStatus` |
+| 状态收敛 | `PaymentService.reconcileRefund(refund, provider)`（包级可见，测试可注入假渠道）+ `reconcileRefunds(limit)` |
+| 条件迁移 | `PaymentDAORefactored.updateRefundStatusIfNotFinalWithConnection`（`WHERE refund_id = ? AND status = ?`）+ `findUnsettledRefunds(createdAfter, limit)` + `countStaleUnsettledRefunds` + `listRefunds(status, limit)` |
+| 调度 | `PaymentRefundReconcileService`（登录后 start / 登出 stop，`isRunning` 守卫、daemon、`catch (Throwable)`） |
+| 错标修正 | `PaymentService.settleRefund`：成功退款合计为 0 时直接返回，不改订单状态 |
+| 接口 | `GET /api/payment/refunds?status=PROCESSING`（finance/admin）；退款响应文案按状态给 |
+| 配置 | `refund.reconcile.enabled=true` / `refund.reconcile.seconds=60` / `refund.max.track.hours=24` |
+
+两个刻意的判断（都可再议）：
+
+1. **`ABNORMAL` 留在 `PROCESSING`**，不当 FAILED：FAILED 会释放预占额度、允许对同一笔支付再退，
+   而 ABNORMAL 意味着这笔钱去向不明（可能已出账）。留在处理中即进入"需人工核对"。
+2. **超期（默认 &gt;24h）不再自动重试**，只统计告警：避免对去向不明的资金无限轮询；
+   运维靠 `GET /api/payment/refunds` + `countStaleUnsettledRefunds` 的 WARN 找出来。
 
 ## 4. 需要产品 / 运维确认的问题
 

@@ -291,7 +291,8 @@ public class PaymentApiController {
                     "status", refund.status.getDisplayName(),
                     "refundTime", refund.refundTime
                 ),
-                "message", "退款成功"
+                // 渠道异步受理时不能报"退款成功"（F9）：微信非 SUCCESS 只落 PROCESSING
+                "message", refund.status.isSuccess() ? "退款成功" : "退款已受理，处理中"
             ));
             
         } catch (IllegalArgumentException | IllegalStateException e) {
@@ -312,6 +313,45 @@ public class PaymentApiController {
      * 查询待支付订单
      * GET /api/payment/waiting
      */
+    /**
+     * 查询退款单（财务/管理员）：默认只看未落终态的，供对账/人工核对。
+     * GET /api/payment/refunds?status=PROCESSING&limit=50
+     */
+    public static void listRefunds(Context ctx) {
+        try {
+            String statusParam = ctx.queryParam("status");
+            int requestedLimit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(DEFAULT_WAITING_PAYMENT_LIMIT);
+            int limit = Math.max(1, Math.min(requestedLimit, MAX_WAITING_PAYMENT_LIMIT));
+
+            List<Map<String, Object>> refunds = DAOFactory.getInstance().getPaymentDAO()
+                .listRefunds(statusParam, limit).stream()
+                .map(refund -> {
+                    Map<String, Object> row = new java.util.LinkedHashMap<>();
+                    row.put("refundId", refund.refundId);
+                    row.put(PAYMENT_ID_FIELD, refund.paymentId);
+                    row.put("transactionId", refund.transactionId);
+                    row.put("merchantRefundNo", refund.merchantRefundNo);
+                    row.put("channelRefundNo", refund.channelRefundNo);
+                    row.put("refundAmount", refund.refundAmount);
+                    row.put("status", refund.status != null ? refund.status.name() : "");
+                    row.put("channel", refund.channel);
+                    row.put("createTime", refund.createTime != null ? refund.createTime.toString() : "");
+                    row.put("refundTime", refund.refundTime != null ? refund.refundTime.toString() : "");
+                    return row;
+                })
+                .collect(Collectors.toList());
+
+            ctx.json(Map.of(
+                "success", true,
+                "data", refunds,
+                "total", refunds.size()
+            ));
+        } catch (SQLException e) {
+            logger.error("查询退款单失败", e);
+            ctx.status(500).json(Map.of("success", false, "error", "查询失败"));
+        }
+    }
+
     public static void getWaitingOrders(Context ctx) {
         try {
             int requestedLimit = ctx.queryParamAsClass("limit", Integer.class).getOrDefault(DEFAULT_WAITING_PAYMENT_LIMIT);

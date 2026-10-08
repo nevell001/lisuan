@@ -191,6 +191,47 @@ public final class WechatNativePaymentProvider implements PaymentChannelProvider
         }
     }
 
+    /**
+     * 回查退款：{@code GET /v3/refund/domestic/refunds/{out_refund_no}}。
+     *
+     * <p>退款请求没有带 {@code notify_url}（微信不会推送退款结果），所以这是把 PROCESSING 收敛到
+     * 终态的唯一途径，由 {@code PaymentRefundReconcileService} 定期调用（F9）。</p>
+     */
+    @Override
+    public RefundRecord.RefundStatus queryRefund(PaymentOrder order, RefundRecord refund) {
+        ensureAvailable();
+        try {
+            String path = "/v3/refund/domestic/refunds/" + PaymentCryptoUtil.urlEncode(refund.merchantRefundNo);
+            HttpResponse<String> response = send("GET", path, "", "");
+            JsonNode root = parseSuccess(response);
+            if (root.hasNonNull("refund_id")) {
+                refund.channelRefundNo = root.path("refund_id").asText();
+            }
+            if (root.hasNonNull("success_time")) {
+                refund.refundTime = Date.from(java.time.OffsetDateTime
+                    .parse(root.path("success_time").asText()).toInstant());
+            }
+            return mapRefundStatus(root.path("status").asText());
+        } catch (Exception e) {
+            throw new IllegalStateException("查询微信退款状态失败", e);
+        }
+    }
+
+    /**
+     * 微信退款状态 → 本地状态。
+     *
+     * <p>{@code ABNORMAL}（退款异常，资金去向需人工确认）**刻意保持 PROCESSING**：标 FAILED 会立刻
+     * 释放预占额度、允许对同一笔支付再退，而实际上这笔钱可能已经出去了。留在处理中即进入
+     * "需人工核对"。</p>
+     */
+    static RefundRecord.RefundStatus mapRefundStatus(String wechatStatus) {
+        return switch (wechatStatus == null ? "" : wechatStatus) {
+            case "SUCCESS" -> RefundRecord.RefundStatus.SUCCESS;
+            case "CLOSED" -> RefundRecord.RefundStatus.CLOSED;
+            default -> RefundRecord.RefundStatus.PROCESSING;
+        };
+    }
+
     private HttpResponse<String> send(String method, String path, String query, String body) throws Exception {
         String url = API_BASE + path + (query.isBlank() ? "" : "?" + query);
         String authorization = authorization(method, path, query, body);

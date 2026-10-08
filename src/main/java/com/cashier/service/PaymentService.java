@@ -78,6 +78,12 @@ public final class PaymentService {
                 loaded.orderExpireMinutes = Integer.parseInt(props.getProperty("order.expire.minutes", "15"));
                 loaded.notifyUrl = props.getProperty("notify.url");
                 loaded.returnUrl = props.getProperty("return.url");
+                loaded.refundReconcileEnabled = Boolean.parseBoolean(
+                    props.getProperty("refund.reconcile.enabled", "true"));
+                loaded.refundReconcileSeconds = Integer.parseInt(
+                    props.getProperty("refund.reconcile.seconds", "60"));
+                loaded.refundMaxTrackHours = Integer.parseInt(
+                    props.getProperty("refund.max.track.hours", "24"));
             } catch (Exception e) {
                 logger.warn("支付配置无效，电子支付保持禁用: {}", e.getMessage());
             }
@@ -113,6 +119,9 @@ public final class PaymentService {
         props.setProperty("order.expire.minutes", String.valueOf(nextConfig.orderExpireMinutes));
         props.setProperty("notify.url", safe(nextConfig.notifyUrl, ""));
         props.setProperty("return.url", safe(nextConfig.returnUrl, ""));
+        props.setProperty("refund.reconcile.enabled", String.valueOf(nextConfig.refundReconcileEnabled));
+        props.setProperty("refund.reconcile.seconds", String.valueOf(nextConfig.refundReconcileSeconds));
+        props.setProperty("refund.max.track.hours", String.valueOf(nextConfig.refundMaxTrackHours));
 
         try (FileOutputStream fos = new FileOutputStream(file)) {
             props.store(fos, "LiSuan payment configuration");
@@ -332,12 +341,135 @@ public final class PaymentService {
             }
             // 终态只看已成功退款合计：申请中/处理中的预占不算已退
             BigDecimal settledAmount = dao.sumSettledRefundAmountWithConnection(conn, paymentId);
+            if (settledAmount.compareTo(BigDecimal.ZERO) == 0) {
+                // 渠道已受理但一分钱都还没退成功（如微信 PROCESSING）：订单状态必须保持不变，
+                // 否则一笔没退成的款会显示成"部分退款"（F9）
+                return true;
+            }
             return dao.updateStatusWithConnection(conn, paymentId,
                 settledAmount.compareTo(refund.originalAmount) >= 0
                     ? PaymentOrder.PaymentStatus.REFUNDED : PaymentOrder.PaymentStatus.PARTIAL_REFUND);
         });
         if (!settled) {
             throw new SQLException("退款终态落库失败: " + refund.refundId);
+        }
+    }
+
+    /**
+     * 退对账一次（F9）：把停在 {@code PROCESSING} 的退款回查渠道并收敛到终态。
+     *
+     * <p>为什么必须有这一步：微信退款是异步的，{@code refund()} 拿到非 SUCCESS 只能先记处理中，
+     * 而退款请求没带 {@code notify_url}（微信不会推送结果）。没有回查时这条记录永远停在处理中——
+     * 预占额度永久占用（同一笔支付再也退不了），订单状态还可能被错标。这里由
+     * {@code PaymentRefundReconcileService} 定期驱动。</p>
+     *
+     * <p>放弃边界：超过 {@code refundMaxTrackHours} 仍未终态的**不再自动重试**（只告警一次进入人工核对），
+     * 避免对一笔去向不明的资金无限轮询。</p>
+     *
+     * @return 本次收敛（落终态）的笔数
+     */
+    public static int reconcileRefunds(int limit) {
+        PaymentConfig current = config;
+        int maxTrackHours = Math.max(1, current.refundMaxTrackHours);
+        Date cutoff = new Date(System.currentTimeMillis() - maxTrackHours * 3600_000L);
+        PaymentDAORefactored dao = DAOFactory.getInstance().getPaymentDAO();
+        int reconciled = 0;
+        try {
+            int stale = dao.countStaleUnsettledRefunds(cutoff);
+            if (stale > 0) {
+                logger.warn("有 {} 笔退款超过 {} 小时仍未落终态，已停止自动重试，需人工核对渠道退款结果",
+                    stale, maxTrackHours);
+            }
+            for (RefundRecord refund : dao.findUnsettledRefunds(cutoff, limit)) {
+                PaymentChannelProvider provider = providers.get(parseChannel(refund.channel));
+                if (provider == null || !provider.isAvailable()) {
+                    logger.debug("退款对账跳过（渠道不可用）: refundId={}, channel={}", refund.refundId, refund.channel);
+                    continue;
+                }
+                try {
+                    if (reconcileRefund(refund, provider)) {
+                        reconciled++;
+                    }
+                } catch (Exception e) {
+                    // 单笔失败不能中断整批：下一轮继续尝试
+                    logger.warn("退款对账单笔失败: refundId={}, err={}", refund.refundId, e.getMessage(), e);
+                }
+            }
+        } catch (SQLException e) {
+            logger.error("退款对账失败", e);
+        }
+        return reconciled;
+    }
+
+    /**
+     * 收敛单笔退款：非终态保持不动；终态则**带状态条件**落库并重算订单状态。
+     *
+     * <p>包级可见以便测试直接注入假渠道（不需要真连微信）。</p>
+     */
+    static boolean reconcileRefund(RefundRecord refund, PaymentChannelProvider provider) throws SQLException {
+        if (refund == null || refund.status == null || refund.status.isFinal()) {
+            return false;
+        }
+        PaymentDAORefactored dao = DAOFactory.getInstance().getPaymentDAO();
+        PaymentOrder order = dao.findById(refund.paymentId);
+        if (order == null) {
+            logger.warn("退款对账跳过：支付单不存在 refundId={}, paymentId={}", refund.refundId, refund.paymentId);
+            return false;
+        }
+        RefundRecord.RefundStatus channelStatus = provider.queryRefund(order, refund);
+        if (channelStatus == null || !channelStatus.isFinal()) {
+            logger.debug("退款仍在处理中: refundId={}, channel={}", refund.refundId, refund.channel);
+            return false;
+        }
+
+        RefundRecord.RefundStatus previous = refund.status;
+        boolean settled = DatabaseManager.executeBooleanTransaction(conn -> {
+            // 带 from 状态条件：对账与迟到回调并发时不会把已落终态的单改回去（也不会重复结算）
+            if (!dao.updateRefundStatusIfNotFinalWithConnection(conn, refund.refundId, previous,
+                    channelStatus, refund.channelRefundNo)) {
+                logger.info("退款状态已被其它流程推进，跳过对账: refundId={}, from={}", refund.refundId, previous);
+                return false;
+            }
+            BigDecimal settledAmount = dao.sumSettledRefundAmountWithConnection(conn, refund.paymentId);
+            if (settledAmount.compareTo(BigDecimal.ZERO) == 0) {
+                // 失败/关闭：没有成功退款，订单状态保持不变（预占额度随之释放）
+                return true;
+            }
+            BigDecimal original = refund.originalAmount != null ? refund.originalAmount : BigDecimal.ZERO;
+            return dao.updateStatusWithConnection(conn, refund.paymentId,
+                settledAmount.compareTo(original) >= 0
+                    ? PaymentOrder.PaymentStatus.REFUNDED : PaymentOrder.PaymentStatus.PARTIAL_REFUND);
+        });
+        if (!settled) {
+            return false;
+        }
+
+        refund.status = channelStatus;
+        if (channelStatus.isSuccess()) {
+            logger.info("退款对账收敛为成功: refundId={}, paymentId={}, 金额={}",
+                refund.refundId, refund.paymentId, refund.refundAmount);
+        } else {
+            logger.warn("退款对账判定为{}，预占额度已释放: refundId={}, paymentId={}",
+                channelStatus.getDisplayName(), refund.refundId, refund.paymentId);
+        }
+        AuditService.success(refund.operator, "REFUND", "PAYMENT_REFUND_RECONCILED",
+            "退款单=" + refund.merchantRefundNo + ", 渠道终态=" + channelStatus.name()
+                + ", 支付单=" + refund.paymentId, 1);
+        SyncManager.getInstance().broadcastSyncEvent(SyncEventType.PAYMENT_REFUND,
+            Map.of("refundId", refund.refundId, "paymentId", refund.paymentId,
+                "status", channelStatus.name()));
+        return true;
+    }
+
+    private static PaymentOrder.PaymentChannel parseChannel(String channel) {
+        if (channel == null || channel.isBlank()) {
+            return null;
+        }
+        try {
+            return PaymentOrder.PaymentChannel.valueOf(channel);
+        } catch (IllegalArgumentException e) {
+            logger.warn("退款单渠道无法识别: {}", channel);
+            return null;
         }
     }
 
@@ -415,5 +547,11 @@ public final class PaymentService {
         public int orderExpireMinutes = 15;
         public String notifyUrl;
         public String returnUrl;
+        /** 退款对账开关（F9）：关掉后停在 PROCESSING 的退款不再自动回查 */
+        public boolean refundReconcileEnabled = true;
+        /** 对账间隔（秒） */
+        public int refundReconcileSeconds = 60;
+        /** 最长跟踪时长（小时）：超过后不再自动重试，转人工核对（避免对去向不明的资金无限轮询） */
+        public int refundMaxTrackHours = 24;
     }
 }

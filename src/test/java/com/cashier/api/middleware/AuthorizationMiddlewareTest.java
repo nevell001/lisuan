@@ -38,8 +38,9 @@ class AuthorizationMiddlewareTest {
         // 开票方信息会写进之后所有发票，属全局配置，收银员不得修改（读取仍允许）
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "PUT", "/api/invoices/seller-info"));
         assertTrue(AuthorizationMiddleware.isAllowed("cashier", "GET", "/api/invoices/seller-info"));
-        // 资金统计属财务口径，收银员不可查看
+        // 资金统计与退款单列表属财务口径，收银员不可查看（退款单里有金额与渠道退款号）
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "GET", "/api/payment/stats/daily"));
+        assertFalse(AuthorizationMiddleware.isAllowed("cashier", "GET", "/api/payment/refunds"));
     }
 
     @Test
@@ -49,6 +50,7 @@ class AuthorizationMiddlewareTest {
         assertTrue(AuthorizationMiddleware.isAllowed("finance", "POST", "/api/payment/P1/refund"));
         assertTrue(AuthorizationMiddleware.isAllowed("finance", "POST", "/api/invoices/manual"));
         assertTrue(AuthorizationMiddleware.isAllowed("finance", "GET", "/api/reports/daily"));
+        assertTrue(AuthorizationMiddleware.isAllowed("finance", "GET", "/api/payment/refunds"));
         assertTrue(AuthorizationMiddleware.isAllowed("finance", "POST", "/api/members/10/recharge"));
         assertTrue(AuthorizationMiddleware.isAllowed("finance", "PUT", "/api/members/10"));
         assertFalse(AuthorizationMiddleware.isAllowed("finance", "PUT", "/api/settings/theme"));

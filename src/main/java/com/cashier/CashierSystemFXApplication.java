@@ -733,6 +733,14 @@ public class CashierSystemFXApplication extends Application {
                 logger.error("停止自动备份服务时发生错误", e);
             }
 
+            // 停止退款对账
+            try {
+                com.cashier.service.PaymentRefundReconcileService.getInstance().stop();
+                logger.info("退款对账服务已停止");
+            } catch (Exception e) {
+                logger.error("停止退款对账服务时发生错误", e);
+            }
+
             // 停止 REST API 服务器
             try {
                 com.cashier.api.ApiServer.getInstance().stop();
@@ -839,6 +847,14 @@ public class CashierSystemFXApplication extends Application {
                 logger.error("启动自动备份服务失败", e);
             }
 
+            // 启动退款对账（F9）：把停在处理中的微信退款回查渠道并收敛到终态
+            try {
+                com.cashier.service.PaymentRefundReconcileService.getInstance().start();
+                logger.info("退款对账服务已启动");
+            } catch (Exception e) {
+                logger.error("启动退款对账服务失败", e);
+            }
+
         } catch (IOException e) {
             logger.error("加载触屏收银台界面失败", e);
         }
@@ -901,6 +917,14 @@ public class CashierSystemFXApplication extends Application {
                 logger.error("启动自动备份服务失败", e);
             }
 
+            // 启动退款对账（F9）：把停在处理中的微信退款回查渠道并收敛到终态
+            try {
+                com.cashier.service.PaymentRefundReconcileService.getInstance().start();
+                logger.info("退款对账服务已启动");
+            } catch (Exception e) {
+                logger.error("启动退款对账服务失败", e);
+            }
+
             // 启动 REST API 服务器
             try {
                 if (com.cashier.api.ApiConfig.isEnabled()) {
@@ -949,6 +973,14 @@ public class CashierSystemFXApplication extends Application {
             logger.info("自动备份服务已停止");
         } catch (Exception e) {
             logger.error("停止自动备份服务时发生错误", e);
+        }
+
+        // 停止退款对账
+        try {
+            com.cashier.service.PaymentRefundReconcileService.getInstance().stop();
+            logger.info("退款对账服务已停止");
+        } catch (Exception e) {
+            logger.error("停止退款对账服务时发生错误", e);
         }
 
         // 停止 REST API 服务器

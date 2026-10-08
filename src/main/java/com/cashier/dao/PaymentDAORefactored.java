@@ -463,4 +463,121 @@ public class PaymentDAORefactored extends BaseDAO {
     private static Date toDate(Timestamp timestamp) {
         return timestamp != null ? new Date(timestamp.getTime()) : null;
     }
+
+    // ===== 退款对账（F9）=====
+
+    private static final String REFUND_COLUMNS =
+        "refund_id, payment_id, transaction_id, merchant_refund_no, channel_refund_no, refund_amount, "
+            + "original_amount, reason, status, channel, create_time, refund_time, operator";
+
+    private static RefundRecord mapRefund(ResultSet rs) throws SQLException {
+        RefundRecord refund = new RefundRecord();
+        refund.refundId = rs.getString("refund_id");
+        refund.paymentId = rs.getString("payment_id");
+        refund.transactionId = rs.getString("transaction_id");
+        refund.merchantRefundNo = rs.getString("merchant_refund_no");
+        refund.channelRefundNo = rs.getString("channel_refund_no");
+        refund.refundAmount = rs.getBigDecimal("refund_amount");
+        refund.originalAmount = rs.getBigDecimal("original_amount");
+        refund.reason = rs.getString("reason");
+        String status = rs.getString("status");
+        try {
+            refund.status = status != null ? RefundRecord.RefundStatus.valueOf(status) : RefundRecord.RefundStatus.APPLYING;
+        } catch (IllegalArgumentException e) {
+            logger.warn("退款单 {} 的状态无法识别，按处理中对待: {}", refund.refundId, status);
+            refund.status = RefundRecord.RefundStatus.PROCESSING;
+        }
+        refund.channel = rs.getString("channel");
+        refund.createTime = toDate(rs.getTimestamp("create_time"));
+        refund.refundTime = toDate(rs.getTimestamp("refund_time"));
+        refund.operator = rs.getString("operator");
+        return refund;
+    }
+
+    /**
+     * 取仍未落终态的退款单（{@code PROCESSING}/{@code APPLYING}），供对账任务回查渠道（F9）。
+     *
+     * @param createdAfter 只取该时间之后建的（超过最长跟踪时长的留给人工核对，不再反复重试）
+     */
+    public List<RefundRecord> findUnsettledRefunds(Date createdAfter, int limit) throws SQLException {
+        List<RefundRecord> refunds = new ArrayList<>();
+        String sql = "SELECT " + REFUND_COLUMNS + " FROM refund_records "
+            + "WHERE status NOT IN ('SUCCESS', 'FAILED', 'CLOSED') AND create_time >= ? "
+            + "ORDER BY create_time LIMIT ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setTimestamp(1, new Timestamp(createdAfter != null ? createdAfter.getTime() : 0L));
+            pstmt.setInt(2, Math.max(1, limit));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    refunds.add(mapRefund(rs));
+                }
+            }
+        }
+        return refunds;
+    }
+
+    /**
+     * 列出退款单（财务对账 / 人工核对用）。
+     *
+     * @param status 退款状态名（如 {@code PROCESSING}）；为空/空白时只列**未落终态**的
+     */
+    public List<RefundRecord> listRefunds(String status, int limit) throws SQLException {
+        List<RefundRecord> refunds = new ArrayList<>();
+        boolean filterByStatus = status != null && !status.isBlank();
+        String sql = "SELECT " + REFUND_COLUMNS + " FROM refund_records "
+            + (filterByStatus ? "WHERE status = ? " : "WHERE status NOT IN ('SUCCESS', 'FAILED', 'CLOSED') ")
+            + "ORDER BY create_time DESC LIMIT ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            int index = 1;
+            if (filterByStatus) {
+                pstmt.setString(index++, status.trim().toUpperCase(java.util.Locale.ROOT));
+            }
+            pstmt.setInt(index, Math.max(1, limit));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    refunds.add(mapRefund(rs));
+                }
+            }
+        }
+        return refunds;
+    }
+
+    /** 超过最长跟踪时长仍未终态的退款单数量：进入"需人工核对"，对账任务只告警不再重试。 */
+    public int countStaleUnsettledRefunds(Date createdBefore) throws SQLException {
+        String sql = "SELECT COUNT(*) FROM refund_records "
+            + "WHERE status NOT IN ('SUCCESS', 'FAILED', 'CLOSED') AND create_time < ?";
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setTimestamp(1, new Timestamp(createdBefore != null ? createdBefore.getTime() : System.currentTimeMillis()));
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next() ? rs.getInt(1) : 0;
+            }
+        }
+    }
+
+    /**
+     * 带状态条件的退款状态迁移（F9）：{@code WHERE refund_id = ? AND status = ?}。
+     *
+     * <p>不能沿用 {@link #updateRefundStatusWithConnection}（裸 UPDATE）——对账任务与迟到回调可能并发，
+     * 裸 UPDATE 会把已经落定 SUCCESS 的退款改回 PROCESSING，造成状态回退与重复结算。</p>
+     *
+     * @return 是否发生迁移（false = 该单已被他人推进到其它状态）
+     */
+    public boolean updateRefundStatusIfNotFinalWithConnection(Connection conn, String refundId,
+                                                              RefundRecord.RefundStatus fromStatus,
+                                                              RefundRecord.RefundStatus toStatus,
+                                                              String channelRefundNo) throws SQLException {
+        String sql = "UPDATE refund_records SET status = ?, channel_refund_no = COALESCE(?, channel_refund_no), "
+            + "refund_time = ? WHERE refund_id = ? AND status = ?";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, toStatus.name());
+            pstmt.setString(2, channelRefundNo);
+            pstmt.setTimestamp(3, toStatus.isSuccess() ? new Timestamp(System.currentTimeMillis()) : null);
+            pstmt.setString(4, refundId);
+            pstmt.setString(5, fromStatus.name());
+            return pstmt.executeUpdate() > 0;
+        }
+    }
 }

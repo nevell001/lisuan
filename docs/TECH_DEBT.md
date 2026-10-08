@@ -2002,7 +2002,30 @@ item 改稳定代码、`settings` 表落代码、`paperSize` 老显示串归一�
 
 - **F9 微信异步退款永不落终态**：`WechatNativePaymentProvider` 对非 SUCCESS 状态写 `PROCESSING`，
   而全仓库没有任何消费方 → 支付单停在 `PARTIAL_REFUND`、预留额度不释放（保守，不会多退钱）。
-  需要设计"退款结果轮询/回调"（查询接口或对账任务），属功能开发，未在本次修。
+  → **F9-a / F9-b 已实施（2026-10）**：
+  - `PaymentChannelProvider` 新增 `queryRefund(order, refund)`；微信走
+    `GET /v3/refund/domestic/refunds/{out_refund_no}`（退款请求没带 `notify_url`，微信不推送结果，
+    回查是收敛终态的唯一途径），支付宝/Mock 是同步终态直接返 SUCCESS，不可用渠道抛不可用。
+  - 微信状态映射集中在 `mapRefundStatus`：**`ABNORMAL`（资金去向需人工确认）刻意留在 PROCESSING**——
+    标 FAILED 会立刻释放预占额度、允许同一笔支付再退，而钱可能已经出去了。
+  - 退回原来的错标：`settleRefund` 在"已成功退款合计 = 0"时**不再**把订单改成 `PARTIAL_REFUND`
+    （此前渠道只是受理就显示"部分退款"）。
+  - 新增 `PaymentRefundReconcileService`（登录后启动/登出停止）：`isRunning` 守卫、daemon 线程、
+    `catch (Throwable)` 兜住异常（调度任务抛一次就会被永久取消）、`scheduleWithFixedDelay`；
+    业务在 `PaymentService.reconcileRefunds(limit)`，**带 from 状态条件**迁移
+    （`updateRefundStatusIfNotFinalWithConnection`，裸 UPDATE 会被并发回调整退回退 → 重复结算）。
+  - 放弃边界：超过 `refund.max.track.hours`（默认 24h）仍未终态的**不再自动重试**，
+    只统计并告警进入人工核对，避免对去向不明的资金无限轮询；`countStaleUnsettledRefunds` 供告警/运维查询。
+  - 运维/接口：`GET /api/payment/refunds?status=PROCESSING`（仅 finance/admin，与其他资金接口同口径）；
+    退款响应文案按状态给（非 SUCCESS 报"退款已受理，处理中"，不再一律"退款成功"）。
+  - 配置：`refund.reconcile.enabled`（默认 true）、`refund.reconcile.seconds`（默认 60）、
+    `refund.max.track.hours`（默认 24）。
+  - 测试 `PaymentRefundReconcileTest`（7 项：处理中不误标/收敛成功/判定失败释放额度/仍在处理不动/
+    终态不回退/超期转人工/服务不可重复启动）+ 微信状态映射 1 项 + 门禁 `RefundTerminalStatePolicyTest`（4 项）。
+    变异验证：删掉零成功退款短路 → 2 项行为测试变红（订单变 `PARTIAL_REFUND`）；去掉 `AND status = ?`
+    → 门禁变红（均已还原）。
+  - **未做（可选）F9-c**：微信退款回调（`notify_url`）——需要生产回调地址与 `REFUND.SUCCESS` 事件处理；
+    有了 60 秒对账，回调只是把收敛时间从"分钟级"降到"秒级"，不影响正确性。
   → **设计方案：[DESIGN_F9_F10.md](DESIGN_F9_F10.md)**（2026-10）
 - **F10 退货创建是 check-then-act**：校验在事务外，`return_orders` 无唯一约束/已退数量台账，
   两个终端同时提交可各退满额。窗口窄，串行操作会被拦；彻底修需要"已退数量台账 + 唯一约束"的设计。

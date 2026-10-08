@@ -1,5 +1,6 @@
 package com.cashier.service.payment;
 
+import com.cashier.model.RefundRecord;
 import com.cashier.service.PaymentService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
@@ -81,6 +82,23 @@ class WechatNativePaymentProviderTest {
         notification.put("Wechatpay-Signature", "invalid");
 
         assertFalse(provider.verifyNotification(notification));
+    }
+
+    @Test
+    @DisplayName("微信退款状态映射：只有 SUCCESS/CLOSED 落终态，ABNORMAL 必须留在处理中")
+    void refundStatusMappingKeepsAbnormalInProgress() {
+        assertEquals(RefundRecord.RefundStatus.SUCCESS,
+            WechatNativePaymentProvider.mapRefundStatus("SUCCESS"));
+        assertEquals(RefundRecord.RefundStatus.CLOSED,
+            WechatNativePaymentProvider.mapRefundStatus("CLOSED"));
+        // ABNORMAL（退款异常，资金去向需人工确认）不能当失败：标 FAILED 会立刻释放预占额度、
+        // 允许对同一笔支付再退，而这笔钱可能已经出去了
+        assertEquals(RefundRecord.RefundStatus.PROCESSING,
+            WechatNativePaymentProvider.mapRefundStatus("ABNORMAL"));
+        assertEquals(RefundRecord.RefundStatus.PROCESSING,
+            WechatNativePaymentProvider.mapRefundStatus("PROCESSING"));
+        assertEquals(RefundRecord.RefundStatus.PROCESSING,
+            WechatNativePaymentProvider.mapRefundStatus(null), "缺失状态一律按处理中，不能猜终态");
     }
 
     private static PaymentService.PaymentConfig configWithPublicKey(KeyPair keyPair) {
