@@ -1125,6 +1125,17 @@ cmd 的语义是：**带通配符的集合在无匹配时会把该模式原样�
 
 **何时重新评估**：若把打包向导交给门店用户使用，或需交付给非中文开发者/外部集成方。
 
+**2026-10 复核（结论不变，仍不迁）**：因 TD-041 收口后顺手重估了这条，逐条核实依据仍成立——
+① `PackageWizardController` 只被自己的 `PackageWizardView.fxml`（`fx:controller`）与
+`BackgroundTaskPolicyTest`（源码扫描门禁）引用，**POS 侧零引用**；
+② `PackageWizardApp` 有独立 `main`，由 `pom.xml` 的 `-Ppackager` profile 打成 `lisuan-packager`；
+③ 内容确实是**开发者语义**（`检测 Maven 命令` / `检测 jpackage 命令` /
+`错误: MySQL JDBC 驱动未找到，请确保项目已编译`），门店用户看到也无从理解；
+④ 该文件**没有任何 i18n 布线**（零 `I18n` 引用），迁移要为一个独立工具新引一套 i18n 依赖；
+⑤ 与同为中文、同样刻意保留的 `release.sh`/`release.bat`（含 11 处中文）口径一致。
+**触发条件未发生，故维持不译**。（该文件另有一条已修的 FX 线程缺陷：`appendLog` 现按
+`Platform.isFxApplicationThread()` 分派，见 TD-035。）
+
 ### 门禁（4 项，全部做过变异验证）
 
 `com.cashier.security.HardcodedUiTextPolicyTest`：
