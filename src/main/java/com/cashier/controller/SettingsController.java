@@ -17,6 +17,7 @@ import com.cashier.scanner.ScanValidation;
 import com.cashier.scanner.USBHIDScannerDevice;
 import com.cashier.util.PasswordUtil;
 import com.cashier.util.FormValidator;
+import com.cashier.util.I18nUiUtils;
 import com.cashier.util.DatabaseManager;
 import com.cashier.util.DateTimeFormats;
 import java.sql.SQLException;
@@ -248,58 +249,63 @@ public class SettingsController {
     @FXML
     private void initialize() {
         logger.info("SettingsController: 初始化系统设置...");
-        I18nManager i18n = I18nManager.getInstance();
 
-        // 初始化语言下拉框
+        // 初始化语言下拉框（item 一律是稳定代码，显示层交给 I18nUiUtils 的映射；下同，见 TD-040）
         languageComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
-            "简体中文",
-            "繁體中文",
-            "English"
+            "zh-CN",
+            "zh-TW",
+            "en"
         ));
-        languageComboBox.getSelectionModel().select(0);
+        I18nUiUtils.configureComboBox(languageComboBox, I18nUiUtils::languageTag);
+        languageComboBox.getSelectionModel().select("zh-CN");
 
         // 初始化货币下拉框
         currencyComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
-            i18n.get(I18nKeys.Currency.CNY),
-            i18n.get("currency.usd"),
-            i18n.get("currency.jpy"),
-            i18n.get("currency.krw"),
-            i18n.get("currency.eur")
+            "CNY",
+            "USD",
+            "JPY",
+            "KRW",
+            "EUR"
         ));
-        currencyComboBox.getSelectionModel().select(0);
+        I18nUiUtils.configureComboBox(currencyComboBox, I18nUiUtils::currency);
+        currencyComboBox.getSelectionModel().select("CNY");
 
         // 初始化主题下拉框
         themeComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
-            i18n.get(I18nKeys.Menu.Theme.LIGHT),
-            i18n.get(I18nKeys.Menu.Theme.DARK),
-            i18n.get(I18nKeys.Menu.Theme.LISUAN)
+            "light",
+            "dark",
+            "lisuan"
         ));
-        themeComboBox.getSelectionModel().select(i18n.get(I18nKeys.Menu.Theme.LISUAN));
+        I18nUiUtils.configureComboBox(themeComboBox, I18nUiUtils::theme);
+        themeComboBox.getSelectionModel().select("lisuan");
 
         // 初始化字号下拉框
         fontSizeComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
-            i18n.get(I18nKeys.Settings.FONT_SIZE_SMALL),
-            i18n.get(I18nKeys.Settings.FONT_SIZE_MEDIUM),
-            i18n.get(I18nKeys.Settings.FONT_SIZE_LARGE),
-            i18n.get(I18nKeys.Settings.FONT_SIZE_EXTRA_LARGE)
+            "small",
+            "medium",
+            "large",
+            "extra-large"
         ));
-        fontSizeComboBox.getSelectionModel().select(1); // 默认选中中等
+        I18nUiUtils.configureComboBox(fontSizeComboBox, I18nUiUtils::fontSize);
+        fontSizeComboBox.getSelectionModel().select("medium"); // 默认选中中等
 
         // 初始化纸张大小下拉框
         paperSizeComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
-            i18n.get("settings.paper_58mm"),
-            i18n.get("settings.paper_80mm"),
+            "58mm",
+            "80mm",
             "A4"
         ));
-        paperSizeComboBox.getSelectionModel().select(0);
+        I18nUiUtils.configureComboBox(paperSizeComboBox, I18nUiUtils::paperSize);
+        paperSizeComboBox.getSelectionModel().select("58mm");
 
         // 初始化备份频率下拉框
         backupFrequencyComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
-            i18n.get("settings.backup_daily"),
-            i18n.get("settings.backup_weekly"),
-            i18n.get("settings.backup_monthly")
+            "daily",
+            "weekly",
+            "monthly"
         ));
-        backupFrequencyComboBox.getSelectionModel().select(0);
+        I18nUiUtils.configureComboBox(backupFrequencyComboBox, I18nUiUtils::backupFrequency);
+        backupFrequencyComboBox.getSelectionModel().select("daily");
 
         // 初始化自动登出时间
         SpinnerValueFactory<Integer> logoutMinutesFactory =
@@ -316,12 +322,13 @@ public class SettingsController {
             new SpinnerValueFactory.IntegerSpinnerValueFactory(3, 10, 5);
         passwordMaxAttemptsSpinner.setValueFactory(passwordMaxAttemptsFactory);
 
-        // 初始化支付模式下拉框
+        // 初始化支付模式下拉框（item=代码，显示层本地化）
         paymentModeComboBox.setItems(javafx.collections.FXCollections.observableArrayList(
             "disabled",
             "mock",
             "production"
         ));
+        I18nUiUtils.configureComboBox(paymentModeComboBox, I18nUiUtils::paymentMode);
         paymentModeComboBox.getSelectionModel().select("disabled");
 
         // 初始化数据导入工具
@@ -356,9 +363,9 @@ public class SettingsController {
         // 加载打印设置
         enablePrintCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("enablePrint", "false")));
         printerNameField.setText(settings.getOrDefault("printerName", ""));
-        String savedPaperSize = settings.getOrDefault("paperSize", "");
-        if (!savedPaperSize.isEmpty() && paperSizeComboBox.getItems().contains(savedPaperSize)) {
-            paperSizeComboBox.setValue(savedPaperSize);
+        String savedPaperSize = paperSizeCodeOf(settings.getOrDefault("paperSize", ""));
+        if (!savedPaperSize.isEmpty()) {
+            paperSizeComboBox.getSelectionModel().select(savedPaperSize);
         }
         printLogoCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("printLogo", "true")));
         printBarcodeCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("printBarcode", "true")));
@@ -376,26 +383,32 @@ public class SettingsController {
         // 加载备份设置
         autoBackupCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("autoBackup", "false")));
         backupPathField.setText(DataService.resolveSqlBackupPath(settings.get("backupPath")));
+        // 备份频率必须回读（原先漏了：下拉永远停在默认值，用户再保存就把选择覆盖回默认）
+        String savedBackupFrequency = com.cashier.service.BackupService
+            .canonicalFrequency(settings.getOrDefault("backupFrequency", ""));
+        if (!savedBackupFrequency.isEmpty()) {
+            backupFrequencyComboBox.getSelectionModel().select(savedBackupFrequency);
+        }
 
         // 加载安全设置
         autoLogoutCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("autoLogout", "true")));
         passwordComplexityCheckBox.setSelected(Boolean.parseBoolean(settings.getOrDefault("passwordComplexity", "true")));
 
-        // 加载主题偏好
+        // 加载主题偏好（偏好表里存的就是代码）
         String username = (currentUser != null) ? currentUser.username : "default";
         String savedThemeCode = DataService.loadThemePreference(username);
-        String savedThemeName = convertThemeCodeToName(savedThemeCode);
-        themeComboBox.getSelectionModel().select(savedThemeName);
+        themeComboBox.getSelectionModel().select(
+            selectableCode(savedThemeCode, List.of("light", "dark", "lisuan"), FXConstants.DEFAULT_THEME));
 
         // 加载语言偏好 - 从数据库加载当前用户的语言偏好
         String savedLanguage = DataService.loadLanguagePreference(username);
-        String savedLanguageName = convertLanguageTagToName(savedLanguage);
-        languageComboBox.getSelectionModel().select(savedLanguageName);
+        languageComboBox.getSelectionModel().select(
+            selectableCode(savedLanguage, List.of("zh-CN", "zh-TW", "en"), "zh-CN"));
 
         // 加载字号偏好 - 从数据库加载当前用户的字号偏好
         String savedFontSize = DataService.loadFontSizePreference(username);
-        String savedFontSizeName = convertFontSizeCodeToName(savedFontSize);
-        fontSizeComboBox.getSelectionModel().select(savedFontSizeName);
+        fontSizeComboBox.getSelectionModel().select(
+            selectableCode(savedFontSize, List.of("small", "medium", "large", "extra-large"), "medium"));
 
         // 记录初始加载时的语言，用于检测变化
         initialLanguage = savedLanguage;
@@ -403,12 +416,12 @@ public class SettingsController {
         // 加载货币偏好 - 从数据库加载当前用户的货币偏好
         try {
             String savedCurrency = com.cashier.dao.DAOFactory.getInstance().getLanguagePreferenceDAO().getCurrencyPreference(username);
-            String savedCurrencyName = convertCurrencyCodeToName(savedCurrency);
-            currencyComboBox.getSelectionModel().select(savedCurrencyName);
+            currencyComboBox.getSelectionModel().select(
+                selectableCode(savedCurrency, List.of("CNY", "USD", "JPY", "KRW", "EUR"), "CNY"));
             initialCurrency = savedCurrency;
         } catch (Exception e) {
             logger.warn("加载货币偏好失败: {}", e.getMessage());
-            currencyComboBox.getSelectionModel().select(0); // 默认人民币
+            currencyComboBox.getSelectionModel().select("CNY"); // 默认人民币
             initialCurrency = "CNY";
         }
 
@@ -436,21 +449,20 @@ public class SettingsController {
         if (validateBasicSettings()) {
             // 检查语言是否变化（与初始加载时的语言对比）
             String selectedLanguage = languageComboBox.getSelectionModel().getSelectedItem();
-            String newLanguageTag = selectedLanguage != null ? convertLanguageNameToTag(selectedLanguage) : "zh-CN";
+            String newLanguageTag = defaultText(selectedLanguage, "zh-CN");
             boolean languageChanged = !newLanguageTag.equals(initialLanguage);
 
             // 检查货币是否变化
             String selectedCurrency = currencyComboBox.getSelectionModel().getSelectedItem();
-            String newCurrencyCode = selectedCurrency != null ? convertCurrencyNameToCode(selectedCurrency) : "CNY";
+            String newCurrencyCode = defaultText(selectedCurrency, "CNY");
             boolean currencyChanged = !newCurrencyCode.equals(initialCurrency);
 
             saveSettings();
 
-            // 应用主题设置
+            // 应用主题设置（下拉 item 就是主题代码）
             String selectedTheme = themeComboBox.getSelectionModel().getSelectedItem();
             if (selectedTheme != null) {
-                String themeCode = convertThemeNameToCode(selectedTheme);
-                applyThemeToCurrentScene(themeCode);
+                applyThemeToCurrentScene(selectedTheme);
             }
 
             // 应用语言设置
@@ -467,11 +479,10 @@ public class SettingsController {
                 }
             }
 
-            // 应用字号设置
+            // 应用字号设置（下拉 item 就是字号代码）
             String selectedFontSize = fontSizeComboBox.getSelectionModel().getSelectedItem();
             if (selectedFontSize != null) {
-                String fontSizeCode = convertFontSizeNameToCode(selectedFontSize);
-                applyFontSizeToCurrentScene(fontSizeCode);
+                applyFontSizeToCurrentScene(selectedFontSize);
             }
 
             // 应用货币设置
@@ -547,179 +558,34 @@ public class SettingsController {
     }
 
     /**
-     * 将中文主题名称转换为英文主题代码
-     * @param themeName 中文主题名称
-     * @return 英文主题代码
+     * 老库里 {@code paperSize} 存的是当时的**显示串**（如 "58mm（热敏纸）"/"58mm (Thermal)"），
+     * 这里归一到稳定代码；已是代码则原样返回（见 TD-040）。
      */
-    private String convertThemeNameToCode(String themeName) {
-        if (themeName == null) {
-            return FXConstants.DEFAULT_THEME;
+    private static String paperSizeCodeOf(String raw) {
+        if (raw == null || raw.isBlank()) {
+            return "";
         }
-        I18nManager i18n = I18nManager.getInstance();
-        if (themeName.equals(i18n.get(I18nKeys.Menu.Theme.LIGHT)) || "浅色主题".equals(themeName)) return "light";
-        if (themeName.equals(i18n.get(I18nKeys.Menu.Theme.DARK)) || "深色主题".equals(themeName)) return "dark";
-        if (themeName.equals(i18n.get(I18nKeys.Menu.Theme.LISUAN)) || "LiSuan主题".equals(themeName) || "IntelliJ主题".equals(themeName)) return "lisuan";
-        return FXConstants.DEFAULT_THEME;
+        if ("58mm".equals(raw) || "80mm".equals(raw) || "A4".equals(raw)) {
+            return raw;
+        }
+        if (raw.contains("58")) {
+            return "58mm";
+        }
+        if (raw.contains("80")) {
+            return "80mm";
+        }
+        if (raw.contains("A4")) {
+            return "A4";
+        }
+        return "";
     }
 
     /**
-     * 将英文主题代码转换为中文主题名称
-     * @param themeCode 英文主题代码
-     * @return 中文主题名称
+     * 把偏好值归一到下拉里真实存在的代码；无法识别（老库/脏值）时回落到默认项，
+     * 避免下拉变空白（等价于被删掉的那批 convert*CodeToName 的兜底分支）。
      */
-    private String convertThemeCodeToName(String themeCode) {
-        if (themeCode == null) {
-            return I18nManager.getInstance().get(I18nKeys.Menu.Theme.LISUAN);
-        }
-        switch (themeCode) {
-            case "light":
-                return I18nManager.getInstance().get(I18nKeys.Menu.Theme.LIGHT);
-            case "dark":
-                return I18nManager.getInstance().get(I18nKeys.Menu.Theme.DARK);
-            case "lisuan":
-            case "intellij":
-                return I18nManager.getInstance().get(I18nKeys.Menu.Theme.LISUAN);
-            default:
-                return I18nManager.getInstance().get(I18nKeys.Menu.Theme.LISUAN);
-        }
-    }
-
-    /**
-     * 将语言名称转换为语言标签
-     * @param languageName 语言名称
-     * @return 语言标签
-     */
-    private String convertLanguageNameToTag(String languageName) {
-        if (languageName == null) {
-            return "zh-CN";
-        }
-        switch (languageName) {
-            case "简体中文":
-                return "zh-CN";
-            case "繁體中文":
-                return "zh-TW";
-            case "English":
-                return "en";
-            default:
-                return "zh-CN";
-        }
-    }
-
-    /**
-     * 将语言标签转换为语言名称
-     * @param languageTag 语言标签
-     * @return 语言名称
-     */
-    private String convertLanguageTagToName(String languageTag) {
-        if (languageTag == null) {
-            return "简体中文";
-        }
-        switch (languageTag) {
-            case "zh-CN":
-                return "简体中文";
-            case "zh-TW":
-                return "繁體中文";
-            case "en":
-                return "English";
-            default:
-                return "简体中文";
-        }
-    }
-
-    /**
-     * 将字号代码转换为字号名称
-     * @param fontSizeCode 字号代码
-     * @return 字号名称
-     */
-    private String convertFontSizeCodeToName(String fontSizeCode) {
-        if (fontSizeCode == null) {
-            return I18nManager.getInstance().get(I18nKeys.Settings.FONT_SIZE_MEDIUM);
-        }
-        I18nManager i18n = I18nManager.getInstance();
-        switch (fontSizeCode) {
-            case "small":
-                return i18n.get(I18nKeys.Settings.FONT_SIZE_SMALL);
-            case "medium":
-                return i18n.get(I18nKeys.Settings.FONT_SIZE_MEDIUM);
-            case "large":
-                return i18n.get(I18nKeys.Settings.FONT_SIZE_LARGE);
-            case "extra-large":
-                return i18n.get(I18nKeys.Settings.FONT_SIZE_EXTRA_LARGE);
-            default:
-                return i18n.get(I18nKeys.Settings.FONT_SIZE_MEDIUM);
-        }
-    }
-
-    /**
-     * 将字号名称转换为字号代码
-     * @param fontSizeName 字号名称
-     * @return 字号代码
-     */
-    private String convertFontSizeNameToCode(String fontSizeName) {
-        if (fontSizeName == null) {
-            return "medium";
-        }
-        I18nManager i18n = I18nManager.getInstance();
-        String small = i18n.get(I18nKeys.Settings.FONT_SIZE_SMALL);
-        String medium = i18n.get(I18nKeys.Settings.FONT_SIZE_MEDIUM);
-        String large = i18n.get(I18nKeys.Settings.FONT_SIZE_LARGE);
-        String extraLarge = i18n.get(I18nKeys.Settings.FONT_SIZE_EXTRA_LARGE);
-
-        if (fontSizeName.equals(small)) {
-            return "small";
-        } else if (fontSizeName.equals(medium)) {
-            return "medium";
-        } else if (fontSizeName.equals(large)) {
-            return "large";
-        } else if (fontSizeName.equals(extraLarge)) {
-            return "extra-large";
-        }
-        return "medium";
-    }
-
-    /**
-     * 货币代码转显示名称
-     */
-    private String convertCurrencyCodeToName(String currencyCode) {
-        I18nManager i18n = I18nManager.getInstance();
-        if (currencyCode == null) {
-            return i18n.get(I18nKeys.Currency.CNY);
-        }
-        switch (currencyCode) {
-            case "CNY":
-                return i18n.get(I18nKeys.Currency.CNY);
-            case "USD":
-                return i18n.get("currency.usd");
-            case "JPY":
-                return i18n.get("currency.jpy");
-            case "KRW":
-                return i18n.get("currency.krw");
-            case "EUR":
-                return i18n.get("currency.eur");
-            default:
-                return i18n.get(I18nKeys.Currency.CNY);
-        }
-    }
-
-    /**
-     * 货币显示名称转代码
-     */
-    private String convertCurrencyNameToCode(String currencyName) {
-        if (currencyName == null) {
-            return "CNY";
-        }
-        if (currencyName.contains("CNY") || currencyName.contains("人民币")) {
-            return "CNY";
-        } else if (currencyName.contains("USD") || currencyName.contains("美元")) {
-            return "USD";
-        } else if (currencyName.contains("JPY") || currencyName.contains("日元")) {
-            return "JPY";
-        } else if (currencyName.contains("KRW") || currencyName.contains("韩元")) {
-            return "KRW";
-        } else if (currencyName.contains("EUR") || currencyName.contains("欧元")) {
-            return "EUR";
-        }
-        return "CNY";
+    private static String selectableCode(String raw, List<String> codes, String fallback) {
+        return raw != null && codes.contains(raw) ? raw : fallback;
     }
 
     /**
@@ -870,7 +736,7 @@ public class SettingsController {
 
         // 设置文件过滤器
         FileChooser.ExtensionFilter imageFilter = new FileChooser.ExtensionFilter(
-            "图片文件 (*.png, *.jpg, *.jpeg, *.gif, *.bmp)",
+            I18nManager.getInstance().get("runtime.file_filter_images"),
             "*.png", "*.PNG", "*.jpg", "*.JPG", "*.jpeg", "*.JPEG", "*.gif", "*.GIF", "*.bmp", "*.BMP"
         );
         fileChooser.getExtensionFilters().add(imageFilter);
@@ -1206,15 +1072,16 @@ public class SettingsController {
      */
     private boolean validateBasicSettings() {
         String errorMessage = "";
+        I18nManager i18n = I18nManager.getInstance();
 
         // 验证税率
         try {
             double taxRate = FormValidator.parseDouble(taxRateField.getText().trim());
             if (taxRate < 0 || taxRate > 1) {
-                errorMessage += "税率必须在0到1之间！\n";
+                errorMessage += i18n.get("settings.tax_rate_range_error") + "\n";
             }
         } catch (IllegalArgumentException e) {
-            errorMessage += "税率格式不正确！\n";
+            errorMessage += i18n.get("settings.tax_rate_format_error") + "\n";
         }
 
         if (!errorMessage.isEmpty()) {
@@ -1307,17 +1174,17 @@ public class SettingsController {
         settings.put("storePhone", storePhoneField.getText().trim());
         settings.put("taxRate", taxRateField.getText().trim());
         String selectedLanguage = languageComboBox.getSelectionModel().getSelectedItem();
-        settings.put("language", selectedLanguage != null ? selectedLanguage : "简体中文");
+        settings.put("language", defaultText(selectedLanguage, "zh-CN"));
         String selectedTheme = themeComboBox.getSelectionModel().getSelectedItem();
-        settings.put("theme", selectedTheme != null ? selectedTheme : I18nManager.getInstance().get(I18nKeys.Menu.Theme.LISUAN));
+        settings.put("theme", defaultText(selectedTheme, FXConstants.DEFAULT_THEME));
         String selectedCurrency = currencyComboBox.getSelectionModel().getSelectedItem();
-        settings.put("currency", selectedCurrency != null ? selectedCurrency : I18nManager.getInstance().get(I18nKeys.Currency.CNY));
+        settings.put("currency", defaultText(selectedCurrency, "CNY"));
 
         // 打印设置
         settings.put("enablePrint", String.valueOf(enablePrintCheckBox.isSelected()));
         settings.put("printerName", printerNameField.getText().trim());
         String selectedPaperSize = paperSizeComboBox.getSelectionModel().getSelectedItem();
-        settings.put("paperSize", selectedPaperSize != null ? selectedPaperSize : "58mm (热敏纸)");
+        settings.put("paperSize", defaultText(selectedPaperSize, "58mm"));
         settings.put("printLogo", String.valueOf(printLogoCheckBox.isSelected()));
         settings.put("logoPath", logoPathField.getText().trim());
         settings.put("printBarcode", String.valueOf(printBarcodeCheckBox.isSelected()));
@@ -1325,7 +1192,7 @@ public class SettingsController {
         // 备份设置
         settings.put("autoBackup", String.valueOf(autoBackupCheckBox.isSelected()));
         String selectedBackupFreq = backupFrequencyComboBox.getSelectionModel().getSelectedItem();
-        settings.put("backupFrequency", selectedBackupFreq != null ? selectedBackupFreq : "每天");
+        settings.put("backupFrequency", defaultText(selectedBackupFreq, "daily"));
         settings.put("backupPath", backupPathField.getText().trim());
 
         // 安全设置
@@ -1344,20 +1211,17 @@ public class SettingsController {
             return;
         }
 
-        // 保存主题偏好（单独存储到主题偏好表）
-        String themeName = settings.getOrDefault("theme", I18nManager.getInstance().get(I18nKeys.Menu.Theme.LISUAN));
-        String themeCode = convertThemeNameToCode(themeName);
+        // 保存主题偏好（单独存储到主题偏好表；settings 里存的就是主题代码）
+        String themeCode = settings.getOrDefault("theme", FXConstants.DEFAULT_THEME);
         String username = (currentUser != null) ? currentUser.username : "default";
         DataService.saveThemePreference(username, themeCode);
 
-        // 保存语言偏好 - 保存到当前用户
-        String languageName = settings.getOrDefault("language", "简体中文");
-        String languageTag = convertLanguageNameToTag(languageName);
+        // 保存语言偏好 - 保存到当前用户（settings 里存的就是 BCP47 标签）
+        String languageTag = settings.getOrDefault("language", "zh-CN");
         DataService.saveLanguagePreference(username, languageTag);
 
-        // 保存字号偏好 - 保存到当前用户
-        String fontSizeName = fontSizeComboBox.getSelectionModel().getSelectedItem();
-        String fontSizeCode = convertFontSizeNameToCode(fontSizeName);
+        // 保存字号偏好 - 保存到当前用户（下拉开 item 就是字号代码）
+        String fontSizeCode = defaultText(fontSizeComboBox.getSelectionModel().getSelectedItem(), "medium");
         DataService.saveFontSizePreference(username, fontSizeCode);
 
         // 让「自动备份 / 备份频率」真正生效：写进 backup_config 并重启调度器（审计 F6）。
@@ -1395,20 +1259,21 @@ public class SettingsController {
         }
 
         int width = 48;
+        I18nManager i18n = I18nManager.getInstance();
         StringBuilder content = new StringBuilder();
         content.append(EscPosUtils.createSeparator(width, '-')).append("\n");
-        content.append(EscPosUtils.centerText(I18nManager.getInstance().get("settings.test_print"), width)).append("\n");
+        content.append(EscPosUtils.centerText(i18n.get("settings.test_print"), width)).append("\n");
         content.append(EscPosUtils.createSeparator(width, '-')).append("\n");
-        content.append("设备名称: ").append(device.getDeviceName()).append("\n");
-        content.append("设备ID: ").append(device.getDeviceId()).append("\n");
-        content.append("设备类型: ").append(device.getDeviceType().getDisplayName()).append("\n");
+        content.append(i18n.get("settings.test_print.device_name", device.getDeviceName())).append("\n");
+        content.append(i18n.get("settings.test_print.device_id", device.getDeviceId())).append("\n");
+        content.append(i18n.get("settings.test_print.device_type", device.getDeviceType().getDisplayName())).append("\n");
         if (device instanceof NetworkPrinterDevice) {
             NetworkPrinterDevice netPrinter = (NetworkPrinterDevice) device;
-            content.append("IP地址: ").append(netPrinter.getHostAddress()).append("\n");
-            content.append("端口: ").append(netPrinter.getPort()).append("\n");
+            content.append(i18n.get("settings.test_print.ip_address", netPrinter.getHostAddress())).append("\n");
+            content.append(i18n.get("settings.test_print.port", netPrinter.getPort())).append("\n");
         }
-        content.append("打印时间: ")
-            .append(DateTimeFormats.formatStandard(LocalDateTime.now(ZoneId.systemDefault()))).append("\n");
+        content.append(i18n.get("settings.test_print.time",
+            DateTimeFormats.formatStandard(LocalDateTime.now(ZoneId.systemDefault())))).append("\n");
         content.append(EscPosUtils.createSeparator(width, '-')).append("\n");
         content.append("\n\n");
 
@@ -1530,10 +1395,12 @@ public class SettingsController {
         javafx.stage.FileChooser fileChooser = new javafx.stage.FileChooser();
         fileChooser.setTitle(com.cashier.i18n.I18nManager.getInstance().get("runtime.choose_csv"));
         fileChooser.getExtensionFilters().add(
-            new javafx.stage.FileChooser.ExtensionFilter("CSV 文件", "*.csv")
+            new javafx.stage.FileChooser.ExtensionFilter(
+                com.cashier.i18n.I18nManager.getInstance().get("runtime.file_filter_csv"), "*.csv")
         );
         fileChooser.getExtensionFilters().add(
-            new javafx.stage.FileChooser.ExtensionFilter("所有文件", "*.*")
+            new javafx.stage.FileChooser.ExtensionFilter(
+                com.cashier.i18n.I18nManager.getInstance().get("runtime.file_filter_all"), "*.*")
         );
         
         File selectedFile = fileChooser.showOpenDialog(csvFilePathField.getScene().getWindow());

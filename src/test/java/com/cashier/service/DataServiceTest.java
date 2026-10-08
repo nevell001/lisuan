@@ -100,8 +100,13 @@ class DataServiceTest extends DatabaseTestBase {
     }
 
     @Test
-    @DisplayName("备份频率文案映射为小时数：中英文都认，无法识别时不改周期")
+    @DisplayName("备份频率映射为小时数：稳定代码与中英文老值都认，无法识别时不改周期")
     void backupFrequencyMapsToHours() {
+        // TD-040 后设置页与 settings 表都存稳定代码
+        assertEquals(24, BackupService.intervalHoursForFrequency("daily"));
+        assertEquals(24 * 7, BackupService.intervalHoursForFrequency("weekly"));
+        assertEquals(24 * 30, BackupService.intervalHoursForFrequency("monthly"));
+        // 老库里的显示文案仍要能算出来，否则老数据升级后备份频率静默失效
         assertEquals(24, BackupService.intervalHoursForFrequency("每天"));
         assertEquals(24, BackupService.intervalHoursForFrequency("Daily"));
         assertEquals(24 * 7, BackupService.intervalHoursForFrequency("每周"));
@@ -110,6 +115,13 @@ class DataServiceTest extends DatabaseTestBase {
         assertEquals(24 * 30, BackupService.intervalHoursForFrequency("Monthly"));
         assertEquals(0, BackupService.intervalHoursForFrequency("随便"));
         assertEquals(0, BackupService.intervalHoursForFrequency(null));
+
+        // 归一函数是设置页回读用的（TD-040）——代码、老文案、未知值
+        assertEquals("daily", BackupService.canonicalFrequency("Daily"));
+        assertEquals("weekly", BackupService.canonicalFrequency("每周"));
+        assertEquals("monthly", BackupService.canonicalFrequency("monthly"));
+        assertEquals("", BackupService.canonicalFrequency("随便"));
+        assertEquals("", BackupService.canonicalFrequency(null));
     }
 
     @Test

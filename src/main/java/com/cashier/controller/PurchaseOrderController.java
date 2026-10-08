@@ -24,7 +24,6 @@ import javafx.beans.property.SimpleBooleanProperty;
 import javafx.collections.FXCollections;
 import javafx.collections.ObservableList;
 import javafx.fxml.FXML;
-import javafx.scene.Node;
 import javafx.scene.Scene;
 import javafx.scene.control.*;
 import javafx.scene.control.cell.PropertyValueFactory;
@@ -51,6 +50,8 @@ public class PurchaseOrderController {
     private static final int PRODUCT_SELECTION_PAGE_SIZE = 500;
     private static final int PURCHASE_SUPPLIER_LIMIT = 500;
     private static final int FIRST_PAGE = 1;
+    /** 明细表上登记的"总金额"标签引用（不能用中文前缀匹配文案，见 {@link #updateItemTotal}）。 */
+    private static final String TOTAL_AMOUNT_LABEL_KEY = "purchaseOrder.totalAmountLabel";
     private final com.cashier.dao.ProductDAORefactored productDAO = com.cashier.dao.DAOFactory.getInstance().getProductDAO();
 
     @FXML
@@ -285,7 +286,6 @@ public class PurchaseOrderController {
                 } catch (SQLException ex) {
                     logger.error("加载订单明细失败", ex);
                 }
-                updateItemTotal(itemTable);
             }
 
             // 添加商品按钮
@@ -298,6 +298,8 @@ public class PurchaseOrderController {
             Label totalLabel = new Label(I18nManager.getInstance().get("runtime.total_amount_value", CurrencyUtil.format(0)));
             totalLabel.getStyleClass().add(TEXT_DEFAULT_STYLE);
             totalLabel.getStyleClass().add("title-sm");
+            // 把标签登记到明细表上，updateItemTotal 直接取引用更新（不再按文案前缀找节点）
+            itemTable.getProperties().put(TOTAL_AMOUNT_LABEL_KEY, totalLabel);
 
             // 商品明细标签
             Label itemLabel = new Label(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Runtime.PRODUCT_DETAILS));
@@ -326,6 +328,10 @@ public class PurchaseOrderController {
             buttonBox.setAlignment(javafx.geometry.Pos.CENTER_RIGHT);
 
             root.getChildren().addAll(form.grid, itemLabel, addProductButton, itemTable, totalLabel, buttonBox);
+
+            // 明细与总金额标签装配完成后刷新总金额（编辑模式原先在标签创建前调用，
+            // 既拿不到标签、又会误弹"请选择采购订单"，总金额停在 0）
+            updateItemTotal(itemTable);
 
             Scene scene = new Scene(root, 750, 550);
             applyCurrentTheme(scene);
@@ -988,17 +994,11 @@ public class PurchaseOrderController {
      */
     private void updateItemTotal(TableView<PurchaseOrderItem> itemTable) {
         BigDecimal total = calculateTotalAmount(itemTable.getItems());
-        // 更新总金额显示
-        VBox parent = (VBox) itemTable.getParent();
-        if (parent != null) {
-            for (javafx.scene.Node node : parent.getChildren()) {
-                if (node instanceof Label && ((Label) node).getText().startsWith("总金额:")) {
-                    ((Label) node).setText(I18nManager.getInstance().get("runtime.total_amount_value", CurrencyUtil.format(total.doubleValue())));
-                    break;
-                }
-            }
-        } else {
-            showWarning(I18nManager.getInstance().get(I18nKeys.Runtime.SELECT_PURCHASE_ORDER));
+        // 总金额标签的文字随语言变化（runtime.total_amount_value），不能再靠 "总金额:" 前缀匹配节点，
+        // 否则切到 en/zh_TW 后永远匹配不上、标签不会刷新；改为取创建时登记的标签引用
+        Object node = itemTable.getProperties().get(TOTAL_AMOUNT_LABEL_KEY);
+        if (node instanceof Label totalLabel) {
+            totalLabel.setText(I18nManager.getInstance().get("runtime.total_amount_value", CurrencyUtil.format(total.doubleValue())));
         }
     }
 

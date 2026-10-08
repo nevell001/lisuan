@@ -1,5 +1,7 @@
 package com.cashier.util;
 
+import com.cashier.i18n.I18nKeys;
+import com.cashier.i18n.I18nManager;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -93,5 +95,31 @@ class I18nUiUtilsTest {
         assertEquals(I18nUiUtils.paymentMethod("现金"), I18nUiUtils.paymentMethod("CASH"));
         assertEquals(I18nUiUtils.paymentMethod("微信"), I18nUiUtils.paymentMethod("WECHAT"));
         assertEquals(I18nUiUtils.paymentMethod("银行卡"), I18nUiUtils.paymentMethod("CARD"));
+    }
+
+    @Test
+    @DisplayName("设置页下拉的显示层映射：代码 → 本地化名称，未知值原样返回（TD-040）")
+    void settingsDropdownMappersTranslateCodesOnly() {
+        I18nManager i18n = I18nManager.getInstance();
+
+        // 语言：显示成语种自称（不随当前界面语言变）
+        assertEquals("简体中文", I18nUiUtils.languageTag("zh-CN"));
+        assertEquals("繁體中文", I18nUiUtils.languageTag("zh-TW"));
+        assertEquals("English", I18nUiUtils.languageTag("en"));
+
+        // 其余下拉：代码 → 语言包条目
+        assertEquals(i18n.get(I18nKeys.Currency.CNY), I18nUiUtils.currency("CNY"));
+        assertEquals(i18n.get("currency.usd"), I18nUiUtils.currency("usd"));
+        assertEquals(i18n.get(I18nKeys.Menu.Theme.LISUAN), I18nUiUtils.theme("lisuan"));
+        assertEquals(i18n.get(I18nKeys.Menu.Theme.DARK), I18nUiUtils.theme("dark"));
+        assertEquals(i18n.get(I18nKeys.Settings.FONT_SIZE_MEDIUM), I18nUiUtils.fontSize("medium"));
+        assertEquals(i18n.get("settings.paper_58mm"), I18nUiUtils.paperSize("58mm"));
+        assertEquals(i18n.get("settings.backup_weekly"), I18nUiUtils.backupFrequency("weekly"));
+        assertEquals(i18n.get("settings.payment_mode_production"), I18nUiUtils.paymentMode("production"));
+
+        // 未知值/不需要翻译的值原样返回，兼容老库按显示串存的历史值
+        assertEquals("A4", I18nUiUtils.paperSize("A4"));
+        assertEquals("其他", I18nUiUtils.theme("其他"));
+        assertEquals("58mm（热敏纸）", I18nUiUtils.paperSize("58mm（热敏纸）"));
     }
 }

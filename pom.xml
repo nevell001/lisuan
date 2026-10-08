@@ -479,9 +479,11 @@
                         <TEST_MODE>true</TEST_MODE>
                     </systemPropertyVariables>
                     <!-- TestFX UI 测试需要真实显示环境；默认构建排除，避免无头/CI 环境挂起。
-                         桌面环境显式运行：mvn -Pui-tests -Dtest=LoginControllerUITest test -->
+                         桌面环境显式运行：mvn -Pui-tests -Dtest=LoginControllerUITest test
+                                            mvn -Pui-tests -Dtest=SettingsControllerUITest test -->
                     <excludes>
                         <exclude>**/LoginControllerUITest.java</exclude>
+                        <exclude>**/SettingsControllerUITest.java</exclude>
                     </excludes>
                 </configuration>
             </plugin>

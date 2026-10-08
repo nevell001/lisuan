@@ -386,8 +386,10 @@ productDAO.update(product);
 - Keep UI tests simple - avoid complex FXML loading in headless environments
 - Test component visibility, IDs, and basic interactions
 - Example: `LoginControllerUITest.java` demonstrates simplified UI testing pattern
-- 默认构建（`mvn verify`）会排除 `LoginControllerUITest`，因为它需要真实显示环境；
-  在具备桌面显示环境时显式运行：`mvn -Pui-tests -Dtest=LoginControllerUITest test`
+- 默认构建（`mvn verify`）会排除 `LoginControllerUITest` 与 `SettingsControllerUITest`（都需要真实显示环境）；
+  在具备桌面显示环境时显式运行：`mvn -Pui-tests -Dtest=LoginControllerUITest test`、
+  `mvn -Pui-tests -Dtest=SettingsControllerUITest test`（后者加载真实 `SettingsView.fxml`，
+  是 TD-040 的桌面冒烟）
 
 ```java
 @ExtendWith(ApplicationExtension.class)
@@ -776,14 +778,36 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   ① 辅助方法返回再显示的文案（`formatDuration` 改回 `hours + "小时"` 不会变红）、
   ② 变量拼接后显示（`RechargeController` 的 `errorMessage += "…"`、
   `MainController` 的关于弹窗正文）两类**抓不到**，靠逐文件定点锚点兜。
-  `MIGRATED_FILES` 现为 **14 个文件**；其余文件里这类残留的实测清单见
-  `docs/TECH_DEBT.md` 的"F14 附录"（下一批要迁的 7 个文件、逐条带行号）。
+  `MIGRATED_FILES` 现为 **14 个文件**；这类残留的实测清单与分批状态见
+  `docs/TECH_DEBT.md` 的"F14 附录"（2026-10 第三批已把 `SettingsController` 三处与
+  `PurchaseOrderController` 总金额标签处理完；"下拉/枚举显示值"这类 TD-002 同款口径重构
+  另见下面的 TD-040）。
+  **"中文当逻辑匹配键"比硬编码文案更坏**（实测于 `PurchaseOrderController.updateItemTotal`）：
+  它用 `((Label) node).getText().startsWith("总金额:")` 找自己在 i18n 里渲染的标签，
+  切到 en/zh_TW 后前缀对不上 → 标签永远不刷新（中文环境掩盖缺陷）。可见控件的**逻辑引用**
+  一律用字段/`fx:id`/登记引用，别拿它的显示文案当 key。
   **写 i18n 调用时要顺着门禁的形状写**：`I18nManager.get(...)` 的首参必须是字面量或常量
   （`get(cond ? A : B, x)` 会让 `I18nBundleConsistencyTest` 把条件里的字面量当成 key）；
   用户可见文案也可能不在 `updateStatus` 里——`showError`/`showWarning` 同样是文案出口，
   按调用形式筛会漏（第四批就这样漏过一处）。
   注意 `RechargeController` 的支付方式：**下拉项仍需保留规范中文落库值**（TD-002），
   只能通过 `StringConverter` 本地化显示层
+- **设置页下拉/落库值必须"代码即数据、显示层翻译"**（TD-040，2026-10）：
+  `SettingsController` 的 7 个下拉（语言/货币/主题/字号/纸张/备份频率/支付模式）此前把
+  `i18n.get(...)` 的**显示串**当 item 值、还 `settings.put("paperSize", 显示串)` 落库，
+  切语言后 `getItems().contains(老值)` 失配 → 设置被静默重置成默认值。现在 item 一律是稳定代码
+  （`zh-CN`/`CNY`/`lisuan`/`small`/`58mm`/`daily`/`disabled`…），显示层统一走
+  `I18nUiUtils.configureComboBox` + `I18nUiUtils.languageTag/currency/theme/fontSize/paperSize/
+  backupFrequency/paymentMode`，老库显示串在读取时归一（`paperSizeCodeOf`/`selectableCode`）。
+  **改这类值时要同时改消费者，并确认"回读"**：`BackupService.intervalHoursForFrequency` 已补
+  `daily/weekly/monthly` 分支（漏了就是"改了备份频率没生效"）；`PrinterManager.applyPaperSize`
+  按 `contains("58"/"80")` 消费，代码值同样成立。**回读也要查**——桌面冒烟实测抓到
+  `loadSettings()` 漏读 `backupFrequency`：下拉永远停在默认值，用户选了"每周"再保存一次就被覆盖回
+  `daily`（连周期一起改回 24h）。现在经 `BackupService.canonicalFrequency` 归一后回读。
+  门禁 `SettingsDropdownValuePolicyTest`（源码，含"必须回读"断言）；
+  冒烟 `SettingsControllerUITest`（真实 FXML + 控件，需显示环境：
+  `mvn -Pui-tests -Dtest=SettingsControllerUITest test`，默认 `mvn verify` 排除）。
+  仍待决定：`PrinterDeviceType.getDisplayName()` 的中文枚举名同时进 API JSON，见 TD-040"同批未做"
 - `I18nKeys.java` 里有**嵌套类**（`Menu.Help`、`Menu.Theme`、`Nav`、`Runtime`、`StatusMessage`…）：
   手工或用脚本改这个文件时**不要**"把块内常量行排序后重排"——那种写法会把嵌套类内的常量压平到外层，
   编译期才会以 `找不到符号` 暴露。新增常量要么严格落在所属嵌套类内，要么按类整体替换

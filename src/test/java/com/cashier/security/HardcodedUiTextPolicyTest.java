@@ -199,6 +199,49 @@ class HardcodedUiTextPolicyTest {
     }
 
     @Test
+    @DisplayName("采购订单总金额标签不得靠硬编码中文前缀定位（切语言后永不刷新）")
+    void purchaseOrderTotalLabelIsNotLocatedByHardcodedChinese() throws Exception {
+        // 2026-10 F14：`((Label) node).getText().startsWith("总金额:")` 既是硬编码中文，又是**功能缺陷**——
+        // 标签文字由 runtime.total_amount_value 按当前语言渲染，切到 en/zh_TW 后前缀对不上，
+        // 于是总金额永远不会刷新（中文环境掩盖了它）。改为创建标签时把引用登记到明细表上。
+        String text = read("controller/PurchaseOrderController.java");
+        assertFalse(text.contains("startsWith(\"总金额"),
+            "总金额标签的文字随语言变化，不得用中文字面前缀匹配节点");
+        assertTrue(text.contains("getProperties().put(TOTAL_AMOUNT_LABEL_KEY")
+                && text.contains("getProperties().get(TOTAL_AMOUNT_LABEL_KEY)"),
+            "总金额标签应通过 showOrderDialog 创建时登记的引用更新，而不是扫描同级节点文案");
+    }
+
+    @Test
+    @DisplayName("设置页三类可见文案必须走 i18n（税率校验 / 测试打印正文 / 文件选择器标签）")
+    void settingsVisibleTextIsLocalized() throws Exception {
+        // 2026-10 F14 第三批。三类都不在主规则覆盖范围内：
+        // ① 税率校验中文拼进 errorMessage 变量后再 showError；② 测试打印正文拼进 StringBuilder
+        // 交给打印机（打印件同样是用户可见文案）；③ ExtensionFilter 的标签参数不在可见调用名单里。
+        String text = read("controller/SettingsController.java");
+        assertTrue(text.contains("get(\"settings.tax_rate_range_error\")")
+                && text.contains("get(\"settings.tax_rate_format_error\")"),
+            "税率校验文案必须走 i18n key");
+        assertFalse(text.contains("errorMessage += \""),
+            "税率校验文案不得再直接拼接中文字面量");
+        assertTrue(text.contains("get(\"settings.test_print.device_name\",")
+                && text.contains("get(\"settings.test_print.device_id\",")
+                && text.contains("get(\"settings.test_print.device_type\",")
+                && text.contains("get(\"settings.test_print.ip_address\",")
+                && text.contains("get(\"settings.test_print.port\",")
+                && text.contains("get(\"settings.test_print.time\","),
+            "测试打印正文的字段名必须走带参 i18n key");
+        assertTrue(text.contains("get(\"runtime.file_filter_images\")")
+                && text.contains("get(\"runtime.file_filter_csv\")")
+                && text.contains("get(\"runtime.file_filter_all\")"),
+            "文件选择器过滤标签必须走 i18n key");
+        assertFalse(text.contains("ExtensionFilter(\"图片文件")
+                || text.contains("ExtensionFilter(\"CSV 文件\"")
+                || text.contains("ExtensionFilter(\"所有文件\""),
+            "文件选择器过滤标签不得回退成中文字面量");
+    }
+
+    @Test
     @DisplayName("FXML 的可见文案必须走 %key，不得写死中文")
     void fxmlVisibleTextUsesResourceKeys() throws Exception {
         // 全量扫描视图目录：可见文案属性要么是 %key，要么不含中文（图标/占位符/技术串）

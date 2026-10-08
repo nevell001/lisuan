@@ -44,6 +44,7 @@
 | TD-037 | 收银员可用 `POST /api/printers/{id}/receipt` 的 `openCashDrawer` 打开钱箱（而 `/cashdrawer` 是管理员专属） | 安全/权限策略 | **待产品决定（2026-09）**：堵住这条等价路径，还是按"收银员本就要开钱箱找零"放开 `/cashdrawer`——两条路的业务含义不同，不擅自改 | 钱箱权限 |
 | TD-038 | `POST /api/invoices/from-transaction` 请求体可自报开票方信息/`createBy`/`taxRate` | 安全 | **待处理（2026-09）**：同一条路由的 `PUT /api/invoices/seller-info` 是管理员专属，此处却可覆盖全局开票方并伪造开票人 | 发票 |
 | TD-039 | `POST /api/invoices/{id}/print` 可写任意 `pdfPath`/`imagePath`；mock 支付模式回调密钥熵低 | 安全 | **待处理（2026-09，低危）**：路径字段目前不被当文件读取（TD-001 门禁守着），影响限于数据伪造；mock 模式仅出现在本地未跟踪配置 | 发票/支付 |
+| TD-040 | 设置页下拉/落库值把**本地化显示串**当数据（切语言后设置失配、被静默重置成默认值） | 正确性/口径 | **已修复（2026-10）**：7 个下拉改稳定代码 + `I18nUiUtils` 显示层映射；`settings` 表落代码、`paperSize`/备份频率老值归一；`BackupService.intervalHoursForFrequency` 补代码分支；**桌面冒烟另抓出"备份频率从不回读"并修掉**；门禁 2 项 + 冒烟 2 项 + 行为测试 2 组 | 多语言设置 |
 
 > 本节条目来自 2026-09 的全量审计（`mvn verify` 三关全绿的前提下，逐条回读代码 + 真实
 > Javalin 最小复现验证）。
@@ -1837,7 +1838,7 @@ PUT /API/members/1    -> HTTP 404
 `inventoryAlertLevelNamesAreLocalized`（枚举常量不得存中文）与
 `inventoryAlertDurationTextsAreLocalized`（时长必须走带参 key，且不得拼接回去）。
 
-### F14 附录：门禁看不见的同类残留——已修 5 处 / 剩余 5 处（2026-10）
+### F14 附录：门禁看不见的同类残留（2026-10，第三批已修）
 
 按"中文在别处拼好/返回再显示"的形状扫描 `MIGRATED_FILES` 全部 14 个文件。
 **重要订正（2026-10 复核）**：首版清单是按**行**筛的，把 3 处**多行调用成的
@@ -1862,20 +1863,93 @@ PUT /API/members/1    -> HTTP 404
 配套门禁：`updateProgress`/`export` 加入 `HardcodedUiTextPolicyTest` 的可见出口名单；
 新增锚点 `variableBuiltVisibleTextIsLocalized` 钉住"拼进变量/列表"的 5 处形状不得回退。
 
+#### 已修（第三批，2026-10-08）
+
+| 位置 | 处理 |
+|---|---|
+| `SettingsController` 税率校验文案（原 1214/1217） | `errorMessage += "税率…"` → `settings.tax_rate_range_error` / `settings.tax_rate_format_error`（拼进变量再 `showError`，主规则看不见，靠新锚点钉住） |
+| `SettingsController` 测试打印正文（原 1402-1410） | 6 个字段名 → `settings.test_print.device_name/device_id/device_type/ip_address/port/time`（各带 `{0}`）。**遗留**：`设备类型` 的**值**仍是 `PrinterDeviceType.getDisplayName()` 里的中文枚举名，且该值同时作为 `PrintApiController` 的 JSON 字段 `deviceType` 返回——"显示值即数据值"，已登记在 TD-040 的"同批未做"（需先定 API 语言口径） |
+| `SettingsController` 文件选择器过滤标签（原 873/1533/1536） | → `runtime.file_filter_images` / `file_filter_csv` / `file_filter_all`（`ExtensionFilter` 的标签参数不在硬编码门禁的可见调用名单里，靠新锚点钉住） |
+| `PurchaseOrderController` **995**（功能缺陷） | 删除 `getText().startsWith("总金额:")` 的节点匹配：标签文字由 `runtime.total_amount_value` 按语言渲染，en/zh_TW 下前缀对不上，**总金额永远不刷新**。改为 `showOrderDialog` 创建标签时 `itemTable.getProperties().put(TOTAL_AMOUNT_LABEL_KEY, totalLabel)`，`updateItemTotal` 直接取引用。顺带修掉同一处的第二个缺陷：编辑模式下原先在标签创建**之前**调用（`parent == null`），既误弹"请选择采购订单"、总金额又停在 0；现在改到 `root.getChildren().addAll(...)` 之后刷新 |
+
+配套门禁：`HardcodedUiTextPolicyTest` 新增两项定点锚点——
+`purchaseOrderTotalLabelIsNotLocatedByHardcodedChinese`（禁止中文字面前缀匹配 + 要求登记引用）与
+`settingsVisibleTextIsLocalized`（税率校验 / 测试打印正文 / 文件选择器三处，含"不得回退成中文字面量"）。
+
 #### 剩余（下一批）
 
-| 文件 | 残留（行号，2026-10-08 复核） | 备注 |
+| 文件 | 残留（2026-10-08 复核） | 备注 |
 |---|---|---|
-| `SettingsController` | 1214/1217 税率校验文案（`errorMessage +=`）；1402-1410 测试打印正文（设备名称:/IP地址:/端口:…）；873/1533/1536 文件选择器过滤标签（`new ExtensionFilter("CSV 文件", …)`） | 与充值校验同形状；测试打印是**打印件**，同样要译 |
-| `PurchaseOrderController` | 489 `String.format("%s - %s (%s级)")`（供应商展示串） | 下拉/表格可见 |
-| `PurchaseOrderController` **995** | `((Label) node).getText().startsWith("总金额:")` | **这是功能缺陷不是文案问题**：该标签的文字已由 i18n 设置（`runtime.total_amount_value`），英文环境下前缀不再等于"总金额:"，于是**总金额标签永远不会刷新**。修法：用同一个 key 拼前缀比较，或给标签一个 `fx:id` 后直接引用 |
-| `TransactionController`/`PurchaseOrderController`/`SettingsController` 的**筛选下拉值**（全部/今天/本月/待审批/简体中文/每天/58mm (热敏纸)…） | 既是显示文本又是落库/匹配值 | 要翻译必须走 TD-002 的模式（落库存代码 + `StringConverter` 只翻译显示层），是一次独立重构，不在"文案迁移"范围内 |
+| `PurchaseOrderController` | 489 `String.format("%s - %s (%s级)")`（供应商展示串） | 下拉/表格可见；`级` 是量词、值来源于数据，需单独的带参 key |
+| 枚举**显示值**（TD-002 同款） | `PrinterDeviceType.getDisplayName()`（中文枚举名同时进 API JSON 与设置页测试打印）、`PrintApiController` 自己的测试打印正文 | 前者已登记在 **TD-040 的"同批未做"**（API 语言口径待定）；后者是 API 触发的打印件，语言来源未定 |
+
+**下拉值口径的实测订正与处理（2026-10-08）**：上表原先列的
+`TransactionController`/`PurchaseOrderController` 筛选下拉**已经**是 TD-002 模式了——
+`I18nUiUtils.configureComboBox` + `paymentMethod/dateRange/purchaseStatus` 只翻译显示层，
+item 值保持稳定代码/规范中文（`statusFilterCombo` 直接用 `all/pending/approved/...` 代码），
+无需再动。真正剩下的是 `SettingsController` 自己的设置值下拉——**已按 TD-040 单独做完**：
+item 改稳定代码、`settings` 表落代码、`paperSize` 老显示串归一、
+`BackupService.intervalHoursForFrequency` 补代码分支（这一条必须配套，否则备份频率会静默失效）。
 
 **根治方案（仍未做）**：把门禁升级为"除白名单数据值外，迁移文件里不得出现中文字面量"。
 白名单约 40 条（落库规范值 现金/微信/简体中文/每天/全部…、品牌名 `APP_TITLE`、
 历史标签兼容表 `actions.put("商品管理", …)`、FXML 设计期占位等），每条要写明理由；
 该方案能覆盖上述**全部**形状（返回值、拼接、`Arrays.asList`、日志除外），但必须先把白名单核准确，
 否则会误报大量落库值。**当前仍靠逐文件定点锚点兜底。**
+
+## TD-040 设置页下拉/落库值把本地化显示串当数据（已修复，2026-10）
+
+**形状**（TD-002 同款，但这次是"设置值"而不是"支付方式"）：`SettingsController` 的 7 个下拉
+把 `i18n.get(...)` 的**显示串**直接当 item 值，保存时 `settings.put("paperSize", 显示串)` 落库，
+读取时再 `paperSizeComboBox.getItems().contains(savedPaperSize)` / 按当前语言的显示串反解代码。
+
+**后果**：切到别的界面语言后，库里的历史值（如 `58mm（热敏纸）`）与当前语言的 item
+（`58mm (Thermal)`）对不上——`contains` 失败、下拉落回第一项，用户下次保存就把原选择
+**静默覆盖**成默认值。`backupFrequency` 更要命：它的值会被
+`BackupService.intervalHoursForFrequency` 拿去算周期，而那个 switch 只手写了中英文文案，
+文案一改就返回 0（保持旧周期不动——改了设置却完全没生效）。
+
+**已修**：
+- 7 个下拉（语言/货币/主题/字号/纸张/备份频率/支付模式）item 一律换成稳定代码
+  （`zh-CN`、`CNY`、`lisuan`、`small`、`58mm`、`daily`、`disabled`…），显示层统一走
+  `I18nUiUtils.configureComboBox` + 新增的 `I18nUiUtils.languageTag/currency/theme/fontSize/
+  paperSize/backupFrequency/paymentMode`；未知值原样返回。
+- `settings` 表改落代码；`paperSize` 读取用 `paperSizeCodeOf` 归一老显示串；主题/语言/字号/货币
+  的偏好值用 `selectableCode` 兜底，脏值不会让下拉变空白。
+- 删除 8 个 `convert*NameToCode`/`convert*CodeToName` 互转方法（约 175 行）——它们是"显示串即数据值"的根源。
+- `BackupService.intervalHoursForFrequency` 补 `daily/weekly/monthly` 分支（保留老中文/英文分支），
+  否则改完代码备份频率会静默失效；归一逻辑抽成 `BackupService.canonicalFrequency(String)` 供回读复用。
+- 支付模式下拉顺带本地化（此前界面直接显示 `disabled/mock/production` 代码）；
+  `runtime.payment_mode_invalid` 文案也从"列出代码"改成"请重新选择"（下拉已显示本地化名称，列代码会自相矛盾）。
+
+**冒烟（2026-10，桌面环境）**：新增 `SettingsControllerUITest`（真实 `SettingsView.fxml` + 控制器），
+`mvn -Pui-tests -Dtest=SettingsControllerUITest test` 运行；默认 `mvn verify` 排除（pom 已加 exclude）。
+首次运行就抓出**第二个缺陷**并当场修掉：**`backupFrequencyComboBox` 从不回读**——`loadSettings()`
+只读 `autoBackup`/`backupPath`，没读 `backupFrequency`，于是下拉永远停在默认值，
+用户选了"每周"后只要再保存一次设置就被覆盖回 `daily`，`applyScheduleFromSettings` 顺带把周期改回 24h。
+现在读值经 `BackupService.canonicalFrequency` 归一（代码与老中文/英文文案都认）；
+`SettingsDropdownValuePolicyTest` 补一条源码断言，防止这条回读再被删掉。
+
+**门禁 / 测试**：
+- `SettingsDropdownValuePolicyTest`（2 项，源码）：7 个下拉的 item 块不得出现 `.get(`、
+  必须接 `configureComboBox`；不得再按显示串 `contains` 回读，`paperSize` 必须归一，
+  备份频率必须回读。**两项都做过变异验证**：把某个 item 换回 `i18n.get(...)`、
+  把 `paperSize` 读取改回 `getItems().contains(savedPaperSize)` → 各自变红（已还原，md5 校验一致）。
+- `SettingsControllerUITest`（2 项，行为、需显示环境）：真实加载设置页后断言
+  ①7 个下拉 item 是稳定代码 + 老显示串 `80mm（热敏纸）`/`每周` 被归一后正确选中；
+  ②按钮单元格按语言渲染（zh-CN「每周」/en「Weekly」），切 en 后同一份代码渲染成英文、语种自称不变。
+- `I18nUiUtilsTest.settingsDropdownMappersTranslateCodesOnly`（行为）：代码 → 本地化名称、
+  未知值/A4 原样透传。
+- `DataServiceTest.backupFrequencyMapsToHours`：扩到代码分支（原 8 条中英文断言保留，
+  验证"老值仍能算出周期"）。
+
+**同批未做（需决定，故未擅改）**：
+- `PrinterDeviceType.getDisplayName()` 的中文枚举名既是设置页测试打印的**显示值**，又是
+  `PrintApiController` 的 JSON 字段 `deviceType`（3 处）。API 响应该用稳定枚举名还是按请求语言
+  本地化，是独立设计（还要定 `Accept-Language` 口径），所以本批只改了打印页的**字段名标签**，
+  枚举**值**保持原样。
+- `PrintApiController` 自己的测试打印正文（`打印机测试页`/`设备名称: `…）仍是硬编码中文，
+  与设置页那份重复；它是 API 触发的打印件、语言来源未定，单独一条处理。
 
 ### 本轮**未修**（状态与理由）
 

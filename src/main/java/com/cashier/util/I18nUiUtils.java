@@ -166,4 +166,85 @@ public final class I18nUiUtils {
         };
         return key == null ? value : I18nManager.getInstance().get(key);
     }
+
+    /**
+     * 设置页各下拉框的**显示层**映射（TD-040，TD-002 同款口径）。
+     *
+     * <p>下拉 item 一律是稳定代码（{@code zh-CN}/{@code CNY}/{@code lisuan}/{@code 58mm}/
+     * {@code daily}/{@code disabled}…），只有 {@link #configureComboBox} 走这里的映射翻译显示；
+     * 落库/匹配值因此与界面语言无关。此前 item 直接存 {@code i18n.get(...)} 的显示串，
+     * 切语言后 {@code getItems().contains(老值)} 会失配、设置被静默覆盖成默认值。
+     *
+     * <p>未知值原样返回，用来兼容老库/老配置里按显示串存的历史值。</p>
+     */
+    public static String languageTag(String tag) {
+        return switch (tag == null ? "" : tag) {
+            case "zh-CN" -> "简体中文";
+            case "zh-TW" -> "繁體中文";
+            case "en" -> "English";
+            default -> tag;
+        };
+    }
+
+    public static String currency(String code) {
+        String key = switch (code == null ? "" : code.toUpperCase(java.util.Locale.ROOT)) {
+            case "CNY" -> I18nKeys.Currency.CNY;
+            case "USD" -> "currency.usd";
+            case "JPY" -> "currency.jpy";
+            case "KRW" -> "currency.krw";
+            case "EUR" -> "currency.eur";
+            default -> null;
+        };
+        return key == null ? code : I18nManager.getInstance().get(key);
+    }
+
+    public static String theme(String code) {
+        String key = switch (code == null ? "" : code.toLowerCase(java.util.Locale.ROOT)) {
+            case "light" -> I18nKeys.Menu.Theme.LIGHT;
+            case "dark" -> I18nKeys.Menu.Theme.DARK;
+            case "lisuan", "intellij" -> I18nKeys.Menu.Theme.LISUAN;
+            default -> null;
+        };
+        return key == null ? code : I18nManager.getInstance().get(key);
+    }
+
+    public static String fontSize(String code) {
+        String key = switch (code == null ? "" : code.toLowerCase(java.util.Locale.ROOT)) {
+            case "small" -> I18nKeys.Settings.FONT_SIZE_SMALL;
+            case "medium" -> I18nKeys.Settings.FONT_SIZE_MEDIUM;
+            case "large" -> I18nKeys.Settings.FONT_SIZE_LARGE;
+            case "extra-large" -> I18nKeys.Settings.FONT_SIZE_EXTRA_LARGE;
+            default -> null;
+        };
+        return key == null ? code : I18nManager.getInstance().get(key);
+    }
+
+    public static String paperSize(String code) {
+        String key = switch (code == null ? "" : code) {
+            case "58mm" -> "settings.paper_58mm";
+            case "80mm" -> "settings.paper_80mm";
+            default -> null;   // A4 等无需翻译
+        };
+        return key == null ? code : I18nManager.getInstance().get(key);
+    }
+
+    public static String backupFrequency(String code) {
+        String key = switch (code == null ? "" : code.toLowerCase(java.util.Locale.ROOT)) {
+            case "daily" -> "settings.backup_daily";
+            case "weekly" -> "settings.backup_weekly";
+            case "monthly" -> "settings.backup_monthly";
+            default -> null;
+        };
+        return key == null ? code : I18nManager.getInstance().get(key);
+    }
+
+    public static String paymentMode(String code) {
+        String key = switch (code == null ? "" : code.toLowerCase(java.util.Locale.ROOT)) {
+            case "disabled" -> "settings.payment_mode_disabled";
+            case "mock" -> "settings.payment_mode_mock";
+            case "production" -> "settings.payment_mode_production";
+            default -> null;
+        };
+        return key == null ? code : I18nManager.getInstance().get(key);
+    }
 }

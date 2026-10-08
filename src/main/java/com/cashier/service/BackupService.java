@@ -572,7 +572,8 @@ public class BackupService {
      * 调度器其实还在按旧配置跑（2026-10 审计 F6）。这里把两边接上：写配置 + 重启。</p>
      *
      * @param autoBackupEnabled 设置页「自动备份」勾选状态
-     * @param frequency         设置页「备份频率」文案（中文或英文，落库原值）
+     * @param frequency         设置页「备份频率」稳定代码（{@code daily}/{@code weekly}/{@code monthly}；
+     *                          兼容老库里的中英文显示文案）
      */
     public static void applyScheduleFromSettings(boolean autoBackupEnabled, String frequency) {
         try {
@@ -596,19 +597,34 @@ public class BackupService {
     }
 
     /**
-     * 备份频率文案 → 小时数。文案来自语言包（{@code settings.backup_daily/weekly/monthly}）：
-     * 简繁为「每天/每周/每月」，英文为 Daily/Weekly/Monthly。
+     * 备份频率归一到稳定代码 {@code daily}/{@code weekly}/{@code monthly}（TD-040）。
+     *
+     * <p>设置页下拉与 settings 表现在都存代码；老库里存的是当时的显示文案
+     * （简繁「每天/每周/每月」、英文 Daily/Weekly/Monthly），这里一并认。
+     * 无法识别返回空串，调用方保持原值/原周期不动。</p>
+     */
+    public static String canonicalFrequency(String frequency) {
+        if (frequency == null || frequency.isBlank()) {
+            return "";
+        }
+        return switch (frequency.trim()) {
+            case "daily", "每天", "每日", "Daily" -> "daily";
+            case "weekly", "每周", "每週", "Weekly" -> "weekly";
+            case "monthly", "每月", "Monthly" -> "monthly";
+            default -> "";
+        };
+    }
+
+    /**
+     * 备份频率 → 小时数。入参是稳定代码或老显示文案（都走 {@link #canonicalFrequency}）。
      *
      * @return 小时数；无法识别返回 0（调用方保持原周期不动）
      */
     static int intervalHoursForFrequency(String frequency) {
-        if (frequency == null || frequency.isBlank()) {
-            return 0;
-        }
-        return switch (frequency.trim()) {
-            case "每天", "每日", "Daily" -> 24;
-            case "每周", "每週", "Weekly" -> 24 * 7;
-            case "每月", "Monthly" -> 24 * 30;
+        return switch (canonicalFrequency(frequency)) {
+            case "daily" -> 24;
+            case "weekly" -> 24 * 7;
+            case "monthly" -> 24 * 30;
             default -> 0;
         };
     }
