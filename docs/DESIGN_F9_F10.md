@@ -82,21 +82,25 @@
 
 1. **建表**（`DatabaseManager.createTable*` + `docker/mysql-init/00-init-complete.sql`；`InitSchemaParityTest` 会比对两处）：
 
-   ```sql
-   CREATE TABLE IF NOT EXISTS return_reservations (
-     id INT AUTO_INCREMENT PRIMARY KEY,
-     return_order_id VARCHAR(50) NOT NULL,
-     original_transaction_id VARCHAR(50) NOT NULL,
-     product_id INT NOT NULL,
-     quantity INT NOT NULL,
-     status VARCHAR(20) NOT NULL DEFAULT 'PENDING',   -- PENDING/APPROVED/COMPLETED/REJECTED
-     create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-     update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-     UNIQUE KEY uk_return_product (return_order_id, product_id),
-     INDEX idx_tx_product (original_transaction_id, product_id),
-     FOREIGN KEY (return_order_id) REFERENCES return_orders(return_order_id) ON DELETE CASCADE
-   );
-   ```
+   **已实施**（`DatabaseManager.createTableReturnReservations`；`docker/mysql-init/00-init-complete.sql`
+   是 Docker 镜像，两处由 `InitSchemaParityTest` 比对）。字段与设计一致：
+
+   | 字段 | 类型 | 说明 |
+   |---|---|---|
+   | `id` | INT PK AUTO_INCREMENT | 主键 |
+   | `return_order_id` | VARCHAR(50) NOT NULL | 退货单号（FK → `return_orders.return_order_id`，`ON DELETE CASCADE`） |
+   | `original_transaction_id` | VARCHAR(50) NOT NULL | 原交易 ID |
+   | `product_id` | INT NOT NULL | 商品 ID（历史数据为空时按 0） |
+   | `quantity` | INT NOT NULL | 占用数量 |
+   | `status` | VARCHAR(20) NOT NULL DEFAULT 'PENDING' | PENDING / APPROVED / COMPLETED / REJECTED |
+   | `create_time` / `update_time` | TIMESTAMP | 创建 / 更新时间（后者自动更新） |
+
+   约束：`UNIQUE KEY uk_return_product(return_order_id, product_id)`、
+   `INDEX idx_tx_product(original_transaction_id, product_id)`。
+
+   > 本设计文档原内嵌了这段 DDL。因为该表**已实施**，那段副本就成了不受门禁保护的"第二份 DDL"
+   > （改了真源它不会跟着变），故改为字段表并指向真源；
+   > 门禁 `DocSchemaSingleSourcePolicyTest` 现在禁止 `docs/*.md` 内嵌 `CREATE TABLE`。
 
 2. **建单**（`ReturnService.createReturnOrder`，同一事务内）：
    ① `SELECT ... FROM transactions WHERE transaction_id = ? FOR UPDATE`（缺行即失败）；

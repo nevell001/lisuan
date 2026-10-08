@@ -646,6 +646,32 @@ Maven 在编译期就失败，日志里没有测试失败行，看起来和"门�
   这些只影响索引命名与个别查询的索引可用性；如需完全一致再逐个对齐索引定义。
 
 
+## 文档里的表结构副本已漂移（2026-10，已修复）
+
+**类别**：文档一致性　**状态**：**已修复（2026-10）**
+
+`docker/mysql-init/*.sql` 有 `InitSchemaParityTest` 守着，但 **`docs/*.md` 里手写的 `CREATE TABLE` 谁都不守**。
+实测三份文档内嵌了第二份 DDL，其中已经漂移：
+
+| 文档 | 内嵌 DDL | 漂移情况 |
+|---|---|---|
+| `DATABASE_INIT.md` | 11 段 | **4 张表漂移**：`members` 缺 `id`/`member_code`/`version`（照它建表会把 `phone` 当主键、丢掉乐观锁列）、`transaction_items` 缺 `product_id`/`product_code`/`barcode`、`categories` 缺 `id`、`operation_logs` 缺 `log_level`/`log_category`/`operation_result`/`affected_records` |
+| `PURCHASE_TABLE_DESIGN.md` | 8 段 | 当时恰好一致（列集合逐表比对通过），但**无门禁保护** |
+| `DESIGN_F9_F10.md` | 1 段 | `return_reservations`，该表已实施，副本同样会漂移 |
+
+**危害**：与 SQL 脚本漂移不同，文档副本**错了也看不出来**——人照着它写 SQL 会建出真实错误的结构
+（`members` 那段就是典型：主键、外键关联列、乐观锁列全错）。
+
+**处置（2026-10）**：三份文档一律改为**字段说明表 + 指向唯一真源**
+（`DatabaseManager` 的 `createTable*` / 功能 DAO 按需建表，镜像到 `docker/mysql-init/00-init-complete.sql`）；
+新增门禁 `DocSchemaSingleSourcePolicyTest`（3 项）——
+① `docs/*.md` 不得内嵌 `CREATE TABLE`（正文"提到"该短语不算，判据是后面是否紧跟表名与左括号）；
+② 两份已迁移文档必须持续指向真源且不得回退成 DDL；
+③ 字段说明表必须覆盖真源全部列（**防说明表自身漂移**，这条正是抓出 `members` 缺列的那条）。
+变异验证：往文档塞一段 DDL → 2 项红；删掉字段说明里的 `version` 行 → 保真检查红（均已在还原后确认字节一致）。
+
+---
+
 ## TD-019 商品管理页数量显示露出未替换的 `{0}`（已修复，2026-09，用户实测发现）
 
 **类别**：正确性 / 体验　**状态**：**已修复（2026-09）**

@@ -745,6 +745,12 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   "递归删除临时目录"变成"沿重解析点删掉仓库源码"——2026-09 实机核查时因此删掉过 422 个跟踪文件
   （改用**复制**所需文件，或删除前确认目标下无重解析点；踩到用 `git checkout -- <路径>` 恢复，
   再用 `mvn verify` 的测试数对比确认没有漏恢复）。完整记录见 `docs/WINDOWS_RUN_AUDIT.md` 的"三点操作提示"
+- **文档不得内嵌第二份 DDL**（2026-10）：`docs/*.md` 里手写 `CREATE TABLE` 是**不受门禁保护**的副本，
+  必然会漂移——实测 `DATABASE_INIT.md` 的 11 段里已有 4 张表与实际结构不符（`members` 缺
+  `id`/`member_code`/`version`，照它建表会把 `phone` 当主键并丢掉乐观锁列）。表结构一律
+  "字段说明表 + 指向真源"（真源＝`DatabaseManager` 的 `createTable*` / 功能 DAO 按需建表，
+  镜像到 `docker/mysql-init/00-init-complete.sql`）；门禁 `DocSchemaSingleSourcePolicyTest`（3 项）
+  禁止 `docs/*.md` 内嵌 DDL，并要求字段说明表覆盖真源全部列（**说明表自身也会漂移**，这条抓出过上例）
 - 安装/运维脚本门禁：`InstallScriptPolicyTest`（`com.cashier.security`）钉住三条不变量——
   ① `install.sh` 的建库/SQL 导入失败必须报错并 `exit 1`（不得再用 `2>/dev/null || true` 静默成功，
   失败时要打印 mysql 的真实输出）；② `docker/docker-init.sh` 必须先 `. ./.env`，且空/占位口令
