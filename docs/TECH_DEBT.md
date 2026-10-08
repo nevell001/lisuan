@@ -646,6 +646,39 @@ Maven 在编译期就失败，日志里没有测试失败行，看起来和"门�
   这些只影响索引命名与个别查询的索引可用性；如需完全一致再逐个对齐索引定义。
 
 
+## `Map.of` 塞 null 让 `/api/printers` 恒 500（2026-10 冒烟发现，已修复）
+
+**类别**：API 正确性　**状态**：**已修复（2026-10）**
+
+`java.util.Map.of` **不接受 null 值**（会抛 NPE），而 `PrintApiController` 有两处把
+"可能为 null 的三元"直接塞进 `Map.of`：
+
+```java
+ctx.json(Map.of("success", true, "data", printerList,
+    "defaultPrinter", manager.getDefaultPrinter() != null
+        ? manager.getDefaultPrinter().getDeviceId() : null, ...));   // ← 未设默认打印机即 NPE
+```
+
+**触发条件是常态**：全新部署/尚未设默认打印机时 `defaultPrinter` 就是 null，
+于是 `GET /api/printers` **恒返回 500**（列表接口完全不可用）；`POST /api/printers/:id/set-default`
+在设置失败（如未知设备号）时同样 500。
+
+**为什么此前没被发现**：`PrintApiControllerTest` 只覆盖了 `receipt`/钱箱/枚举等路径，
+**从未调用过 `listPrinters`**；而单测走 in-process 调用，真实 HTTP 全量冒烟此前没跑过。
+直到 2026-10 用真实 MySQL + 真实 Javalin 起服务打 `/api/printers` 才暴露
+（`Map.of` → `ImmutableCollections$MapN.<init>` → `Objects.requireNonNull`）。
+
+**处置**：两处改为 `HashMap`（null 容忍）；新增回归测试 2 项——
+`listPrintersToleratesMissingDefaultPrinter`（清空设备后断言 200 且 `defaultPrinter` 为 null）、
+`setDefaultPrinterToleratesUnknownDevice`。变异验证：把第一处改回 `Map.of` → 该测试立即 NPE 变红。
+
+**教训**：`Map.of` 只适合"值确定非 null"的场景；API 响应里凡是有"可空字段"，
+一律用 `HashMap`/`LinkedHashMap`（本仓库此前已在 `checkPrinterStatus`、
+`BackupApiController.executeBackup` 等处因字段数超限改过 `LinkedHashMap`，
+但**"值可能为 null"是另一个理由**，容易被忽略）。真实 HTTP 冒烟应纳入发版流程。
+
+---
+
 ## 文档里的表结构副本已漂移（2026-10，已修复）
 
 **类别**：文档一致性　**状态**：**已修复（2026-10）**

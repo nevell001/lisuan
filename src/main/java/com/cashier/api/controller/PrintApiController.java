@@ -77,13 +77,15 @@ public class PrintApiController {
             })
             .collect(Collectors.toList());
         
-        ctx.json(Map.of(
-            "success", true,
-            "data", printerList,
-            "defaultPrinter", manager.getDefaultPrinter() != null ? 
-                manager.getDefaultPrinter().getDeviceId() : null,
-            "total", printerList.size()
-        ));
+        // Map.of 不接受 null 值：未设默认打印机时 defaultPrinter 就是 null，
+        // 原写法（三元给 null）会让整个 /api/printers 恒 500（冒烟实测）。
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("data", printerList);
+        result.put("defaultPrinter", manager.getDefaultPrinter() != null
+            ? manager.getDefaultPrinter().getDeviceId() : null);
+        result.put("total", printerList.size());
+        ctx.json(result);
     }
     
     /**
@@ -359,14 +361,15 @@ public class PrintApiController {
         
         manager.setDefaultPrinter(deviceId);
         
-        ctx.json(Map.of(
-            "success", true,
-            "data", Map.of(
-                "defaultPrinter", manager.getDefaultPrinter() != null ? 
-                    manager.getDefaultPrinter().getDeviceId() : null
-            ),
-            "message", com.cashier.api.ApiMessages.text(ctx, "api.printer.default_set", deviceId)
-        ));
+        // 同 listPrinters：Map.of 不接受 null，设置失败时这里本意是返回 null 而不是 500
+        Map<String, Object> data = new HashMap<>();
+        data.put("defaultPrinter", manager.getDefaultPrinter() != null
+            ? manager.getDefaultPrinter().getDeviceId() : null);
+        Map<String, Object> result = new HashMap<>();
+        result.put("success", true);
+        result.put("data", data);
+        result.put("message", com.cashier.api.ApiMessages.text(ctx, "api.printer.default_set", deviceId));
+        ctx.json(result);
     }
     
     /**

@@ -32,6 +32,39 @@ class PrintApiControllerTest {
     }
 
     @Test
+    @DisplayName("未设默认打印机时 /api/printers 不得 500（Map.of 不接受 null 值）")
+    void listPrintersToleratesMissingDefaultPrinter() {
+        // 回归：原写法 ctx.json(Map.of(..., "defaultPrinter", x != null ? id : null, ...))
+        // 在没有默认打印机（常态）时恒抛 NPE → 整个列表接口 500，冒烟实测发现。
+        com.cashier.printer.PrinterManager manager = com.cashier.printer.PrinterManager.getInstance();
+        for (com.cashier.printer.PrinterDevice d : manager.getAllDevices()) {
+            manager.unregisterDevice(d.getDeviceId());
+        }
+        assertEquals(null, manager.getDefaultPrinter(), "前置条件：确实没有默认打印机");
+
+        TestContext ctx = new TestContext()
+            .withRequest(HandlerType.GET, "/api/printers")
+            .withQueryParam("locale", "zh-CN");
+        PrintApiController.listPrinters(ctx.context);
+
+        assertEquals(HttpStatus.OK, ctx.status, "没有默认打印机也必须正常返回列表: " + ctx.json);
+        assertEquals(Boolean.TRUE, response(ctx).get("success"));
+        assertNotNull(response(ctx).get("data"));
+        assertEquals(null, response(ctx).get("defaultPrinter"), "无默认打印机时应为 null 而不是报错");
+    }
+
+    @Test
+    @DisplayName("设置默认打印机失败时不得 500（同一处 Map.of + null）")
+    void setDefaultPrinterToleratesUnknownDevice() {
+        TestContext ctx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/printers/NOT-EXIST/set-default")
+            .withPathParam("id", "NOT-EXIST")
+            .withQueryParam("locale", "zh-CN");
+        PrintApiController.setDefaultPrinter(ctx.context);
+        assertEquals(HttpStatus.OK, ctx.status, "未知设备也不该抛 NPE: " + ctx.json);
+    }
+
+    @Test
     @DisplayName("枚举双字段（TD-041）：deviceType/status 是稳定代码，*Name 跟随请求语言")
     void enumFieldsAreCodePlusLocalizedName() {
         com.cashier.printer.NetworkPrinterDevice device =
