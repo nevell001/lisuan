@@ -107,6 +107,80 @@ class InstructionsDocPolicyTest {
                 + String.join("\n  ", violations));
     }
 
+    /** 面向发布/用户的文档：只讲功能与问题修复，不写测试与代码工程细节（2026-10）。 */
+    private static final List<Path> RELEASE_FACING_DOCS = List.of(
+        Path.of("README.md"), Path.of("README_en.md"), Path.of("README_zh_TW.md"),
+        Path.of("docs/GO_LIVE_CHECKLIST.md"));
+
+    /**
+     * 这些节是**给开发者/changelog 看的**，出现源码符号或历史测试数字是合理的，不算违规：
+     * README 的"开发约定"是贡献者指南，变更历史里的数字是**史实**（不是会漂移的"当前值"）。
+     */
+    private static final List<String> DEVELOPER_SECTIONS = List.of(
+        "## 开发约定", "## Development Conventions", "## 開發約定",
+        "## 变更历史", "## Changelog", "## 變更歷史");
+
+    /** 发布文档里不该出现的"工程/测试"痕迹（面向上线验收人与门店用户）。 */
+    private static final List<Pattern> ENGINEERING_TRACES = List.of(
+        // 构建/测试命令：发布文档只该讲"装哪个包、点哪里、看到什么"
+        Pattern.compile("mvn\\s+(-\\S+\\s+)*(test|verify|compile|package|spotbugs)"),
+        Pattern.compile("spotbugs|jacoco", Pattern.CASE_INSENSITIVE),
+        Pattern.compile("覆盖率门槛|覆蓋率門檻|测试门禁|測試門禁|测试口径|測試口徑"),
+        Pattern.compile("Tests run:\\s*\\d+"));
+
+    @Test
+    @DisplayName("发布文档不得包含测试/代码工程内容（只保留功能与问题修复）")
+    void releaseDocsDoNotContainEngineeringOrTestContent() throws IOException {
+        List<String> violations = new ArrayList<>();
+        for (Path doc : RELEASE_FACING_DOCS) {
+            if (!Files.exists(doc)) {
+                continue;
+            }
+            String text = Files.readString(doc);
+            java.util.Set<Integer> exemptLines = developerSectionLines(text);
+            for (Pattern pattern : ENGINEERING_TRACES) {
+                Matcher matcher = pattern.matcher(text);
+                while (matcher.find()) {
+                    int line = text.substring(0, matcher.start()).split("\n", -1).length;
+                    String lineText = text.split("\n", -1)[line - 1];
+                    // 开发者节/变更历史内的命中不算：那里的源码符号与历史数字是合理的
+                    if (exemptLines.contains(line)) {
+                        continue;
+                    }
+                    // 纯"指向工程文档"的说明句（本门禁要求的那句）豁免
+                    if (lineText.contains("相关内容见") && lineText.contains("CLAUDE.md")) {
+                        continue;
+                    }
+                    violations.add(doc + ":" + line + "  →  " + matcher.group().trim());
+                }
+            }
+        }
+        assertTrue(violations.isEmpty(),
+            "面向发布/用户的文档里出现了测试或代码工程内容（这类内容对上线验收人没有可执行意义，"
+                + "且「当前值」必然漂移）。\n"
+                + "README/上线清单只写功能与问题修复；构建、测试门禁、源码符号归 CLAUDE.md"
+                + " 与 docs/TECH_DEBT.md（工程记录，不受此限）：\n  "
+                + String.join("\n  ", violations));
+    }
+
+    /** 返回"属于开发者节/变更历史"的行号集合（这些行豁免：源码符号与历史数字是合理的）。 */
+    private static java.util.Set<Integer> developerSectionLines(String text) {
+        java.util.Set<Integer> exempt = new java.util.HashSet<>();
+        boolean inside = false;
+        int lineNo = 0;
+        for (String line : text.split("\n", -1)) {
+            lineNo++;
+            String trimmed = line.trim();
+            if (trimmed.startsWith("## ")) {
+                inside = DEVELOPER_SECTIONS.stream().anyMatch(trimmed::startsWith);
+            }
+            if (inside) {
+                exempt.add(lineNo);
+            }
+        }
+        return exempt;
+    }
+
     /** 用 git ls-files 取跟踪文件；不在 git 仓库里时跳过（例如源码包解压后运行）。 */
     private static List<String> trackedFiles() throws Exception {
         ProcessBuilder pb = new ProcessBuilder("git", "ls-files");

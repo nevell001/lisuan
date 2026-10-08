@@ -911,6 +911,13 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `AppConstants`/`pom.xml`/`installer/Installer.java`/`.env.example`；
   两份"当前事实"文档**不得写死测试数量**（改版本/加测试时最容易漂移，一律指向构建输出的 `Tests run:`；
   README 的历史更新日志不在此限）。改版本号时除了四处代码来源，记得同步这两份文档里的同步句
+- **发布/用户文档只讲功能与问题修复**（2026-10）：`README.md`/`README_en.md`/`README_zh_TW.md` 与
+  `docs/GO_LIVE_CHECKLIST.md` 面向**上线验收人与门店用户**，不得出现测试与代码工程内容——
+  `mvn test/verify/compile/package/spotbugs`、`SpotBugs`/`JaCoCo`、"覆盖率门槛/测试门禁"这类表述、
+  以及源码符号。README 的"开发约定"节与变更历史**豁免**（前者是贡献者指南，后者是史实，
+  不是会漂移的"当前值"）。门禁 `InstructionsDocPolicyTest.releaseDocsDoNotContainEngineeringOrTestContent`。
+  实测这次清理前，三份 README 写死的测试数量互不相同且全部过时（589 / 606 / 380，实际 887）——
+  正是"当前值写进面向用户的文档"导致的漂移
 - **发票文件路径（TD-001）**：`invoices.pdf_path` / `image_path` 目前**故意不校验**——全仓库没有任何地方
   把它们当文件路径读取（只由 `POST /api/invoices/{id}/print` 原样落库），此时定白名单属于为不存在的能力
   做防御，且合法路径范围取决于尚未确定的发票预览/下载设计。`InvoicePathGuardPolicyTest` 把这个

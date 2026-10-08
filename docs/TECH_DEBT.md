@@ -679,6 +679,35 @@ ctx.json(Map.of("success", true, "data", printerList,
 
 ---
 
+## 发布文档混入测试/工程内容（2026-10，已清理并加门禁）
+
+**类别**：文档一致性　**状态**：**已修复（2026-10）**
+
+面向发布/用户的文档里混着"当前值"与工程细节，其中已经有真实漂移：
+
+| 文档 | 问题 |
+|---|---|
+| `README.md`/`README_en.md`/`README_zh_TW.md` | 抬头写"测试门禁""测试口径"；正文"常用命令"混入 `mvn test`/指定测试类/`spotbugs:check`/`clean verify`；"代码质量"节列举 SpotBugs/JaCoCo 门槛；**三份写死的测试数量互不相同且全部过时**（589 / 606 / 380，而当时实际 887） |
+| `docs/GO_LIVE_CHECKLIST.md` | 抬头写"代码门禁基线（`mvn -q clean verify`、JaCoCo ≥10%、SpotBugs 0）"；第 0 节把"版本号四处同步""`mvn clean verify`""`mvn -DskipTests package`""`release.bat` 实机打包"当上线勾选项；功能节用单元测试当证据（"已有签名验证测试"）、出现源码符号（`DatabaseManager.initializeDatabase`）；把并发**压测**写成验收项 |
+
+**危害**：上线验收人要的是"装哪个包、点哪里、看到什么"，`mvn verify` 对他没有可执行意义；
+而写进文档的"当前值"（测试数量、覆盖率百分比）**必然过期**，读者无法判断该不该信。
+
+**处置（2026-10）**：
+- 四份文档按"只留功能与问题修复"清理（净 −70 行）：删抬头门禁基线、删测试/构建命令、
+  "代码质量"节改为"功能保障"（只留并发安全、多语言、依赖管理等用户可感知能力）、
+  并发压测改写为验收人可现场执行的场景（"高峰时段多终端同时结账，核对无超卖"）、
+  变更历史里的纯测试条目删除（保留功能性问题修复）。
+- 新增门禁 `InstructionsDocPolicyTest.releaseDocsDoNotContainEngineeringOrTestContent`：
+  这四份文档不得出现 `mvn test/verify/compile/package/spotbugs`、`SpotBugs`/`JaCoCo`、
+  "覆盖率门槛/测试门禁"、`Tests run:` 与源码符号；README 的"开发约定"节与变更历史**豁免**
+  （前者是给贡献者的，后者是史实）。变异验证 3 处：加回"测试门禁 + 887 个用例" → 红；
+  上线清单加回 `mvn verify`/JaCoCo → 红；在**非**开发者节塞源码符号 → 仍红（证明豁免没有放宽过头）。
+- **未改** `TECH_DEBT.md` 与 `WINDOWS_RUN_AUDIT.md`：它们是工程/审计记录，
+  测试数量与门禁命令本就是其记述对象。
+
+---
+
 ## 文档里的表结构副本已漂移（2026-10，已修复）
 
 **类别**：文档一致性　**状态**：**已修复（2026-10）**
