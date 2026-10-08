@@ -1900,7 +1900,7 @@ PUT /API/members/1    -> HTTP 404
 | 位置 | 处理 |
 |---|---|
 | `SettingsController` 税率校验文案（原 1214/1217） | `errorMessage += "税率…"` → `settings.tax_rate_range_error` / `settings.tax_rate_format_error`（拼进变量再 `showError`，主规则看不见，靠新锚点钉住） |
-| `SettingsController` 测试打印正文（原 1402-1410） | 6 个字段名 → `settings.test_print.device_name/device_id/device_type/ip_address/port/time`（各带 `{0}`）。**遗留**：`设备类型` 的**值**仍是 `PrinterDeviceType.getDisplayName()` 里的中文枚举名，且该值同时作为 `PrintApiController` 的 JSON 字段 `deviceType` 返回——"显示值即数据值"，**已转 TD-041**（REST API 语言策略，待决定） |
+| `SettingsController` 测试打印正文（原 1402-1410） | 6 个字段名 → `settings.test_print.device_name/device_id/device_type/ip_address/port/time`（各带 `{0}`）。**遗留**：`设备类型` 的**值**仍是 `PrinterDeviceType.getDisplayName()` 里的中文枚举名，且该值同时作为 `PrintApiController` 的 JSON 字段 `deviceType` 返回——"显示值即数据值"，**已由 TD-041 收口（2026-10）**：`deviceType` 现返稳定代码（如 `NETWORK`），中文显示名移到 `deviceTypeName` 并按请求语言渲染 |
 | `SettingsController` 文件选择器过滤标签（原 873/1533/1536） | → `runtime.file_filter_images` / `file_filter_csv` / `file_filter_all`（`ExtensionFilter` 的标签参数不在硬编码门禁的可见调用名单里，靠新锚点钉住） |
 | `PurchaseOrderController` **995**（功能缺陷） | 删除 `getText().startsWith("总金额:")` 的节点匹配：标签文字由 `runtime.total_amount_value` 按语言渲染，en/zh_TW 下前缀对不上，**总金额永远不刷新**。改为 `showOrderDialog` 创建标签时 `itemTable.getProperties().put(TOTAL_AMOUNT_LABEL_KEY, totalLabel)`，`updateItemTotal` 直接取引用。顺带修掉同一处的第二个缺陷：编辑模式下原先在标签创建**之前**调用（`parent == null`），既误弹"请选择采购订单"、总金额又停在 0；现在改到 `root.getChildren().addAll(...)` 之后刷新 |
 
@@ -1913,7 +1913,7 @@ PUT /API/members/1    -> HTTP 404
 | 文件 | 残留（2026-10-08 复核） | 备注 |
 |---|---|---|
 | `PurchaseOrderController` | 489 `String.format("%s - %s (%s级)")`（供应商展示串） | 下拉/表格可见；`级` 是量词、值来源于数据，需单独的带参 key |
-| 枚举**显示值**（TD-002 同款） | `PrinterDeviceType`/`PrinterDeviceStatus`/`PrintTaskType`/`PrintTaskStatus` 的中文枚举名进 API JSON（`deviceType`/`status`/`taskType`）与设置页测试打印；`PrintApiController` 自己的文案与测试打印正文 | **已转 TD-041**（REST API 语言策略，待决定） |
+| 枚举**显示值**（TD-002 同款） | `PrinterDeviceType`/`PrinterDeviceStatus`/`PrintTaskType`/`PrintTaskStatus` 的中文枚举名进 API JSON（`deviceType`/`status`/`taskType`）与设置页测试打印；`PrintApiController` 自己的文案与测试打印正文 | **已由 TD-041 收口（2026-10）**：`deviceType` 现返稳定代码（如 `NETWORK`），中文显示名移到 `deviceTypeName` 并按请求语言渲染 |
 
 **下拉值口径的实测订正与处理（2026-10-08）**：上表原先列的
 `TransactionController`/`PurchaseOrderController` 筛选下拉**已经**是 TD-002 模式了——
@@ -1975,7 +1975,7 @@ item 改稳定代码、`settings` 表落代码、`paperSize` 老显示串归一�
 - `DataServiceTest.backupFrequencyMapsToHours`：扩到代码分支（原 8 条中英文断言保留，
   验证"老值仍能算出周期"）。
 
-**同批未做（需决定，故未擅改）**：全部转 **TD-041**（REST API 语言策略）——
+**同批未做（当时需决定，故未擅改）**：全部转 **TD-041**——该决策已于 2026-10 定稿（双字段）并实施完毕——
 `PrinterDeviceType` 等枚举的中文显示名同时进 API JSON 与设置页测试打印的值，
 `PrintApiController` 自己的文案/测试打印正文也仍是中文。本批只改了设置页打印的**字段名标签**，
 枚举**值**与 API 响应保持原样。
