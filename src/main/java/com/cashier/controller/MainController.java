@@ -817,15 +817,15 @@ private Button shiftBtn;
 
     @FXML
     public void handleAbout() {
-        String about =
-            AppConstants.APP_NAME + "\n\n" +
-            "版本: " + AppConstants.FULL_VERSION_STRING + "\n" +
-            "开发: " + AppConstants.DEVELOPER + "\n\n" +
-            "技术栈:\n" +
-            "- JavaFX " + AppConstants.JAVAFX_VERSION + "\n" +
-            "- Maven " + AppConstants.MIN_MAVEN_VERSION + "+\n" +
-            "- JDK " + AppConstants.MIN_JDK_VERSION + "/21\n\n" +
-            "许可证: " + AppConstants.LICENSE;
+        // 正文走 i18n：它先拼进变量再交给弹窗，门禁的"调用点"规则看不见（2026-10 F14 第二批）
+        String about = I18nManager.getInstance().get("runtime.about_dialog_content",
+            AppConstants.APP_NAME,
+            AppConstants.FULL_VERSION_STRING,
+            AppConstants.DEVELOPER,
+            AppConstants.JAVAFX_VERSION,
+            AppConstants.MIN_MAVEN_VERSION,
+            AppConstants.MIN_JDK_VERSION,
+            AppConstants.LICENSE);
 
         showInformationOnlyAlert(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Menu.Help.ABOUT), about);
     }

@@ -530,9 +530,15 @@ public class TransactionController {
      */
     private void exportTransactions(com.cashier.util.ExportUtil.ExportFormat format) {
         try {
+            // 表头/兜底/报表名都走 i18n（2026-10 F14 第二批；这些串拼进列表/变量，门禁调用点规则看不见）
+            I18nManager i18n = I18nManager.getInstance();
+
             // 准备表头
             java.util.List<String> headers = java.util.Arrays.asList(
-                "交易编号", "交易时间", "商品列表", "总金额", "税额", "最终金额", "支付方式", "会员手机号"
+                i18n.get("transaction.export.id"), i18n.get("transaction.export.time"),
+                i18n.get("transaction.export.items"), i18n.get("transaction.export.total_amount"),
+                i18n.get("transaction.export.tax"), i18n.get("transaction.export.final_amount"),
+                i18n.get("recharge.payment_method"), i18n.get("transaction.export.member_phone")
             );
 
             // 准备数据
@@ -543,7 +549,7 @@ public class TransactionController {
                 // 构建商品列表字符串
                 String itemsStr;
                 if (t.items == null || t.items.isEmpty()) {
-                    itemsStr = "无商品";
+                    itemsStr = i18n.get("transaction.no_items");
                 } else {
                     StringBuilder sb = new StringBuilder();
                     for (int i = 0; i < t.items.size(); i++) {
@@ -578,17 +584,17 @@ public class TransactionController {
                     CurrencyUtil.format(t.tax.doubleValue()),
                     CurrencyUtil.format(t.finalAmount.doubleValue()),
                     t.paymentMethod,
-                    t.memberPhone == null || t.memberPhone.isEmpty() ? "非会员" : t.memberPhone
+                    t.memberPhone == null || t.memberPhone.isEmpty() ? i18n.get("runtime.non_member") : t.memberPhone
                 });
             }
 
             // 导出数据
             String filePath = com.cashier.util.ExportUtil.export(
-                "交易记录报表",
+                i18n.get("transaction.export.file_name"),
                 headers,
                 data,
                 format,
-                "交易记录"
+                i18n.get("transaction.export.dir")
             );
 
             if (filePath != null) {

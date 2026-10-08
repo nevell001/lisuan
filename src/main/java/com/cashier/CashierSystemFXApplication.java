@@ -154,7 +154,7 @@ public class CashierSystemFXApplication extends Application {
      * （本机实测 8.5s），连接一旦被挂住就会无限期停在启动画面上、既无提示也无超时。</p>
      */
     private void initializeApplication(SplashWindow splash) {
-        splash.updateProgress(0.2, "正在连接数据库...");
+        splash.updateProgress(0.2, I18nManager.getInstance().get("runtime.splash_connecting_db"));
         long startedAt = System.currentTimeMillis();
         logger.info("启动阶段: 正在连接数据库（等待上限 {} 秒）", STARTUP_DATABASE_TIMEOUT_MS / 1000);
 
@@ -185,10 +185,8 @@ public class CashierSystemFXApplication extends Application {
                 if (waited >= STARTUP_DATABASE_TIMEOUT_MS) {
                     logger.error("启动阶段: 等待数据库超过 {} 秒，放弃启动", STARTUP_DATABASE_TIMEOUT_MS / 1000);
                     databasePhase.completeExceptionally(new IOException(
-                        "连接数据库超过 " + (STARTUP_DATABASE_TIMEOUT_MS / 1000) + " 秒仍未完成（已等待 "
-                            + (waited / 1000) + " 秒）。请检查 MySQL 是否已启动、"
-                            + "config/database.properties 的主机/端口是否正确；"
-                            + "若数据库响应较慢，可调大 db.connection.timeout"));
+                        I18nManager.getInstance().get("runtime.startup_db_timeout",
+                            STARTUP_DATABASE_TIMEOUT_MS / 1000, waited / 1000)));
                     return;
                 }
                 long seconds = waited / 1000;
@@ -197,7 +195,8 @@ public class CashierSystemFXApplication extends Application {
                     lastLoggedSecond[0] = seconds;
                     logger.info("启动阶段: 仍在等待数据库（已 {} 秒）", seconds);
                 }
-                splash.updateProgress(0.2, "正在连接数据库...（已等待 " + seconds + " 秒）");
+                splash.updateProgress(0.2,
+                    I18nManager.getInstance().get("runtime.splash_connecting_db_waiting", seconds));
             }));
         watchdog.setCycleCount(Animation.INDEFINITE);
         watchdog.play();
@@ -258,7 +257,7 @@ public class CashierSystemFXApplication extends Application {
      * 启动第二阶段（FX 线程）：应用图标、语言、登录界面、主窗口与后台服务。
      */
     private void finishStartup(SplashWindow splash, StartupDatabase database) {
-        splash.updateProgress(0.5, "正在加载界面...");
+        splash.updateProgress(0.5, I18nManager.getInstance().get("runtime.splash_loading_ui"));
 
         // 立即设置应用图标
         setupApplicationIcon();
@@ -274,7 +273,7 @@ public class CashierSystemFXApplication extends Application {
         // 配置主窗口
         configurePrimaryStage();
 
-        splash.updateProgress(0.85, "正在启动服务...");
+        splash.updateProgress(0.85, I18nManager.getInstance().get(I18nKeys.Runtime.SPLASH_STARTING_SERVICES));
 
         // 立即显示窗口 - 不等待后台初始化
         primaryStage.show();
@@ -284,7 +283,7 @@ public class CashierSystemFXApplication extends Application {
             Platform.runLater(this::warnUiFontMissing);
         }
 
-        splash.updateProgress(1.0, "即将完成...");
+        splash.updateProgress(1.0, I18nManager.getInstance().get(I18nKeys.Runtime.SPLASH_FINISHING));
         splash.close();
 
         // 等启动窗口关掉、事件循环空闲后再弹模态向导，否则会卡住启动画面的收尾

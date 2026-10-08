@@ -27,6 +27,8 @@ import java.util.*;
 public class RechargeController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(RechargeController.class);
     private static final int RECHARGE_HISTORY_LIMIT = 10;
+    /** 单次充值上限（元）；提示文案里的数字与这条校验共用，避免改了阈值忘了文案 */
+    private static final int MAX_RECHARGE_AMOUNT = 10000;
 
     @FXML
     private Label memberNameLabel;
@@ -250,26 +252,28 @@ public class RechargeController {
      */
     private boolean isInputValid() {
         String errorMessage = "";
+        // 校验文案走 i18n：这些串是拼进变量的，门禁的"调用点"规则看不见（2026-10 F14 第二批）
+        com.cashier.i18n.I18nManager i18n = com.cashier.i18n.I18nManager.getInstance();
 
         try {
             String amountText = amountField.getText().trim();
             if (amountText.isEmpty()) {
-                errorMessage += "充值金额不能为空！\n";
+                errorMessage += i18n.get("recharge.validation.amount_empty") + "\n";
             } else {
                 double amount = FormValidator.parseDouble(amountText);
                 if (amount <= 0) {
-                    errorMessage += "充值金额必须大于0！\n";
+                    errorMessage += i18n.get("recharge.validation.amount_positive") + "\n";
                 }
-                if (amount > 10000) {
-                    errorMessage += "单次充值金额不能超过10000元！\n";
+                if (amount > MAX_RECHARGE_AMOUNT) {
+                    errorMessage += i18n.get("recharge.validation.amount_max", MAX_RECHARGE_AMOUNT) + "\n";
                 }
             }
         } catch (IllegalArgumentException e) {
-            errorMessage += "充值金额格式不正确！\n";
+            errorMessage += i18n.get("recharge.validation.amount_format") + "\n";
         }
 
         if (paymentMethodComboBox.getSelectionModel().getSelectedItem() == null) {
-            errorMessage += "请选择支付方式！\n";
+            errorMessage += i18n.get("recharge.validation.payment_method") + "\n";
         }
 
         if (errorMessage.isEmpty()) {

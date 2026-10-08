@@ -1837,25 +1837,45 @@ PUT /API/members/1    -> HTTP 404
 `inventoryAlertLevelNamesAreLocalized`（枚举常量不得存中文）与
 `inventoryAlertDurationTextsAreLocalized`（时长必须走带参 key，且不得拼接回去）。
 
-### F14 附录：其余"已迁移"文件里**门禁看不见**的残留（2026-10 实测，待下一批）
+### F14 附录：门禁看不见的同类残留——已修 5 处 / 剩余 5 处（2026-10）
 
-按"中文在别处拼好/返回再显示"的形状扫描 `MIGRATED_FILES` 全部 14 个文件，确认以下**用户可见**残留
-（`行号` 为 2026-10-08 实测位置；`现金/简体中文/每天/全部/待审批` 这类**落库规范值**不计入，它们必须保持中文）：
+按"中文在别处拼好/返回再显示"的形状扫描 `MIGRATED_FILES` 全部 14 个文件。
+**重要订正（2026-10 复核）**：首版清单是按**行**筛的，把 3 处**多行调用成的
+`logger`/审计日志续行**误判成了界面文案，已剔除并在此记录，避免下次照单返工：
 
-| 文件 | 残留（行号） | 形状 |
+| 首版误报 | 实际情况 |
+|---|---|
+| `CashierSystemFXApplication:451-453` | 是 `logger.error("内置界面字体 {} 未注册成功…")` 的**续行**，属日志；字体缺失**弹窗**早就走 `runtime.ui_font_missing_detail` |
+| `SettingsController:805-807` | 是 `AuditService.success(..., "支付模式=…")` 的**审计日志明细**，不是界面文案 |
+| `PurchaseInboundController:403/410`、`PurchaseApprovalController:279/369` | 同为审计/异常日志文本 |
+
+#### 已修（第二批，含本批）
+
+| 位置 | 处理 |
+|---|---|
+| `RechargeController` 5 条充值校验文案 | 新增 `recharge.validation.*`（上限用常量 `MAX_RECHARGE_AMOUNT` 传入，避免改了阈值忘改文案） |
+| `MainController` 关于弹窗正文 | 新增 `runtime.about_dialog_content`（7 个占位符：名称/版本/开发者/JavaFX/Maven/JDK/许可证） |
+| `CashierSystemFXApplication` 闪屏进度 ×5 + 数据库超时异常 | 新增 `runtime.splash_connecting_db(_waiting)`、`runtime.splash_loading_ui`、`runtime.startup_db_timeout`；"正在启动服务..."/"即将完成..." 复用既有 `runtime.splash_starting_services`/`splash_finishing` |
+| `ShiftController` 导出 | 12 个表头 + 报表名 + 导出目录 + 未开始/未结束/未完成/无 → `shift.export.*` + 复用 `shift.not_started/not_ended`、`runtime.incomplete`、`common.none`、`shift.operator` |
+| `TransactionController` 导出 | 8 个表头 + 报表名 + 目录 + 无商品/非会员 → `transaction.export.*` + 复用 `recharge.payment_method`、`transaction.no_items`、`runtime.non_member` |
+
+配套门禁：`updateProgress`/`export` 加入 `HardcodedUiTextPolicyTest` 的可见出口名单；
+新增锚点 `variableBuiltVisibleTextIsLocalized` 钉住"拼进变量/列表"的 5 处形状不得回退。
+
+#### 剩余（下一批）
+
+| 文件 | 残留（行号，2026-10-08 复核） | 备注 |
 |---|---|---|
-| `RechargeController` | 252-284：5 条充值校验文案（充值金额不能为空！/必须大于0！/不能超过10000元！/格式不正确！/请选择支付方式！） | `errorMessage += "…"` → `StatusBarManager.updateError(errorMessage)` + `alert.setContentText(errorMessage)` |
-| `MainController` | 820-830：关于弹窗正文（版本:/开发:/技术栈:/许可证:） | 拼接进 `about` 变量后 `showInformationOnlyAlert(title, about)` |
-| `CashierSystemFXApplication` | 157/200/261/277/287：启动闪屏进度文案；451-453：UI 字体缺失弹窗正文 | `splash.updateProgress(0.2, "正在连接数据库...")`（`updateProgress` 不在门禁的出口名单里） |
-| `ShiftController` | 496-497/533/537：导出表头 + 报表文件名；506/507/510/527：未开始/未结束/未完成/无 | `Arrays.asList("班次编号", …)` / 三元兜底变量 |
-| `TransactionController` | 535/587/591：导出表头 + 报表文件名；546/581：无商品/非会员 | 同上 |
-| `SettingsController` | 873/1533/1536：文件选择器过滤标签；1402-1410：测试打印正文（设备名称:/IP地址:/端口:…）；1214/1217：税率校验文案 | `new ExtensionFilter("CSV 文件", …)` / `content.append("设备名称: ")` / `errorMessage +=` |
-| `PurchaseOrderController` | 489：`String.format("%s - %s (%s级)")`；995：`getText().startsWith("总金额:")` | 展示串拼接 + **用中文匹配自己界面上的标签**（切语言后该匹配会失效，属潜在缺陷） |
+| `SettingsController` | 1214/1217 税率校验文案（`errorMessage +=`）；1402-1410 测试打印正文（设备名称:/IP地址:/端口:…）；873/1533/1536 文件选择器过滤标签（`new ExtensionFilter("CSV 文件", …)`） | 与充值校验同形状；测试打印是**打印件**，同样要译 |
+| `PurchaseOrderController` | 489 `String.format("%s - %s (%s级)")`（供应商展示串） | 下拉/表格可见 |
+| `PurchaseOrderController` **995** | `((Label) node).getText().startsWith("总金额:")` | **这是功能缺陷不是文案问题**：该标签的文字已由 i18n 设置（`runtime.total_amount_value`），英文环境下前缀不再等于"总金额:"，于是**总金额标签永远不会刷新**。修法：用同一个 key 拼前缀比较，或给标签一个 `fx:id` 后直接引用 |
+| `TransactionController`/`PurchaseOrderController`/`SettingsController` 的**筛选下拉值**（全部/今天/本月/待审批/简体中文/每天/58mm (热敏纸)…） | 既是显示文本又是落库/匹配值 | 要翻译必须走 TD-002 的模式（落库存代码 + `StringConverter` 只翻译显示层），是一次独立重构，不在"文案迁移"范围内 |
 
-**下一批的建议做法**：优先修 ①②（充值校验、关于弹窗：用户每次都能看到），
-然后 ③④⑤（闪屏/报表导出）。若要根治，需把门禁升级为"除白名单数据值外，迁移文件里不得出现中文
-字面量"——白名单要逐条写明理由（落库规范值、FXML 设计期占位等），预计 40 条左右；
-该方案能覆盖上述全部形状，但必须先把白名单核准确，否则会误报大量落库值。
+**根治方案（仍未做）**：把门禁升级为"除白名单数据值外，迁移文件里不得出现中文字面量"。
+白名单约 40 条（落库规范值 现金/微信/简体中文/每天/全部…、品牌名 `APP_TITLE`、
+历史标签兼容表 `actions.put("商品管理", …)`、FXML 设计期占位等），每条要写明理由；
+该方案能覆盖上述**全部**形状（返回值、拼接、`Arrays.asList`、日志除外），但必须先把白名单核准确，
+否则会误报大量落库值。**当前仍靠逐文件定点锚点兜底。**
 
 ### 本轮**未修**（状态与理由）
 

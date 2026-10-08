@@ -75,7 +75,8 @@ class HardcodedUiTextPolicyTest {
     private static final Pattern UI_CALL_HEAD = Pattern.compile(
         "\\.?(setTitle|setHeaderText|setContentText|setPromptText|setTooltipText|setText|showErrorAlert|"
             + "showInfoAlert|showWarningAlert|showError|showWarning|showInformation|showPlaceholder|"
-            + "showConfirm|updateStatus|updateWarning|updateSuccess|updateError|updateInfo)\\s*\\(");
+            + "showConfirm|updateStatus|updateWarning|updateSuccess|updateError|updateInfo|"
+            + "updateProgress|export)\\s*\\(");
 
     /** 直接构造控件时传入的可见文案。 */
     private static final Pattern NEW_CONTROL = Pattern.compile(
@@ -165,6 +166,36 @@ class HardcodedUiTextPolicyTest {
         assertFalse(text.contains("hours + \"小时\"") || text.contains("minutes + \"分钟\"")
                 || text.contains("seconds + \"秒\""),
             "时长拼接回硬编码中文会绕过调用点规则，不得回归");
+    }
+
+    @Test
+    @DisplayName("拼进变量/列表再显示的可见文案必须走 i18n（调用点规则看不见的形状）")
+    void variableBuiltVisibleTextIsLocalized() throws Exception {
+        // 2026-10 F14 第二批：这几处的中文都**不在**可见调用点的实参里（拼进 errorMessage、拼进
+        // about、拼进 Arrays.asList 后交给导出），主规则抓不到，因此逐个钉住"不得回退"。
+        String recharge = read("controller/RechargeController.java");
+        assertTrue(recharge.contains("get(\"recharge.validation.amount_empty\")"));
+        assertFalse(recharge.contains("errorMessage += \""), "校验文案不得再直接拼接中文字面量");
+
+        String main = read("controller/MainController.java");
+        assertTrue(main.contains("get(\"runtime.about_dialog_content\","));
+        assertFalse(main.contains("\"版本: \" +"), "关于弹窗正文不得再拼接中文");
+
+        String shift = read("controller/ShiftController.java");
+        assertTrue(shift.contains("get(\"shift.export.shift_no\")"));
+        assertFalse(shift.contains("\"班次编号\""), "导出表头不得回退成中文字面量");
+
+        String transaction = read("controller/TransactionController.java");
+        assertTrue(transaction.contains("get(\"transaction.export.id\")"));
+        assertFalse(transaction.contains("\"交易编号\""), "导出表头不得回退成中文字面量");
+
+        String app = read("CashierSystemFXApplication.java");
+        assertTrue(app.contains("get(\"runtime.splash_connecting_db\")"));
+        assertFalse(app.contains("\"正在连接数据库...\""), "闪屏进度文案不得回退成中文字面量");
+    }
+
+    private static String read(String relativeToCashier) throws Exception {
+        return Files.readString(Path.of("src/main/java/com/cashier/" + relativeToCashier));
     }
 
     @Test

@@ -169,12 +169,15 @@ class FxThreadDbPolicyTest {
 
         assertTrue(startPhase.contains("whenComplete("),
             "数据库阶段应以非阻塞回调收口，否则 FX 线程仍会被占住");
-        assertFalse(startPhase.contains(".get("),
+        // 只针对**阻塞等待数据库阶段**的写法：此前用裸 ".get(" 判定，2026-10 文案迁 i18n 后
+        // `I18nManager.getInstance().get("key")` 也会命中，属误报（迁移不该被门禁挡住）
+        assertFalse(startPhase.contains("databasePhase.get(") || startPhase.contains("databasePhase.join("),
             "不得在 FX 线程上阻塞等待数据库阶段：启动画面会卡住，看门狗也跑不起来");
         assertTrue(app.contains("STARTUP_DATABASE_TIMEOUT_MS"),
             "等待数据库必须有上限，超时要给出可操作的提示而不是无限期停在启动画面");
-        assertTrue(app.contains("已等待"),
-            "等待期间要向用户反馈已经等了多久");
+        // 等待期间要向用户反馈已等多久：文案已迁 i18n，断言改为钉住那条带参 key
+        assertTrue(app.contains("runtime.splash_connecting_db_waiting"),
+            "等待期间要向用户反馈已经等了多久（runtime.splash_connecting_db_waiting 带参 key）");
     }
 
     @Test

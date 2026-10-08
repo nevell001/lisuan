@@ -491,10 +491,18 @@ public class ShiftController {
      */
     private void exportShifts(com.cashier.util.ExportUtil.ExportFormat format) {
         try {
+            // 表头/兜底/报表名都走 i18n：这些串拼进列表或变量后交给导出，门禁的"调用点"规则看不见
+            // （2026-10 F14 第二批）
+            com.cashier.i18n.I18nManager i18n = com.cashier.i18n.I18nManager.getInstance();
+
             // 准备表头
             java.util.List<String> headers = java.util.Arrays.asList(
-                "班次编号", "操作员", "开始时间", "结束时间", "班次时长", "交易数量",
-                "总收入", "现金收入", "微信收入", "支付宝收入", "银行卡收入", "备注"
+                i18n.get("shift.export.shift_no"), i18n.get("shift.operator"),
+                i18n.get("shift.export.start_time"), i18n.get("shift.export.end_time"),
+                i18n.get("shift.export.duration"), i18n.get("shift.export.transaction_count"),
+                i18n.get("shift.export.total_revenue"), i18n.get("shift.export.cash_revenue"),
+                i18n.get("shift.export.wechat_revenue"), i18n.get("shift.export.alipay_revenue"),
+                i18n.get("shift.export.card_revenue"), i18n.get("shift.export.remark")
             );
 
             // 准备数据
@@ -503,11 +511,11 @@ public class ShiftController {
 
             for (Shift s : shiftList) {
                 // 格式化时间，处理 NULL 值
-                String startTimeStr = (s.startTime != null) ? sdf.format(s.startTime.atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()) : "未开始";
-                String endTimeStr = (s.endTime != null) ? sdf.format(s.endTime.atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()) : "未结束";
+                String startTimeStr = (s.startTime != null) ? sdf.format(s.startTime.atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()) : i18n.get("shift.not_started");
+                String endTimeStr = (s.endTime != null) ? sdf.format(s.endTime.atZone(java.time.ZoneId.systemDefault()).toLocalDateTime()) : i18n.get("shift.not_ended");
                 
                 // 计算班次时长，处理 NULL 值
-                String durationText = "未完成";
+                String durationText = i18n.get("runtime.incomplete");
                 if (s.startTime != null && s.endTime != null) {
                     durationText = s.getDurationText();
                 }
@@ -524,17 +532,17 @@ public class ShiftController {
                     CurrencyUtil.format(s.wechatRevenue.doubleValue()),
                     CurrencyUtil.format(s.alipayRevenue.doubleValue()),
                     CurrencyUtil.format(s.cardRevenue.doubleValue()),
-                    s.notes == null || s.notes.isEmpty() ? "无" : s.notes
+                    s.notes == null || s.notes.isEmpty() ? i18n.get(I18nKeys.Common.NONE) : s.notes
                 });
             }
 
             // 导出数据
             String filePath = com.cashier.util.ExportUtil.export(
-                "交接班报表",
+                i18n.get("shift.export.file_name"),
                 headers,
                 data,
                 format,
-                "交接班记录"
+                i18n.get("shift.export.dir")
             );
 
             if (filePath != null) {
