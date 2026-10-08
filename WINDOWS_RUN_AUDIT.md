@@ -1,12 +1,12 @@
 # LiSuan 收银系统 —— Windows 运行审计报告
 
-- **审计日期**：2026-09-24
-- **代码版本**：`main` @ `b09dc9b`（v2.6.0）
+- **审计日期**：2026-09-24（第一轮）；2026-10-08（第二轮复验，见文末）
+- **代码版本**：第一轮 `main` @ `b09dc9b`；第二轮 `main` @ `75edc45` → `56388c3`（v2.6.0）
 - **审计主机**：Windows 11（`Microsoft Windows NT 10.0.26200.0`），x64，16 核
 - **审计方式**：全新搭建 JDK/Maven/MySQL → 真机编译 → 全量测试 → 打包 → **真实启动应用并连库操作**
 
-> 本报告为**新增的外部审计产物**，不属于源码树，可自由移动/删除/提交到 `docs/`。
-> 审计结束后 `git status` 为干净状态（`.env`、`config/database.properties`、`target/`、`logs/` 均为 gitignore 内文件）。
+> 本报告第一轮（2026-09-24）成稿于源码树外，后随 `a2b5afe` 提交至仓库根目录；第二轮（2026-10-08）直接增补于文末。
+> 两轮审计结束时 `git status` 均为干净状态（`.env`、`config/database.properties`、`target/`、`logs/` 均为 gitignore 内文件）。
 
 ---
 
@@ -596,3 +596,108 @@ cmd /c "release.bat"   # 只输出到 [1/3]，echo %ERRORLEVEL% 仍为 0
 # D4：空 module-path 是硬错误
 java --module-path "" -version
 ```
+
+---
+
+# 第二轮（2026-10-08）：首启向导改造 + 跨平台实机复验
+
+- **复验日期**：2026-10-08
+- **代码版本**：`main` @ `75edc45`（阶段一：原代码实机验证）→ `56388c3`（阶段二：首启向导改造）
+- **复验主机**：Windows（`Microsoft Windows NT 10.0.26300.0`，x64，DPI 100%）原生；另加 Linux 实机——WSL2 Debian 13（WSLg，`DISPLAY=:0`）
+- **数据库**：MySQL 8.0.46，跑在 WSL2 docker 容器 `lisuan-mysql`（`127.0.0.1:3306`；`docker run mysql:8.0` 创建，**未挂载** `docker/mysql-init/`，schema 全部由应用 `DatabaseManager` 自建）
+- **工具链**（仓库外便携目录 `C:\Users\nevell\lisuan-win-verify\`）：JDK Temurin **17.0.20.1+1**、Maven **3.9.16**（Linux 侧为 apt Maven 3.9.9 + Temurin 17）
+
+## 一、背景与结论
+
+第一轮修复后遗留一个核心安全问题：**空库启动时应用自动生成随机 16 位临时密码并打印到控制台**——`javaw`/双击启动的用户根本看不到控制台，等于制造了一个谁也登不进去的账号；而 `docker/mysql-init/00-init-complete.sql` 又播种公开弱口令 `admin/admin123`（文档中 "Default login: admin / admin123" 仅对播种过的库成立，极易误导）。
+
+本轮两阶段：
+
+1. **阶段一**：在全新 Windows 环境对 `@75edc45` 做原生实机复验（构建门禁、真实启动、登录、REST API 冒烟）；
+2. **阶段二**：以「首次运行向导」取代随机临时密码与 SQL 种子（提交 `56388c3`），并在 Windows 与 Linux（WSLg）双平台实机走通「空库 → 向导建号 → 登录 → 主界面」。
+
+**结论**：两阶段全部通过。`mvn verify` 全绿（771 → **783** 个用例）；向导在双平台实机验证成功；仓库内（代码、SQL、脚本、文档）已不存在任何默认口令。验证后仓库干净，无任何未提交改动。
+
+## 二、阶段一：原代码 Windows 实机验证（@75edc45）
+
+**构建门禁**（`mvn clean verify`）：
+
+| 检查 | 结果 |
+|---|---|
+| Surefire | **771 个用例，0 失败 / 0 错误** |
+| SpotBugs（High） | 通过 |
+| JaCoCo 行覆盖 ≥10% | 通过 |
+| 产物 | `target/lisuan-fx-2.6.0-jar-with-dependencies.jar`（fat jar）可启动 |
+
+**真实运行**（连真实 MySQL 8.0.46）：`java -jar` 启动 → 登录 →（随机临时密码首登）→ 强制改密对话框 → 主界面。锁定逻辑实测：连续 4 次错误未锁定（阈值 5），第 5 次正确密码登录成功且 `login_attempts.attempt_count` 立即清零。
+
+**REST API 冒烟**（Javalin 6.1.3，`127.0.0.1:8080`；验证期间临时 `api.enabled=true`、CORS 限 `127.0.0.1:19387`，验毕已还原 `false`）：
+
+| # | 请求 | 结果 |
+|---|---|---|
+| 1 | `GET /api/health` | 200 `{"service":"cashier-api","status":"ok",...}` |
+| 2 | `GET /api/health/detail`（无 token） | 401 —— 公开端点只有 `/api/health`，文档如称 health 系列公开需修正 |
+| 3 | `POST /api/auth/login`（正确凭据） | 200 + token；`password` 字段为 null（未泄漏哈希） |
+| 4/5 | `GET /api/products` / `/api/members`（Bearer） | 200 分页壳 |
+| 6 | 无 token | 401 `缺少认证 Token` |
+| 7 | 坏 token | 401 `Token 无效或已过期` |
+| 8 | 错误凭据登录 | 401 统一文案（不枚举用户；未写 `login_attempts`） |
+| 9 | 不存在路由（无 token / 带 token） | 401（鉴权先行）/ 404 `{"message":"接口不存在: ..."}` |
+
+**观察**（均不阻塞，部分在阶段二一并处理）：
+
+- 随机临时密码机制的实际体验与预期一致地糟——这是阶段二改造的直接动因；
+- Javalin 6.1.3 启动日志自带"已 949 天未更新"提醒 → 依赖升级候选；
+- MySQL 未就绪（WSL 空闲关 VM 连带容器）时应用 fail-fast 退出，控制台可见"数据库初始化失败，系统将终止启动"，但双击启动的用户看不到任何提示；
+- `DatabaseManager.initializeDatabase()` **硬编码 `CREATE DATABASE IF NOT EXISTS lisuan_system`**（`db.url` 里的 schema 实际被忽略）——"空库测试"必须清空 `lisuan_system` 本身，新建别的库会拆成两库写入、导致首启检测误判（调试踩坑，非本轮引入）。
+
+**UI 自动化踩坑**（供后续复用）：
+
+- `SendKeys` 高频输入会**静默丢字符**（14 位密码变 13 位，连错 4 次）→ 一律改用剪贴板 `Set-Clipboard` + `Ctrl+V` 原子粘贴；
+- 登录错误是**内联 label 且约 3.3 秒自动淡出**——截图必须抢在 3 秒内，否则误判"点击无反应"；
+- `SetForegroundWindow` 在窗口已在前台时返回 false → 判定应改用 `GetForegroundWindow() == hwnd`。
+
+## 三、阶段二：首启向导改造（提交 @56388c3）
+
+**改造内容**（20 个文件，+620/−137）：
+
+- 新增 `service/FirstRunSetupService`：`needsFirstRunSetup()` = `users` 表 0 行；`createAdministrator()` 经 BCrypt 落库、`force_password_change=0`（密码本就是用户自设）、写 `operation_logs`（`FIRST_RUN_SETUP`）；
+- 新增 `FirstRunSetupDialog`：程序化 `Dialog<User>`，密码用 **`PasswordField`** 收集；策略随系统设置（`passwordMinLength` 默认 6、`passwordComplexity` 默认 true → 须含字母+数字）；输入非法时「创建并进入系统」保持禁用；建号失败不关窗、内联报错可重试；取消向导 → 退出应用（此时一个账号都没有、无路可登）；
+- 启动接线：数据库阶段（后台线程）检测空库 → 随不可变结果 `StartupDatabase(languageTag, needsFirstRunSetup)` 带回 FX 线程 → 启动画面关闭后 `Platform.runLater(this::showFirstRunSetup)` 弹出 → 创建成功视为完成登录直接进主界面；
+- **删除**：`DatabaseManager` 的 `createDefaultAdminUser`/随机密码生成/打印；`00-init-complete.sql` 的 admin/admin123 种子；安装脚本与 5 份文档（`AGENTS.md`/`CLAUDE.md`/`README`×3）中的默认口令表述；
+- i18n：四个 bundle 各补 15 个 `firstrun.*` 键（门禁会检查四份齐全）。
+
+**门禁**（新增 12 个用例，`mvn verify` 771 → **783** 全绿）：
+
+- `FirstRunSetupPolicyTest`（5 个）：旧建号路径已删净；全仓库（SQL / 安装脚本 / Java 源码，剥离注释后）不得出现 `admin123` 及其 BCrypt 哈希；启动接线在位（空库检测 → `Platform.runLater` 弹向导、取消即退出）；密码必须 `PasswordField` + BCrypt；15 个 `firstrun.*` 键 × 4 bundle 全存在；
+- `FirstRunSetupServiceTest`（7 个）：空库检测、建号成功 / 重名 / 空值等。
+
+## 四、Windows 实机验证：向导全流程
+
+1. 先 dump 备份 `lisuan_system` → 清空库 → 启动应用：**向导如期弹出**（`shot-wizard-1.png`）；
+2. 不合格输入时「创建并进入系统」保持禁用（`shot-wizard-weak.png`、`shot-wizard-weak2.png`）；
+3. 填入合规密码创建成功 → 弹「初始化完成：管理员账号已创建，欢迎使用狸算！」（`shot-done-alert.png`）→ 直接进主界面（`shot-main-after-create.png`）；
+4. 重启应用：**不再弹向导**，直接到登录页（`shot-relaunch-login.png`）；用向导创建的账号登录成功（`shot-login-filled2.png` → `shot-login-main.png`）；
+5. 库内证据：`operation_logs` 有 `FIRST_RUN_SETUP` 与 `LOGIN SUCCESS`；`users` 行 `force_password_change=0`、`last_login_time` 已写；
+6. 验证后从备份恢复 `lisuan_system`（33 张表）。（会话使用的测试口令均为一次性验证用，不记入本报告；`lisuan_fresh` 辅助库已删除。）
+
+（截图均在仓库外 `C:\Users\nevell\lisuan-win-verify\`。）
+
+## 五、Linux 实机验证（WSL2 Debian 13 + WSLg）
+
+- 环境：WSL2 Debian 13 自带 WSLg（`DISPLAY=:0`）+ Temurin 17；apt Maven 3.9.9（pom 自带 Aliyun 仓库，无需 settings.xml）；补装 GTK3/GL/X11/字体/工具：`libgtk-3-0t64 libgl1 libglib2.0-0t64 libx11-6 libxext6 libxrender1 libxtst6 libxi6 libfreetype6 libasound2t64 fontconfig fonts-noto-cjk fonts-dejavu xdotool imagemagick x11-utils`；
+- 运行：`export JAVA_HOME=/usr/lib/jvm/temurin-17-jdk-amd64; mvn -B -ntp javafx:run`（首次约 52 秒）；
+- **空库 → 向导 → 建号 → 「初始化完成」→ 登录 → 主界面**全流程走通（`shot-wsl-wizard.png`、`shot-wsl-wizard-filled.png`、`shot-wsl-done-alert.png`、`shot-wsl-login-filled.png`、`shot-wsl-login-main.png` 等）；
+- UI 自动化：xdotool 必须先 `windowactivate <id>` 再 click/type，否则首击被吞（与 Windows `SendKeys` 同类坑）；截图 `import -window <id>` 直接可用（GL 渲染不黑屏）；找窗口 `xdotool search --name 狸算`；
+- **跨平台 locale 观察**（预存在，非向导引入）：应用未 `Locale.setDefault`，系统 locale 非中文时（WSL 常见），应用自身 i18n 是中文但 JavaFX 标准弹窗按钮显示 "OK"、状态栏星期显示 "Thursday"（Windows 上因系统 locale 是中文而显示"确定/星期四"）。若要修：启动时按 `I18nManager` 设置 `Locale.setDefault`——**未擅自改动，留待确认**。
+
+## 六、提交、清理与遗留
+
+- 提交：`56388c3` `feat(security): 首次运行向导取代默认凭据（删除随机临时密码与 SQL 种子）`（20 文件，+620/−137）；提交后仓库干净；
+- 验证环境全部在仓库外（`C:\Users\nevell\lisuan-win-verify\`）；`config/api.properties` 已还原 `api.enabled=false`；应用进程已退出；`lisuan-mysql` 容器保留运行（`docker stop lisuan-mysql` 可停）；下载用 `jdk.zip`/`maven.zip` 与旧配置备份已删（仅保留解压后的工具链目录——本机无其他 JDK/Maven）；
+- 遗留（均不阻塞发布，待确认后再动）：
+  1. **locale 一行修复**（见第五节）——影响所有平台的弹窗文案观感，需确认；
+  2. `/api/health/detail` 需 token——若文档称 health 系列公开则需改文档；
+  3. Javalin 6.1.3 过旧（启动自提醒 949 天未更新）；
+  4. MySQL 不可达时双击启动无可见提示（fail-fast）——可接受但值得知晓；
+  5. macOS 实机无法验证（无硬件），仅代码与 CI 层面兼容。
