@@ -428,6 +428,35 @@ public class CashierSystemFXApplication extends Application {
      * 加载自定义中文字体
      * 确保在所有平台上中文都能正确显示
      */
+    /**
+     * 启动登录后需要常驻的后台服务（TD-032）。
+     *
+     * <p>库存预警、自动备份、退款对账三者启动时都会**立刻做一次查库**（低库存全表、备份配置、
+     * 未终态退款），此前在 FX 线程里顺序调用，登录切换会被这几条查询挡住（登录时同步启动两个服务
+     * 是审计里点名的现象）。这些服务不碰 UI，统一放到后台线程启动；单个失败只记日志，不影响登录。</p>
+     */
+    private void startPostLoginServices() {
+        Thread starter = new Thread(() -> {
+            startServiceQuietly("库存预警服务",
+                () -> com.cashier.service.InventoryAlertService.getInstance().start());
+            startServiceQuietly("自动备份服务",
+                () -> com.cashier.service.BackupService.getInstance().start());
+            startServiceQuietly("退款对账服务",
+                () -> com.cashier.service.PaymentRefundReconcileService.getInstance().start());
+        }, "post-login-services");
+        starter.setDaemon(true);
+        starter.start();
+    }
+
+    private void startServiceQuietly(String name, Runnable start) {
+        try {
+            start.run();
+            logger.info("{}已启动", name);
+        } catch (Exception e) {
+            logger.error("启动{}失败", name, e);
+        }
+    }
+
     private void loadCustomFonts() {
         boolean regular;
         boolean bold;
@@ -831,29 +860,7 @@ public class CashierSystemFXApplication extends Application {
 
             logger.info("用户 {} ({}) 进入触屏收银台", user.name, user.getRoleDisplayName());
 
-            // 启动库存预警服务
-            try {
-                com.cashier.service.InventoryAlertService.getInstance().start();
-                logger.info("库存预警服务已启动");
-            } catch (Exception e) {
-                logger.error("启动库存预警服务失败", e);
-            }
-
-            // 启动自动备份服务
-            try {
-                com.cashier.service.BackupService.getInstance().start();
-                logger.info("自动备份服务已启动");
-            } catch (Exception e) {
-                logger.error("启动自动备份服务失败", e);
-            }
-
-            // 启动退款对账（F9）：把停在处理中的微信退款回查渠道并收敛到终态
-            try {
-                com.cashier.service.PaymentRefundReconcileService.getInstance().start();
-                logger.info("退款对账服务已启动");
-            } catch (Exception e) {
-                logger.error("启动退款对账服务失败", e);
-            }
+            startPostLoginServices();
 
         } catch (IOException e) {
             logger.error("加载触屏收银台界面失败", e);
@@ -901,29 +908,7 @@ public class CashierSystemFXApplication extends Application {
 
             logger.info("用户 {} ({}) 进入完整主界面", user.name, user.getRoleDisplayName());
 
-            // 启动库存预警服务
-            try {
-                com.cashier.service.InventoryAlertService.getInstance().start();
-                logger.info("库存预警服务已启动");
-            } catch (Exception e) {
-                logger.error("启动库存预警服务失败", e);
-            }
-
-            // 启动自动备份服务
-            try {
-                com.cashier.service.BackupService.getInstance().start();
-                logger.info("自动备份服务已启动");
-            } catch (Exception e) {
-                logger.error("启动自动备份服务失败", e);
-            }
-
-            // 启动退款对账（F9）：把停在处理中的微信退款回查渠道并收敛到终态
-            try {
-                com.cashier.service.PaymentRefundReconcileService.getInstance().start();
-                logger.info("退款对账服务已启动");
-            } catch (Exception e) {
-                logger.error("启动退款对账服务失败", e);
-            }
+            startPostLoginServices();
 
             // 启动 REST API 服务器
             try {

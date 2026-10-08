@@ -20,6 +20,35 @@ import java.time.ZoneId;
  * 封装交易相关的业务逻辑
  */
 public class TransactionService {
+
+    /** 促销缓存有效期：购物车每次变更都会重新选促销，30 秒足够新鲜，又省掉每次改数量都查库（TD-032）。 */
+    private static final long ACTIVE_PROMOTIONS_TTL_MILLIS = 30_000L;
+    private static volatile List<Promotion> activePromotionsCache;
+    private static volatile long activePromotionsCachedAt;
+
+    /**
+     * 取当前有效促销（带短 TTL 缓存，TD-032）。
+     *
+     * <p>此前 {@code selectBestPromotion} 每次加/减商品、改数量、开始支付都在 FX 线程同步
+     * {@code findActive()}；促销是低频变更数据，缓存 30 秒即可，写入侧（{@code PromotionService}）
+     * 会主动失效，跨终端改动最多滞后一个 TTL。</p>
+     */
+    private static List<Promotion> activePromotionsForPricing() throws SQLException {
+        List<Promotion> cached = activePromotionsCache;
+        if (cached != null && System.currentTimeMillis() - activePromotionsCachedAt < ACTIVE_PROMOTIONS_TTL_MILLIS) {
+            return cached;
+        }
+        List<Promotion> fresh = DAOFactory.getInstance().getPromotionDAO().findActive();
+        activePromotionsCache = fresh;
+        activePromotionsCachedAt = System.currentTimeMillis();
+        return fresh;
+    }
+
+    /** 促销被创建/修改/删除后调用：让定价用的缓存立刻失效，避免继续按旧规则算钱。 */
+    public static void invalidatePromotionCache() {
+        activePromotionsCache = null;
+        activePromotionsCachedAt = 0L;
+    }
     private static final Logger logger = LoggerFactoryUtil.getLogger(TransactionService.class);
     private static final com.cashier.dao.ProductDAORefactored productDAO = com.cashier.dao.DAOFactory.getInstance().getProductDAO();
 
@@ -408,7 +437,7 @@ public class TransactionService {
         Promotion bestPromotion = null;
         BigDecimal bestDiscount = BigDecimal.ZERO;
         try {
-            for (Promotion promotion : DAOFactory.getInstance().getPromotionDAO().findActive()) {
+            for (Promotion promotion : activePromotionsForPricing()) {
                 BigDecimal discount = promotion.calculateDiscount(totalAmount);
                 if (discount.compareTo(bestDiscount) > 0) {
                     bestDiscount = discount;

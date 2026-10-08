@@ -653,13 +653,24 @@ public class InventoryCheckController {
         categoryCombo.setValue(allCategories);
     }
 
+    /** 选品框搜索防抖（TD-032）：连续键入期间只调度一次查询 */
+    private javafx.animation.PauseTransition productSelectorDebounce;
+
     /** 绑定分类与搜索筛选事件 */
     private void wireProductFilterEvents(ComboBox<String> categoryCombo, TextField searchField,
                                          TableView<Product> productTable, String allCategories) {
         categoryCombo.setOnAction(e ->
             loadProductSelectionPage(productTable, allCategories, searchField.getText(), categoryCombo.getValue()));
-        searchField.textProperty().addListener((obs, oldVal, newVal) ->
-            loadProductSelectionPage(productTable, allCategories, newVal, categoryCombo.getValue()));
+        // TD-032：此前每敲一个字符就在 FX 线程同步查库；改为停顿 300ms 后到后台查询（同 TouchCart 的防抖做法）
+        searchField.textProperty().addListener((obs, oldVal, newVal) -> {
+            if (productSelectorDebounce != null) {
+                productSelectorDebounce.stop();
+            }
+            productSelectorDebounce = new javafx.animation.PauseTransition(javafx.util.Duration.millis(300));
+            productSelectorDebounce.setOnFinished(event ->
+                loadProductSelectionPage(productTable, allCategories, newVal, categoryCombo.getValue()));
+            productSelectorDebounce.play();
+        });
     }
 
     /** 创建全选/取消全选按钮组 */
@@ -729,30 +740,30 @@ public class InventoryCheckController {
             String searchText,
             String selectedCategory) {
 
-        try {
-            String normalizedSearch = searchText == null ? "" : searchText.trim();
-            boolean allCategorySelected = selectedCategory == null || allCategories.equals(selectedCategory);
-            List<Product> products;
-
-            if (!normalizedSearch.isEmpty()) {
-                products = productDAO.search(normalizedSearch, FIRST_PAGE, CHECK_PRODUCT_PAGE_SIZE).getData();
-                if (!allCategorySelected) {
-                    products = products.stream()
+        String normalizedSearch = searchText == null ? "" : searchText.trim();
+        boolean allCategorySelected = selectedCategory == null || allCategories.equals(selectedCategory);
+        // 查库放后台（TD-032）：输入/筛选是交互路径，不能在 FX 线程同步等 JDBC
+        com.cashier.util.UIOptimizer.runInBackground(
+            () -> {
+                if (!normalizedSearch.isEmpty()) {
+                    List<Product> found = productDAO.search(normalizedSearch, FIRST_PAGE, CHECK_PRODUCT_PAGE_SIZE).getData();
+                    return allCategorySelected ? found : found.stream()
                         .filter(product -> selectedCategory.equals(product.category))
                         .toList();
                 }
-            } else if (!allCategorySelected) {
-                products = productDAO.findByCategory(selectedCategory, FIRST_PAGE, CHECK_PRODUCT_PAGE_SIZE).getData();
-            } else {
-                products = productDAO.findAll(FIRST_PAGE, CHECK_PRODUCT_PAGE_SIZE).getData();
-            }
-
-            productTable.setItems(FXCollections.observableArrayList(products));
-            productTable.getSelectionModel().clearSelection();
-        } catch (SQLException e) {
-            logger.error("加载盘点商品选择列表失败", e);
-            showError(I18nManager.getInstance().get("runtime.product_load_failed", e.getMessage()));
-        }
+                if (!allCategorySelected) {
+                    return productDAO.findByCategory(selectedCategory, FIRST_PAGE, CHECK_PRODUCT_PAGE_SIZE).getData();
+                }
+                return productDAO.findAll(FIRST_PAGE, CHECK_PRODUCT_PAGE_SIZE).getData();
+            },
+            products -> {
+                productTable.setItems(FXCollections.observableArrayList(products));
+                productTable.getSelectionModel().clearSelection();
+            },
+            e -> {
+                logger.error("加载盘点商品选择列表失败", e);
+                showError(I18nManager.getInstance().get("runtime.product_load_failed", e.getMessage()));
+            });
     }
 
     /**

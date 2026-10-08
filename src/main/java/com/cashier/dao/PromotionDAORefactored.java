@@ -89,10 +89,12 @@ public class PromotionDAORefactored extends BaseDAO {
             promotion.endDate != null ? Timestamp.valueOf(promotion.endDate) : null,
             promotion.usageCount, promotion.maxUsage);
         promotion.id = (int) id;
+        invalidatePricingCache();
         return id > 0;
     }
 
     public boolean update(Promotion promotion) throws SQLException {
+        invalidatePricingCache();
         return executeUpdate(
             "UPDATE promotions SET promotion_code = ?, name = ?, type = ?, threshold = ?, discount = ?, " +
                 "description = ?, enabled = ?, start_date = ?, end_date = ?, usage_count = ?, max_usage = ? WHERE id = ?",
@@ -104,7 +106,18 @@ public class PromotionDAORefactored extends BaseDAO {
     }
 
     public boolean delete(int id) throws SQLException {
+        invalidatePricingCache();
         return executeUpdate("DELETE FROM promotions WHERE id = ?", id) > 0;
+    }
+
+    /**
+     * 促销被改动后让定价用的短 TTL 缓存立刻失效（TD-032）。
+     *
+     * <p>放在 DAO 写入处而不是只放 Service：任何写路径（含直连 DAO 的调用与跨终端同步）都要失效，
+     * 否则收银台可能继续按已删除/已停用的促销算钱。</p>
+     */
+    private static void invalidatePricingCache() {
+        com.cashier.service.TransactionService.invalidatePromotionCache();
     }
 
     public boolean incrementUsage(int id) throws SQLException {

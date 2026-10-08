@@ -36,7 +36,7 @@
 | TD-029 | 月报/任意区间报表用 `findByDateRange(start,end)` 全量 JOIN 物化到内存 | 性能 | **已修（2026-10，月报部分）**：月报改 `summarizeDailyBetween` SQL 聚合（返回行数 = 当月天数）；**日报与桌面统计/交班仍需逐笔明细**（日报响应带 `transactions`、统计页与交班要展示/结算明细，窗口天然有界），登记为剩余 | 大数据量门店 |
 | TD-030 | 首次登录改密对话框取消后，登录界面永久禁用（只能杀进程） | UI 缺陷 | **已修复（2026-09）**：改密对话框返回后，凡未真正切到主界面（取消/关窗/改密失败/无 application）一律 `setLoginState(false)`；1 项门禁 + 变异验证 | 强制改密 |
 | TD-031 | 网关下单在 FX 线程且 HttpClient 无任何超时 → 收银台可无限卡死 | 体验/健壮性 | **已修复（2026-09）**：两个渠道都加 `connectTimeout(5s)` + 请求 `timeout(15s)`；两个收银台的下单改走 `UIOptimizer.runInBackground`（异步窗口内置 `paymentInProgress` 防重复提交）；2 项门禁 + 变异验证 | 电子支付 |
-| TD-032 | FX 线程同步查库若干处（选品框逐字符搜索、每次购物车变更查促销、登录时同步启动两个服务） | 性能 | **待处理** | 界面流畅度 |
+| TD-032 | FX 线程同步查库若干处（选品框逐字符搜索、每次购物车变更查促销、登录时同步启动两个服务） | 性能 | **已修（2026-10）**：三处都改掉——选品框（采购/盘点）加 300ms 防抖 + 后台查询；`selectBestPromotion` 走 30s TTL 缓存、写在 `PromotionDAO` 写入处失效（任何写路径都覆盖）；登录后三个常驻服务改由 daemon 线程启动（`startPostLoginServices`） | 界面流畅度 |
 | TD-033 | 触屏切语言泄漏 scheduler/Timeline/全局监听；`BackupService.start()` 无并发守卫 | 资源泄漏 | **待处理** | 触屏收银台 |
 | TD-034 | 金额/数量口径一批（7 项：发票税额百分比 `setScale(0)` 抛异常、挂单折扣走 double、退款单价取整使 Σ明细≠实付、积分冲减按次取整、充值小数积分被编辑保存截断、`promotions.discount` 列精度与输入不匹配、发票行税与表头差 1 分） | 正确性 | **已修复（2026-09）**：7 项全部处理（退款改为"总额权威、明细只许少算"，积分/充值改 FLOOR）；4 项门禁 + 5 项行为测试，11 处变异全红 | 对账 |
 | TD-035 | 其它（打包向导 FX 线程违规、`NotificationManager` 定时任务无 try/catch、`hasActiveShift` 吞异常让收银员看到"请先开班"、非 daemon 线程、`CurrencyUtil` HALF_EVEN…） | 杂项 | **待处理** | — |
@@ -1556,6 +1556,19 @@ autocommit 连接；`insertWithConnection` 内部先插表头（提交），再�
   `PromotionDAORefactored.findActive()`（无缓存）；
 - `CashierSystemFXApplication:770/778/832/840`：登录时同步 `InventoryAlertService.start()`
   （内部立刻跑一次全表低库存查询并逐条发通知）与 `BackupService.start()`。
+
+**2026-10 修复**：
+- 采购/盘点的选品框：`textProperty` 监听改为 `PauseTransition(300ms)` 防抖，查询逻辑经
+  `UIOptimizer.runInBackground` 下后台、回 FX 线程刷新表格（与 `TouchCartController` 的搜索防抖同一做法）。
+- `TransactionService.selectBestPromotion` 的频率最高（每次加/减商品、改数量、开始支付）：
+  改为 `activePromotionsForPricing()` 读 30 秒 TTL 缓存；
+  **失效放在 `PromotionDAO` 的 insert/update/delete**（而不是只放 Service），
+  这样直连 DAO 的写路径与跨终端同步也不会继续按旧规则算钱。TTL 只兜跨进程改动。
+- 登录后的三个常驻服务（库存预警/自动备份/退款对账）合并到
+  `CashierSystemFXApplication.startPostLoginServices()`，在 daemon 线程里启动；
+  单个失败只记日志，不阻塞登录。
+- 说明：`mvn compile` 的增量判断一度把改动过的文件当成 "up to date" 而报 BUILD SUCCESS，
+  排查时应以 `mvn test`/`verify` 或 `rm -rf target/classes` 后的编译为准（本次 236 个源文件全量编译通过）。
 
 ### TD-033 触屏切换语言泄漏资源
 
