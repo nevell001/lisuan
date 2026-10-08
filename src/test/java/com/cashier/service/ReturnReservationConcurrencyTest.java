@@ -19,13 +19,14 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /**
@@ -57,13 +58,21 @@ class ReturnReservationConcurrencyTest extends DatabaseTestBase {
             start.countDown();
 
             int success = 0;
+            int rejected = 0;
             for (Future<Boolean> future : futures) {
-                if (future.get(30, TimeUnit.SECONDS)) {
-                    success++;
+                try {
+                    if (future.get(30, TimeUnit.SECONDS)) {
+                        success++;
+                    }
+                } catch (ExecutionException e) {
+                    assertTrue(e.getCause() instanceof ReturnService.ReturnQuantityExceededException,
+                        "输掉的那次必须是可退余量不足，而不是别的异常: " + e.getCause());
+                    rejected++;
                 }
             }
 
             assertEquals(1, success, "同一交易并发满额退货必须只有一个成功（否则库存与钱会被退两次）");
+            assertEquals(1, rejected, "另一个终端必须拿到「可退余量不足」的明确原因");
             assertEquals(2, reservationRowCount(TX), "台账只应留下成功那一张单的两行占用");
             assertEquals(2, reservedQuantity(TX, PRODUCT_A));
             assertEquals(3, reservedQuantity(TX, PRODUCT_B));
@@ -79,7 +88,8 @@ class ReturnReservationConcurrencyTest extends DatabaseTestBase {
 
         assertTrue(ReturnService.createReturnOrder(order(), items(1, 0)), "第一次退 1 件应成功");
         assertTrue(ReturnService.createReturnOrder(order(), items(1, 0)), "第二次退 1 件应成功（累计 = 原销量）");
-        assertFalse(ReturnService.createReturnOrder(order(), items(1, 0)), "第三次退 1 件应被余量校验拦下");
+        assertThrows(ReturnService.ReturnQuantityExceededException.class,
+            () -> ReturnService.createReturnOrder(order(), items(1, 0)), "第三次退 1 件应被余量校验拦下");
         assertEquals(2, reservedQuantity(TX, PRODUCT_A));
     }
 
@@ -90,7 +100,8 @@ class ReturnReservationConcurrencyTest extends DatabaseTestBase {
 
         ReturnOrder first = order();
         assertTrue(ReturnService.createReturnOrder(first, items(2, 0)), "首次满额退货应成功");
-        assertFalse(ReturnService.createReturnOrder(order(), items(2, 0)), "已占满时不能再建单");
+        assertThrows(ReturnService.ReturnQuantityExceededException.class,
+            () -> ReturnService.createReturnOrder(order(), items(2, 0)), "已占满时不能再建单");
 
         try (Connection conn = getTestConnection()) {
             assertTrue(DAOFactory.getInstance().getReturnOrderDAO()
@@ -108,7 +119,8 @@ class ReturnReservationConcurrencyTest extends DatabaseTestBase {
         insertTransactionWithItems(TX, new int[][]{{PRODUCT_A, 1}, {PRODUCT_A, 1}});
 
         assertTrue(ReturnService.createReturnOrder(order(), items(2, 0)), "两行合计 2 件，退 2 件应成功");
-        assertFalse(ReturnService.createReturnOrder(order(), items(1, 0)), "再退 1 件应被拦下（合计已满）");
+        assertThrows(ReturnService.ReturnQuantityExceededException.class,
+            () -> ReturnService.createReturnOrder(order(), items(1, 0)), "再退 1 件应被拦下（合计已满）");
     }
 
     @Test
@@ -133,7 +145,8 @@ class ReturnReservationConcurrencyTest extends DatabaseTestBase {
         assertEquals(1, reservationRowCount(TX_LEGACY));
         assertEquals(0, DatabaseManager.backfillReturnReservations(), "重复回填必须幂等（不重复插入）");
 
-        assertFalse(ReturnService.createReturnOrder(orderFor(TX_LEGACY), items(2, 0)),
+        assertThrows(ReturnService.ReturnQuantityExceededException.class,
+            () -> ReturnService.createReturnOrder(orderFor(TX_LEGACY), items(2, 0)),
             "老退货单已被回填占用，不能再退满额");
     }
 
@@ -145,6 +158,49 @@ class ReturnReservationConcurrencyTest extends DatabaseTestBase {
         assertTrue(ReturnService.createReturnOrder(orderFor(TX_LEGACY), items(5, 0)),
             "无从得知可退基数时应放行（这条兜底只影响脏数据，且会留 WARN）");
         assertEquals(1, reservationRowCount(TX_LEGACY), "放行也要记台账，便于事后审计");
+    }
+
+    @Test
+    @DisplayName("审批 / 完成会同步台账行状态（F10-b）")
+    void ledgerStatusFollowsApprovalAndCompletion() throws Exception {
+        insertTransactionWithItems(TX, new int[][]{{PRODUCT_A, 2}});
+
+        ReturnOrder order = order();
+        assertTrue(ReturnService.createReturnOrder(order, items(2, 0)));
+        assertEquals("PENDING", reservationStatus(order.returnOrderId));
+
+        assertTrue(ReturnService.approveReturnOrder(order.returnOrderId, "admin", "同意", true));
+        assertEquals("APPROVED", reservationStatus(order.returnOrderId));
+
+        assertTrue(ReturnService.completeReturnOrder(order.returnOrderId));
+        assertEquals("COMPLETED", reservationStatus(order.returnOrderId));
+    }
+
+    @Test
+    @DisplayName("驳回会同步台账为 REJECTED（占用统计随即归零）")
+    void ledgerStatusFollowsRejection() throws Exception {
+        insertTransactionWithItems(TX, new int[][]{{PRODUCT_A, 2}});
+
+        ReturnOrder order = order();
+        assertTrue(ReturnService.createReturnOrder(order, items(2, 0)));
+        assertTrue(ReturnService.approveReturnOrder(order.returnOrderId, "admin", "拒绝", false));
+
+        assertEquals("REJECTED", reservationStatus(order.returnOrderId));
+        assertEquals(0, reservedQuantity(TX, PRODUCT_A), "驳回后占用统计必须归零");
+    }
+
+    @Test
+    @DisplayName("超量建单的提示由服务层用 i18n 组装（含商品名与数量），界面不必自己拼")
+    void exceededQuantityMessageIsBuiltByService() {
+        insertTransactionWithItems(TX, new int[][]{{PRODUCT_A, 1}});
+
+        ReturnService.ReturnQuantityExceededException e = assertThrows(
+            ReturnService.ReturnQuantityExceededException.class,
+            () -> ReturnService.createReturnOrder(order(), items(3, 0)));
+
+        assertTrue(e.getMessage() != null && e.getMessage().contains("商品" + PRODUCT_A),
+            "提示应包含商品名（证明服务层查了商品）: " + e.getMessage());
+        assertTrue(e.getMessage().contains("3"), "提示应包含本次退货数量: " + e.getMessage());
     }
 
     // ===== 辅助 =====
@@ -198,7 +254,13 @@ class ReturnReservationConcurrencyTest extends DatabaseTestBase {
             stmt.execute("INSERT INTO transactions (transaction_id, timestamp, total_amount, tax, final_amount, " +
                 "payment_method, operator_name, status) VALUES ('" + transactionId + "', '2026-10-08 10:00:00', " +
                 "100.00, 0, 100.00, '现金', 'tester', 'NORMAL')");
+            java.util.Set<Integer> productsInserted = new java.util.HashSet<>();
             for (int[] pair : productQuantities) {
+                if (productsInserted.add(pair[0])) {
+                    // 商品行存在时超量提示才能显示商品名（服务层会查一次商品）
+                    stmt.execute("INSERT INTO products (id, product_code, name, price, quantity) VALUES (" + pair[0]
+                        + ", 'P" + pair[0] + "', '商品" + pair[0] + "', 10.00, 100)");
+                }
                 stmt.execute("INSERT INTO transaction_items (transaction_id, product_id, product_code, product_name, " +
                     "price, quantity, subtotal) VALUES ('" + transactionId + "', " + pair[0] + ", 'P" + pair[0] + "', " +
                     "'商品" + pair[0] + "', 10.00, " + pair[1] + ", " + (10 * pair[1]) + ".00)");
@@ -227,6 +289,12 @@ class ReturnReservationConcurrencyTest extends DatabaseTestBase {
             + transactionId + "'");
     }
 
+    /** 台账行状态（同单据只有一行商品时即该行）。 */
+    private String reservationStatus(String returnOrderId) {
+        return queryString("SELECT status FROM return_reservations WHERE return_order_id = '"
+            + returnOrderId + "' LIMIT 1");
+    }
+
     private int reservedQuantity(String transactionId, int productId) {
         return queryInt("SELECT COALESCE(SUM(rr.quantity), 0) FROM return_reservations rr " +
             "JOIN return_orders ro ON rr.return_order_id = ro.return_order_id " +
@@ -239,6 +307,16 @@ class ReturnReservationConcurrencyTest extends DatabaseTestBase {
              Statement stmt = conn.createStatement();
              ResultSet rs = stmt.executeQuery(sql)) {
             return rs.next() ? rs.getInt(1) : 0;
+        } catch (SQLException e) {
+            throw new IllegalStateException("查询失败: " + sql, e);
+        }
+    }
+
+    private String queryString(String sql) {
+        try (Connection conn = getTestConnection();
+             Statement stmt = conn.createStatement();
+             ResultSet rs = stmt.executeQuery(sql)) {
+            return rs.next() ? rs.getString(1) : null;
         } catch (SQLException e) {
             throw new IllegalStateException("查询失败: " + sql, e);
         }

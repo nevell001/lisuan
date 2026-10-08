@@ -364,52 +364,6 @@ public class CreateReturnOrderDialogController {
     }
 
     /**
-     * 验证退货商品 - 防止重复退货
-     */
-    private String validateReturnItems() {
-        try {
-            // 查询该交易的所有已存在退货订单（不包括已拒绝的）
-            List<ReturnOrder> existingReturns = DAOFactory.getInstance().getReturnOrderDAO().findByOriginalTransactionId(
-                originalTransaction.transactionId
-            );
-
-            if (existingReturns.isEmpty()) {
-                return null;  // 没有退货记录，允许创建
-            }
-
-            // 统计所有已退货的商品和数量
-            java.util.Map<Integer, Integer> returnedQuantities = new java.util.HashMap<>();
-            for (ReturnOrder returnOrder : existingReturns) {
-                List<ReturnOrderItem> items = DAOFactory.getInstance().getReturnOrderItemDAO().findByReturnOrderId(returnOrder.returnOrderId);
-                for (ReturnOrderItem item : items) {
-                    returnedQuantities.put(item.productId,
-                        returnedQuantities.getOrDefault(item.productId, 0) + item.returnQuantity);
-                }
-            }
-
-            // 检查当前要退货的商品是否会超过原交易数量
-            for (ReturnItem item : returnItems) {
-                if (item.isSelected() && item.returnQuantity > 0) {
-                    int returnedQty = returnedQuantities.getOrDefault(item.productId, 0);
-                    int totalReturnQty = returnedQty + item.returnQuantity;
-
-                    if (totalReturnQty > item.originalQuantity) {
-                        return com.cashier.i18n.I18nManager.getInstance().get(
-                            "runtime.return_quantity_exceeded", item.productName,
-                            item.originalQuantity, returnedQty, item.returnQuantity);
-                    }
-                }
-            }
-
-            return null;  // 验证通过
-
-        } catch (Exception e) {
-            logger.error("验证退货商品失败", e);
-            return com.cashier.i18n.I18nManager.getInstance().get("runtime.return_validation_error", e.getMessage());
-        }
-    }
-
-    /**
      * 处理提交
      */
     @FXML
@@ -426,13 +380,8 @@ public class CreateReturnOrderDialogController {
             return;
         }
 
-        // 验证退货订单 - 防止重复退货
-        String validationResult = validateReturnItems();
-        if (validationResult != null) {
-            showAlert(Alert.AlertType.WARNING, com.cashier.i18n.I18nManager.getInstance().get("runtime.return_validation_failed"), validationResult);
-            return;
-        }
-
+        // 可退余量校验已下沉到 ReturnService（建单事务内、行锁保护），这里不再重复实现一遍规则；
+        // 超量时服务层抛出带文案的异常（并发输掉的那次也能拿到明确原因）
         ReturnOrder returnOrder = buildReturnOrder(returnReason, resolveMemberId());
         List<ReturnOrderItem> items = buildReturnOrderItems(returnReason);
         // 应退总额以"整单实付比例"为准（ReturnService.refundTotal），不能拿逐行单价×数量求和：
@@ -443,8 +392,14 @@ public class CreateReturnOrderDialogController {
         returnOrder.totalAmount = refundTotal;
 
         // 保存退货订单
-        boolean result = ReturnService.createReturnOrder(returnOrder, items);
-        handleReturnOrderSaveResult(result, returnOrder);
+        try {
+            boolean result = ReturnService.createReturnOrder(returnOrder, items);
+            handleReturnOrderSaveResult(result, returnOrder);
+        } catch (ReturnService.ReturnQuantityExceededException e) {
+            showAlert(Alert.AlertType.WARNING,
+                com.cashier.i18n.I18nManager.getInstance().get("runtime.return_validation_failed"),
+                e.getMessage());
+        }
     }
 
     /** 本次选中退货部分（含退货数量）的原价合计，未折算会员折扣/促销。 */

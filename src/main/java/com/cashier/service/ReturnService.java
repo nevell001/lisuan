@@ -247,10 +247,38 @@ public class ReturnService {
             if (alreadyReserved + entry.getValue() > available) {
                 logger.warn("退货数量超出可退余量，拒绝创建: transactionId={}, productId={}, 已占用={}, 本次={}, 原单={}",
                     transactionId, productId, alreadyReserved, entry.getValue(), available);
-                return false;
+                // 文案在服务层生成：并发输掉的那次建单也必须给出"超出可退余量"而不是通用的创建失败
+                throw new ReturnQuantityExceededException(I18nManager.getInstance().get(
+                    "runtime.return_quantity_exceeded", productNameWithConnection(conn, productId),
+                    available, alreadyReserved, entry.getValue()));
             }
         }
         return true;
+    }
+
+    /** 商品名（用于把超量原因说清楚）；历史/脏数据的商品可能查不到，退化成 #id。 */
+    private static String productNameWithConnection(Connection conn, int productId) {
+        try {
+            Product product = productDAO.findByIdWithConnection(conn, productId);
+            if (product != null && product.name != null && !product.name.isBlank()) {
+                return product.name;
+            }
+        } catch (SQLException e) {
+            logger.warn("查询商品名失败（用于退货超量提示）: productId={}", productId, e);
+        }
+        return "#" + productId;
+    }
+
+    /**
+     * 可退余量不足（并发建单、超量退货）。
+     *
+     * <p>文案由服务层用 i18n 组装好（{@code runtime.return_quantity_exceeded}），
+     * 调用方直接展示即可——避免每个界面各自拼一套文案。</p>
+     */
+    public static class ReturnQuantityExceededException extends RuntimeException {
+        public ReturnQuantityExceededException(String message) {
+            super(message);
+        }
     }
 
     /** 把本次退货的占用写进台账（与退货单同事务；F10-b 会在此基础上同步行状态）。 */
@@ -270,6 +298,19 @@ public class ReturnService {
             reservations.add(reservation);
         }
         return DAOFactory.getInstance().getReturnReservationDAO().batchInsertWithConnection(conn, reservations);
+    }
+
+    /**
+     * 同步台账行状态（F10-b）；0 行只记日志——台账上线前建的退货单、或 API 直接完成的整单
+     * 可能没有台账行，不当成失败。
+     */
+    private static void syncReservationStatus(Connection conn, String returnOrderId, String status)
+            throws SQLException {
+        int updated = DAOFactory.getInstance().getReturnReservationDAO()
+            .updateStatusForReturnOrderWithConnection(conn, returnOrderId, status);
+        if (updated == 0) {
+            logger.info("退货单 {} 没有台账行可同步为 {}（旧单或 API 整单退款）", returnOrderId, status);
+        }
     }
 
     /**
@@ -314,6 +355,10 @@ public class ReturnService {
                     logger.warn("退货单状态已变更，审批冲突: {}", returnOrderId);
                     return false;
                 }
+
+                // F10-b：台账行状态与单据状态同事务同步（占用与否本就按父单状态判定，这里为审计可视化）
+                syncReservationStatus(conn, returnOrderId,
+                    approved ? ReturnReservation.STATUS_APPROVED : ReturnReservation.STATUS_REJECTED);
 
                 if (!approved) {
                     return true;
@@ -500,6 +545,9 @@ public class ReturnService {
                     logger.warn("退货单已被处理，完成冲突: {}", returnOrderId);
                     return false;
                 }
+
+                // F10-b：台账行同步为已完成（同事务）
+                syncReservationStatus(conn, returnOrderId, ReturnReservation.STATUS_COMPLETED);
 
                 settleRefund(conn, returnOrder, returnOrderId);
 

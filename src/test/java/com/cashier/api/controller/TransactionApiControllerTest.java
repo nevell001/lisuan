@@ -4,6 +4,7 @@ import com.cashier.api.support.TestContext;
 import com.cashier.dao.DAOFactory;
 import com.cashier.dao.TransactionDAORefactored;
 import com.cashier.service.DataService;
+import com.cashier.service.ReturnService;
 import com.cashier.model.*;
 import com.cashier.util.DatabaseTestBase;
 import io.javalin.http.HandlerType;
@@ -19,6 +20,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class TransactionApiControllerTest extends DatabaseTestBase {
@@ -395,6 +397,58 @@ class TransactionApiControllerTest extends DatabaseTestBase {
 
     private void assertAmountEquals(BigDecimal expected, BigDecimal actual) {
         assertEquals(0, expected.compareTo(actual), "expected " + expected + " but was " + actual);
+    }
+
+    @Test
+    @DisplayName("API 整单退款会写占用台账（COMPLETED），桌面退货随即不能再退同一交易（F10-b）")
+    void apiRefundOccupiesLedgerSoDesktopReturnIsRejected() throws Exception {
+        Product product = insertProduct("API台账商品", "APILEDGER001", new BigDecimal("10.00"), 50);
+
+        TestContext saleCtx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions")
+            .withBody(createRequest(product.id, 2, "现金", null));
+        TransactionApiController.create(saleCtx.context);
+        assertEquals(HttpStatus.CREATED, saleCtx.status);
+        String transactionId = (String) response(saleCtx).get("transactionId");
+
+        TestContext refundCtx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions/" + transactionId + "/refund")
+            .withPathParam("id", transactionId);
+        TransactionApiController.refund(refundCtx.context);
+        assertEquals(HttpStatus.OK, refundCtx.status);
+
+        // 台账必须记下这笔占用：桌面退货建单查的就是它，不写就会出现"API 已整单退款、桌面还能再退"
+        assertEquals(1, queryInt("SELECT COUNT(*) FROM return_reservations WHERE original_transaction_id = '"
+            + transactionId + "' AND status = 'COMPLETED'"), "API 退款应写一条 COMPLETED 占用");
+        assertEquals(2, queryInt("SELECT quantity FROM return_reservations WHERE original_transaction_id = '"
+            + transactionId + "'"), "占用数量应等于该商品在交易里的数量");
+
+        // 桌面退货走 ReturnService 的可退余量校验：已被整单退款 → 余量不足
+        ReturnOrder desktopReturn = new ReturnOrder();
+        desktopReturn.originalTransactionId = transactionId;
+        desktopReturn.returnDate = Instant.now();
+        desktopReturn.totalAmount = new BigDecimal("20.00");
+        desktopReturn.paymentMethod = "CASH";
+        desktopReturn.operatorName = "tester";
+
+        ReturnOrderItem item = new ReturnOrderItem();
+        item.productId = product.id;
+        item.productName = product.name;
+        item.returnQuantity = 2;
+        item.unitPrice = new BigDecimal("10.00");
+        item.returnAmount = new BigDecimal("20.00");
+
+        assertThrows(ReturnService.ReturnQuantityExceededException.class,
+            () -> ReturnService.createReturnOrder(desktopReturn, List.of(item)),
+            "API 已整单退款后，桌面不能再对同一交易建退货单");
+    }
+
+    private int queryInt(String sql) throws Exception {
+        try (Connection conn = getTestConnection();
+             var stmt = conn.createStatement();
+             var rs = stmt.executeQuery(sql)) {
+            return rs.next() ? rs.getInt(1) : 0;
+        }
     }
 
     @SuppressWarnings("unchecked")

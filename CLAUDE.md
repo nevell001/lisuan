@@ -923,10 +923,17 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   两个终端并发提交各退满额 → 库存恢复两次 + 退款两次。占用是否生效按**父退货单状态**判定
   （`ro.status <> 'REJECTED'`，驳回即释放）；老库既有退货单由
   `DatabaseManager.backfillReturnReservations()` 启动时幂等回填（`NOT EXISTS` 去重），
-  否则历史交易又能再退一次。门禁 `ReturnLedgerPolicyTest`（3 项源码）+ 行为
-  `ReturnReservationConcurrencyTest`（7 项，含双线程并发；校验短路变异后 5 项变红）。
+  否则历史交易又能再退一次。门禁 `ReturnLedgerPolicyTest`（5 项源码）+ 行为
+  `ReturnReservationConcurrencyTest`（10 项，含双线程并发）+ API 跨路径
+  `TransactionApiControllerTest.apiRefundOccupiesLedgerSoDesktopReturnIsRejected`；
+  3 处变异（校验短路、API 不写台账、审批不同步）均让对应测试变红。
   原交易缺明细行时**放行但仍记台账**（只影响无法校验的脏数据，留 WARN）。
-  设计与剩余项（F10-b/F9）见 `docs/DESIGN_F9_F10.md`
+  **三条写路径都要保持台账一致（F10-b）**：审批/驳回同步 `APPROVED`/`REJECTED`、完成同步
+  `COMPLETED`、**API 整单退款**（`TransactionApiController`，状态直接 COMPLETED）也要写台账——
+  漏了它，桌面退货查不到这笔占用，同一交易就能再退一次。超量提示由服务层
+  `ReturnQuantityExceededException` 用 i18n 组装（含商品名/原单量/已退量/本次量），
+  建单界面**不再自己实现一份校验**（那是规则的第二个实现，也是 check-then-act 的源头）。
+  设计与剩余项（F10-c/F9）见 `docs/DESIGN_F9_F10.md`
 - **多表/多行写入必须走 `*WithConnection` + `executeBooleanTransaction`**（TD-023~025）：本仓库 DAO 有
   两套写法，`xxx(...)` 自带 autocommit 连接并立即提交，`xxxWithConnection(conn, ...)` 参与调用方事务。
   审计实测的三处事故：盘点单保存（先删全部旧明细再逐条插，中途失败留下"已提交的 DELETE + 半截明细"，

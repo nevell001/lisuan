@@ -442,7 +442,35 @@ public class TransactionApiController {
         // 退款额取 transaction.final_amount（权威），明细只允许少算
         ReturnService.alignItemsToRefundTotal(returnItems,
             transaction.finalAmount != null ? transaction.finalAmount : BigDecimal.ZERO);
-        return DAOFactory.getInstance().getReturnOrderItemDAO().batchInsertWithConnection(conn, returnItems);
+        if (!DAOFactory.getInstance().getReturnOrderItemDAO().batchInsertWithConnection(conn, returnItems)) {
+            return false;
+        }
+
+        // F10-b：API 整单退款是"直接完成"的单，必须同样写占用台账（按商品合计、状态 COMPLETED），
+        // 否则桌面退货建单查不到这笔占用，会把同一交易再退一次
+        return DAOFactory.getInstance().getReturnReservationDAO()
+            .batchInsertWithConnection(conn, completedReservations(returnOrderId, transaction));
+    }
+
+    /** API 整单退款对应的台账行：按商品跨行合计，状态直接是 COMPLETED。 */
+    private static List<ReturnReservation> completedReservations(String returnOrderId, Transaction transaction) {
+        Map<Integer, Integer> quantities = new LinkedHashMap<>();
+        for (Product product : transaction.items) {
+            if (product.quantity > 0) {
+                quantities.merge(product.id, product.quantity, Integer::sum);
+            }
+        }
+        List<ReturnReservation> reservations = new ArrayList<>();
+        for (Map.Entry<Integer, Integer> entry : quantities.entrySet()) {
+            ReturnReservation reservation = new ReturnReservation();
+            reservation.returnOrderId = returnOrderId;
+            reservation.originalTransactionId = transaction.transactionId;
+            reservation.productId = entry.getKey();
+            reservation.quantity = entry.getValue();
+            reservation.status = ReturnReservation.STATUS_COMPLETED;
+            reservations.add(reservation);
+        }
+        return reservations;
     }
 
     /**

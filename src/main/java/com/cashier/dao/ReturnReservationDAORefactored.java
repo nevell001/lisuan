@@ -70,4 +70,26 @@ public class ReturnReservationDAORefactored extends BaseDAO {
         }
         return reserved;
     }
+
+    /**
+     * 同步某退货单台账行的状态（F10-b），与退货单状态迁移**同事务**调用。
+     *
+     * <p>占用是否生效本来就按父退货单状态判定（见类注释），所以这里只影响审计可视化与
+     * 排查便利；返回 0 表示这张单没有台账行（如台账上线前建的、或 API 直接完成的整单），
+     * 调用方据此只记日志，不当成失败。</p>
+     *
+     * @return 受影响行数
+     */
+    public int updateStatusForReturnOrderWithConnection(Connection conn, String returnOrderId, String status)
+            throws SQLException {
+        if (returnOrderId == null || returnOrderId.isBlank() || status == null) {
+            return 0;
+        }
+        try (PreparedStatement stmt = conn.prepareStatement(
+            "UPDATE return_reservations SET status = ? WHERE return_order_id = ?")) {
+            stmt.setString(1, status);
+            stmt.setString(2, returnOrderId);
+            return stmt.executeUpdate();
+        }
+    }
 }

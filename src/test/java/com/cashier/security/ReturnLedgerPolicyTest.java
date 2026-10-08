@@ -64,4 +64,36 @@ class ReturnLedgerPolicyTest {
         assertTrue(databaseManager.contains("NOT EXISTS (SELECT 1 FROM return_reservations"),
             "回填必须幂等（按 (退货单号, 商品) 去重），重复执行不得重复插入");
     }
+
+    @Test
+    @DisplayName("三条写路径都要写台账：桌面建单、审批/完成同步、API 整单退款（F10-b）")
+    void everyWritePathKeepsLedgerConsistent() throws Exception {
+        String service = read("com/cashier/service/ReturnService.java");
+        assertTrue(service.contains("syncReservationStatus(conn, returnOrderId"),
+            "审批/完成必须同步台账行状态（与单据状态同事务）");
+        assertTrue(service.contains("ReturnReservation.STATUS_APPROVED")
+                && service.contains("ReturnReservation.STATUS_REJECTED")
+                && service.contains("ReturnReservation.STATUS_COMPLETED"),
+            "PENDING/APPROVED/COMPLETED/REJECTED 四个状态都要落到台账");
+
+        String api = read("com/cashier/api/controller/TransactionApiController.java");
+        assertTrue(api.contains("getReturnReservationDAO()"),
+            "API 整单退款（直接 COMPLETED）也必须写台账，否则桌面退货查不到这笔占用、会把同一交易再退一次");
+    }
+
+    @Test
+    @DisplayName("可退量规则只在服务层实现一次：界面不得再照抄一份校验")
+    void ruleIsImplementedOnlyInService() throws Exception {
+        String service = read("com/cashier/service/ReturnService.java");
+        assertTrue(service.contains("ReturnQuantityExceededException"),
+            "超量必须由服务层抛带文案的异常，界面才能拿到明确原因（并发输掉的那次也一样）");
+        assertTrue(service.contains("runtime.return_quantity_exceeded"),
+            "文案在服务层用 i18n 组装，避免各界面各拼一套");
+
+        String dialog = read("com/cashier/controller/CreateReturnOrderDialogController.java");
+        assertTrue(!dialog.contains("findByOriginalTransactionId"),
+            "建单界面不得再自己汇总已退数量（那是事务外的 check-then-act，也是规则的第二个实现）");
+        assertTrue(dialog.contains("ReturnService.ReturnQuantityExceededException"),
+            "界面应捕获服务层的超量异常并展示其文案");
+    }
 }
