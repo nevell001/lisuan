@@ -83,7 +83,12 @@ public class PackageWizardController {
     private static final int TOOL_LOOKUP_TIMEOUT_SECONDS = 10;
     private static final int PACKAGE_COMMAND_TIMEOUT_SECONDS = 10 * 60;
     private static final int POWERSHELL_PACKAGE_TIMEOUT_SECONDS = 30 * 60;
-    private final ExecutorService executorService = Executors.newSingleThreadExecutor();
+    // TD-035：daemon 线程池——向导被关闭/取消后若还有卡住的任务，不得吊住整个进程
+    private final ExecutorService executorService = Executors.newSingleThreadExecutor(runnable -> {
+        Thread thread = new Thread(runnable, "package-wizard");
+        thread.setDaemon(true);
+        return thread;
+    });
 
     /**
      * 查找 Maven 命令
@@ -825,8 +830,19 @@ public class PackageWizardController {
         Files.deleteIfExists(dir.toPath());
     }
 
+    /**
+     * 追加日志（TD-035）。
+     *
+     * <p>{@code Task.call()} 与输出读取线程都会调它，而 {@code TextArea} 是 Node：必须在 FX 线程写。
+     * 之前在 worker 线程里直接 {@code appendText} 属于 JavaFX 线程违规（偶发界面错乱/异常）。</p>
+     */
     private void appendLog(String message) {
-        logTextArea.appendText(message + "\n");
+        Runnable append = () -> logTextArea.appendText(message + "\n");
+        if (javafx.application.Platform.isFxApplicationThread()) {
+            append.run();
+        } else {
+            javafx.application.Platform.runLater(append);
+        }
     }
 
     private void disableAllControls(boolean disable) {

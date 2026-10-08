@@ -892,6 +892,7 @@ public class SettingsController {
                     });
                 }
             }, "settings-backup");
+            // TD-035：整库 dump/恢复/测试打印可能长时间阻塞，必须 daemon，否则关窗后进程不退出
             worker.setDaemon(true);
             worker.start();
         } catch (Exception e) {
@@ -1000,6 +1001,7 @@ public class SettingsController {
                                 showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED)));
                         }
                     }, "settings-restore");
+                    // TD-035：整库 dump/恢复/测试打印可能长时间阻塞，必须 daemon，否则关窗后进程不退出
                     worker.setDaemon(true);
                     worker.start();
                 } else {
@@ -1298,6 +1300,7 @@ public class SettingsController {
                 }
             });
         }, "settings-test-print");
+        // TD-035：测试打印会阻塞数秒（5s 超时），必须 daemon，否则关窗后进程不退出
         worker.setDaemon(true);
         worker.start();
     }
@@ -1436,7 +1439,7 @@ public class SettingsController {
         importStatusLabel.setText(com.cashier.i18n.I18nManager.getInstance().get("runtime.csv_importing"));
 
         // 异步导入
-        new Thread(() -> {
+        Thread importThread = new Thread(() -> {
             try {
                 Map<String, Object> result = dataImporter.importFromCSV(filePath);
                 
@@ -1475,7 +1478,10 @@ public class SettingsController {
                     showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Message.OPERATION_FAILED));
                 });
             }
-        }).start();
+        });
+        // TD-035：导入是 daemon 线程，避免关窗后进程被吊住
+        importThread.setDaemon(true);
+        importThread.start();
     }
 
     /**

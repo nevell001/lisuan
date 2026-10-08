@@ -26,16 +26,23 @@ class MoneyPrecisionPolicyTest {
     @Test
     @DisplayName("挂单金额必须用结账同一算法，不得用 double 反推折扣")
     void holdOrderAmountsUseCheckoutAlgorithm() throws Exception {
-        String source = Files.readString(CONTROLLERS.resolve("CartController.java"));
-        String code = withoutComments(source);
-        String finalBody = methodBody(code, "private java.math.BigDecimal calculateHoldOrderFinal()");
+        // TD-035 把这三算式从 CartController 挪进了 TransactionService（体积棘轮），
+        // 因此门禁改为盯"归属地"，并继续断言它与结账同算法
+        String controllerCode = withoutComments(Files.readString(CONTROLLERS.resolve("CartController.java")));
+        String serviceCode = withoutComments(
+            Files.readString(Path.of("src/main/java/com/cashier/service/TransactionService.java")));
+        String payableBody = methodBody(serviceCode, "public static BigDecimal cartPayable(");
 
-        assertTrue(finalBody.contains("TransactionService.calculateFinalAmount(cartList, currentMember, appliedPromotion)"),
-            "calculateHoldOrderFinal 必须直接调用 TransactionService.calculateFinalAmount(...)："
+        assertTrue(payableBody.contains("calculateFinalAmount(items, member, promotion)"),
+            "挂单应付金额必须与结账同算法（TransactionService.calculateFinalAmount）："
                 + "此前用 double discountRate 反推折扣，在 .xx5 边界与结账差 1 分（TD-034）");
-        assertFalse(code.contains("double discountRate"),
+        assertTrue(controllerCode.contains("TransactionService.cartPayable("),
+            "控制器必须复用服务层的挂单算式，不得自己实现一份");
+        assertFalse(controllerCode.contains("double discountRate"),
             "不得再用 `double discountRate = discount.doubleValue() / 10.0` 算金额："
                 + "二进制浮点会让挂单落库金额与实际收款不一致（注释里提到旧写法不算）");
+        assertFalse(serviceCode.contains("double discountRate"),
+            "服务层同样不得用 double 反推折扣");
     }
 
     /** 取方法体（按花括号配对）。 */

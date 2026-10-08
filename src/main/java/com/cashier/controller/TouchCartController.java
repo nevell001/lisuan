@@ -1952,8 +1952,9 @@ public class TouchCartController implements CartViewHost {
             // 延迟刷新界面，确保提示被看到
             javafx.animation.PauseTransition pause = new javafx.animation.PauseTransition(javafx.util.Duration.seconds(1));
             pause.setOnFinished(e -> {
-                // 重新加载当前视图
+                // TD-033：切视图前必须 cleanup()，否则时钟 Timeline 与状态栏静态监听会继续持有旧界面
                 if (application != null && currentUser != null) {
+                    cleanup();
                     application.switchToPosModeView(currentUser);
                 }
             });

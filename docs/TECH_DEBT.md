@@ -37,9 +37,9 @@
 | TD-030 | 首次登录改密对话框取消后，登录界面永久禁用（只能杀进程） | UI 缺陷 | **已修复（2026-09）**：改密对话框返回后，凡未真正切到主界面（取消/关窗/改密失败/无 application）一律 `setLoginState(false)`；1 项门禁 + 变异验证 | 强制改密 |
 | TD-031 | 网关下单在 FX 线程且 HttpClient 无任何超时 → 收银台可无限卡死 | 体验/健壮性 | **已修复（2026-09）**：两个渠道都加 `connectTimeout(5s)` + 请求 `timeout(15s)`；两个收银台的下单改走 `UIOptimizer.runInBackground`（异步窗口内置 `paymentInProgress` 防重复提交）；2 项门禁 + 变异验证 | 电子支付 |
 | TD-032 | FX 线程同步查库若干处（选品框逐字符搜索、每次购物车变更查促销、登录时同步启动两个服务） | 性能 | **已修（2026-10）**：三处都改掉——选品框（采购/盘点）加 300ms 防抖 + 后台查询；`selectBestPromotion` 走 30s TTL 缓存、写在 `PromotionDAO` 写入处失效（任何写路径都覆盖）；登录后三个常驻服务改由 daemon 线程启动（`startPostLoginServices`） | 界面流畅度 |
-| TD-033 | 触屏切语言泄漏 scheduler/Timeline/全局监听；`BackupService.start()` 无并发守卫 | 资源泄漏 | **待处理** | 触屏收银台 |
+| TD-033 | 触屏切语言泄漏 scheduler/Timeline/全局监听；`BackupService.start()` 无并发守卫 | 资源泄漏 | **已修（2026-10）**：`switchLanguage` 切视图前先 `cleanup()`；`BackupService.start()` 补 `isRunning` 守卫 + daemon 调度线程 + `isRunning()` 断言口；门禁 `BackgroundTaskPolicyTest`（含变异） | 触屏收银台 |
 | TD-034 | 金额/数量口径一批（7 项：发票税额百分比 `setScale(0)` 抛异常、挂单折扣走 double、退款单价取整使 Σ明细≠实付、积分冲减按次取整、充值小数积分被编辑保存截断、`promotions.discount` 列精度与输入不匹配、发票行税与表头差 1 分） | 正确性 | **已修复（2026-09）**：7 项全部处理（退款改为"总额权威、明细只许少算"，积分/充值改 FLOOR）；4 项门禁 + 5 项行为测试，11 处变异全红 | 对账 |
-| TD-035 | 其它（打包向导 FX 线程违规、`NotificationManager` 定时任务无 try/catch、`hasActiveShift` 吞异常让收银员看到"请先开班"、非 daemon 线程、`CurrencyUtil` HALF_EVEN…） | 杂项 | **待处理** | — |
+| TD-035 | 其它（打包向导 FX 线程违规、`NotificationManager` 定时任务无 try/catch、`hasActiveShift` 吞异常让收银员看到"请先开班"、非 daemon 线程、`CurrencyUtil` HALF_EVEN…） | 杂项 | **已修（2026-10）**：①打包向导 `appendLog` 切 FX 线程 + 线程池改 daemon；②`NotificationManager` 两处调度任务兜住异常；③班次改三态（`ActiveShiftState`），结账守卫区分"没开班"与"查不到状态"（新增 `runtime.shift_state_unknown`）；④**全仓库 `new Thread` 现在 0 处缺 daemon**（原 8 处 + 本次触达的若干）；⑤`CurrencyUtil` 显式 HALF_UP；⑥盘点页"检查完成"改在刷新成功后提示、失败可见 | — |
 | TD-036 | 结尾斜杠绕过**全部**角色门禁（收银员可退款/改会员折扣/改支付配置） | 安全 | **已修复（2026-09）**：`isAllowed` 先归一化末尾斜杠；回归测试覆盖 13 条受控路由 × {正常,`/`,`//`} + 变异验证 | 越权 |
 | TD-037 | 收银员可用 `POST /api/printers/{id}/receipt` 的 `openCashDrawer` 打开钱箱（而 `/cashdrawer` 是管理员专属） | 安全 | **已修（2026-10，产品决定：两条路都限管理员）**：`printReceipt` 在解析后、打印前按当前用户角色拦下 `openCashDrawer:true`（403，取不到用户按非管理员 fail-closed）；3 项行为测试 | 钱箱权限 |
 | TD-038 | `POST /api/invoices/from-transaction` 请求体可自报开票方信息/`createBy`/`taxRate` | 安全 | **已修（2026-10）**：服务层 `trustedRequest` 只保留买家信息（顾客提供），开票方/税率取管理员配置、开票人取认证用户；请求体带这些字段时记 WARN；行为测试 1 项（伪造销方/0.99 税率/冒充开票人全部被忽略） | 发票 |
@@ -1616,6 +1616,24 @@ autocommit 连接；`insertWithConnection` 内部先插表头（提交），再�
 - `CurrencyUtil:63-65` 的 `DecimalFormat` 未设 `RoundingMode`（默认 HALF_EVEN），
   而全应用金额是 HALF_UP：`format(1.005)` → `1.00`（只影响 3 位以上小数的中间值展示）；
 - `InventoryAlertController:410-416` 先弹"检查完成"再异步刷新（且刷新失败只记日志，表格静默保留旧数据）。
+
+**2026-10 修复**：①打包向导 `appendLog` 会在 worker 线程直接写 `TextArea`（JavaFX 线程违规）→
+改为 `isFxApplicationThread()` 判定 + `Platform.runLater`；其 `newSingleThreadExecutor` 改 daemon 线程池。
+②`NotificationManager` 的 `scheduleAtFixedRate`/`schedule` 任务体加 `catch (Throwable)`
+（抛一次异常会让后续通知被**永久取消**）。③`DataService` 班次查询改三态
+（`ActiveShiftState.ACTIVE/NONE/UNKNOWN`），`hasActiveShift()` 保留布尔口径给展示类调用；
+结账/支付的守卫改用 `activeShiftBlockingMessageKey(...)`，数据库故障不再显示"请先开班"，
+新增 i18n key `runtime.shift_state_unknown`（4 份语言包）。
+④全仓库 `new Thread(...)` 逐个补 `setDaemon(true)`（复核后 0 处遗漏，含 `installer/Installer`）。
+⑤`CurrencyUtil` 的 `DecimalFormat` 显式 `RoundingMode.HALF_UP`（默认 HALF_EVEN 与全应用口径不一致，
+`format(1.005)` 会得到 1.00）。⑥盘点页手动检查改为"刷新成功后才提示完成"，失败走错误提示。
+
+**顺带**：`CartController` 因上述改动触及体积棘轮（2240 行），把挂单金额三算式
+（`cartTotal/cartDiscount/cartPayable`）挪进 `TransactionService`，控制器回到 2223 行；
+`MoneyPrecisionPolicyTest`（TD-034 门禁）随之改为盯新归属地并继续断言"与结账同算法"。
+**新增门禁** `BackgroundTaskPolicyTest`（6 项：daemon 全量扫描、调度任务兜异常、
+可重启服务的 running 守卫、切语言 cleanup 顺序、worker 不写 Node、班次失败不当业务结论），
+变异验证：去掉 `cleanup()` / 让 `appendLog` 直接写 Node → 对应测试变红。
 
 ---
 

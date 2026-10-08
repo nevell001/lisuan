@@ -90,7 +90,7 @@ public class PasswordResetController {
         setSubmitState(true);
 
         // 异步处理（避免阻塞 UI）
-        new Thread(() -> {
+        Thread backgroundThread = new Thread(() -> {
             try {
                 // 查找用户
                 User user;
@@ -131,7 +131,10 @@ public class PasswordResetController {
                     setSubmitState(false);
                 });
             }
-        }).start();
+        });
+        // TD-035：非 daemon 线程会让关窗后进程不退出
+        backgroundThread.setDaemon(true);
+        backgroundThread.start();
     }
 
     /**

@@ -62,7 +62,11 @@ public class CurrencyUtil {
         if (version == null || version != formatVersion) {
             DecimalFormatSymbols symbols = new DecimalFormatSymbols(Locale.SIMPLIFIED_CHINESE);
             symbols.setCurrencySymbol(cachedSymbol);
-            TL_FORMAT.set(new DecimalFormat("#,##0.00", symbols));
+            DecimalFormat format = new DecimalFormat("#,##0.00", symbols);
+            // TD-035：DecimalFormat 默认 HALF_EVEN，而全应用金额是 HALF_UP——
+            // 1.005 会显示成 1.00（只影响 3 位以上小数的中间值，但口径必须统一）
+            format.setRoundingMode(java.math.RoundingMode.HALF_UP);
+            TL_FORMAT.set(format);
             TL_VERSION.set(formatVersion);
         }
         return TL_FORMAT.get();

@@ -15,11 +15,38 @@ import java.util.*;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 
+public class TransactionService {
+
+    /**
+     * 挂单/购物车金额三算式（从 CartController 挪来，见体积棘轮）。
+     *
+     * <p>必须与结账走**同一个算法**（{@link #calculateFinalAmount}，含会员折扣与促销）：
+     * 曾经在控制器里用 {@code double} 反推折扣，在 .xx5 边界上与结账差 1 分（TD-034）。</p>
+     */
+    public static BigDecimal cartTotal(java.util.List<com.cashier.model.CartItem> items) {
+        BigDecimal total = BigDecimal.ZERO;
+        for (com.cashier.model.CartItem item : items) {
+            total = total.add(item.subtotal);
+        }
+        return total;
+    }
+
+    /** 挂单折扣金额 = 原价合计 − 应付金额。 */
+    public static BigDecimal cartDiscount(java.util.List<com.cashier.model.CartItem> items,
+                                          Member member, Promotion promotion) {
+        return cartTotal(items).subtract(calculateFinalAmount(items, member, promotion));
+    }
+
+    /** 挂单应付金额（与结账同算法）。 */
+    public static BigDecimal cartPayable(java.util.List<com.cashier.model.CartItem> items,
+                                         Member member, Promotion promotion) {
+        return calculateFinalAmount(items, member, promotion);
+    }
+
 /**
  * 交易服务类
  * 封装交易相关的业务逻辑
  */
-public class TransactionService {
 
     /** 促销缓存有效期：购物车每次变更都会重新选促销，30 秒足够新鲜，又省掉每次改数量都查库（TD-032）。 */
     private static final long ACTIVE_PROMOTIONS_TTL_MILLIS = 30_000L;

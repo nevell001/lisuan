@@ -345,7 +345,7 @@ public class Installer {
         log("开始安装...");
         log("");
         
-        new Thread(() -> {
+        Thread backgroundThread = new Thread(() -> {
             try {
                 install();
             } catch (Exception e) {
@@ -361,7 +361,10 @@ public class Installer {
                     cancelButton.setEnabled(true);
                 });
             }
-        }).start();
+        });
+        // TD-035：非 daemon 线程会让关窗后进程不退出
+        backgroundThread.setDaemon(true);
+        backgroundThread.start();
     }
     
     private void install() throws Exception {

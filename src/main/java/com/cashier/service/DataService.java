@@ -463,13 +463,56 @@ public class DataService {
     /**
      * 检查是否有活跃班次
      */
-    public static boolean hasActiveShift() {
-        try {
-            return DAOFactory.getInstance().getShiftDAO().hasActiveShift();
-        } catch (SQLException e) {
-            logger.error("检查活跃班次失败", e);
-            return false;
+    /**
+     * 班次状态三态（TD-035）。
+     *
+     * <p>此前 {@code hasActiveShift()} 吞掉 {@code SQLException} 返回 false，调用方于是把
+     * "数据库故障"显示成"请先开班/没有活跃班次"，排查方向被带偏。用三态把两者分开：
+     * 只有 {@link ActiveShiftState#NONE} 才该提示开班，{@link ActiveShiftState#UNKNOWN} 要报系统错误。</p>
+     */
+    public enum ActiveShiftState {
+        /** 有活跃班次 */
+        ACTIVE,
+        /** 确认没有活跃班次 */
+        NONE,
+        /** 查询失败（数据库不可用），无法判定 */
+        UNKNOWN
+    }
+
+    /**
+     * 班次状态对应的提示文案 key（TD-035）。
+     *
+     * <p>放在这里而不是控制器：多个结账/支付入口都要"没有班次 → 请开班，查不到 → 系统错误"，
+     * 判定逻辑集中一处，控制器只负责显示（也避免把 CartController 撑破体积棘轮）。</p>
+     *
+     * @return ACTIVE 时返回 null（无需提示）
+     */
+    public static String activeShiftBlockingMessageKey(ActiveShiftState state) {
+        if (state == null || state == ActiveShiftState.ACTIVE) {
+            return null;
         }
+        return state == ActiveShiftState.NONE ? "runtime.no_active_shift" : "runtime.shift_state_unknown";
+    }
+
+    /** 查询班次状态；失败返回 {@link ActiveShiftState#UNKNOWN}（不再伪造成"没有班次"）。 */
+    public static ActiveShiftState activeShiftState() {
+        try {
+            return DAOFactory.getInstance().getShiftDAO().hasActiveShift()
+                ? ActiveShiftState.ACTIVE : ActiveShiftState.NONE;
+        } catch (SQLException e) {
+            logger.error("检查活跃班次失败（将按「无法确认」处理，不再当作没有班次）", e);
+            return ActiveShiftState.UNKNOWN;
+        }
+    }
+
+    /**
+     * 是否有活跃班次。
+     *
+     * <p>保留布尔口径给"禁用按钮/提示"这类不涉及资金的展示；**结账等资金路径请用
+     * {@link #activeShiftState()}**，否则数据库故障会被误报成"请先开班"（TD-035）。</p>
+     */
+    public static boolean hasActiveShift() {
+        return activeShiftState() == ActiveShiftState.ACTIVE;
     }
 
     /**

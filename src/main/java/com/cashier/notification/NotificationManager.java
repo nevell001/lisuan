@@ -82,7 +82,11 @@ public class NotificationManager {
      */
     public void sendDelayedNotification(NotificationType type, String title, String message, long delayMillis) {
         scheduler.schedule(() -> {
-            sendNotification(type, title, message);
+            try {
+                sendNotification(type, title, message);
+            } catch (Throwable t) {
+                logger.error("延迟通知发送失败（已兜住）", t);
+            }
         }, delayMillis, TimeUnit.MILLISECONDS);
     }
     
@@ -91,9 +95,15 @@ public class NotificationManager {
      */
     private void startNotificationProcessor() {
         scheduler.scheduleAtFixedRate(() -> {
-            Notification notification = notificationQueue.poll();
-            if (notification != null) {
-                processNotification(notification);
+            // TD-035：任务体必须兜住所有异常——按 ScheduledExecutorService 语义，
+            // 抛一次异常就会永久取消后续调度，通知会静默停摆
+            try {
+                Notification notification = notificationQueue.poll();
+                if (notification != null) {
+                    processNotification(notification);
+                }
+            } catch (Throwable t) {
+                logger.error("通知处理任务异常（已兜住，调度继续）", t);
             }
         }, 0, 100, TimeUnit.MILLISECONDS);
     }

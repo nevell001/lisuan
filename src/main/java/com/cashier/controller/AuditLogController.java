@@ -120,7 +120,7 @@ public class AuditLogController {
 
     @FXML
     private void handleRefresh() {
-        new Thread(() -> {
+        Thread backgroundThread = new Thread(() -> {
             try {
                 List<OperationLog> logs = DAOFactory.getInstance().getOperationLogDAO().findRecent(AUDIT_LOG_LIMIT);
                 Platform.runLater(() -> {
@@ -133,7 +133,10 @@ public class AuditLogController {
                     countLabel.setText(I18nManager.getInstance().get("audit.load_failed"));
                 });
             }
-        }).start();
+        });
+        // TD-035：非 daemon 线程会让关窗后进程不退出
+        backgroundThread.setDaemon(true);
+        backgroundThread.start();
     }
 
     @FXML

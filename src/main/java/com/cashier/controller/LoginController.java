@@ -106,7 +106,7 @@ public class LoginController {
         setLoginState(true);
 
         // 异步验证登录（避免阻塞 UI）
-        new Thread(() -> {
+        Thread backgroundThread = new Thread(() -> {
             try {
                 // 锁定阈值取系统设置 passwordMaxAttempts（此前写死在常量里，设置页改了不生效，审计 F6）
                 final int maxLoginAttempts = com.cashier.service.DataService.getIntSetting(
@@ -171,7 +171,10 @@ public class LoginController {
                 });
                 logger.error("登录失败", e);
             }
-        }).start();
+        });
+        // TD-035：非 daemon 线程会让关窗后进程不退出
+        backgroundThread.setDaemon(true);
+        backgroundThread.start();
     }
 
     /**

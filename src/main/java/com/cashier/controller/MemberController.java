@@ -132,7 +132,7 @@ public class MemberController extends BaseController<Member> {
      */
     @Override
     protected void loadTableData() {
-        new Thread(() -> {
+        Thread backgroundThread = new Thread(() -> {
             try {
                 PageResult<Member> memberData = DAOFactory.getInstance().getMemberDAO().findAll(FIRST_PAGE, DESKTOP_PAGE_SIZE);
                 long total = memberData.getTotal();
@@ -158,7 +158,10 @@ public class MemberController extends BaseController<Member> {
                     updateCountLabel();
                 });
             }
-        }).start();
+        });
+        // TD-035：非 daemon 线程会让关窗后进程不退出
+        backgroundThread.setDaemon(true);
+        backgroundThread.start();
     }
 
     private void setLoadedMembers(java.util.Collection<Member> loadedMembers) {

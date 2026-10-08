@@ -165,7 +165,7 @@ public class UserController {
      */
     private void loadUsers() {
         logger.info("UserController: 开始加载用户数据...");
-        new Thread(() -> {
+        Thread backgroundThread = new Thread(() -> {
             try {
                 List<User> userListData = DAOFactory.getInstance().getUserDAO().findAll(FIRST_PAGE, USER_LIST_PAGE_SIZE).getData();
                 java.util.HashMap<String, User> userMap = new java.util.HashMap<>();
@@ -189,7 +189,10 @@ public class UserController {
                     updateCountLabel();
                 });
             }
-        }).start();
+        });
+        // TD-035：非 daemon 线程会让关窗后进程不退出
+        backgroundThread.setDaemon(true);
+        backgroundThread.start();
     }
 
     /**

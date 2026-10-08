@@ -31,6 +31,8 @@ public class BackupService {
     private static volatile BackupService instance;
     private static volatile BackupConfig config;
     private ScheduledExecutorService scheduler;
+    /** 调度是否在运行（TD-033）：重复 start() 不得叠出第二个调度器 */
+    private volatile boolean isRunning = false;
 
     private BackupService() {}
 
@@ -540,25 +542,46 @@ public class BackupService {
     /**
      * 启动自动备份服务
      */
+    /**
+     * 启动自动备份调度。
+     *
+     * <p>TD-033：此前没有 {@code isRunning} 守卫，重复调用（每次登录、每次切语言）都会新建一个
+     * {@code ScheduledExecutorService}，旧线程既没被关闭也不是 daemon → 线程数随操作累积、
+     * 退出应用时被吊住。现在与 {@code InventoryAlertService} 同口径：守卫 + daemon + 可停止。</p>
+     */
     public void start() {
         try {
             init();
             config = DAOFactory.getInstance().getBackupDAO().getConfig();
 
-            if (config.autoBackupEnabled && config.backupIntervalHours > 0) {
-                scheduler = Executors.newSingleThreadScheduledExecutor();
-                scheduler.scheduleAtFixedRate(() -> {
-                    try {
-                        if (config.needsBackup()) {
-                            executeAutoBackup();
-                        }
-                    } catch (Exception e) {
-                        logger.error("自动备份执行失败", e);
-                    }
-                }, config.backupIntervalHours, config.backupIntervalHours, TimeUnit.HOURS);
-
-                logger.info("自动备份服务已启动，周期: {} 小时", config.backupIntervalHours);
+            if (!config.autoBackupEnabled || config.backupIntervalHours <= 0) {
+                logger.info("自动备份未启用，跳过启动");
+                return;
             }
+            if (isRunning) {
+                logger.warn("自动备份服务已在运行中");
+                return;
+            }
+            if (scheduler != null && !scheduler.isShutdown()) {
+                scheduler.shutdownNow();
+            }
+            scheduler = Executors.newSingleThreadScheduledExecutor(runnable -> {
+                Thread thread = new Thread(runnable, "auto-backup");
+                thread.setDaemon(true);
+                return thread;
+            });
+            isRunning = true;
+            scheduler.scheduleAtFixedRate(() -> {
+                try {
+                    if (config.needsBackup()) {
+                        executeAutoBackup();
+                    }
+                } catch (Exception e) {
+                    logger.error("自动备份执行失败", e);
+                }
+            }, config.backupIntervalHours, config.backupIntervalHours, TimeUnit.HOURS);
+
+            logger.info("自动备份服务已启动，周期: {} 小时", config.backupIntervalHours);
         } catch (Exception e) {
             logger.error("启动自动备份服务失败", e);
         }
@@ -632,7 +655,13 @@ public class BackupService {
     /**
      * 停止自动备份服务
      */
+    /** 调度是否在运行（TD-033 门禁用）。 */
+    public boolean isRunning() {
+        return isRunning;
+    }
+
     public void stop() {
+        isRunning = false;
         if (scheduler != null) {
             scheduler.shutdown();
             try {

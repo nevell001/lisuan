@@ -337,15 +337,38 @@ public class InventoryAlertController {
      * 加载预警商品（打开窗口/手动刷新时调用；DB 查询放到后台线程，UI 更新回 FX）
      */
     private void loadAlertItems() {
+        loadAlertItems(null);
+    }
+
+    /**
+     * 加载预警商品列表（TD-035）。
+     *
+     * <p>此前刷新失败只记日志、表格静默保留旧数据，用户以为"检查过了没问题"；
+     * 现在把结果回传（{@code onDone} 收到 true/false），调用方据此决定提示什么。</p>
+     */
+    private void loadAlertItems(java.util.function.Consumer<Boolean> onDone) {
         Thread worker = new Thread(() -> {
+            boolean ok = true;
+            List<Product> alertProducts = null;
             try {
-                List<Product> alertProducts = productDAO.findProductsRequiringStockAlert();
-                javafx.application.Platform.runLater(() -> renderAlertList(alertProducts));
+                alertProducts = productDAO.findProductsRequiringStockAlert();
             } catch (SQLException e) {
                 logger.error("从数据库加载商品失败", e);
+                ok = false;
             } catch (Exception e) {
                 logger.error("加载预警商品失败", e);
+                ok = false;
             }
+            final boolean success = ok;
+            final List<Product> products = alertProducts;
+            javafx.application.Platform.runLater(() -> {
+                if (success) {
+                    renderAlertList(products);
+                }
+                if (onDone != null) {
+                    onDone.accept(success);
+                }
+            });
         }, "inventory-alert-load");
         worker.setDaemon(true);
         worker.start();
@@ -419,10 +442,19 @@ public class InventoryAlertController {
         logger.info("手动触发库存预警检查");
         alertService.triggerCheck();
         updateServiceStatus();
-        loadAlertItems();
-        FXUtils.showInfoAlert(
-            I18nManager.getInstance().get("inventory_alert.check_done_title"),
-            I18nManager.getInstance().get("inventory_alert.check_done_message"));
+        // TD-035：提示必须在刷新**成功**之后——此前先弹"检查完成"再异步刷新（且失败静默），
+        // 用户会看到"检查完成"而表格其实没更新
+        loadAlertItems(success -> {
+            if (success) {
+                FXUtils.showInfoAlert(
+                    I18nManager.getInstance().get("inventory_alert.check_done_title"),
+                    I18nManager.getInstance().get("inventory_alert.check_done_message"));
+            } else {
+                FXUtils.showErrorAlert(
+                    I18nManager.getInstance().get("inventory_alert.check_done_title"),
+                    I18nManager.getInstance().get(I18nKeys.Error.LOAD_DATA));
+            }
+        });
     }
 
     /**

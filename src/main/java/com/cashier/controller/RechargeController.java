@@ -162,7 +162,7 @@ public class RechargeController {
      * 加载充值历史记录（后台线程执行 DB 查询，Platform.runLater 更新 UI）
      */
     private void loadRechargeHistory() {
-        new Thread(() -> {
+        Thread backgroundThread = new Thread(() -> {
             try {
                 List<RechargeRecord> memberRecords = DAOFactory.getInstance().getRechargeRecordDAO().findRecentByMemberPhone(
                     member.phone,
@@ -177,7 +177,10 @@ public class RechargeController {
                 Platform.runLater(() -> showError(
                     com.cashier.i18n.I18nManager.getInstance().get(com.cashier.i18n.I18nKeys.Error.LOAD_DATA)));
             }
-        }).start();
+        });
+        // TD-035：非 daemon 线程会让关窗后进程不退出
+        backgroundThread.setDaemon(true);
+        backgroundThread.start();
     }
 
     /**

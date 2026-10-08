@@ -873,8 +873,7 @@ public class CartController implements CartViewHost {
             return;
         }
 
-        if (!com.cashier.service.DataService.hasActiveShift()) {
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Runtime.NO_ACTIVE_SHIFT));
+        if (!requireActiveShift()) {
             return;
         }
 
@@ -1197,8 +1196,7 @@ public class CartController implements CartViewHost {
             showError(i18n.get(I18nKeys.Runtime.CART_EMPTY_PAYMENT));
             return;
         }
-        if (!DataService.hasActiveShift()) {
-            showError(i18n.get(I18nKeys.Runtime.NO_ACTIVE_SHIFT));
+        if (!requireActiveShift()) {
             return;
         }
         if (!PaymentService.isChannelAvailable(channel)) {
@@ -1411,8 +1409,7 @@ public class CartController implements CartViewHost {
         }
 
         // 检查是否有活跃班次
-        if (!com.cashier.service.DataService.hasActiveShift()) {
-            showError(com.cashier.i18n.I18nManager.getInstance().get(I18nKeys.Runtime.NO_ACTIVE_SHIFT));
+        if (!requireActiveShift()) {
             return;
         }
 
@@ -1968,15 +1965,29 @@ public class CartController implements CartViewHost {
         return matches;
     }
 
+    /** 班次守卫（TD-035）：查不到状态时提示系统错误，而非"请先开班"。 */
+    private boolean requireActiveShift() {
+        String key = DataService.activeShiftBlockingMessageKey(DataService.activeShiftState());
+        if (key == null) {
+            return true;
+        }
+        showError(i18n.get(key));
+        return false;
+    }
+
     /**
      * 检查班次状态并提示
      */
     private void checkShiftStatus() {
         // 班次查询也走后台：它此前在 FX 线程查库后再弹窗
         UIOptimizer.runInBackground(
-            DataService::hasActiveShift,
-            active -> {
-                if (!active) {
+            DataService::activeShiftState,
+            state -> {
+                if (state == DataService.ActiveShiftState.UNKNOWN) {
+                    showError(I18nManager.getInstance().get("runtime.shift_state_unknown"));
+                    return;
+                }
+                if (state == DataService.ActiveShiftState.NONE) {
                     Alert alert = new Alert(Alert.AlertType.WARNING);
                     alert.setTitle(I18nManager.getInstance().get(I18nKeys.Common.TIP));
                     alert.setHeaderText(null);
@@ -2024,9 +2035,9 @@ public class CartController implements CartViewHost {
             }
 
             // 金额信息
-            holdOrder.totalAmount = calculateHoldOrderTotal();
-            holdOrder.discountAmount = calculateHoldOrderDiscount();
-            holdOrder.finalAmount = calculateHoldOrderFinal();
+            holdOrder.totalAmount = TransactionService.cartTotal(cartList);
+            holdOrder.discountAmount = TransactionService.cartDiscount(cartList, currentMember, appliedPromotion);
+            holdOrder.finalAmount = TransactionService.cartPayable(cartList, currentMember, appliedPromotion);
             holdOrder.itemCount = cartList.size();
 
             // 序列化购物车项目
@@ -2187,37 +2198,9 @@ public class CartController implements CartViewHost {
     /** 恢复挂单的结果：后台解析/查库完成后一次性带回 FX 线程。 */
     private record ResumedOrder(List<CartItem> items, Member member) {}
 
-
-
     /**
      * 获取总金额
      */
-    private java.math.BigDecimal calculateHoldOrderTotal() {
-        java.math.BigDecimal total = java.math.BigDecimal.ZERO;
-        for (CartItem item : cartList) {
-            total = total.add(item.subtotal);
-        }
-        return total;
-    }
-
-    /**
-     * 获取折扣金额
-     */
-    private java.math.BigDecimal calculateHoldOrderDiscount() {
-        return calculateHoldOrderTotal().subtract(calculateHoldOrderFinal());
-    }
-
-    /**
-     * 获取最终金额
-     *
-     * <p>必须与结账走**同一个算法**（`TransactionService.calculateFinalAmount`，含会员折扣与促销）：
-     * 原来这里用 `double discountRate = discount.doubleValue() / 10.0` 再 `BigDecimal.valueOf(1 - rate)`
-     * 反推折扣，在 `.xx5` 的边界上会与结账差 1 分——挂单列表/落库金额与实际收款对不上（TD-034）。</p>
-     */
-    private java.math.BigDecimal calculateHoldOrderFinal() {
-        return TransactionService.calculateFinalAmount(cartList, currentMember, appliedPromotion);
-    }
-
     /**
      * 设置当前用户
      * @param user 当前登录用户
