@@ -32,7 +32,8 @@ public class InventoryApiController {
         } catch (Exception e) {
             logger.error("获取库存列表失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取库存列表失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.inventory.list_failed")));
         }
     }
     
@@ -50,7 +51,8 @@ public class InventoryApiController {
         } catch (Exception e) {
             logger.error("获取库存预警失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取库存预警失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.inventory.alerts_failed")));
         }
     }
     
@@ -64,14 +66,16 @@ public class InventoryApiController {
             StockRequest request = ApiRequest.parse(ctx, StockRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")));
                 return;
             }
             
             Product product = productDAO.findById(id);
             if (product == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
-                   .json(Map.of("success", false, "message", "商品不存在"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.product.not_found")));
                 return;
             }
             
@@ -82,7 +86,8 @@ public class InventoryApiController {
             }
             if (product.quantity < 0) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "库存数量不能为负数"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.inventory.negative_quantity")));
                 return;
             }
             
@@ -90,16 +95,19 @@ public class InventoryApiController {
                 // 乐观锁：version 不匹配说明并发修改已提交（如收银台扣减），不能回 success
                 logger.warn("更新库存冲突（乐观锁未命中）: {} ({})", product.name, product.id);
                 ctx.status(HttpStatus.CONFLICT)
-                   .json(Map.of("success", false, "message", "库存已被其他操作修改，请重新获取后再试"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.inventory.update_conflict")));
                 return;
             }
             
             logger.info("更新库存: {} -> {}", product.name, product.quantity);
-            ctx.json(Map.of("success", true, "data", product, "message", "库存更新成功"));
+            ctx.json(Map.of("success", true, "data", product, "message",
+                com.cashier.api.ApiMessages.text(ctx, "api.inventory.update_success")));
         } catch (Exception e) {
             logger.error("更新库存失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "更新库存失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.inventory.update_failed")));
         }
     }
     
@@ -126,7 +134,8 @@ public class InventoryApiController {
         } catch (Exception e) {
             logger.error("库存盘点失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "库存盘点失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.inventory.check_failed")));
         }
     }
     

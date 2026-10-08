@@ -28,12 +28,14 @@ public class SettingsApiController {
         String key = ctx.pathParam("key");
         if (key == null || key.isBlank()) {
             ctx.status(HttpStatus.BAD_REQUEST)
-               .json(Map.of("success", false, "message", "设置项名称不能为空"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.settings.key_required")));
             return false;
         }
         if (key.length() > MAX_KEY_LENGTH) {
             ctx.status(HttpStatus.BAD_REQUEST)
-               .json(Map.of("success", false, "message", "设置项名称过长（最多 " + MAX_KEY_LENGTH + " 字符）"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.settings.key_too_long", MAX_KEY_LENGTH)));
             return false;
         }
         return true;
@@ -52,7 +54,8 @@ public class SettingsApiController {
         } catch (Exception e) {
             logger.error("获取系统设置失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取系统设置失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.settings.list_failed")));
         }
     }
 
@@ -70,7 +73,8 @@ public class SettingsApiController {
 
             if (value == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
-                   .json(Map.of("success", false, "message", "设置项不存在"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.settings.not_found")));
                 return;
             }
 
@@ -78,7 +82,8 @@ public class SettingsApiController {
         } catch (Exception e) {
             logger.error("获取设置项失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取设置项失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.settings.get_failed")));
         }
     }
 
@@ -95,7 +100,8 @@ public class SettingsApiController {
             Map<?, ?> body = ApiRequest.parse(ctx, Map.class);
             if (body == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")));
                 return;
             }
             Object rawValue = body.get("value");
@@ -103,7 +109,8 @@ public class SettingsApiController {
 
             if (value == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "缺少 value 参数"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.settings.value_required")));
                 return;
             }
 
@@ -111,16 +118,19 @@ public class SettingsApiController {
             if (!DAOFactory.getInstance().getSystemSettingsDAO().setSetting(key, value)) {
                 logger.error("设置未保存: {} = {}", key, value);
                 ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                   .json(Map.of("success", false, "message", "设置未保存"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.settings.not_saved")));
                 return;
             }
 
             logger.info("设置已更新: {} = {}", key, value);
-            ctx.json(Map.of("success", true, "key", key, "value", value, "message", "设置已更新"));
+            ctx.json(Map.of("success", true, "key", key, "value", value, "message",
+                com.cashier.api.ApiMessages.text(ctx, "api.settings.saved")));
         } catch (Exception e) {
             logger.error("更新设置失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "更新设置失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.settings.save_failed")));
         }
     }
 
@@ -137,23 +147,27 @@ public class SettingsApiController {
 
             if (DAOFactory.getInstance().getSystemSettingsDAO().getSetting(key) == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
-                   .json(Map.of("success", false, "message", "设置项不存在"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.settings.not_found")));
                 return;
             }
 
             if (!DAOFactory.getInstance().getSystemSettingsDAO().deleteSetting(key)) {
                 logger.error("设置未删除: {}", key);
                 ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                   .json(Map.of("success", false, "message", "设置未删除"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.settings.not_deleted")));
                 return;
             }
 
             logger.info("设置已删除: {}", key);
-            ctx.json(Map.of("success", true, "message", "设置已删除"));
+            ctx.json(Map.of("success", true, "message",
+                com.cashier.api.ApiMessages.text(ctx, "api.settings.deleted")));
         } catch (Exception e) {
             logger.error("删除设置失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "删除设置失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.settings.delete_failed")));
         }
     }
 }

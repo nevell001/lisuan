@@ -33,7 +33,6 @@ public class PrintApiController {
     private static final String CONNECTED_FIELD = "connected";
     private static final String PAPER_WIDTH_FIELD = "paperWidth";
     private static final String INVOICE_ID_FIELD = "invoiceId";
-    private static final String PRINTER_NOT_FOUND_PREFIX = "打印机不存在: ";
     private static final int DEFAULT_PRINT_HISTORY_LIMIT = 100;
     private static final int MAX_PRINT_HISTORY_LIMIT = 500;
     private static final int DEFAULT_DISCOVERY_HOST_LIMIT = 64;
@@ -135,7 +134,7 @@ public class PrintApiController {
         if (device == null) {
             ctx.status(404).json(Map.of(
                 "success", false,
-                "error", PRINTER_NOT_FOUND_PREFIX + deviceId
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.not_found", deviceId)
             ));
             return;
         }
@@ -180,7 +179,7 @@ public class PrintApiController {
             if (body == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "请求体为空或字段不合法"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")
                 ));
                 return;
             }
@@ -192,7 +191,7 @@ public class PrintApiController {
             if (name == null || host == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "缺少必要参数: name, host"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.common.missing_param", "name, host")
                 ));
                 return;
             }
@@ -232,7 +231,8 @@ public class PrintApiController {
                     "status", printer.getStatus().name(),
                     "statusName", deviceStatusName(ctx, printer.getStatus())
                 ),
-                "message", initialized ? "打印机添加成功" : "打印机添加成功，但连接失败"
+                "message", com.cashier.api.ApiMessages.text(ctx,
+                    initialized ? "api.printer.added" : "api.printer.added_but_disconnected")
             ));
             
             // 广播打印机添加事件
@@ -243,7 +243,7 @@ public class PrintApiController {
             logger.error("添加打印机失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "添加打印机失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.add_failed")
             ));
         }
     }
@@ -260,7 +260,7 @@ public class PrintApiController {
         if (device == null) {
             ctx.status(404).json(Map.of(
                 "success", false,
-                "error", PRINTER_NOT_FOUND_PREFIX + deviceId
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.not_found", deviceId)
             ));
             return;
         }
@@ -275,7 +275,8 @@ public class PrintApiController {
                     "statusName", deviceStatusName(ctx, device.getStatus()),
                 CONNECTED_FIELD, device.isConnected()
             ),
-            "message", connected ? "打印机连接成功" : "打印机连接失败"
+            "message", com.cashier.api.ApiMessages.text(ctx,
+                    connected ? "api.printer.connected" : "api.printer.connect_failed")
         ));
         
         if (connected) {
@@ -296,7 +297,7 @@ public class PrintApiController {
         if (device == null) {
             ctx.status(404).json(Map.of(
                 "success", false,
-                "error", PRINTER_NOT_FOUND_PREFIX + deviceId
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.not_found", deviceId)
             ));
             return;
         }
@@ -311,7 +312,8 @@ public class PrintApiController {
                     "statusName", deviceStatusName(ctx, device.getStatus()),
                 CONNECTED_FIELD, device.isConnected()
             ),
-            "message", disconnected ? "打印机已断开" : "打印机断开失败"
+            "message", com.cashier.api.ApiMessages.text(ctx,
+                    disconnected ? "api.printer.disconnected" : "api.printer.disconnect_failed")
         ));
         
         SyncManager.getInstance().broadcastSyncEvent(SyncEventType.PRINTER_DISCONNECTED, 
@@ -330,7 +332,7 @@ public class PrintApiController {
         if (device == null) {
             ctx.status(404).json(Map.of(
                 "success", false,
-                "error", PRINTER_NOT_FOUND_PREFIX + deviceId
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.not_found", deviceId)
             ));
             return;
         }
@@ -340,7 +342,7 @@ public class PrintApiController {
         
         ctx.json(Map.of(
             "success", true,
-            "message", "打印机已删除: " + deviceName
+            "message", com.cashier.api.ApiMessages.text(ctx, "api.printer.removed", deviceName)
         ));
         
         SyncManager.getInstance().broadcastSyncEvent(SyncEventType.PRINTER_REMOVED, 
@@ -363,7 +365,7 @@ public class PrintApiController {
                 "defaultPrinter", manager.getDefaultPrinter() != null ? 
                     manager.getDefaultPrinter().getDeviceId() : null
             ),
-            "message", "默认打印机已设置: " + deviceId
+            "message", com.cashier.api.ApiMessages.text(ctx, "api.printer.default_set", deviceId)
         ));
     }
     
@@ -379,7 +381,7 @@ public class PrintApiController {
         if (device == null) {
             ctx.status(404).json(Map.of(
                 "success", false,
-                "error", PRINTER_NOT_FOUND_PREFIX + deviceId
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.not_found", deviceId)
             ));
             return;
         }
@@ -427,7 +429,7 @@ public class PrintApiController {
         if (device == null) {
             ctx.status(404).json(Map.of(
                 "success", false,
-                "error", PRINTER_NOT_FOUND_PREFIX + deviceId
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.not_found", deviceId)
             ));
             return;
         }
@@ -435,7 +437,7 @@ public class PrintApiController {
         if (!device.isConnected()) {
             ctx.status(400).json(Map.of(
                 "success", false,
-                "error", "打印机未连接"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.not_connected")
             ));
             return;
         }
@@ -470,7 +472,8 @@ public class PrintApiController {
         
         ctx.json(Map.of(
             "success", success,
-            "message", success ? "测试页打印成功" : "测试页打印失败"
+            "message", com.cashier.api.ApiMessages.text(ctx,
+                success ? "api.printer.test_ok" : "api.printer.test_failed")
         ));
     }
     
@@ -490,7 +493,7 @@ public class PrintApiController {
             if (body == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "请求体为空或字段不合法"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")
                 ));
                 return;
             }
@@ -505,7 +508,7 @@ public class PrintApiController {
                 logger.warn("拒绝非管理员通过小票打印开启钱箱: deviceId={}, user={}", deviceId, currentUsername(ctx));
                 ctx.status(403).json(Map.of(
                     "success", false,
-                    "error", "只有管理员可以开启钱箱"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.cash_drawer_admin_only")
                 ));
                 return;
             }
@@ -513,7 +516,7 @@ public class PrintApiController {
             if (content == null || content.isEmpty()) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "缺少打印内容"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.content_required")
                 ));
                 return;
             }
@@ -521,14 +524,14 @@ public class PrintApiController {
             if (content.length() > MAX_RECEIPT_CONTENT_LENGTH) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "打印内容过长"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.content_too_long")
                 ));
                 return;
             }
             if (UNSAFE_RECEIPT_CHARS.matcher(content).find()) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "打印内容不能包含控制字符"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.content_unsafe")
                 ));
                 return;
             }
@@ -539,7 +542,7 @@ public class PrintApiController {
             if (device == null || !device.isConnected()) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "打印机未连接"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.not_connected")
                 ));
                 return;
             }
@@ -555,14 +558,15 @@ public class PrintApiController {
                     "printerId", device.getDeviceId(),
                     "printerName", device.getDeviceName()
                 ),
-                "message", success ? "小票打印成功" : "小票打印失败"
+                "message", com.cashier.api.ApiMessages.text(ctx,
+                success ? "api.printer.receipt_ok" : "api.printer.receipt_failed")
             ));
             
         } catch (Exception e) {
             logger.error("打印小票失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "打印失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.print_failed")
             ));
         }
     }
@@ -581,7 +585,7 @@ public class PrintApiController {
             if (invoice == null) {
                 ctx.status(404).json(Map.of(
                     "success", false,
-                    "error", "发票不存在: " + invoiceId
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.invoice_not_found", invoiceId)
                 ));
                 return;
             }
@@ -600,7 +604,7 @@ public class PrintApiController {
                         "filePath", filePath,
                         "printed", false
                     ),
-                    "message", "发票HTML已生成，但无可用打印机"
+                    "message", com.cashier.api.ApiMessages.text(ctx, "api.printer.invoice_html_only")
                 ));
                 return;
             }
@@ -631,14 +635,15 @@ public class PrintApiController {
                     "printerId", device.getDeviceId(),
                     "printed", success
                 ),
-                "message", success ? "发票打印成功" : "发票打印失败，但HTML已生成"
+                "message", com.cashier.api.ApiMessages.text(ctx,
+                    success ? "api.printer.invoice_ok" : "api.printer.invoice_failed_html_kept")
             ));
             
         } catch (Exception e) {
             logger.error("打印发票失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "打印发票失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.invoice_print_failed")
             ));
         }
     }
@@ -702,7 +707,7 @@ public class PrintApiController {
         if (device == null || !device.isConnected()) {
             ctx.status(400).json(Map.of(
                 "success", false,
-                "error", "打印机未连接"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.printer.not_connected")
             ));
             return;
         }
@@ -711,7 +716,8 @@ public class PrintApiController {
         
         ctx.json(Map.of(
             "success", success,
-            "message", success ? "钱箱已打开" : "打开钱箱失败"
+            "message", com.cashier.api.ApiMessages.text(ctx,
+                success ? "api.printer.cash_drawer_ok" : "api.printer.cash_drawer_failed")
         ));
     }
     
@@ -775,12 +781,14 @@ public class PrintApiController {
             String host = subnet + "." + i;
             
             if (checkPrinterPort(host, port, timeoutMs)) {
-                discovered.add(Map.of(
-                    "host", host,
-                    "port", port,
-                    "status", "在线",
-                    DEVICE_ID_FIELD, "NET-" + host + "-" + port
-                ));
+                // 与枚举同口径：代码 + 本地化显示名（TD-041）
+                Map<String, Object> found = new HashMap<>();
+                found.put("host", host);
+                found.put("port", port);
+                found.put("status", PrinterDeviceStatus.CONNECTED.name());
+                found.put("statusName", deviceStatusName(ctx, PrinterDeviceStatus.CONNECTED));
+                found.put(DEVICE_ID_FIELD, "NET-" + host + "-" + port);
+                discovered.add(found);
             }
         }
         

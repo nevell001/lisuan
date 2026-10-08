@@ -114,6 +114,31 @@ class PrintApiControllerTest {
         assertTrue(ctx.status != HttpStatus.FORBIDDEN, "管理员不应被开钱箱的角色检查拦下");
     }
 
+    @Test
+    @DisplayName("响应文案跟随请求语言（TD-041）：?locale=en 时错误信息为英文")
+    void errorMessagesFollowRequestLocale() {
+        Map<String, Object> body = new HashMap<>();
+        body.put("content", "内容\u001b@含控制字符");
+        TestContext zh = new TestContext()
+            .withRequest(HandlerType.POST, "/api/printers/P1/receipt")
+            .withPathParam("id", "P1")
+            .withBody(body)
+            .withQueryParam("locale", "zh-CN");
+        PrintApiController.printReceipt(zh.context);
+
+        TestContext en = new TestContext()
+            .withRequest(HandlerType.POST, "/api/printers/P1/receipt")
+            .withPathParam("id", "P1")
+            .withBody(body)
+            .withQueryParam("locale", "en");
+        PrintApiController.printReceipt(en.context);
+
+        assertEquals("打印内容不能包含控制字符", errorOf(zh),
+            "默认中文请求仍返回中文（老客户端不受影响）");
+        assertEquals("Print content must not contain control characters", errorOf(en),
+            "英文请求必须返回英文：文案此前写死中文，切语言无从下手");
+    }
+
     @SuppressWarnings("unchecked")
     private static Map<String, Object> response(TestContext ctx) {
         return (Map<String, Object>) ctx.json;

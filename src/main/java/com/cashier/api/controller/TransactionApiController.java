@@ -65,7 +65,8 @@ public class TransactionApiController {
         } catch (Exception e) {
             logger.error("获取交易列表失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取交易列表失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.transaction.list_failed")));
         }
     }
     
@@ -80,7 +81,8 @@ public class TransactionApiController {
             
             if (transaction == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
-                   .json(Map.of("success", false, "message", "交易不存在"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.transaction.not_found")));
                 return;
             }
             
@@ -88,7 +90,8 @@ public class TransactionApiController {
         } catch (Exception e) {
             logger.error("获取交易详情失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取交易详情失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.transaction.detail_failed")));
         }
     }
     
@@ -101,12 +104,14 @@ public class TransactionApiController {
             TransactionRequest request = ApiRequest.parse(ctx, TransactionRequest.class);
             if (request == null || request.items == null || request.items.isEmpty()) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "交易明细不能为空"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.transaction.items_required")));
                 return;
             }
             if (request.paymentMethod == null || request.paymentMethod.isBlank()) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "支付方式不能为空"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.transaction.payment_required")));
                 return;
             }
             // 落库前归一化为规范中文值（与桌面端一致）：否则库里会同时存在「现金」与 CASH，
@@ -115,8 +120,8 @@ public class TransactionApiController {
             if (paymentMethod == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
                    .json(Map.of("success", false,
-                       "message", "不支持的支付方式: " + request.paymentMethod
-                           + "（可用：现金/微信/支付宝/银行卡/会员余额，或 CASH/WECHAT/ALIPAY/CARD/MEMBER_BALANCE）"));
+                       "message", com.cashier.api.ApiMessages.text(ctx,
+                           "api.transaction.unsupported_payment_method", request.paymentMethod)));
                 return;
             }
 
@@ -127,13 +132,15 @@ public class TransactionApiController {
             for (Product requested : request.items) {
                 if (requested == null || requested.id <= 0 || requested.quantity <= 0) {
                     ctx.status(HttpStatus.BAD_REQUEST)
-                       .json(Map.of("success", false, "message", "交易明细不合法（需要商品 ID 与正数数量）"));
+                       .json(Map.of("success", false, "message",
+                           com.cashier.api.ApiMessages.text(ctx, "api.transaction.invalid_items")));
                     return;
                 }
                 Product product = productDAO.findById(requested.id);
                 if (product == null) {
                     ctx.status(HttpStatus.BAD_REQUEST)
-                       .json(Map.of("success", false, "message", "商品不存在: " + requested.id));
+                       .json(Map.of("success", false, "message",
+                           com.cashier.api.ApiMessages.text(ctx, "api.product.not_found_id", requested.id)));
                     return;
                 }
                 inventory.put(product.name, product);
@@ -143,15 +150,18 @@ public class TransactionApiController {
             Member member = resolveMember(request);
             if (member == null && request.memberPhone != null && !request.memberPhone.isBlank()) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "会员不存在: " + request.memberPhone));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(
+                           ctx, "api.member.not_found_phone", request.memberPhone)));
                 return;
             }
             // 会员余额支付必须能定位到会员：定位不到时余额既不会校验也不会扣减，
             // 却会照扣库存、照落成交（服务层同样兜底拒绝，这里给出明确 400）
             if (member == null && "会员余额".equals(paymentMethod)) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false,
-                       "message", "会员余额支付必须提供有效的会员（memberId 或 memberPhone）"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(
+                           ctx, "api.transaction.member_required_for_balance")));
                 return;
             }
 
@@ -197,7 +207,8 @@ public class TransactionApiController {
         } catch (Exception e) {
             logger.error("创建交易失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "创建交易失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.transaction.create_failed")));
         }
     }
 
@@ -241,7 +252,8 @@ public class TransactionApiController {
         } catch (SQLException e) {
             logger.error("读取交易失败: {}", transactionId, e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "交易退款失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.transaction.refund_failed")));
             return;
         }
         refundFetched(ctx, transactionId, transaction);
@@ -268,17 +280,20 @@ public class TransactionApiController {
                 respondRefundSuccess(ctx, transactionId, transaction);
             } else {
                 ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                   .json(Map.of("success", false, "message", "退款处理失败"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.transaction.refund_process_failed")));
             }
         } catch (RefundConflictException e) {
             // 并发/重复退款：交易已被另一方抢占，属客户端可理解的冲突而非服务器错误
             logger.warn("退款冲突: {}", e.getMessage());
             ctx.status(HttpStatus.CONFLICT)
-               .json(Map.of("success", false, "message", "该交易已退款"));
+               .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.transaction.already_refunded")));
         } catch (Exception e) {
             logger.error("交易退款失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "交易退款失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.transaction.refund_failed")));
         }
     }
 
@@ -292,19 +307,22 @@ public class TransactionApiController {
     private static boolean validateRefundRequest(Context ctx, String transactionId, Transaction transaction) {
         if (transaction == null) {
             ctx.status(HttpStatus.NOT_FOUND)
-               .json(Map.of("success", false, "message", "交易不存在"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.transaction.not_found")));
             return false;
         }
         if ("REFUNDED".equals(transaction.status)) {
             ctx.status(HttpStatus.BAD_REQUEST)
-               .json(Map.of("success", false, "message", "该交易已退款"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.transaction.already_refunded")));
             return false;
         }
         // 桌面退货流程不写 transactions.status，必须显式检查已有退货单，否则同一单会被退两次
         if (!DAOFactory.getInstance().getReturnOrderDAO()
                 .findByOriginalTransactionId(transactionId).isEmpty()) {
             ctx.status(HttpStatus.BAD_REQUEST)
-               .json(Map.of("success", false, "message", "该交易已有退货记录，不能重复退款"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.transaction.return_exists")));
             return false;
         }
         return true;
@@ -523,7 +541,8 @@ public class TransactionApiController {
             )
         );
 
-        ctx.json(Map.of("success", true, "message", "退款成功",
+        ctx.json(Map.of("success", true, "message",
+            com.cashier.api.ApiMessages.text(ctx, "api.transaction.refund_success"),
             "transactionId", transactionId,
             "refundAmount", transaction.finalAmount));
     }
@@ -572,7 +591,8 @@ public class TransactionApiController {
         } catch (Exception e) {
             logger.error("获取今日交易统计失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取今日交易统计失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.transaction.today_stats_failed")));
         }
     }
     

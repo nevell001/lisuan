@@ -43,7 +43,7 @@ public class BackupApiController {
             if (body == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "请求体为空或字段不合法"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")
                 ));
                 return;
             }
@@ -62,17 +62,20 @@ public class BackupApiController {
             // 异步执行备份
             BackupRecord record = BackupService.executeBackup(contentType, target, operator);
             
-            ctx.json(Map.of(
-                "success", true,
-                "data", buildBackupRecordData(record),
-                "message", record.status.isSuccess() ? "备份成功" : "备份失败"
-            ));
+            // 字段数超过 Map.of 的 10 对上限，改用 LinkedHashMap（TD-041 新增了按请求语言渲染的 message）
+            Map<String, Object> response = new java.util.LinkedHashMap<>();
+            response.put("success", true);
+            response.put("data", buildBackupRecordData(record));
+            response.put("message", record.status.isSuccess()
+                ? com.cashier.api.ApiMessages.text(ctx, "api.backup.execute_success")
+                : com.cashier.api.ApiMessages.text(ctx, "api.backup.execute_failed_status"));
+            ctx.json(response);
             
         } catch (Exception e) {
             logger.error("执行备份失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "备份失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.execute_failed")
             ));
         }
     }
@@ -102,7 +105,7 @@ public class BackupApiController {
             logger.error("查询备份列表失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "查询失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.list_failed")
             ));
         }
     }
@@ -120,7 +123,7 @@ public class BackupApiController {
             if (record == null) {
                 ctx.status(404).json(Map.of(
                     "success", false,
-                    "error", "备份记录不存在"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.not_found")
                 ));
                 return;
             }
@@ -134,7 +137,7 @@ public class BackupApiController {
             logger.error("查询备份详情失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "查询失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.list_failed")
             ));
         }
     }
@@ -151,14 +154,16 @@ public class BackupApiController {
             
             ctx.json(Map.of(
                 "success", success,
-                "message", success ? "备份恢复成功" : "备份恢复失败"
+                "message", success
+                    ? com.cashier.api.ApiMessages.text(ctx, "api.backup.restore_success")
+                    : com.cashier.api.ApiMessages.text(ctx, "api.backup.restore_failed_status")
             ));
             
         } catch (Exception e) {
             logger.error("恢复备份失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "恢复失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.restore_failed")
             ));
         }
     }
@@ -176,7 +181,7 @@ public class BackupApiController {
             if (record == null || record.localPath == null) {
                 ctx.status(404).json(Map.of(
                     "success", false,
-                    "error", "备份文件不存在"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.file_not_found")
                 ));
                 return;
             }
@@ -186,7 +191,7 @@ public class BackupApiController {
             if (!file.exists() || !file.isFile()) {
                 ctx.status(404).json(Map.of(
                     "success", false,
-                    "error", "文件不存在"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.file_missing")
                 ));
                 return;
             }
@@ -200,12 +205,12 @@ public class BackupApiController {
             logger.error("下载备份失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "下载失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.download_failed")
             ));
         } catch (FileNotFoundException e) {
             ctx.status(404).json(Map.of(
                 "success", false,
-                "error", "文件不存在"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.file_missing")
             ));
         }
     }
@@ -245,7 +250,7 @@ public class BackupApiController {
             ctx.json(Map.of(
                 "success", true,
                 "data", Map.of("deletedCount", deleted),
-                "message", "清理过期备份: " + deleted + " 个"
+                "message", com.cashier.api.ApiMessages.text(ctx, "api.backup.cleanup_success", deleted)
             ));
             
             if (deleted > 0) {
@@ -257,7 +262,7 @@ public class BackupApiController {
             logger.error("清理备份失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "清理失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.cleanup_failed")
             ));
         }
     }
@@ -279,7 +284,7 @@ public class BackupApiController {
             logger.error("获取备份配置失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "获取失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.config_load_failed")
             ));
         }
     }
@@ -294,7 +299,7 @@ public class BackupApiController {
             if (body == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "请求体为空或字段不合法"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")
                 ));
                 return;
             }
@@ -306,14 +311,14 @@ public class BackupApiController {
             
             ctx.json(Map.of(
                 "success", true,
-                "message", "备份配置已更新"
+                "message", com.cashier.api.ApiMessages.text(ctx, "api.backup.config_updated")
             ));
             
         } catch (Exception e) {
             logger.error("更新备份配置失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "更新失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.config_update_failed")
             ));
         }
     }
@@ -393,7 +398,7 @@ public class BackupApiController {
             logger.error("获取备份统计失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "获取失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.stats_failed")
             ));
         }
     }

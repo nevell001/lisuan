@@ -32,7 +32,8 @@ public class AuthController {
             LoginRequest request = ApiRequest.parse(ctx, LoginRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")));
                 return;
             }
             
@@ -41,7 +42,8 @@ public class AuthController {
             if (request.username == null || request.username.isBlank()
                     || request.password == null || request.password.isBlank()) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "用户名和密码不能为空"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.auth.credentials_required")));
                 return;
             }
 
@@ -57,7 +59,8 @@ public class AuthController {
                 long remainingSeconds = LoginRateLimiter.getInstance().remainingLockMillis(clientIp) / 1000;
                 ctx.status(HttpStatus.TOO_MANY_REQUESTS)
                    .json(Map.of("success", false, "message",
-                       "尝试次数过多，请 " + Math.max(1, remainingSeconds) + " 秒后重试"));
+                       com.cashier.api.ApiMessages.text(ctx, "api.auth.too_many_attempts",
+                           Math.max(1, remainingSeconds))));
                 return;
             }
 
@@ -68,7 +71,8 @@ public class AuthController {
             if (DAOFactory.getInstance().getLoginAttemptDAO().isLocked(request.username)) {
                 long remainingSeconds = DAOFactory.getInstance().getLoginAttemptDAO().getRemainingLockoutSeconds(request.username);
                 ctx.status(HttpStatus.TOO_MANY_REQUESTS)
-                   .json(Map.of("success", false, "message", "账户已锁定，请 " + remainingSeconds + " 秒后重试"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.auth.account_locked", remainingSeconds)));
                 return;
             }
             
@@ -80,20 +84,23 @@ public class AuthController {
                 PasswordUtil.verifyPassword(request.password, DUMMY_PASSWORD_HASH);
                 LoginRateLimiter.getInstance().recordFailure(clientIp);
                 ctx.status(HttpStatus.UNAUTHORIZED)
-                   .json(Map.of("success", false, "message", "用户名或密码错误"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.auth.login_failed")));
                 return;
             }
 
             if (!PasswordUtil.verifyPassword(request.password, user.password)) {
                 LoginRateLimiter.getInstance().recordFailure(clientIp);
                 ctx.status(HttpStatus.UNAUTHORIZED)
-                   .json(Map.of("success", false, "message", "用户名或密码错误"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.auth.login_failed")));
                 return;
             }
 
             if (!user.active) {
                 ctx.status(HttpStatus.UNAUTHORIZED)
-                   .json(Map.of("success", false, "message", "用户已被禁用"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.auth.user_disabled")));
                 return;
             }
 
@@ -114,12 +121,13 @@ public class AuthController {
                 "success", true,
                 "token", token,
                 "user", user,
-                "message", "登录成功"
+                "message", com.cashier.api.ApiMessages.text(ctx, "api.auth.login_success")
             ));
         } catch (Exception e) {
             logger.error("登录失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "登录失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.auth.login_error")));
         }
     }
     
@@ -131,7 +139,8 @@ public class AuthController {
         String token = ctx.header("Authorization");
         if (token == null || !token.startsWith("Bearer ")) {
             ctx.status(HttpStatus.UNAUTHORIZED)
-               .json(Map.of("success", false, "message", "缺少认证 Token"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.auth.token_required")));
             return;
         }
         
@@ -141,7 +150,8 @@ public class AuthController {
             User user = ApiServer.getInstance().validateToken(token);
             if (user == null) {
                 ctx.status(HttpStatus.UNAUTHORIZED)
-                   .json(Map.of("success", false, "message", "Token 无效或已过期"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.auth.token_invalid")));
                 return;
             }
             
@@ -152,7 +162,8 @@ public class AuthController {
             ctx.json(Map.of("success", true, "token", newToken));
         } catch (Exception e) {
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "Token 刷新失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.auth.refresh_failed")));
         }
     }
     
@@ -166,7 +177,8 @@ public class AuthController {
             token = token.substring(7);
             ApiServer.getInstance().invalidateToken(token);
         }
-        ctx.json(Map.of("success", true, "message", "已注销"));
+        ctx.json(Map.of("success", true, "message",
+            com.cashier.api.ApiMessages.text(ctx, "api.auth.logged_out")));
     }
     
     /**
@@ -177,7 +189,8 @@ public class AuthController {
         User user = ctx.attribute("currentUser");
         if (user == null) {
             ctx.status(HttpStatus.UNAUTHORIZED)
-               .json(Map.of("success", false, "message", "未登录"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.common.unauthorized")));
             return;
         }
         

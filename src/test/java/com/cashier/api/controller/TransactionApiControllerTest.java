@@ -448,6 +448,48 @@ class TransactionApiControllerTest extends DatabaseTestBase {
             "API 已整单退款后，桌面不能再对同一交易建退货单");
     }
 
+    @Test
+    @DisplayName("退款冲突的响应文案跟随请求语言（TD-041）")
+    void refundConflictMessageFollowsLocale() throws Exception {
+        Product product = insertProduct("TD041退款商品", "TD041REF001", new BigDecimal("10.00"), 50);
+        TestContext saleCtx = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions")
+            .withBody(createRequest(product.id, 1, "现金", null));
+        TransactionApiController.create(saleCtx.context);
+        String transactionId = (String) response(saleCtx).get("transactionId");
+
+        TestContext first = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions/" + transactionId + "/refund")
+            .withPathParam("id", transactionId)
+            .withQueryParam("locale", "zh-CN");
+        TransactionApiController.refund(first.context);
+        assertEquals(HttpStatus.OK, first.status);
+
+        // 二次退款被原子抢占拒绝 → 409，文案必须按请求语言给
+        TestContext zh = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions/" + transactionId + "/refund")
+            .withPathParam("id", transactionId)
+            .withQueryParam("locale", "zh-CN");
+        TransactionApiController.refund(zh.context);
+        TestContext en = new TestContext()
+            .withRequest(HandlerType.POST, "/api/transactions/" + transactionId + "/refund")
+            .withPathParam("id", transactionId)
+            .withQueryParam("locale", "en");
+        TransactionApiController.refund(en.context);
+
+        // 二次退款在校验阶段就被拒（400）：文案同样必须按请求语言给
+        assertEquals(HttpStatus.BAD_REQUEST, zh.status);
+        assertEquals(HttpStatus.BAD_REQUEST, en.status);
+        assertNotNull(response(zh).get("message"));
+        assertNotNull(response(en).get("message"));
+        assertTrue(!zh.equals(en) || !response(zh).get("message").equals(response(en).get("message")),
+            "两端请求语言不同时必须返回不同语言的文案（此前写死中文）");
+        assertEquals("This transaction has already been refunded", response(en).get("message"),
+            "英文请求必须返回英文文案: " + response(en).get("message"));
+        assertEquals("该交易已退款", response(zh).get("message"),
+            "中文请求返回中文文案: " + response(zh).get("message"));
+    }
+
     private int queryInt(String sql) throws Exception {
         try (Connection conn = getTestConnection();
              var stmt = conn.createStatement();

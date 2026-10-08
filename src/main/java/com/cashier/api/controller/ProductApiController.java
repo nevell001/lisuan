@@ -43,7 +43,8 @@ public class ProductApiController {
         } catch (Exception e) {
             logger.error("获取商品列表失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取商品列表失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.product.list_failed")));
         }
     }
     
@@ -58,7 +59,8 @@ public class ProductApiController {
             
             if (product == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
-                   .json(Map.of("success", false, "message", "商品不存在"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.product.not_found")));
                 return;
             }
             
@@ -66,7 +68,8 @@ public class ProductApiController {
         } catch (Exception e) {
             logger.error("获取商品详情失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取商品详情失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.product.detail_failed")));
         }
     }
     
@@ -79,7 +82,8 @@ public class ProductApiController {
             ProductRequest request = ApiRequest.parse(ctx, ProductRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")));
                 return;
             }
             
@@ -87,12 +91,14 @@ public class ProductApiController {
             // 会被下面的 catch 兜成 500「创建商品失败」，客户端看不出少了哪个字段
             if (request.productCode == null || request.productCode.isBlank()) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "缺少必填字段: productCode（商品编号）"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.product.missing_field", "productCode")));
                 return;
             }
             if (request.name == null || request.name.isBlank()) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "缺少必填字段: name（商品名称）"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.product.missing_field", "name")));
                 return;
             }
             
@@ -116,11 +122,13 @@ public class ProductApiController {
             
             logger.info("创建商品: {} ({})", product.name, product.productCode);
             ctx.status(HttpStatus.CREATED)
-               .json(Map.of("success", true, "data", product, "message", "商品创建成功"));
+               .json(Map.of("success", true, "data", product, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.product.created")));
         } catch (Exception e) {
             logger.error("创建商品失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "创建商品失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.product.create_failed")));
         }
     }
     
@@ -134,14 +142,16 @@ public class ProductApiController {
             ProductRequest request = ApiRequest.parse(ctx, ProductRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")));
                 return;
             }
             
             Product product = productDAO.findById(id);
             if (product == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
-                   .json(Map.of("success", false, "message", "商品不存在"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.product.not_found")));
                 return;
             }
             
@@ -151,16 +161,19 @@ public class ProductApiController {
                 // 乐观锁：version 不匹配说明并发修改已提交，不能回 success 让调用方以为写成功了
                 logger.warn("更新商品冲突（乐观锁未命中）: {} ({})", product.name, product.id);
                 ctx.status(HttpStatus.CONFLICT)
-                   .json(Map.of("success", false, "message", "商品已被其他操作修改，请重新获取后再试"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.product.update_conflict")));
                 return;
             }
             
             logger.info("更新商品: {} ({})", product.name, product.id);
-            ctx.json(Map.of("success", true, "data", product, "message", "商品更新成功"));
+            ctx.json(Map.of("success", true, "data", product, "message",
+                com.cashier.api.ApiMessages.text(ctx, "api.product.updated")));
         } catch (Exception e) {
             logger.error("更新商品失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "更新商品失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.product.update_failed")));
         }
     }
 
@@ -203,18 +216,21 @@ public class ProductApiController {
             Product product = productDAO.findById(id);
             if (product == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
-                   .json(Map.of("success", false, "message", "商品不存在"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.product.not_found")));
                 return;
             }
             
             productDAO.delete(id);
             
             logger.info("删除商品: {} ({})", product.name, product.id);
-            ctx.json(Map.of("success", true, "message", "商品删除成功"));
+            ctx.json(Map.of("success", true, "message",
+                com.cashier.api.ApiMessages.text(ctx, "api.product.deleted")));
         } catch (Exception e) {
             logger.error("删除商品失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "删除商品失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.product.delete_failed")));
         }
     }
     
@@ -230,7 +246,8 @@ public class ProductApiController {
         } catch (Exception e) {
             logger.error("获取低库存商品失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取低库存商品失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.product.low_stock_failed")));
         }
     }
     

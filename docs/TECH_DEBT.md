@@ -45,7 +45,7 @@
 | TD-038 | `POST /api/invoices/from-transaction` 请求体可自报开票方信息/`createBy`/`taxRate` | 安全 | **已修（2026-10）**：服务层 `trustedRequest` 只保留买家信息（顾客提供），开票方/税率取管理员配置、开票人取认证用户；请求体带这些字段时记 WARN；行为测试 1 项（伪造销方/0.99 税率/冒充开票人全部被忽略） | 发票 |
 | TD-039 | `POST /api/invoices/{id}/print` 可写任意 `pdfPath`/`imagePath`；mock 支付模式回调密钥熵低 | 安全 | **已修（2026-10）**：打印记录不再采纳客户端路径（只更新状态/时间/次数，带路径时记 WARN）；mock 渠道回调密钥 <16 位或为占位符时**直接判渠道不可用**（fail-closed）+ 2 组行为测试 | 发票/支付 |
 | TD-040 | 设置页下拉/落库值把**本地化显示串**当数据（切语言后设置失配、被静默重置成默认值） | 正确性/口径 | **已修复（2026-10）**：7 个下拉改稳定代码 + `I18nUiUtils` 显示层映射；`settings` 表落代码、`paperSize`/备份频率老值归一；`BackupService.intervalHoursForFrequency` 补代码分支；**桌面冒烟另抓出"备份频率从不回读"并修掉**；门禁 2 项 + 冒烟 2 项 + 行为测试 2 组 | 多语言设置 |
-| TD-041 | REST API 的语言策略未定：**枚举显示名/错误与打印文案写死中文**却直接进响应（`deviceType`/`status`/`taskType`） | 口径/契约定稿 | **契约已定并实施（2026-10，产品决定：双字段）**：枚举返回稳定代码 + `*Name` 本地化显示名（printer 四个枚举全量）；新增 `I18nManager.get(Locale,key,params)` 与 `ApiMessages`；门禁 `ApiLanguageContractPolicyTest`。**剩余**：其余控制器的错误/提示文案仍是中文字面量（~365 处，含日志），按 ratchet 逐个迁移 | API 多语言 |
+| TD-041 | REST API 的语言策略未定：**枚举显示名/错误与打印文案写死中文**却直接进响应（`deviceType`/`status`/`taskType`） | 口径/契约定稿 | **已修复（2026-10，产品决定：双字段）**：枚举返稳定代码 + `*Name` 本地化显示名；**12 个 API 控制器共 167 处响应文案**全部改走 `ApiMessages.text(ctx,key,...)`（198 个 `api.*` key × 4 份语言包，零残留裸中文响应）；新增 `I18nManager.get(Locale,key,params)`；门禁 `ApiLanguageContractPolicyTest`（6 项，含 12 控制器棘轮）+ 跨控制器语言行为测试 | API 多语言 |
 
 > 本节条目来自 2026-09 的全量审计（`mvn verify` 三关全绿的前提下，逐条回读代码 + 真实
 > Javalin 最小复现验证）。
@@ -1997,9 +1997,23 @@ item 改稳定代码、`settings` 表落代码、`paperSize` 老显示串归一�
 | 门禁 | `ApiLanguageContractPolicyTest`（4 项：JSON 不得直接塞 `getDisplayName()`、必须经 `ApiMessages`、四包 key 齐全且英文是真的英文、按语言取值支持占位符） |
 | 行为测试 | `PrintApiControllerTest.enumFieldsAreCodePlusLocalizedName`（zh-CN → `网络打印机`、en → `Network printer`、代码恒为 `NETWORK`） |
 
-**剩余（下一步增量）**：各 API 控制器的错误/提示文案仍是中文字面量（约 365 处，其中一部分是日志/注释）。
-契约与基建已就位，迁移方式是对每个响应文案建 `api.<controller>.<name>` key 并改用
-`ApiMessages.text(ctx, key, params)`；建议按控制器逐个 ratchet（先 `PrintApiController`，再资金类）。
+**第二批（2026-10，文案迁移，已完成）**：把 12 个 API 控制器的**响应文案**全部迁到
+`ApiMessages.text(ctx, key, params)`——Auth / Backup / I18n / Inventory / Invoice / Member /
+Payment / Print / Product / Report / Settings / Transaction，共 **167 处调用点**，
+新增 **198 个 `api.*` key**（`api.common.*` 复用，`api.<area>.<meaning>` 分域），四份语言包 key 集合
+逐字节一致、无重复。迁移后全仓库 API 控制器**零裸中文响应文案**（脚本审计确认），
+剩余中文只剩日志、注释、打印正文、落库默认值与枚举显示名（均不属响应契约）。
+
+- 棘轮门禁 `ApiLanguageContractPolicyTest.migratedControllersHaveNoHardcodedResponseMessages`：
+  `MIGRATED_CONTROLLERS` 列出的控制器不得再新增写死中文的 `error`/`message`（只增不减）。
+- 行为验证：`PrintApiControllerTest.errorMessagesFollowRequestLocale`（receipt 校验错误 zh/en 各一份）、
+  `TransactionApiControllerTest.refundConflictMessageFollowsLocale`（同一次重复退款请求，
+  `?locale=zh-CN` 返回"该交易已退款"、`?locale=en` 返回英文）。
+- 顺带修掉一个真缺陷：`I18nApiController` 的语言显示名此前用 **平台默认 locale**
+  （`locale.getDisplayName()`），忽略请求 locale；现改走 `I18nManager.getAvailableLocales(requestLocale)`
+  （`displayName` = 本地名称、`displayNameLocal` = 按请求语言渲染）。
+- 判断保留（非响应，未迁移）：`TransactionApiController.RefundConflictException` 的消息只进日志
+  （客户端拿到的是本地化的 `api.transaction.already_refunded`）；会员等级/退款原因等**落库值**是逻辑键。
 
 ---
 

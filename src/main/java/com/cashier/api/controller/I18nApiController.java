@@ -28,6 +28,11 @@ public class I18nApiController {
      */
     public static void getCurrentLocale(Context ctx) {
         Locale locale = ApiLocaleResolver.of(ctx);
+        // 显示名复用 I18nManager.getAvailableLocales：参数既是"当前语言"标记，也是本地化显示名的渲染语言（TD-041）
+        LocaleInfo info = I18nManager.getInstance().getAvailableLocales(locale).stream()
+            .filter(item -> item.languageTag.equals(locale.toLanguageTag()))
+            .findFirst()
+            .orElse(null);
 
         ctx.json(Map.of(
             "success", true,
@@ -35,8 +40,8 @@ public class I18nApiController {
                 "locale", locale.toLanguageTag(),
                 "language", locale.getLanguage(),
                 "country", locale.getCountry(),
-                "displayName", locale.getDisplayName(locale),
-                "displayNameLocal", locale.getDisplayName()
+                "displayName", info != null ? info.displayName : locale.toLanguageTag(),
+                "displayNameLocal", info != null ? info.displayNameLocal : locale.toLanguageTag()
             )
         ));
     }
@@ -52,7 +57,7 @@ public class I18nApiController {
             if (user == null || user.username == null) {
                 ctx.status(401).json(Map.of(
                     "success", false,
-                    "error", "缺少认证用户"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.common.unauthorized")
                 ));
                 return;
             }
@@ -61,7 +66,7 @@ public class I18nApiController {
             if (body == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "请求体为空或字段不合法"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")
                 ));
                 return;
             }
@@ -70,14 +75,14 @@ public class I18nApiController {
             if (localeStr == null || localeStr.isEmpty()) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "缺少 locale 参数"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.common.missing_param", "locale")
                 ));
                 return;
             }
             if (!I18nManager.isSupported(localeStr)) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "不支持的语言: " + localeStr
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.i18n.unsupported_language", localeStr)
                 ));
                 return;
             }
@@ -90,12 +95,17 @@ public class I18nApiController {
 
             logger.info("用户 {} 的语言偏好已更新: {}", user.username, locale.toLanguageTag());
 
+            LocaleInfo info = I18nManager.getInstance().getAvailableLocales(locale).stream()
+                .filter(item -> item.languageTag.equals(locale.toLanguageTag()))
+                .findFirst()
+                .orElse(null);
+
             ctx.json(Map.of(
                 "success", true,
-                "message", "语言设置成功",
+                "message", com.cashier.api.ApiMessages.text(ctx, "api.i18n.locale_updated"),
                 "data", Map.of(
                     "locale", locale.toLanguageTag(),
-                    "displayName", locale.getDisplayName(locale)
+                    "displayName", info != null ? info.displayName : locale.toLanguageTag()
                 )
             ));
             
@@ -103,13 +113,13 @@ public class I18nApiController {
             logger.error("保存语言偏好失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "设置语言失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.i18n.set_failed")
             ));
         } catch (Exception e) {
             logger.error("设置语言失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "设置语言失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.i18n.set_failed")
             ));
         }
     }
@@ -148,7 +158,7 @@ public class I18nApiController {
         if (key == null || key.isEmpty()) {
             ctx.status(400).json(Map.of(
                 "success", false,
-                "error", "缺少 key 参数"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.common.missing_param", "key")
             ));
             return;
         }
@@ -245,7 +255,7 @@ public class I18nApiController {
         } catch (MissingResourceException e) {
             ctx.status(404).json(Map.of(
                 "success", false,
-                "error", "找不到语言包: " + localeTag
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.i18n.bundle_not_found", localeTag)
             ));
         }
     }

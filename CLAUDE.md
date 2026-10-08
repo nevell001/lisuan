@@ -807,10 +807,12 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   门禁 `SettingsDropdownValuePolicyTest`（源码，含"必须回读"断言）；
   冒烟 `SettingsControllerUITest`（真实 FXML + 控件，需显示环境：
   `mvn -Pui-tests -Dtest=SettingsControllerUITest test`，默认 `mvn verify` 排除）。
-  仍待决定：**TD-041**（REST API 语言策略）——`PrinterDeviceType/PrinterDeviceStatus/PrintTaskType/
-  PrintTaskStatus` 的中文枚举名直接进 `PrintApiController` 的 JSON（`deviceType`/`status`/`taskType`），
-  且 `PrintApiController` 的文案与测试打印正文也是中文；`ApiLocaleResolver` + `I18nManager.get(Locale,key)`
-  基建已具备，但"只返代码 / 按请求语言本地化 / 双字段"三选一要先确认外部消费方
+  **TD-041 已定稿（双字段）并实施**：REST API 的枚举字段返**稳定代码**、另给 `*Name` 返回按请求语言
+  本地化的显示名；响应文案一律走 `ApiMessages.text(ctx, key, params)`（`?locale=` → `Accept-Language`
+  → 用户偏好，**不改进程语言**）。12 个 API 控制器的响应文案已全部迁完（198 个 `api.*` key × 4 份语言包），
+  门禁 `ApiLanguageContractPolicyTest` 用 `MIGRATED_CONTROLLERS` 棘轮：**新增响应文案必须写 key，
+  不得再写死中文**；带占位符的文案用 `I18nManager.get(Locale, key, params)`（只给 `get(Locale,key)`
+  会直接漏出 `{0}`）。日志/落库值/打印正文不属响应契约，不在此列
 - `I18nKeys.java` 里有**嵌套类**（`Menu.Help`、`Menu.Theme`、`Nav`、`Runtime`、`StatusMessage`…）：
   手工或用脚本改这个文件时**不要**"把块内常量行排序后重排"——那种写法会把嵌套类内的常量压平到外层，
   编译期才会以 `找不到符号` 暴露。新增常量要么严格落在所属嵌套类内，要么按类整体替换

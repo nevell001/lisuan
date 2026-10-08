@@ -47,7 +47,8 @@ public class InvoiceApiController {
         } catch (Exception e) {
             logger.error("获取发票列表失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取发票列表失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.invoice.list_failed")));
         }
     }
     
@@ -62,7 +63,8 @@ public class InvoiceApiController {
             
             if (invoice == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
-                   .json(Map.of("success", false, "message", "发票不存在"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.invoice.not_found")));
                 return;
             }
             
@@ -70,7 +72,8 @@ public class InvoiceApiController {
         } catch (Exception e) {
             logger.error("获取发票详情失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取发票详情失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.invoice.detail_failed")));
         }
     }
     
@@ -85,7 +88,8 @@ public class InvoiceApiController {
             
             if (invoice == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
-                   .json(Map.of("success", false, "message", "该交易未开具发票"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.invoice.not_issued_for_transaction")));
                 return;
             }
             
@@ -93,7 +97,8 @@ public class InvoiceApiController {
         } catch (Exception e) {
             logger.error("获取交易发票失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取交易发票失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.invoice.transaction_detail_failed")));
         }
     }
     
@@ -106,13 +111,15 @@ public class InvoiceApiController {
             InvoiceService.InvoiceRequest request = ApiRequest.parse(ctx, InvoiceService.InvoiceRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")));
                 return;
             }
             
             if (request.transactionId == null || request.transactionId.isEmpty()) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "交易ID不能为空"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.invoice.transaction_id_required")));
                 return;
             }
             
@@ -130,11 +137,13 @@ public class InvoiceApiController {
             
             logger.info("发票创建成功: {}", invoice.invoiceId);
             ctx.status(HttpStatus.CREATED)
-               .json(Map.of("success", true, "data", invoice, "message", "发票创建成功"));
+               .json(Map.of("success", true, "data", invoice, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.invoice.created")));
         } catch (Exception e) {
             logger.error("创建发票失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "创建发票失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.invoice.create_failed")));
         }
     }
     
@@ -147,13 +156,15 @@ public class InvoiceApiController {
             InvoiceService.InvoiceRequest request = ApiRequest.parse(ctx, InvoiceService.InvoiceRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")));
                 return;
             }
             
             if (request.items == null || request.items.isEmpty()) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "商品明细不能为空"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.invoice.items_required")));
                 return;
             }
             
@@ -161,11 +172,13 @@ public class InvoiceApiController {
             
             logger.info("手工发票创建成功: {}", invoice.invoiceId);
             ctx.status(HttpStatus.CREATED)
-               .json(Map.of("success", true, "data", invoice, "message", "发票创建成功"));
+               .json(Map.of("success", true, "data", invoice, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.invoice.created")));
         } catch (Exception e) {
             logger.error("创建手工发票失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "创建手工发票失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.invoice.manual_create_failed")));
         }
     }
     
@@ -179,24 +192,28 @@ public class InvoiceApiController {
             VoidRequest request = ApiRequest.parse(ctx, VoidRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")));
                 return;
             }
             
             if (request.reason == null || request.reason.isEmpty()) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "作废原因不能为空"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.invoice.void_reason_required")));
                 return;
             }
             
             Invoice invoice = InvoiceService.voidInvoice(invoiceId, request.reason);
             
             logger.info("发票作废: {} - 原因: {}", invoiceId, request.reason);
-            ctx.json(Map.of("success", true, "data", invoice, "message", "发票已作废"));
+            ctx.json(Map.of("success", true, "data", invoice, "message",
+                com.cashier.api.ApiMessages.text(ctx, "api.invoice.voided")));
         } catch (Exception e) {
             logger.error("作废发票失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "作废发票失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.invoice.void_failed")));
         }
     }
     
@@ -210,7 +227,8 @@ public class InvoiceApiController {
             PrintRequest request = ApiRequest.parse(ctx, PrintRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")));
                 return;
             }
             
@@ -224,11 +242,13 @@ public class InvoiceApiController {
             DAOFactory.getInstance().getInvoiceDAO().updatePrintInfo(invoiceId, null, null);
             
             logger.info("发票打印记录: {}", invoiceId);
-            ctx.json(Map.of("success", true, "message", "打印记录已更新"));
+            ctx.json(Map.of("success", true, "message",
+                com.cashier.api.ApiMessages.text(ctx, "api.invoice.print_recorded")));
         } catch (Exception e) {
             logger.error("记录打印失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "记录打印失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.invoice.print_record_failed")));
         }
     }
     
@@ -243,7 +263,8 @@ public class InvoiceApiController {
         } catch (Exception e) {
             logger.error("获取销售方信息失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取销售方信息失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.invoice.seller_info_failed")));
         }
     }
     
@@ -256,7 +277,8 @@ public class InvoiceApiController {
             Map<?, ?> info = ApiRequest.parse(ctx, Map.class);
             if (info == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")));
                 return;
             }
             
@@ -269,11 +291,13 @@ public class InvoiceApiController {
             );
             
             logger.info("销售方信息已更新");
-            ctx.json(Map.of("success", true, "message", "销售方信息已更新"));
+            ctx.json(Map.of("success", true, "message",
+                com.cashier.api.ApiMessages.text(ctx, "api.invoice.seller_info_updated")));
         } catch (Exception e) {
             logger.error("设置销售方信息失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "设置销售方信息失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.invoice.seller_info_update_failed")));
         }
     }
     
@@ -328,7 +352,8 @@ public class InvoiceApiController {
         } catch (Exception e) {
             logger.error("发票统计失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "发票统计失败"));
+               .json(Map.of("success", false, "message",
+                   com.cashier.api.ApiMessages.text(ctx, "api.invoice.stats_failed")));
         }
     }
     

@@ -41,7 +41,7 @@ public class PaymentApiController {
             if (body == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "请求体为空或字段不合法"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")
                 ));
                 return;
             }
@@ -57,7 +57,7 @@ public class PaymentApiController {
             if (transactionId == null || amount == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "缺少必要参数: transactionId, amount"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.common.missing_param", "transactionId, amount")
                 ));
                 return;
             }
@@ -68,21 +68,21 @@ public class PaymentApiController {
             if (transaction == null) {
                 ctx.status(404).json(Map.of(
                     "success", false,
-                    "error", "交易不存在: " + transactionId
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.payment.transaction_not_found", transactionId)
                 ));
                 return;
             }
             if ("REFUNDED".equals(transaction.status)) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "该交易已退款，不能再发起收款"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.payment.transaction_refunded")
                 ));
                 return;
             }
             if (transaction.finalAmount == null || amount.compareTo(transaction.finalAmount) != 0) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "支付金额与交易实付不一致（应为 " + transaction.finalAmount + "）"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.payment.amount_mismatch", transaction.finalAmount)
                 ));
                 return;
             }
@@ -105,14 +105,14 @@ public class PaymentApiController {
                     "expireTime", order.expireTime,
                     "status", order.status.getDisplayName()
                 ),
-                "message", "支付订单创建成功"
+                "message", com.cashier.api.ApiMessages.text(ctx, "api.payment.create_success")
             ));
             
         } catch (Exception e) {
             logger.error("创建支付订单失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "创建失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.payment.create_failed")
             ));
         }
     }
@@ -130,7 +130,7 @@ public class PaymentApiController {
             if (order == null) {
                 ctx.status(404).json(Map.of(
                     "success", false,
-                    "error", "支付订单不存在"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.payment.order_not_found")
                 ));
                 return;
             }
@@ -144,7 +144,7 @@ public class PaymentApiController {
             logger.error("查询支付状态失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "查询失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.payment.query_failed")
             ));
         }
     }
@@ -181,7 +181,7 @@ public class PaymentApiController {
             logger.error("查询交易支付记录失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "查询失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.payment.query_failed")
             ));
         }
     }
@@ -231,9 +231,9 @@ public class PaymentApiController {
                 ctx.status(400);
             }
             if (channel == PaymentOrder.PaymentChannel.WECHAT && success) {
-                ctx.json(Map.of("code", "SUCCESS", "message", "成功"));
+                ctx.json(Map.of("code", "SUCCESS", "message", com.cashier.api.ApiMessages.text(ctx, "api.payment.notify_success")));
             } else if (channel == PaymentOrder.PaymentChannel.WECHAT) {
-                ctx.json(Map.of("code", "FAIL", "message", "签名或业务校验失败"));
+                ctx.json(Map.of("code", "FAIL", "message", com.cashier.api.ApiMessages.text(ctx, "api.payment.notify_failed")));
             } else if (success) {
                 ctx.result("success");
             } else {
@@ -243,7 +243,7 @@ public class PaymentApiController {
         } catch (Exception e) {
             logger.error("处理支付回调失败", e);
             if (channel == PaymentOrder.PaymentChannel.WECHAT) {
-                ctx.status(500).json(Map.of("code", "FAIL", "message", "处理失败"));
+                ctx.status(500).json(Map.of("code", "FAIL", "message", com.cashier.api.ApiMessages.text(ctx, "api.payment.notify_failed")));
             } else {
                 ctx.result("fail");
             }
@@ -274,7 +274,7 @@ public class PaymentApiController {
             if (body == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "请求体为空或字段不合法"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")
                 ));
                 return;
             }
@@ -297,7 +297,8 @@ public class PaymentApiController {
                     "refundTime", refund.refundTime
                 ),
                 // 渠道异步受理时不能报"退款成功"（F9）：微信非 SUCCESS 只落 PROCESSING
-                "message", refund.status.isSuccess() ? "退款成功" : "退款已受理，处理中"
+                "message", com.cashier.api.ApiMessages.text(ctx, refund.status.isSuccess()
+                    ? "api.payment.refund_success" : "api.payment.refund_processing")
             ));
             
         } catch (IllegalArgumentException | IllegalStateException e) {
@@ -309,7 +310,7 @@ public class PaymentApiController {
             logger.error("退款失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "退款失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.payment.refund_failed")
             ));
         }
     }
@@ -353,7 +354,7 @@ public class PaymentApiController {
             ));
         } catch (SQLException e) {
             logger.error("查询退款单失败", e);
-            ctx.status(500).json(Map.of("success", false, "error", "查询失败"));
+            ctx.status(500).json(Map.of("success", false, "error", com.cashier.api.ApiMessages.text(ctx, "api.payment.query_failed")));
         }
     }
 
@@ -386,7 +387,7 @@ public class PaymentApiController {
             logger.error("查询待支付订单失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "查询失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.payment.query_failed")
             ));
         }
     }
@@ -402,14 +403,14 @@ public class PaymentApiController {
             ctx.json(Map.of(
                 "success", true,
                 "data", Map.of("closedCount", count),
-                "message", "关闭过期订单: " + count + " 个"
+                "message", com.cashier.api.ApiMessages.text(ctx, "api.payment.closed_expired", count)
             ));
             
         } catch (SQLException e) {
             logger.error("关闭过期订单失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "关闭失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.payment.close_failed")
             ));
         }
     }
@@ -438,7 +439,7 @@ public class PaymentApiController {
             logger.error("获取支付统计失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "查询失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.payment.query_failed")
             ));
         }
     }
@@ -471,7 +472,7 @@ public class PaymentApiController {
             if (body == null) {
                 ctx.status(400).json(Map.of(
                     "success", false,
-                    "error", "请求体为空或字段不合法"
+                    "error", com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")
                 ));
                 return;
             }
@@ -530,14 +531,14 @@ public class PaymentApiController {
             
             ctx.json(Map.of(
                 "success", true,
-                "message", "支付配置已更新"
+                "message", com.cashier.api.ApiMessages.text(ctx, "api.payment.config_updated")
             ));
             
         } catch (Exception e) {
             logger.error("设置支付配置失败", e);
             ctx.status(500).json(Map.of(
                 "success", false,
-                "error", "设置失败"
+                "error", com.cashier.api.ApiMessages.text(ctx, "api.payment.config_update_failed")
             ));
         }
     }

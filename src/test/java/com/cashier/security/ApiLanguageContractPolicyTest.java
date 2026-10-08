@@ -100,6 +100,80 @@ class ApiLanguageContractPolicyTest {
             "按语言的带参取值必须走 MessageFormat");
     }
 
+    /** 已迁移到 ApiMessages 的控制器（棘轮：只增不减，新增控制器时把它们加进来）。 */
+    private static final List<String> MIGRATED_CONTROLLERS = List.of(
+        "AuthController.java",
+        "BackupApiController.java",
+        "I18nApiController.java",
+        "InventoryApiController.java",
+        "InvoiceApiController.java",
+        "MemberApiController.java",
+        "PaymentApiController.java",
+        "PrintApiController.java",
+        "ProductApiController.java",
+        "ReportApiController.java",
+        "SettingsApiController.java",
+        "TransactionApiController.java"
+    );
+
+    @Test
+    @DisplayName("已迁移的控制器不得再新增写死中文的响应文案（棘轮）")
+    void migratedControllersHaveNoHardcodedResponseMessages() throws IOException {
+        Path dir = Path.of("src/main/java/com/cashier/api/controller");
+        List<String> violations = new ArrayList<>();
+        for (String name : MIGRATED_CONTROLLERS) {
+            String source = withoutComments(read(dir.resolve(name)));
+            for (String line : source.split("\n")) {
+                // 只看响应出口：Map.put("error"/"message", "中文") 与 Map.of(... "error", "中文")
+                if (!(line.contains("\"error\"") || line.contains("\"message\""))) {
+                    continue;
+                }
+                if (!line.matches(".*\"[^\"]*[\u4e00-\u9fa5][^\"]*\".*")) {
+                    continue;
+                }
+                // 打印正文（content/sb.append）不是 API 契约
+                if (line.contains("append(")) {
+                    continue;
+                }
+                violations.add(name + ": " + line.trim());
+            }
+        }
+        assertTrue(violations.isEmpty(),
+            "已迁移控制器的响应文案必须走 ApiMessages.text(ctx, key)（TD-041）：\n  "
+                + String.join("\n  ", violations));
+    }
+
+    @Test
+    @DisplayName("PrinterApiController 的文案 key 在四份语言包里都存在")
+    void migratedMessageKeysExistInBundles() throws IOException {
+        Path i18n = Path.of("src/main/resources/com/cashier/i18n");
+        String source = read(PRINT_API);
+        java.util.Set<String> keys = new java.util.TreeSet<>();
+        java.util.regex.Matcher m = java.util.regex.Pattern
+            .compile("ApiMessages\\.text\\(ctx,\\s*\"([^\"]+)\"")
+            .matcher(source);
+        while (m.find()) {
+            keys.add(m.group(1));
+        }
+        assertTrue(keys.size() >= 15, "应识别到 PrintApiController 的响应文案 key，实际 " + keys.size() + ": " + keys);
+        // 三元分支（text(ctx, cond ? "a" : "b")）里的 key 同样要齐全：单独提取并合并
+        java.util.regex.Matcher ternary = java.util.regex.Pattern
+            .compile("\"(api\\.[a-z0-9_]+\\.[a-z0-9_]+)\"")
+            .matcher(source);
+        while (ternary.find()) {
+            keys.add(ternary.group(1));
+        }
+
+        for (String bundle : new String[]{"messages.properties", "messages_zh_CN.properties",
+            "messages_zh_TW.properties", "messages_en.properties"}) {
+            String content = read(i18n.resolve(bundle));
+            for (String key : keys) {
+                assertTrue(content.contains("\n" + key + "="),
+                    bundle + " 缺少 key: " + key + "（TD-041 双字段契约要求四包齐全）");
+            }
+        }
+    }
+
     private static String read(Path path) throws IOException {
         return new String(Files.readAllBytes(path), StandardCharsets.UTF_8);
     }

@@ -30,7 +30,7 @@ public class MemberApiController {
         } catch (Exception e) {
             logger.error("获取会员列表失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取会员列表失败"));
+               .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.list_failed")));
         }
     }
     
@@ -45,7 +45,7 @@ public class MemberApiController {
             
             if (member == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
-                   .json(Map.of("success", false, "message", "会员不存在"));
+                   .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.not_found")));
                 return;
             }
             
@@ -53,7 +53,7 @@ public class MemberApiController {
         } catch (Exception e) {
             logger.error("获取会员详情失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取会员详情失败"));
+               .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.detail_failed")));
         }
     }
     
@@ -68,7 +68,7 @@ public class MemberApiController {
             
             if (member == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
-                   .json(Map.of("success", false, "message", "会员不存在"));
+                   .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.not_found")));
                 return;
             }
             
@@ -76,7 +76,7 @@ public class MemberApiController {
         } catch (Exception e) {
             logger.error("根据手机号获取会员失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "获取会员失败"));
+               .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.get_failed")));
         }
     }
     
@@ -89,13 +89,13 @@ public class MemberApiController {
             MemberRequest request = ApiRequest.parse(ctx, MemberRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                   .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")));
                 return;
             }
             
             if (request.phone == null || request.phone.isEmpty()) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "手机号不能为空"));
+                   .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.phone_required")));
                 return;
             }
             
@@ -103,7 +103,7 @@ public class MemberApiController {
             Member existing = DAOFactory.getInstance().getMemberDAO().findByPhone(request.phone);
             if (existing != null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "该手机号已注册"));
+                   .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.phone_exists")));
                 return;
             }
             
@@ -131,11 +131,11 @@ public class MemberApiController {
             );
             
             ctx.status(HttpStatus.CREATED)
-               .json(Map.of("success", true, "data", member, "message", "会员创建成功"));
+               .json(Map.of("success", true, "data", member, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.create_success")));
         } catch (Exception e) {
             logger.error("创建会员失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "创建会员失败"));
+               .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.create_failed")));
         }
     }
     
@@ -149,14 +149,14 @@ public class MemberApiController {
             MemberRequest request = ApiRequest.parse(ctx, MemberRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                   .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")));
                 return;
             }
             
             Member member = DAOFactory.getInstance().getMemberDAO().findById(id);
             if (member == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
-                   .json(Map.of("success", false, "message", "会员不存在"));
+                   .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.not_found")));
                 return;
             }
 
@@ -169,7 +169,7 @@ public class MemberApiController {
             if (request.name != null) {
                 if (request.name.isBlank()) {
                     ctx.status(HttpStatus.BAD_REQUEST)
-                       .json(Map.of("success", false, "message", "会员姓名不能为空"));
+                       .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.name_required")));
                     return;
                 }
                 member.name = request.name.trim();
@@ -178,7 +178,7 @@ public class MemberApiController {
                 String phone = request.phone.trim();
                 if (!phone.matches("\\d{11}")) {
                     ctx.status(HttpStatus.BAD_REQUEST)
-                       .json(Map.of("success", false, "message", "手机号必须是 11 位数字"));
+                       .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.phone_invalid")));
                     return;
                 }
                 member.phone = phone;
@@ -186,7 +186,7 @@ public class MemberApiController {
             if (request.level != null) {
                 if (!com.cashier.service.MemberService.isKnownLevel(request.level)) {
                     ctx.status(HttpStatus.BAD_REQUEST)
-                       .json(Map.of("success", false, "message", "会员等级不合法（可用：普通/银卡/金卡/钻石）"));
+                       .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.level_invalid")));
                     return;
                 }
                 member.level = request.level;
@@ -195,7 +195,7 @@ public class MemberApiController {
                 if (request.discount.compareTo(BigDecimal.ZERO) < 0
                         || request.discount.compareTo(BigDecimal.TEN) > 0) {
                     ctx.status(HttpStatus.BAD_REQUEST)
-                       .json(Map.of("success", false, "message", "折扣必须在 0 到 10 之间（10 = 不打折）"));
+                       .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.discount_invalid")));
                     return;
                 }
                 member.discount = request.discount;
@@ -208,7 +208,7 @@ public class MemberApiController {
                 // 乐观锁冲突是并发语义，回 409 而不是把它当服务器内部错误
                 logger.warn("更新会员冲突（乐观锁未命中）: {}", member.phone);
                 ctx.status(HttpStatus.CONFLICT)
-                   .json(Map.of("success", false, "message", "会员已被其他操作修改，请重新获取后再试"));
+                   .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.concurrent_modified")));
                 return;
             }
             
@@ -240,11 +240,11 @@ public class MemberApiController {
                 )
             );
             
-            ctx.json(Map.of("success", true, "data", member, "message", "会员更新成功"));
+            ctx.json(Map.of("success", true, "data", member, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.update_success")));
         } catch (Exception e) {
             logger.error("更新会员失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "更新会员失败"));
+               .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.update_failed")));
         }
     }
     
@@ -258,20 +258,20 @@ public class MemberApiController {
             RechargeRequest request = ApiRequest.parse(ctx, RechargeRequest.class);
             if (request == null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "请求体为空或字段不合法"));
+                   .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.common.bad_request")));
                 return;
             }
             
             Member member = DAOFactory.getInstance().getMemberDAO().findById(id);
             if (member == null) {
                 ctx.status(HttpStatus.NOT_FOUND)
-                   .json(Map.of("success", false, "message", "会员不存在"));
+                   .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.not_found")));
                 return;
             }
             
             if (request.amount == null || request.amount.compareTo(BigDecimal.ZERO) <= 0) {
                 ctx.status(HttpStatus.BAD_REQUEST)
-                   .json(Map.of("success", false, "message", "充值金额必须大于0"));
+                   .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.recharge_amount_invalid")));
                 return;
             }
             
@@ -289,15 +289,15 @@ public class MemberApiController {
             
             if (success) {
                 logger.info("会员充值: {} + {}", member.phone, request.amount);
-                ctx.json(Map.of("success", true, "data", member, "message", "充值成功"));
+                ctx.json(Map.of("success", true, "data", member, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.recharge_success")));
             } else {
                 ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                   .json(Map.of("success", false, "message", "充值失败"));
+                   .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.recharge_failed")));
             }
         } catch (Exception e) {
             logger.error("会员充值失败", e);
             ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
-               .json(Map.of("success", false, "message", "充值失败"));
+               .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.recharge_failed")));
         }
     }
     
