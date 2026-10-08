@@ -2003,8 +2003,10 @@ item 改稳定代码、`settings` 表落代码、`paperSize` 老显示串归一�
 - **F9 微信异步退款永不落终态**：`WechatNativePaymentProvider` 对非 SUCCESS 状态写 `PROCESSING`，
   而全仓库没有任何消费方 → 支付单停在 `PARTIAL_REFUND`、预留额度不释放（保守，不会多退钱）。
   需要设计"退款结果轮询/回调"（查询接口或对账任务），属功能开发，未在本次修。
+  → **设计方案：[DESIGN_F9_F10.md](DESIGN_F9_F10.md)**（2026-10）
 - **F10 退货创建是 check-then-act**：校验在事务外，`return_orders` 无唯一约束/已退数量台账，
   两个终端同时提交可各退满额。窗口窄，串行操作会被拦；彻底修需要"已退数量台账 + 唯一约束"的设计。
+  → **设计方案：[DESIGN_F9_F10.md](DESIGN_F9_F10.md)**（2026-10）
 - **F13 `ProductDAORefactored.batchUpdateWithConnection` 丢弃 `executeBatch()` 结果**并无条件 `version++`：
   当前唯一调用方 `DataService.saveInventory` 无生产调用方，属埋雷，未动。
 - **F14 `InventoryAlertController` 的硬编码中文**：**已修**（弹窗/导出/时长/级别名全部迁 i18n，
