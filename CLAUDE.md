@@ -916,6 +916,17 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `fx:controller` 里找到方法；② 每个 `@FXML` 字段都有同名 `fx:id`（豁免表 `KNOWN_ORPHAN_FIELDS`
   逐条写明原因，**过期即失败**）；③ 回归锚点：`handleCheckout` 必须委托 `handleCart()`。
   改 FXML 时如果新增/改名 `fx:id`，记得同步控制器字段（门禁会报出来）
+- **退货建单的可退量校验必须在事务内**（F10，2026-10）：`ReturnService.createReturnOrder` 先
+  `SELECT ... FROM transactions ... FOR UPDATE` 锁原交易行，再用 `return_reservations` 台账
+  按**商品跨行合计**校验 `已占用 + 本次 ≤ 原销量`，并与退货单/明细同事务写入。
+  此前校验只在 `CreateReturnOrderDialogController.validateReturnItems`（UI 线程、事务外），
+  两个终端并发提交各退满额 → 库存恢复两次 + 退款两次。占用是否生效按**父退货单状态**判定
+  （`ro.status <> 'REJECTED'`，驳回即释放）；老库既有退货单由
+  `DatabaseManager.backfillReturnReservations()` 启动时幂等回填（`NOT EXISTS` 去重），
+  否则历史交易又能再退一次。门禁 `ReturnLedgerPolicyTest`（3 项源码）+ 行为
+  `ReturnReservationConcurrencyTest`（7 项，含双线程并发；校验短路变异后 5 项变红）。
+  原交易缺明细行时**放行但仍记台账**（只影响无法校验的脏数据，留 WARN）。
+  设计与剩余项（F10-b/F9）见 `docs/DESIGN_F9_F10.md`
 - **多表/多行写入必须走 `*WithConnection` + `executeBooleanTransaction`**（TD-023~025）：本仓库 DAO 有
   两套写法，`xxx(...)` 自带 autocommit 连接并立即提交，`xxxWithConnection(conn, ...)` 参与调用方事务。
   审计实测的三处事故：盘点单保存（先删全部旧明细再逐条插，中途失败留下"已提交的 DELETE + 半截明细"，

@@ -457,6 +457,21 @@ public abstract class DatabaseTestBase {
             )
             """);
 
+        // 创建 return_reservations 表（退货占用台账，F10）
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS return_reservations (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                return_order_id VARCHAR(50) NOT NULL,
+                original_transaction_id VARCHAR(50) NOT NULL,
+                product_id INT NOT NULL,
+                quantity INT NOT NULL,
+                status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+                create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                CONSTRAINT uk_return_product UNIQUE (return_order_id, product_id)
+            )
+            """);
+
         // 创建 operation_logs 表（操作日志）
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS operation_logs (
@@ -569,6 +584,7 @@ public abstract class DatabaseTestBase {
         {"fk_ici_check", "inventory_check_items", "check_id", "inventory_check(id)", "CASCADE"},
         {"fk_ici_product", "inventory_check_items", "product_id", "products(id)", "RESTRICT"},
         {"fk_roi_return", "return_order_items", "return_order_id", "return_orders(return_order_id)", "CASCADE"},
+        {"fk_rr_return", "return_reservations", "return_order_id", "return_orders(return_order_id)", "CASCADE"},
         {"fk_ii_invoice", "invoice_items", "invoice_id", "invoices(invoice_id)", "CASCADE"},
     };
 
@@ -640,6 +656,7 @@ public abstract class DatabaseTestBase {
             stmt.execute("DELETE FROM products");
             stmt.execute("DELETE FROM users");
             stmt.execute("DELETE FROM promotions");
+            stmt.execute("DELETE FROM return_reservations");
             stmt.execute("DELETE FROM return_order_items");
             stmt.execute("DELETE FROM return_orders");
             stmt.execute("DELETE FROM operation_logs");

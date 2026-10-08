@@ -2007,6 +2007,13 @@ item 改稳定代码、`settings` 表落代码、`paperSize` 老显示串归一�
 - **F10 退货创建是 check-then-act**：校验在事务外，`return_orders` 无唯一约束/已退数量台账，
   两个终端同时提交可各退满额。窗口窄，串行操作会被拦；彻底修需要"已退数量台账 + 唯一约束"的设计。
   → **设计方案：[DESIGN_F9_F10.md](DESIGN_F9_F10.md)**（2026-10）
+  → **F10-a 已实施（2026-10）**：新增 `return_reservations` 台账表（Java 建表 + `docker/mysql-init`
+  同步，`InitSchemaParityTest` 守着）；`ReturnService.createReturnOrder` 改为事务内
+  `SELECT ... FOR UPDATE` 锁原交易 → 按商品**跨行合计**校验 `已占用 + 本次 ≤ 原销量` →
+  台账与退货单/明细同事务写入；`DatabaseManager.backfillReturnReservations()` 启动时幂等回填老库。
+  测试 `ReturnReservationConcurrencyTest`（7 项，含真实双线程并发）+ 门禁 `ReturnLedgerPolicyTest`（3 项）；
+  校验短路变异后 5 项测试变红（已还原）。**F10-b 待做**：审批/完成/API 三处同步台账行状态
+  （当前占用与否已按父单状态判定，故只影响审计可视化）+ 错误文案挪进服务层。
 - **F13 `ProductDAORefactored.batchUpdateWithConnection` 丢弃 `executeBatch()` 结果**并无条件 `version++`：
   当前唯一调用方 `DataService.saveInventory` 无生产调用方，属埋雷，未动。
 - **F14 `InventoryAlertController` 的硬编码中文**：**已修**（弹窗/导出/时长/级别名全部迁 i18n，

@@ -868,6 +868,39 @@ EXECUTE stmt;
 DEALLOCATE PREPARE stmt;
 
 -- ============================================
+-- 退货占用台账（F10）：建单时校验"累计退货量 ≤ 原销量"的落库依据
+-- 历史已建的退货单由应用启动时的 backfillReturnReservations() 幂等回填
+-- ============================================
+
+-- 创建退货占用台账表
+SET @table_exists = (
+    SELECT COUNT(*)
+    FROM INFORMATION_SCHEMA.TABLES
+    WHERE TABLE_SCHEMA = DATABASE()
+    AND TABLE_NAME = 'return_reservations'
+);
+
+SET @sql = IF(@table_exists = 0,
+    'CREATE TABLE IF NOT EXISTS return_reservations (
+        id INT PRIMARY KEY AUTO_INCREMENT,
+        return_order_id VARCHAR(50) NOT NULL COMMENT ''退货单号'',
+        original_transaction_id VARCHAR(50) NOT NULL COMMENT ''原交易ID'',
+        product_id INT NOT NULL COMMENT ''商品ID（历史数据为空时按 0）'',
+        quantity INT NOT NULL COMMENT ''占用数量'',
+        status VARCHAR(20) NOT NULL DEFAULT ''PENDING'' COMMENT ''台账状态'',
+        create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        UNIQUE KEY uk_return_product (return_order_id, product_id),
+        INDEX idx_tx_product (original_transaction_id, product_id),
+        FOREIGN KEY (return_order_id) REFERENCES return_orders(return_order_id) ON DELETE CASCADE
+    ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT=''退货占用台账''',
+    'SELECT "return_reservations table already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- ============================================
 -- 历史遗留表：导出历史与模板（v2.4.0）
 -- 当前 Java 侧已无代码引用 export_history / export_templates（导出走 ExportUtil 直接写文件），
 -- 保留仅为兼容旧库/BI 取数；新装部署不再需要。

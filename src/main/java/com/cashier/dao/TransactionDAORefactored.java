@@ -407,6 +407,47 @@ public class TransactionDAORefactored extends BaseDAO {
         }
     }
 
+    /**
+     * 锁定原交易行，用于把"退货建单 + 可退量校验"放进同一事务串行化（F10）。
+     *
+     * <p>没有这把锁时，两个终端各自在事务外校验"已退量 + 本次 ≤ 原销量"都能通过，
+     * 随后双双插入退货单——库存和钱都会被退两次。行锁让同一交易的建单排队，
+     * 后到者在锁内重算时就能看到先到者已提交的台账占用。</p>
+     *
+     * @return 交易存在且已加锁（{@code SELECT ... FOR UPDATE}）
+     */
+    public boolean lockForReturnWithConnection(Connection conn, String transactionId) throws SQLException {
+        try (PreparedStatement pstmt = conn.prepareStatement(
+            "SELECT transaction_id FROM transactions WHERE transaction_id = ? FOR UPDATE")) {
+            pstmt.setString(1, transactionId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                return rs.next();
+            }
+        }
+    }
+
+    /**
+     * 原交易各商品的销量基数（**按商品跨行合计**，历史数据 product_id 为空时并入 0）。
+     *
+     * <p>退货校验必须按商品合计，不能按明细行比较：同一商品在交易里出现多行时，
+     * 按行比较会把"这一行退了 1 件"误判成"只退了这一行的量"。</p>
+     */
+    public Map<Integer, Integer> sumItemQuantitiesByProductWithConnection(Connection conn, String transactionId)
+            throws SQLException {
+        Map<Integer, Integer> quantities = new HashMap<>();
+        String sql = "SELECT COALESCE(product_id, 0) AS pid, SUM(quantity) AS qty FROM transaction_items "
+            + "WHERE transaction_id = ? GROUP BY COALESCE(product_id, 0)";
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, transactionId);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    quantities.put(rs.getInt("pid"), rs.getInt("qty"));
+                }
+            }
+        }
+        return quantities;
+    }
+
     private static void addJoinedTransactionRow(Map<String, Transaction> transactionMap, ResultSet rs) throws SQLException {
         String transactionId = rs.getString("transaction_id");
         Transaction transaction = transactionMap.get(transactionId);

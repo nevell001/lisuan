@@ -47,6 +47,7 @@ public class DAOFactory {
         register(PurchaseInboundDAORefactored.class, new PurchaseInboundDAORefactored());
         register(PurchaseApprovalDAORefactored.class, new PurchaseApprovalDAORefactored());
         register(ReturnOrderItemDAORefactored.class, new ReturnOrderItemDAORefactored());
+        register(ReturnReservationDAORefactored.class, new ReturnReservationDAORefactored());
         register(BackupDAORefactored.class, new BackupDAORefactored());
         register(HoldOrderDAORefactored.class, new HoldOrderDAORefactored());
         register(LoginAttemptDAORefactored.class, new LoginAttemptDAORefactored());
@@ -191,6 +192,14 @@ public class DAOFactory {
      */
     public ReturnOrderDAORefactored getReturnOrderDAO() {
         return getDAO(ReturnOrderDAORefactored.class);
+    }
+
+    /**
+     * 获取退货占用台账 DAO（重构版，F10）
+     * @return ReturnReservationDAORefactored 实例
+     */
+    public ReturnReservationDAORefactored getReturnReservationDAO() {
+        return getDAO(ReturnReservationDAORefactored.class);
     }
 
     /**

@@ -349,6 +349,7 @@ public class DatabaseManager {
             createTableInventoryCheckItems(stmt);
             createTableReturnOrders(stmt);
             createTableReturnOrderItems(stmt);
+            createTableReturnReservations(stmt);
             createTableInvoices(stmt);
             createTableInvoiceItems(stmt);
             createTableBackupRecords(stmt);
@@ -364,6 +365,48 @@ public class DatabaseManager {
             // 抛出去由静态块统一转换成"数据库初始化失败 + 排查指引"。
             logger.error("数据库表创建失败", e);
             throw e;
+        }
+
+        // 老库的一次性补数据（幂等、失败不阻塞启动，见方法注释）
+        backfillReturnReservations();
+    }
+
+    /**
+     * 把老库里既有的退货单明细回填成退货占用台账（F10-a）。
+     *
+     * <p>台账是本轮新增的表：新库/新单由 {@code ReturnService.createReturnOrder} 在建单事务里写入，
+     * 而**建表之前就已存在的退货单**没有台账行——不回填的话，那些交易的可退余量会被算成满额，
+     * 又能再退一次。这里按 (退货单号, 商品) 汇总明细写入，已驳回的单不占额度。</p>
+     *
+     * <p>幂等：按 (return_order_id, product_id) 去重，重复执行不会重复插入；数据是推导出来的，
+     * 失败只告警并在下次启动重试，不阻塞应用启动（与建表失败必须抛出不同——那条会掩盖结构问题）。</p>
+     *
+     * @return 本次回填的行数
+     */
+    public static int backfillReturnReservations() {
+        String sql = """
+            INSERT INTO return_reservations (return_order_id, original_transaction_id, product_id, quantity, status)
+            SELECT roi.return_order_id, ro.original_transaction_id, COALESCE(roi.product_id, 0),
+                   SUM(roi.return_quantity),
+                   CASE ro.status WHEN 'COMPLETED' THEN 'COMPLETED' WHEN 'APPROVED' THEN 'APPROVED' ELSE 'PENDING' END
+            FROM return_order_items roi
+            JOIN return_orders ro ON roi.return_order_id = ro.return_order_id
+            WHERE ro.status <> 'REJECTED'
+              AND NOT EXISTS (SELECT 1 FROM return_reservations rr
+                              WHERE rr.return_order_id = roi.return_order_id
+                                AND rr.product_id = COALESCE(roi.product_id, 0))
+            GROUP BY roi.return_order_id, ro.original_transaction_id, COALESCE(roi.product_id, 0), ro.status
+            """;
+        try (Connection conn = getConnection();
+             PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            int inserted = pstmt.executeUpdate();
+            if (inserted > 0) {
+                logger.info("退货占用台账回填完成: {} 行", inserted);
+            }
+            return inserted;
+        } catch (SQLException e) {
+            logger.warn("退货占用台账回填失败（幂等，下次启动重试）: {}", e.getMessage(), e);
+            return 0;
         }
     }
 
@@ -944,6 +987,26 @@ public class DatabaseManager {
                     INDEX idx_original_transaction (original_transaction_id),
                     INDEX idx_status (status)
                 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='退货订单表'
+                """);
+
+    }
+
+    private static void createTableReturnReservations(Statement stmt) throws SQLException {
+            // F10：退货占用台账——建单校验"累计退货量 ≤ 原销量"的落库依据
+            stmt.execute("""
+                CREATE TABLE IF NOT EXISTS return_reservations (
+                    id INT PRIMARY KEY AUTO_INCREMENT,
+                    return_order_id VARCHAR(50) NOT NULL COMMENT '退货单号',
+                    original_transaction_id VARCHAR(50) NOT NULL COMMENT '原交易ID',
+                    product_id INT NOT NULL COMMENT '商品ID（历史数据为空时按 0）',
+                    quantity INT NOT NULL COMMENT '占用数量',
+                    status VARCHAR(20) NOT NULL DEFAULT 'PENDING' COMMENT '台账状态',
+                    create_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    update_time TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                    UNIQUE KEY uk_return_product (return_order_id, product_id),
+                    INDEX idx_tx_product (original_transaction_id, product_id),
+                    FOREIGN KEY (return_order_id) REFERENCES return_orders(return_order_id) ON DELETE CASCADE
+                ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci COMMENT='退货占用台账'
                 """);
 
     }

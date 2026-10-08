@@ -121,16 +121,30 @@ public class ReturnService {
     }
 
     /**
-     * 创建退货订单（事务）
+     * 创建退货订单（事务）。
+     *
+     * <p><b>F10</b>：建单校验（累计退货量 ≤ 原销量）不再是"事务外 check-then-act"。
+     * 事务内先 {@code SELECT ... FOR UPDATE} 锁住原交易行使同一交易的建单串行化，
+     * 再用占用台账（{@code return_reservations}）重算可退余量；通过后与退货单、明细、
+     * 台账一起提交。这样两个终端同时提交时只有一个能成功，另一个会被余量校验拦下。</p>
      *
      * <p>退货单号由 MAX+1 生成，多进程并发创建时可能撞唯一键；失败时整体重试一次
      * （事务只做纯插入，失败已回滚，重放安全），提升并发场景成功率。</p>
      */
     public static boolean createReturnOrder(ReturnOrder returnOrder, List<ReturnOrderItem> items) {
+        if (returnOrder == null) {
+            return false;
+        }
+        final Map<Integer, Integer> requested = aggregateRequestedQuantities(items);
         final int maxAttempts = 2;
         for (int attempt = 1; attempt <= maxAttempts; attempt++) {
             try {
                 boolean success = DatabaseManager.executeBooleanTransaction(conn -> {
+                    // 行锁 + 余量校验必须与插入同事务：事务外的校验挡不住并发建单
+                    if (!lockAndValidateReturnable(conn, returnOrder.originalTransactionId, requested)) {
+                        return false;
+                    }
+
                     returnOrder.returnOrderId = DAOFactory.getInstance().getReturnOrderDAO().generateNextReturnOrderId(conn);
                     returnOrder.status = "PENDING";
 
@@ -144,8 +158,12 @@ public class ReturnService {
                         return false;
                     }
 
-                    return items == null || items.isEmpty()
-                        || DAOFactory.getInstance().getReturnOrderItemDAO().batchInsertWithConnection(conn, items);
+                    if (items != null && !items.isEmpty()
+                        && !DAOFactory.getInstance().getReturnOrderItemDAO().batchInsertWithConnection(conn, items)) {
+                        return false;
+                    }
+
+                    return insertReservations(conn, returnOrder, requested);
                 });
 
                 if (success) {
@@ -174,6 +192,84 @@ public class ReturnService {
         }
         logger.error("创建退货订单失败，已达最大重试次数: {}", maxAttempts);
         return false;
+    }
+
+    /** 本次退货按商品跨行合计的数量（退货明细可能把同一商品拆成多行）。 */
+    private static Map<Integer, Integer> aggregateRequestedQuantities(List<ReturnOrderItem> items) {
+        Map<Integer, Integer> requested = new java.util.LinkedHashMap<>();
+        if (items == null) {
+            return requested;
+        }
+        for (ReturnOrderItem item : items) {
+            if (item != null && item.returnQuantity > 0) {
+                requested.merge(item.productId, item.returnQuantity, Integer::sum);
+            }
+        }
+        return requested;
+    }
+
+    /**
+     * 锁原交易行并校验可退余量（F10）。必须在建单事务内调用。
+     *
+     * <p>可退余量 = 原单该商品数量（跨行合计）− 台账占用合计（排除已驳回退货单）。</p>
+     *
+     * <p>两种数据缺失时**放行但仍记台账**，避免把老数据挡死：① 原交易行不存在（历史/测试数据）；
+     * ② 原交易没有 {@code transaction_items} 明细（无从得知基数）。真实结账一定写明细，
+     * 因此这条兜底只影响无法校验的脏数据，且会留 WARN。</p>
+     *
+     * @return 允许建单
+     */
+    private static boolean lockAndValidateReturnable(Connection conn, String transactionId,
+                                                     Map<Integer, Integer> requested) throws SQLException {
+        if (transactionId == null || transactionId.isBlank()) {
+            logger.warn("退货建单缺少原交易号，拒绝创建");
+            return false;
+        }
+        if (requested.isEmpty()) {
+            return true;
+        }
+        if (!DAOFactory.getInstance().getTransactionDAO().lockForReturnWithConnection(conn, transactionId)) {
+            logger.warn("退货建单的原交易不存在，拒绝创建: transactionId={}", transactionId);
+            return false;
+        }
+        Map<Integer, Integer> original = DAOFactory.getInstance().getTransactionDAO()
+            .sumItemQuantitiesByProductWithConnection(conn, transactionId);
+        if (original.isEmpty()) {
+            logger.warn("原交易无明细，跳过可退量校验（仅记台账）: transactionId={}", transactionId);
+            return true;
+        }
+        Map<Integer, Integer> reserved = DAOFactory.getInstance().getReturnReservationDAO()
+            .sumReservedQuantitiesWithConnection(conn, transactionId);
+        for (Map.Entry<Integer, Integer> entry : requested.entrySet()) {
+            int productId = entry.getKey();
+            int available = original.getOrDefault(productId, 0);
+            int alreadyReserved = reserved.getOrDefault(productId, 0);
+            if (alreadyReserved + entry.getValue() > available) {
+                logger.warn("退货数量超出可退余量，拒绝创建: transactionId={}, productId={}, 已占用={}, 本次={}, 原单={}",
+                    transactionId, productId, alreadyReserved, entry.getValue(), available);
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /** 把本次退货的占用写进台账（与退货单同事务；F10-b 会在此基础上同步行状态）。 */
+    private static boolean insertReservations(Connection conn, ReturnOrder returnOrder,
+                                              Map<Integer, Integer> requested) throws SQLException {
+        if (requested.isEmpty()) {
+            return true;
+        }
+        java.util.List<ReturnReservation> reservations = new java.util.ArrayList<>();
+        for (Map.Entry<Integer, Integer> entry : requested.entrySet()) {
+            ReturnReservation reservation = new ReturnReservation();
+            reservation.returnOrderId = returnOrder.returnOrderId;
+            reservation.originalTransactionId = returnOrder.originalTransactionId;
+            reservation.productId = entry.getKey();
+            reservation.quantity = entry.getValue();
+            reservation.status = ReturnReservation.STATUS_PENDING;
+            reservations.add(reservation);
+        }
+        return DAOFactory.getInstance().getReturnReservationDAO().batchInsertWithConnection(conn, reservations);
     }
 
     /**
