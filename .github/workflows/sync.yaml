@@ -13,11 +13,29 @@ jobs:
     runs-on: ubuntu-latest
     
     steps:
+      # 前置检查：GH_PAT 缺失/过期是本作业最常见的失败原因，且默认报错极难定位——
+      # 表现为 actions/checkout 的 `could not read Username for 'https://github.com'`，
+      # 看着像"仓库地址不对"，实际是 secret 没配。这里提前给出可执行的指引。
+      - name: Check GH_PAT secret
+        env:
+          GH_PAT: ${{ secrets.GH_PAT }}
+        run: |
+          if [ -z "$GH_PAT" ]; then
+            echo "::error::仓库 secret GH_PAT 未设置或为空，同步无法进行。"
+            echo "::error::处理：GitHub 仓库 Settings → Secrets and variables → Actions → New repository secret，"
+            echo "::error::名称填 GH_PAT，值为具备写权限的 Personal Access Token"
+            echo "::error::（classic 勾 repo；fine-grained 需 Contents: Read and write）。"
+            echo "::error::若已有该 secret 仍报错，多半是 PAT 已过期，请重新生成后更新。"
+            exit 1
+          fi
+          echo "GH_PAT 已配置（长度 ${#GH_PAT}）"
+      
       - name: Checkout GitHub repo
         uses: actions/checkout@v5
         with:
           token: ${{ secrets.GH_PAT }}
           fetch-depth: 0
+          persist-credentials: true
 
       - name: Configure Git
         run: |
@@ -72,4 +90,11 @@ jobs:
           # 提交并强制推送（时间戳用北京时间，便于与 cron 注释对照）
           git add .
           git commit -m "Sync from Gitee $(TZ=Asia/Shanghai date +%Y-%m-%d-%H:%M)" || echo "No changes"
-          git push origin main --force
+          # 推送失败时给出可定位的提示（凭据问题最常见：PAT 过期/权限不足）
+          if ! git push origin main --force; then
+            echo "::error::推送失败。多为 GH_PAT 已过期或权限不足"
+            echo "::error::（force push 需要对 Contents 的写权限；classic PAT 勾 repo，"
+            echo "::error::fine-grained 需 Contents: Read and write）。"
+            echo "::error::也可能是 protected branch 规则拒绝了 force push。"
+            exit 1
+          fi
