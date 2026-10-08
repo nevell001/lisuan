@@ -45,6 +45,7 @@
 | TD-038 | `POST /api/invoices/from-transaction` 请求体可自报开票方信息/`createBy`/`taxRate` | 安全 | **待处理（2026-09）**：同一条路由的 `PUT /api/invoices/seller-info` 是管理员专属，此处却可覆盖全局开票方并伪造开票人 | 发票 |
 | TD-039 | `POST /api/invoices/{id}/print` 可写任意 `pdfPath`/`imagePath`；mock 支付模式回调密钥熵低 | 安全 | **待处理（2026-09，低危）**：路径字段目前不被当文件读取（TD-001 门禁守着），影响限于数据伪造；mock 模式仅出现在本地未跟踪配置 | 发票/支付 |
 | TD-040 | 设置页下拉/落库值把**本地化显示串**当数据（切语言后设置失配、被静默重置成默认值） | 正确性/口径 | **已修复（2026-10）**：7 个下拉改稳定代码 + `I18nUiUtils` 显示层映射；`settings` 表落代码、`paperSize`/备份频率老值归一；`BackupService.intervalHoursForFrequency` 补代码分支；**桌面冒烟另抓出"备份频率从不回读"并修掉**；门禁 2 项 + 冒烟 2 项 + 行为测试 2 组 | 多语言设置 |
+| TD-041 | REST API 的语言策略未定：**枚举显示名/错误与打印文案写死中文**却直接进响应（`deviceType`/`status`/`taskType`） | 口径/契约定稿 | **待决定（2026-10）**：仓库内无 API 消费方，需先确认外部终端；`ApiLocaleResolver` + `I18nManager.get(Locale,key)` 基建已具备。三条路（只返代码 / 按请求语言本地化 / 双字段）见专节 | API 多语言 |
 
 > 本节条目来自 2026-09 的全量审计（`mvn verify` 三关全绿的前提下，逐条回读代码 + 真实
 > Javalin 最小复现验证）。
@@ -1868,7 +1869,7 @@ PUT /API/members/1    -> HTTP 404
 | 位置 | 处理 |
 |---|---|
 | `SettingsController` 税率校验文案（原 1214/1217） | `errorMessage += "税率…"` → `settings.tax_rate_range_error` / `settings.tax_rate_format_error`（拼进变量再 `showError`，主规则看不见，靠新锚点钉住） |
-| `SettingsController` 测试打印正文（原 1402-1410） | 6 个字段名 → `settings.test_print.device_name/device_id/device_type/ip_address/port/time`（各带 `{0}`）。**遗留**：`设备类型` 的**值**仍是 `PrinterDeviceType.getDisplayName()` 里的中文枚举名，且该值同时作为 `PrintApiController` 的 JSON 字段 `deviceType` 返回——"显示值即数据值"，已登记在 TD-040 的"同批未做"（需先定 API 语言口径） |
+| `SettingsController` 测试打印正文（原 1402-1410） | 6 个字段名 → `settings.test_print.device_name/device_id/device_type/ip_address/port/time`（各带 `{0}`）。**遗留**：`设备类型` 的**值**仍是 `PrinterDeviceType.getDisplayName()` 里的中文枚举名，且该值同时作为 `PrintApiController` 的 JSON 字段 `deviceType` 返回——"显示值即数据值"，**已转 TD-041**（REST API 语言策略，待决定） |
 | `SettingsController` 文件选择器过滤标签（原 873/1533/1536） | → `runtime.file_filter_images` / `file_filter_csv` / `file_filter_all`（`ExtensionFilter` 的标签参数不在硬编码门禁的可见调用名单里，靠新锚点钉住） |
 | `PurchaseOrderController` **995**（功能缺陷） | 删除 `getText().startsWith("总金额:")` 的节点匹配：标签文字由 `runtime.total_amount_value` 按语言渲染，en/zh_TW 下前缀对不上，**总金额永远不刷新**。改为 `showOrderDialog` 创建标签时 `itemTable.getProperties().put(TOTAL_AMOUNT_LABEL_KEY, totalLabel)`，`updateItemTotal` 直接取引用。顺带修掉同一处的第二个缺陷：编辑模式下原先在标签创建**之前**调用（`parent == null`），既误弹"请选择采购订单"、总金额又停在 0；现在改到 `root.getChildren().addAll(...)` 之后刷新 |
 
@@ -1881,7 +1882,7 @@ PUT /API/members/1    -> HTTP 404
 | 文件 | 残留（2026-10-08 复核） | 备注 |
 |---|---|---|
 | `PurchaseOrderController` | 489 `String.format("%s - %s (%s级)")`（供应商展示串） | 下拉/表格可见；`级` 是量词、值来源于数据，需单独的带参 key |
-| 枚举**显示值**（TD-002 同款） | `PrinterDeviceType.getDisplayName()`（中文枚举名同时进 API JSON 与设置页测试打印）、`PrintApiController` 自己的测试打印正文 | 前者已登记在 **TD-040 的"同批未做"**（API 语言口径待定）；后者是 API 触发的打印件，语言来源未定 |
+| 枚举**显示值**（TD-002 同款） | `PrinterDeviceType`/`PrinterDeviceStatus`/`PrintTaskType`/`PrintTaskStatus` 的中文枚举名进 API JSON（`deviceType`/`status`/`taskType`）与设置页测试打印；`PrintApiController` 自己的文案与测试打印正文 | **已转 TD-041**（REST API 语言策略，待决定） |
 
 **下拉值口径的实测订正与处理（2026-10-08）**：上表原先列的
 `TransactionController`/`PurchaseOrderController` 筛选下拉**已经**是 TD-002 模式了——
@@ -1943,13 +1944,59 @@ item 改稳定代码、`settings` 表落代码、`paperSize` 老显示串归一�
 - `DataServiceTest.backupFrequencyMapsToHours`：扩到代码分支（原 8 条中英文断言保留，
   验证"老值仍能算出周期"）。
 
-**同批未做（需决定，故未擅改）**：
-- `PrinterDeviceType.getDisplayName()` 的中文枚举名既是设置页测试打印的**显示值**，又是
-  `PrintApiController` 的 JSON 字段 `deviceType`（3 处）。API 响应该用稳定枚举名还是按请求语言
-  本地化，是独立设计（还要定 `Accept-Language` 口径），所以本批只改了打印页的**字段名标签**，
-  枚举**值**保持原样。
-- `PrintApiController` 自己的测试打印正文（`打印机测试页`/`设备名称: `…）仍是硬编码中文，
-  与设置页那份重复；它是 API 触发的打印件、语言来源未定，单独一条处理。
+**同批未做（需决定，故未擅改）**：全部转 **TD-041**（REST API 语言策略）——
+`PrinterDeviceType` 等枚举的中文显示名同时进 API JSON 与设置页测试打印的值，
+`PrintApiController` 自己的文案/测试打印正文也仍是中文。本批只改了设置页打印的**字段名标签**，
+枚举**值**与 API 响应保持原样。
+
+## TD-041 REST API 的语言策略未定（枚举显示名 / 错误与打印文案）（待决定，2026-10）
+
+**现状（实测）**：API 侧**已经有**按请求解析语言的基建，而且刻意不改进程级状态——
+`ApiLocaleResolver.of(ctx)`（`?locale=` → `Accept-Language` → 当前登录用户偏好 → 进程语言，
+结果缓存在请求属性里，见 `api/ApiLocaleResolver.java`）配 `I18nManager.get(Locale, String)`
+（"按指定语言取文案，**不改变当前语言**"，注释就写明是给 REST 用的）。
+但**目前只有 `I18nApiController` 用了它**，其余 API 响应里的展示文本仍是写死中文：
+
+| 类别 | 站点（2026-10-08 实测行号） | 说明 |
+|---|---|---|
+| 枚举显示名（中文缓存在枚举常量里） | `PrintApiController` JSON：`deviceType` = `PrinterDeviceType.getDisplayName()`（63/100/141）；`status` = `PrinterDeviceStatus.getDisplayName()`（64/101/142）；任务列表 `taskType` = `PrintTaskType.getDisplayName()`（711）；`task.getStatus().getDisplayName()`（716，`PrintTaskStatus`） | 与 TD-040 / F14 同类反模式：**显示文本被当数据字段返回**，且 4 个枚举都在常量里存中文 |
+| 服务端文案 | `PRINTER_NOT_FOUND_PREFIX = "打印机不存在: "`（35/133）；`"error", "打印机未连接"`（428/520/683） | `PrintApiControllerTest:68` 正断言这个中文，改文案要连测试一起改 |
+| 打印正文 | `POST /api/printers/{id}/test-print` 的 `打印机测试页`/`设备名称: `…/`打印时间: `（436-448） | 与设置页那份重复；设置页那份已迁 i18n（TD-040 同批） |
+| 桌面端 | `SettingsController:1269` 测试打印的「设备类型」**值**仍是中文枚举名（标签已 i18n） | 同上 |
+
+**对照组（本 TD 不动）**：其它 API 返回的是**落库数据值**——如 `payment_method` 落库就是中文「现金」、
+会员等级存中文。这些是数据不是展示文本，按 TD-002 口径"数据值不翻译、展示层翻译"。
+
+**要决定的三条路**（可组合）：
+
+- **A. API 只返稳定代码**：`deviceType` → `NETWORK`、`status` → `CONNECTED`、`taskType` → `RECEIPT`；
+  本地化交给客户端。优点：与"数据值不翻译"一致；不必给枚举维护一套语言包映射；
+  没有全局状态/并发问题（`I18nManager` 是进程级单例）。缺点：**改响应契约**（现有值从中文变代码）。
+- **B. 按请求语言本地化**：沿用 `ApiLocaleResolver.of(ctx)` + `I18nManager.get(locale, key)`，契约不变。
+  需要：① 4 个枚举去掉常量里的中文，改 `getDisplayKey()`；② API 文案与打印正文加 key；
+  ③ **补 `I18nManager.get(Locale, String, Object...)`**——现在只有 `get(Locale,String)` 和
+  `get(String,Object...)`，带占位符的文案无法按请求语言渲染（已知缺口）；
+  ④ 定 `?locale=`/`Accept-Language` 都缺省时的回退（现为进程语言）。
+  风险：范围会膨胀成"是否所有 API 文案都本地化"。
+- **C. 结构化 + 展示双字段**：新增 `deviceTypeCode`/`taskTypeCode`，展示字段保留（可本地化）= B 的超集；
+  适合外部客户端"既要按代码判断、又要直接显示"。
+
+**阻塞点**：仓库内**没有** API 消费方（无 js/ts/vue/其它客户端；`docs/` 也没有 `deviceType` 的契约定稿，
+只有 `HARDWARE_ACCEPTANCE.md` 提到 `/api/printers`）。所以"改契约是否安全"必须由产品/外部终端确认。
+
+**建议顺序**：先确认消费方 → 若确认无可依赖方，优先 **A + 把打印正文/文案迁 i18n**
+（代码归代码、文本归文本，口径与 TD-002/TD-040 一致，且不用给枚举做语言包映射）；
+若确有客户端依赖现有中文文本，再退 B/C。
+
+**决定后的待办（逐条可拆）**：
+1. `PrintApiController` 的 `deviceType`/`status`/`taskType`/任务 `status`（A → `name()`；B/C → key + `ApiLocaleResolver`）。
+2. `SettingsController:1269` 打印正文的「设备类型」值（A → `I18nUiUtils` 的枚举名映射；B → `getDisplayKey()`）。
+3. `PrintApiController` 的错误文案 + 测试打印正文（B 时按 `ApiLocaleResolver.of(ctx)` 渲染，
+   并同步 `PrintApiControllerTest:68` 的中文断言）。
+4. 门禁：把"枚举常量不得缓存中文展示名"做成**通用规则**——现有
+   `HardcodedUiTextPolicyTest.inventoryAlertLevelNamesAreLocalized` 只钉了 `InventoryAlertController` 一处，
+   这 4 个 printer 枚举同类却无门禁。
+5. 若选 B/C：新增 `I18nManager.get(Locale, String, Object...)`。
 
 ### 本轮**未修**（状态与理由）
 

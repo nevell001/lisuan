@@ -807,7 +807,10 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   门禁 `SettingsDropdownValuePolicyTest`（源码，含"必须回读"断言）；
   冒烟 `SettingsControllerUITest`（真实 FXML + 控件，需显示环境：
   `mvn -Pui-tests -Dtest=SettingsControllerUITest test`，默认 `mvn verify` 排除）。
-  仍待决定：`PrinterDeviceType.getDisplayName()` 的中文枚举名同时进 API JSON，见 TD-040"同批未做"
+  仍待决定：**TD-041**（REST API 语言策略）——`PrinterDeviceType/PrinterDeviceStatus/PrintTaskType/
+  PrintTaskStatus` 的中文枚举名直接进 `PrintApiController` 的 JSON（`deviceType`/`status`/`taskType`），
+  且 `PrintApiController` 的文案与测试打印正文也是中文；`ApiLocaleResolver` + `I18nManager.get(Locale,key)`
+  基建已具备，但"只返代码 / 按请求语言本地化 / 双字段"三选一要先确认外部消费方
 - `I18nKeys.java` 里有**嵌套类**（`Menu.Help`、`Menu.Theme`、`Nav`、`Runtime`、`StatusMessage`…）：
   手工或用脚本改这个文件时**不要**"把块内常量行排序后重排"——那种写法会把嵌套类内的常量压平到外层，
   编译期才会以 `找不到符号` 暴露。新增常量要么严格落在所属嵌套类内，要么按类整体替换
