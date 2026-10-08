@@ -19,7 +19,6 @@ import java.util.Map;
 import java.util.Properties;
 import java.nio.file.Files;
 import java.nio.charset.StandardCharsets;
-import java.security.SecureRandom;
 import java.util.concurrent.TimeUnit;
 
 /**
@@ -29,11 +28,6 @@ import java.util.concurrent.TimeUnit;
 public class DatabaseManager {
 
     private static final Logger logger = LoggerFactoryUtil.getLogger(DatabaseManager.class);
-    private static final SecureRandom SECURE_RANDOM = new SecureRandom();
-
-    public static SecureRandom getSecureRandom() {
-        return SECURE_RANDOM;
-    }
 
     private static volatile HikariDataSource dataSource;
     private static volatile boolean initialized = false;
@@ -54,7 +48,6 @@ public class DatabaseManager {
     private static String connectionTestQuery = "SELECT 1";
     private static long validationTimeout = 3000;
     private static String dockerMysqlContainerName = "lisuan-mysql";
-    private static final String CONSOLE_SEPARATOR = "========================================";
     private static final String DEFAULT_DATABASE_NAME = "lisuan_system";
     private static final String OPERATION_LOGS_TABLE = "operation_logs";
     /** 用 'default' 伪用户存全局默认值的偏好表；其 username 不能加指向 users 的外键 */
@@ -361,9 +354,6 @@ public class DatabaseManager {
             createTableBackupRecords(stmt);
             createTableBackupConfig(stmt);
             upgradeTableStructure(stmt);
-
-            // 创建默认管理员用户（如果不存在）
-            createDefaultAdminUser(stmt);
 
             initialized = true;
             logger.info("MySQL 数据库初始化成功");
@@ -1440,103 +1430,6 @@ public class DatabaseManager {
             logger.warn("无法解析 users 时间列脏数据 {}，已跳过", raw);
             return null;
         }
-    }
-
-    /**
-     * 创建默认管理员用户（如果不存在）
-     */
-    private static void createDefaultAdminUser(Statement stmt) throws SQLException {
-        logger.info("检查默认用户...");
-
-        try (ResultSet rs = stmt.executeQuery("SELECT COUNT(*) as count FROM users")) {
-            if (rs.next() && rs.getInt("count") == 0) {
-                logger.info("创建默认管理员用户...");
-                // 生成随机初始密码并加密存储
-                String initialPassword = generateRandomPassword();
-                String hashedPassword = com.cashier.util.PasswordUtil.hashPassword(initialPassword);
-                long currentTime = System.currentTimeMillis();
-
-                // 使用 PreparedStatement 防止 SQL 注入
-                String sql = "INSERT INTO users (username, password, name, role, active, force_password_change, create_time, last_login_time) " +
-                             "VALUES (?, ?, ?, ?, ?, ?, ?, NULL)";
-
-                try (Connection conn = getConnection();
-                     PreparedStatement pstmt = conn.prepareStatement(sql)) {
-                    pstmt.setString(1, "admin");
-                    pstmt.setString(2, hashedPassword);
-                    pstmt.setString(3, "系统管理员");
-                    pstmt.setString(4, "admin");
-                    pstmt.setInt(5, 1);
-                    pstmt.setInt(6, 1);
-                    pstmt.setLong(7, currentTime);
-                    pstmt.executeUpdate();
-                }
-
-                logger.info("默认管理员用户创建成功");
-                // 安全提示：不在日志中记录用户名和明文密码，避免日志泄露凭据
-                logger.info("  初始密码已生成并使用 BCrypt 加密存储，请查看控制台输出获取临时密码");
-                printInitialAdminPassword(initialPassword);
-            } else {
-                logger.info("用户表已有数据，跳过创建默认用户");
-            }
-        }
-    }
-
-    private static void printInitialAdminPassword(String initialPassword) {
-        Console console = System.console();
-        PrintWriter writer = console == null ? new PrintWriter(System.err, true, StandardCharsets.UTF_8) : console.writer();
-        writer.println(CONSOLE_SEPARATOR);
-        writer.println("  默认管理员初始密码: " + initialPassword);
-        writer.println("  请妥善保存，首次登录后需立即修改！");
-        writer.println(CONSOLE_SEPARATOR);
-    }
-
-    /**
-     * 生成随机密码
-     * @return 随机生成的密码
-     */
-    private static String generateRandomPassword() {
-        // L-7: 增强密码复杂度——长度16位，包含大小写字母、数字、特殊字符
-        String upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        String lower = "abcdefghijklmnopqrstuvwxyz";
-        String digits = "0123456789";
-        String special = "!@#$%^&*()-_=+";
-        String all = upper + lower + digits + special;
-        StringBuilder sb = new StringBuilder(16);
-        // 确保每类字符至少出现一次
-        sb.append(upper.charAt(SECURE_RANDOM.nextInt(upper.length())));
-        sb.append(lower.charAt(SECURE_RANDOM.nextInt(lower.length())));
-        sb.append(digits.charAt(SECURE_RANDOM.nextInt(digits.length())));
-        sb.append(special.charAt(SECURE_RANDOM.nextInt(special.length())));
-        for (int i = 4; i < 16; i++) {
-            sb.append(all.charAt(SECURE_RANDOM.nextInt(all.length())));
-        }
-        // 打乱顺序
-        char[] arr = sb.toString().toCharArray();
-        for (int i = arr.length - 1; i > 0; i--) {
-            int j = SECURE_RANDOM.nextInt(i + 1);
-            char tmp = arr[i]; arr[i] = arr[j]; arr[j] = tmp;
-        }
-        return new String(arr);
-    }
-
-    /**
-     * 检查数据库是否已初始化（包含数据）
-     * @return 如果数据库包含数据返回 true，否则返回 false
-     */
-    public static boolean isDatabasePopulated() {
-        try (Connection conn = getConnection();
-             Statement stmt = conn.createStatement();
-             ResultSet rs = stmt.executeQuery("SELECT COUNT(*) as count FROM users")) {
-
-            if (rs.next() && rs.getInt("count") > 0) {
-                return true;
-            }
-
-        } catch (SQLException e) {
-            logger.error("检查数据库状态失败: {}", e.getMessage(), e);
-        }
-        return false;
     }
 
     /**

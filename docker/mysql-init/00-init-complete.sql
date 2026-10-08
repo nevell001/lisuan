@@ -246,10 +246,8 @@ SELECT '=== 基础表创建完成 ===' AS status;
 -- 注意：基础表已在第二部分创建
 -- 下面的 ALTER TABLE 语句仅用于从旧版本升级时的向后兼容
 
--- 创建默认管理员用户（如果不存在）
--- 密码: admin123 (明文，首次登录时强制修改密码)
-INSERT IGNORE INTO users (username, password, name, role, active, force_password_change, create_time, last_login_time)
-VALUES ('admin', '$2a$10$EVvVqIyQ7Ve2dZb9DKnv/u8JVIyfsp6flS1q9qTVaDB1X4SUTywsu', '系统管理员', 'admin', 1, 1, UNIX_TIMESTAMP() * 1000, NULL);
+-- 不创建默认管理员：空库首次启动时由应用的首次运行向导收集管理员账号与密码，
+-- 避免仓库里出现公开的默认口令。
 
 -- 为 products 表添加 product_code 字段（如果不存在）
 -- 注意：product_code 字段已在 CREATE TABLE 中定义（见第二部分）
@@ -948,10 +946,7 @@ SELECT '=== 表结构升级完成 ===' AS status;
 -- 第四部分：基础数据
 -- ============================================
 
--- 创建默认管理员用户（如果不存在）
--- 密码: admin123 (明文，首次登录时强制修改密码)
-INSERT IGNORE INTO users (username, password, name, role, active, force_password_change, create_time, last_login_time)
-VALUES ('admin', '$2a$10$EVvVqIyQ7Ve2dZb9DKnv/u8JVIyfsp6flS1q9qTVaDB1X4SUTywsu', '系统管理员', 'admin', 1, 1, UNIX_TIMESTAMP() * 1000, NULL);
+-- 不创建默认管理员：空库首次启动时由应用的首次运行向导收集管理员账号与密码。
 
 -- ============================================
 -- v2.5+ 表（补建）：发票 / 备份 / 支付 / 挂单 / 登录尝试 / 系统设置

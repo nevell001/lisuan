@@ -653,7 +653,7 @@ SyncManager.broadcastTransactionComplete(transactionId);
 
 ## Quick Reference
 
-**Default Login:** admin / admin123
+**First Run:** no default credentials — on an empty DB the app shows the first-run wizard (`FirstRunSetupDialog`) to create the admin account; `docker/mysql-init` seeds no users.
 
 **Config Files:**
 - `config/database.properties` - Database connection (HikariCP pool settings included; password via `CASHIER_DB_PASSWORD` from `.env`/environment, legacy `CASHER_DB_PASSWORD` accepted)

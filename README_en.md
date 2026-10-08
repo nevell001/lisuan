@@ -111,10 +111,9 @@ LiSuan Cashier System is a desktop POS (Point of Sale) cashier system built with
 - MySQL 8.4 or compatible MySQL 8.0/8.3
 - Docker Compose (optional, for quick MySQL startup)
 
-### Default Accounts
-- Username: `admin`
-- Initial Password: `admin123`
-- *It is highly recommended to change the password immediately upon first login.*
+### First Run
+- On an empty database, the app shows a **first-run wizard** that lets the operator create the administrator account and set its password.
+- No default credentials ship with the repository (`docker/mysql-init` seeds no users either).
 
 ### Starting Database
 

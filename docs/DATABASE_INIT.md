@@ -357,7 +357,7 @@ docker run --rm -v lisuan-mysql-data:/data -v $(pwd):/backup alpine tar xzf /bac
 
 | 用户名 | 密码 | 角色 | 说明 |
 |--------|------|------|------|
-| admin | admin123 | admin | 系统管理员 |
+| admin | 首次运行向导中设置（无默认口令） | admin | 系统管理员，空库首次启动时由向导创建 |
 | cashier | 自行生成的强随机密码 | cashier | 应用专用用户 |
 
 ### 权限说明

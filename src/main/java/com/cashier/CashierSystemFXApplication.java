@@ -142,7 +142,7 @@ public class CashierSystemFXApplication extends Application {
     }
 
     /** 数据库阶段的结果；{@code null} 结果表示用户在配置向导里取消了配置 */
-    private record StartupDatabase(String languageTag) {
+    private record StartupDatabase(String languageTag, boolean needsFirstRunSetup) {
     }
 
     /**
@@ -220,7 +220,10 @@ public class CashierSystemFXApplication extends Application {
         // 支付渠道必须在收银界面加载前完成配置，未配置渠道保持禁用。
         com.cashier.service.PaymentService.init();
 
-        return new StartupDatabase(DataService.loadLanguagePreference());
+        // 空库（一个账号都没有）时走首次运行向导：不再自动生成随机密码，也没有 admin/admin123 种子
+        boolean needsFirstRunSetup = com.cashier.service.FirstRunSetupService.needsFirstRunSetup();
+
+        return new StartupDatabase(DataService.loadLanguagePreference(), needsFirstRunSetup);
     }
 
     /**
@@ -242,7 +245,7 @@ public class CashierSystemFXApplication extends Application {
 
         logger.info("启动阶段: 数据库就绪，耗时 {}ms", System.currentTimeMillis() - startedAt);
         try {
-            finishStartup(splash, database.languageTag());
+            finishStartup(splash, database);
         } catch (Throwable t) {
             logger.error("应用初始化失败", t);
             splash.close();
@@ -253,12 +256,13 @@ public class CashierSystemFXApplication extends Application {
     /**
      * 启动第二阶段（FX 线程）：应用图标、语言、登录界面、主窗口与后台服务。
      */
-    private void finishStartup(SplashWindow splash, String savedLanguage) {
+    private void finishStartup(SplashWindow splash, StartupDatabase database) {
         splash.updateProgress(0.5, "正在加载界面...");
 
         // 立即设置应用图标
         setupApplicationIcon();
 
+        String savedLanguage = database.languageTag();
         I18nManager.getInstance().setLocale(savedLanguage);
         logger.info("应用启动 - 已加载语言偏好: {}, I18nManager 当前语言: {}",
             savedLanguage, I18nManager.getInstance().getCurrentLanguageTag());
@@ -282,8 +286,34 @@ public class CashierSystemFXApplication extends Application {
         splash.updateProgress(1.0, "即将完成...");
         splash.close();
 
+        // 等启动窗口关掉、事件循环空闲后再弹模态向导，否则会卡住启动画面的收尾
+        if (database.needsFirstRunSetup()) {
+            Platform.runLater(this::showFirstRunSetup);
+        }
+
         // 异步初始化后台服务 - 启动后立即执行
         startBackgroundServices();
+    }
+
+    /**
+     * 首次运行向导：空库启动时先创建管理员账号，再进主界面。
+     *
+     * <p>空库不再由应用自建随机密码（javaw/双击启动看不到控制台输出），也不再依赖
+     * SQL 里的 admin/admin123 种子；向导里创建成功即视为完成登录，直接进入主界面。</p>
+     */
+    private void showFirstRunSetup() {
+        java.util.Optional<User> created = FirstRunSetupDialog.showAndWait(primaryStage);
+        if (created.isEmpty()) {
+            // 一个账号都没有就无路可登：取消向导等于放弃初始化
+            logger.warn("用户在首次运行向导中取消创建管理员，应用退出");
+            exitApplication();
+            return;
+        }
+
+        FXUtils.showInfoAlert(
+            I18nManager.getInstance().get("firstrun.created_title"),
+            I18nManager.getInstance().get("firstrun.created_message"));
+        switchToMainView(created.get());
     }
 
     /**

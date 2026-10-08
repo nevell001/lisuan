@@ -30,7 +30,7 @@ mvn javafx:run                # run app (needs display + running MySQL)
 - Schema is auto-created/upgraded **in Java** on every startup by `util/DatabaseManager.initializeDatabase()` (`CREATE TABLE IF NOT EXISTS` + idempotent `ALTER` in try/catch, e.g. `products.is_hot`). When adding a table: make that change **here** (executable source of truth), not just in a SQL file. `docker/mysql-init/00-init-complete.sql` is the full init; the `07-`/`08-`/`09-`/`10-`/`11-`/`99-` scripts are for manual upgrades (not auto-mounted by compose).
 - MySQL conn comes from `config/database.properties` (gitignored; copy `config/database.properties.example`). Password can be overridden at launch with `CASHIER_DB_PASSWORD`/`CASHER_DB_PASSWORD`.
 - `docker compose up -d mysql` **fails unless `.env` exists** (compose uses required-var expansion `MYSQL_ROOT_PASSWORD?...`). Copy `.env.example` → `.env` and set real secrets.
-- Default login: `admin` / `admin123`.
+- **No default credentials:** on an empty database the app shows a first-run wizard (`FirstRunSetupDialog`) that collects the admin account; `docker/mysql-init` seeds no users and no default password exists anywhere.
 - `config/*.properties`, `.env`, `logs/*.log`, `target/` are gitignored — never commit secrets.
 
 ## Non-obvious conventions

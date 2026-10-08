@@ -271,6 +271,6 @@ echo Next Steps:
 echo   1. Use the GUI configuration tool to save database settings
 echo   2. Click Save ^& Start in the GUI, or run start.bat later
 echo.
-echo Default Login: admin / admin123
+echo First Run: the app will ask you to create the administrator account
 echo.
 pause
