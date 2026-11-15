@@ -104,6 +104,7 @@ class ApiLanguageContractPolicyTest {
     private static final List<String> MIGRATED_CONTROLLERS = List.of(
         "AuthController.java",
         "BackupApiController.java",
+        "HoldOrderApiController.java",
         "I18nApiController.java",
         "InventoryApiController.java",
         "InvoiceApiController.java",

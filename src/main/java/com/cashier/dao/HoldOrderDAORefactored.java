@@ -1,6 +1,7 @@
 package com.cashier.dao;
 
 import com.cashier.model.HoldOrder;
+import com.cashier.model.PageResult;
 
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -8,6 +9,7 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -129,6 +131,60 @@ public class HoldOrderDAORefactored extends BaseDAO {
      */
     public int updateStatus(int id, int status) throws SQLException {
         return executeUpdate("UPDATE hold_orders SET status = ? WHERE id = ?", status, id);
+    }
+
+    /**
+     * 仅当当前状态等于 {@code expected} 时才更新（取单/取消的 CAS）。
+     *
+     * @return 受影响行数；0 表示记录不存在或状态已被其他终端改变
+     */
+    public int updateStatusIfCurrent(int id, int expected, int target) throws SQLException {
+        return executeUpdate(
+            "UPDATE hold_orders SET status = ? WHERE id = ? AND status = ?",
+            target, id, expected);
+    }
+
+    /**
+     * 分页查询挂单，按挂单时间倒序。
+     *
+     * @param userId 为 null 时查全部用户（仅管理员使用）
+     * @param status 为 null 时不限状态
+     */
+    public PageResult<HoldOrder> findPage(Integer userId, Integer status, int pageNum, int pageSize)
+            throws SQLException {
+        int safePage = Math.max(1, pageNum);
+        int safeSize = Math.max(1, pageSize);
+        List<Object> params = new ArrayList<>();
+        String where = buildWhere(userId, status, params);
+        long total = count(userId, status);
+
+        params.add(safeSize);
+        params.add((safePage - 1) * safeSize);
+        List<HoldOrder> rows = queryList(
+            "SELECT * FROM hold_orders" + where
+                + " ORDER BY hold_date DESC, hold_time DESC, id DESC LIMIT ? OFFSET ?",
+            ORDER_MAPPER, params.toArray());
+        return new PageResult<>(rows, safePage, safeSize, total);
+    }
+
+    /** 与 {@link #findPage} 相同过滤条件的总数。 */
+    public long count(Integer userId, Integer status) throws SQLException {
+        List<Object> params = new ArrayList<>();
+        String where = buildWhere(userId, status, params);
+        return queryLong("SELECT COUNT(*) FROM hold_orders" + where, params.toArray());
+    }
+
+    private static String buildWhere(Integer userId, Integer status, List<Object> params) {
+        StringBuilder where = new StringBuilder(" WHERE 1=1");
+        if (userId != null) {
+            where.append(" AND user_id = ?");
+            params.add(userId);
+        }
+        if (status != null) {
+            where.append(" AND status = ?");
+            params.add(status);
+        }
+        return where.toString();
     }
 
     /**

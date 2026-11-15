@@ -160,6 +160,7 @@ public class ApiServer {
         registerHealthAndAuthRoutes();
         registerProductRoutes();
         registerMemberRoutes();
+        registerHoldOrderRoutes();
         registerTransactionRoutes();
         registerInventoryRoutes();
         registerReportRoutes();
@@ -200,6 +201,14 @@ public class ApiServer {
         app.post("/api/members", MemberApiController::create);
         app.put("/api/members/{id}", MemberApiController::update);
         app.post("/api/members/{id}/recharge", MemberApiController::recharge);
+    }
+
+    private void registerHoldOrderRoutes() {
+        app.get("/api/hold-orders", HoldOrderApiController::list);
+        app.get("/api/hold-orders/{id}", HoldOrderApiController::get);
+        app.post("/api/hold-orders", HoldOrderApiController::create);
+        app.post("/api/hold-orders/{id}/resume", HoldOrderApiController::resume);
+        app.post("/api/hold-orders/{id}/cancel", HoldOrderApiController::cancel);
     }
 
     private void registerTransactionRoutes() {

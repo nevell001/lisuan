@@ -46,9 +46,9 @@ public class HoldOrder {
     }
 
     /**
-     * 生成订单号
+     * 生成订单号（时间戳 + 序号 + 进程随机段，与交易单号同一加固口径）。
      */
     public static String generateOrderNumber() {
-        return "HLD" + System.currentTimeMillis();
+        return com.cashier.service.TransactionService.generateTransactionId("HLD");
     }
 }
