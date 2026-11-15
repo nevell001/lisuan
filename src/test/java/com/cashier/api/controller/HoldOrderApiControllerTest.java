@@ -1,5 +1,6 @@
 package com.cashier.api.controller;
 
+import com.cashier.api.controller.HoldOrderApiController.CleanupView;
 import com.cashier.api.controller.HoldOrderApiController.CreateHoldRequest;
 import com.cashier.api.controller.HoldOrderApiController.HoldItemRequest;
 import com.cashier.api.controller.HoldOrderApiController.HoldOrderView;
@@ -19,6 +20,10 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.sql.Connection;
+import java.sql.Date;
+import java.sql.PreparedStatement;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -28,6 +33,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @DisplayName("挂单 REST API")
@@ -240,6 +246,59 @@ class HoldOrderApiControllerTest extends DatabaseTestBase {
         assertEquals(HttpStatus.CONFLICT, again.status);
     }
 
+    @Test
+    @DisplayName("管理员硬删除挂单；不存在或非法 ID 分别 404/400")
+    void deleteRemovesRecordAndHandlesMissing() throws Exception {
+        HoldOrder order = insertHold(1, 2, "[]");
+
+        TestContext ctx = delete(order.id, user(9, "admin"));
+        HoldOrderApiController.delete(ctx.context);
+        assertEquals(HttpStatus.OK, ctx.status);
+        assertTrue((Boolean) body(ctx).get("success"));
+        assertNull(HOLD_DAO.findById(order.id));
+
+        TestContext again = delete(order.id, user(9, "admin"));
+        HoldOrderApiController.delete(again.context);
+        assertEquals(HttpStatus.NOT_FOUND, again.status);
+
+        TestContext invalid = new TestContext()
+            .withAttribute("currentUser", user(9, "admin"))
+            .withRequest(HandlerType.DELETE, "/api/hold-orders/abc")
+            .withPathParam("id", "abc");
+        HoldOrderApiController.delete(invalid.context);
+        assertEquals(HttpStatus.BAD_REQUEST, invalid.status);
+    }
+
+    @Test
+    @DisplayName("清理只删除超过指定天数的已取单/已取消记录，留给收银员的待取单不受影响")
+    void cleanupDeletesOnlyOldFinishedOrders() throws Exception {
+        HoldOrder oldResumed = insertHold(1, 1, "[]");
+        HoldOrder oldCancelled = insertHold(1, 2, "[]");
+        HoldOrder oldPending = insertHold(1, 0, "[]");
+        HoldOrder recentResumed = insertHold(1, 1, "[]");
+        setHoldDate(oldResumed.id, 30);
+        setHoldDate(oldCancelled.id, 30);
+        setHoldDate(oldPending.id, 30);
+
+        TestContext ctx = cleanup(user(9, "admin"), "7");
+        HoldOrderApiController.cleanup(ctx.context);
+
+        assertEquals(HttpStatus.OK, ctx.status);
+        assertEquals(2, ((CleanupView) body(ctx).get("data")).deleted);
+        assertNull(HOLD_DAO.findById(oldResumed.id));
+        assertNull(HOLD_DAO.findById(oldCancelled.id));
+        assertNotNull(HOLD_DAO.findById(oldPending.id), "待取单不能被清理");
+        assertNotNull(HOLD_DAO.findById(recentResumed.id), "未超过保留期的记录不能被清理");
+
+        TestContext defaults = cleanup(user(9, "admin"), null);
+        HoldOrderApiController.cleanup(defaults.context);
+        assertEquals(HttpStatus.OK, defaults.status, "省略 days 时默认保留 7 天");
+
+        TestContext invalid = cleanup(user(9, "admin"), "0");
+        HoldOrderApiController.cleanup(invalid.context);
+        assertEquals(HttpStatus.BAD_REQUEST, invalid.status);
+    }
+
     private static TestContext post(String path, Object requestBody, User user) {
         TestContext ctx = new TestContext().withAttribute("currentUser", user)
             .withRequest(HandlerType.POST, path);
@@ -253,6 +312,31 @@ class HoldOrderApiControllerTest extends DatabaseTestBase {
         return new TestContext().withAttribute("currentUser", user)
             .withRequest(HandlerType.GET, "/api/hold-orders/" + id)
             .withPathParam("id", String.valueOf(id));
+    }
+
+    private static TestContext delete(int id, User user) {
+        return new TestContext().withAttribute("currentUser", user)
+            .withRequest(HandlerType.DELETE, "/api/hold-orders/" + id)
+            .withPathParam("id", String.valueOf(id));
+    }
+
+    private static TestContext cleanup(User user, String days) {
+        TestContext ctx = new TestContext().withAttribute("currentUser", user)
+            .withRequest(HandlerType.POST, "/api/hold-orders/cleanup");
+        if (days != null) {
+            ctx.withQueryParam("days", days);
+        }
+        return ctx;
+    }
+
+    private static void setHoldDate(int id, int daysAgo) throws Exception {
+        try (Connection conn = getTestConnection();
+             PreparedStatement pstmt = conn.prepareStatement(
+                 "UPDATE hold_orders SET hold_date = ? WHERE id = ?")) {
+            pstmt.setDate(1, Date.valueOf(LocalDate.now().minusDays(daysAgo)));
+            pstmt.setInt(2, id);
+            pstmt.executeUpdate();
+        }
     }
 
     private static void assertBadRequest(TestContext ctx) {

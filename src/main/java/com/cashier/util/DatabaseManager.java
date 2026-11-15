@@ -489,6 +489,9 @@ public class DatabaseManager {
             } catch (SQLException e) {
                 logger.warn("创建挂单表失败", e);
             }
+            // 列表按 (用户, 状态) 过滤并按挂单时间倒序；老库补复合索引
+            ensureIndex(stmt, "hold_orders", "idx_user_status_hold",
+                "user_id, status, hold_date, hold_time");
 
     }
 

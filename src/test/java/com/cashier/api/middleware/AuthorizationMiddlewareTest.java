@@ -38,6 +38,9 @@ class AuthorizationMiddlewareTest {
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "DELETE", "/api/promotions/1"));
         assertTrue(AuthorizationMiddleware.isAllowed("cashier", "GET", "/api/promotions"));
         assertTrue(AuthorizationMiddleware.isAllowed("cashier", "GET", "/api/promotions/1"));
+        // 挂单硬删与批量清理影响他人数据，仅管理员可用
+        assertFalse(AuthorizationMiddleware.isAllowed("cashier", "DELETE", "/api/hold-orders/1"));
+        assertFalse(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/hold-orders/cleanup"));
         // 充值是收银台日常操作（顾客当面充卡），桌面端一直开放，2026-09 起 API 与之统一（TD-018）
         assertTrue(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/members/10/recharge"));
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "PUT", "/api/members/10"));
@@ -66,6 +69,8 @@ class AuthorizationMiddlewareTest {
         assertFalse(AuthorizationMiddleware.isAllowed("finance", "PUT", "/api/settings/theme"));
         assertFalse(AuthorizationMiddleware.isAllowed("finance", "POST", "/api/backup/execute"));
         assertFalse(AuthorizationMiddleware.isAllowed("finance", "PUT", "/api/invoices/seller-info"));
+        assertFalse(AuthorizationMiddleware.isAllowed("finance", "DELETE", "/api/hold-orders/1"));
+        assertFalse(AuthorizationMiddleware.isAllowed("finance", "POST", "/api/hold-orders/cleanup"));
     }
 
     @Test
@@ -100,6 +105,8 @@ class AuthorizationMiddlewareTest {
             {"POST", "/api/promotions"},
             {"PUT", "/api/promotions/1"},
             {"DELETE", "/api/promotions/1"},
+            {"DELETE", "/api/hold-orders/1"},
+            {"POST", "/api/hold-orders/cleanup"},
         };
         for (String[] route : cashierGated) {
             assertFalse(AuthorizationMiddleware.isAllowed("cashier", route[0], route[1]),

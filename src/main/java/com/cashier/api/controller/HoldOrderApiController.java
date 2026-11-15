@@ -3,12 +3,10 @@ package com.cashier.api.controller;
 import com.cashier.api.ApiMessages;
 import com.cashier.dao.DAOFactory;
 import com.cashier.dao.HoldOrderDAORefactored;
-import com.cashier.dao.ProductDAORefactored;
 import com.cashier.model.CartItem;
 import com.cashier.model.HoldOrder;
 import com.cashier.model.Member;
 import com.cashier.model.PageResult;
-import com.cashier.model.Product;
 import com.cashier.model.Promotion;
 import com.cashier.model.User;
 import com.cashier.service.HoldOrderCodec;
@@ -43,8 +41,9 @@ public class HoldOrderApiController {
 
     private static final Logger logger = LoggerFactoryUtil.getLogger(HoldOrderApiController.class);
 
-    private static final int MAX_ITEMS = 50;
     private static final int MAX_NOTES_LENGTH = 500;
+    private static final int DEFAULT_CLEANUP_DAYS = 7;
+    private static final int MAX_CLEANUP_DAYS = 3650;
     private static final int STATUS_PENDING = 0;
     private static final int STATUS_RESUMED = 1;
     private static final int STATUS_CANCELLED = 2;
@@ -118,39 +117,10 @@ public class HoldOrderApiController {
                 error(ctx, HttpStatus.FORBIDDEN, "api.hold.forbidden");
                 return;
             }
-            if (request.items == null || request.items.isEmpty()) {
-                error(ctx, HttpStatus.BAD_REQUEST, "api.hold.items_required");
+            List<CartItem> cart = CartRequestBinder.bind(
+                ctx, request.items, true, CartRequestBinder.HOLD);
+            if (cart == null) {
                 return;
-            }
-            if (request.items.size() > MAX_ITEMS) {
-                error(ctx, HttpStatus.BAD_REQUEST, "api.hold.too_many_items", MAX_ITEMS);
-                return;
-            }
-
-            List<CartItem> cart = new ArrayList<>();
-            Set<Integer> seenProductIds = new HashSet<>();
-            ProductDAORefactored productDAO = DAOFactory.getInstance().getProductDAO();
-            for (HoldItemRequest item : request.items) {
-                if (item == null || item.productId == null || item.productId <= 0
-                        || item.quantity == null || item.quantity <= 0 || item.quantity > 9999) {
-                    error(ctx, HttpStatus.BAD_REQUEST, "api.hold.item_invalid");
-                    return;
-                }
-                if (!seenProductIds.add(item.productId)) {
-                    error(ctx, HttpStatus.BAD_REQUEST, "api.hold.duplicate_item", item.productId);
-                    return;
-                }
-                Product product = productDAO.findById(item.productId);
-                if (product == null) {
-                    error(ctx, HttpStatus.BAD_REQUEST, "api.hold.product_not_found", item.productId);
-                    return;
-                }
-                if (item.quantity > product.quantity) {
-                    error(ctx, HttpStatus.BAD_REQUEST, "api.hold.stock_insufficient",
-                        product.name, product.quantity);
-                    return;
-                }
-                cart.add(new CartItem(product, item.quantity));
             }
 
             Member member = null;
@@ -274,6 +244,52 @@ public class HoldOrderApiController {
         }
     }
 
+    /**
+     * DELETE /api/hold-orders/{id}
+     *
+     * <p>管理员限制由 {@link com.cashier.api.middleware.AuthorizationMiddleware} 统一拦截。</p>
+     */
+    public static void delete(Context ctx) {
+        try {
+            Integer id = parseId(ctx);
+            if (id == null) {
+                return;
+            }
+            HoldOrder order = dao().findById(id);
+            if (order == null) {
+                error(ctx, HttpStatus.NOT_FOUND, "api.hold.not_found");
+                return;
+            }
+            if (dao().delete(id) == 0) {
+                error(ctx, HttpStatus.NOT_FOUND, "api.hold.not_found");
+                return;
+            }
+            logger.info("API 删除挂单: {}", order.orderNumber);
+            ctx.json(body(null, ApiMessages.text(ctx, "api.hold.deleted")));
+        } catch (SQLException e) {
+            logger.error("删除挂单失败", e);
+            error(ctx, HttpStatus.INTERNAL_SERVER_ERROR, "api.hold.delete_failed");
+        }
+    }
+
+    /** POST /api/hold-orders/cleanup?days=7（管理员，只清理已取单/已取消的旧单） */
+    public static void cleanup(Context ctx) {
+        try {
+            Integer days = parseCleanupDays(ctx);
+            if (days == null) {
+                return;
+            }
+            int deleted = dao().deleteFinishedBefore(days);
+            logger.info("API 清理挂单: {} 天前已完成 {} 张", days, deleted);
+            CleanupView view = new CleanupView();
+            view.deleted = deleted;
+            ctx.json(body(view, ApiMessages.text(ctx, "api.hold.cleanup_done", deleted)));
+        } catch (SQLException e) {
+            logger.error("清理挂单失败", e);
+            error(ctx, HttpStatus.INTERNAL_SERVER_ERROR, "api.hold.cleanup_failed");
+        }
+    }
+
     // ---------- helpers ----------
 
     private static HoldOrderDAORefactored dao() {
@@ -337,6 +353,26 @@ public class HoldOrderApiController {
             // 落到下面的统一 400
         }
         error(ctx, HttpStatus.BAD_REQUEST, "api.hold.status_invalid");
+        return null;
+    }
+
+    /**
+     * @return 清理天数；请求非法时已写入 400 并返回 {@code null}
+     */
+    private static Integer parseCleanupDays(Context ctx) {
+        String raw = ctx.queryParam("days");
+        if (raw == null || raw.isBlank()) {
+            return DEFAULT_CLEANUP_DAYS;
+        }
+        try {
+            int days = Integer.parseInt(raw.trim());
+            if (days >= 1 && days <= MAX_CLEANUP_DAYS) {
+                return days;
+            }
+        } catch (NumberFormatException ignored) {
+            // 落到下面的统一 400
+        }
+        error(ctx, HttpStatus.BAD_REQUEST, "api.hold.cleanup_days_invalid", 1, MAX_CLEANUP_DAYS);
         return null;
     }
 
@@ -499,6 +535,10 @@ public class HoldOrderApiController {
 
     public static class ResumeView extends HoldOrderView {
         public List<Integer> missingProductIds = new ArrayList<>();
+    }
+
+    public static class CleanupView {
+        public int deleted;
     }
 
     public static class HoldItemView {

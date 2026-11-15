@@ -76,7 +76,11 @@ public final class AuthorizationMiddleware {
             || (path.startsWith("/api/products") && isMutating(method))
             || (path.startsWith("/api/inventory") && isMutating(method))
             || (path.startsWith("/api/printers/") && isMutating(method)
-                && !path.matches("/api/printers/[^/]+/(receipt|invoice/[^/]+)"));
+                && !path.matches("/api/printers/[^/]+/(receipt|invoice/[^/]+)"))
+            // 挂单属于收银员本人数据，硬删与批量清理只给管理员
+            || (path.startsWith("/api/hold-orders")
+                && ("DELETE".equals(method)
+                    || (path.equals("/api/hold-orders/cleanup") && isMutating(method))));
     }
 
     private static boolean isFinanceOrAdminPath(String method, String path) {

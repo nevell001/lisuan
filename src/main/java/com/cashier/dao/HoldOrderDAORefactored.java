@@ -4,11 +4,13 @@ import com.cashier.model.HoldOrder;
 import com.cashier.model.PageResult;
 
 import java.sql.Connection;
+import java.sql.Date;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -70,7 +72,8 @@ public class HoldOrderDAORefactored extends BaseDAO {
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 INDEX idx_user_id (user_id),
                 INDEX idx_status (status),
-                INDEX idx_hold_date (hold_date)
+                INDEX idx_hold_date (hold_date),
+                INDEX idx_user_status_hold (user_id, status, hold_date, hold_time)
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci
             """;
 
@@ -226,6 +229,20 @@ public class HoldOrderDAORefactored extends BaseDAO {
         return queryList(
             "SELECT * FROM hold_orders WHERE status = 0 ORDER BY hold_date DESC, hold_time DESC",
             ORDER_MAPPER);
+    }
+
+    /**
+     * 清理早于指定天数的已完成挂单（已取单/已取消）。
+     *
+     * <p>截止日由 Java 计算后作为参数传入，避免依赖 MySQL 专有的 {@code DATE_SUB}，
+     * 测试库（H2）与生产库走同一条 SQL。</p>
+     *
+     * @return 受影响行数
+     */
+    public int deleteFinishedBefore(int days) throws SQLException {
+        Date cutoff = Date.valueOf(LocalDate.now().minusDays(days));
+        return executeUpdate(
+            "DELETE FROM hold_orders WHERE status IN (1, 2) AND hold_date < ?", cutoff);
     }
 
     /**

@@ -206,8 +206,11 @@ public class ApiServer {
 
     private void registerHoldOrderRoutes() {
         app.get("/api/hold-orders", HoldOrderApiController::list);
-        app.get("/api/hold-orders/{id}", HoldOrderApiController::get);
         app.post("/api/hold-orders", HoldOrderApiController::create);
+        // 字面量路径 cleanup 必须排在 /{id} 之前
+        app.post("/api/hold-orders/cleanup", HoldOrderApiController::cleanup);
+        app.get("/api/hold-orders/{id}", HoldOrderApiController::get);
+        app.delete("/api/hold-orders/{id}", HoldOrderApiController::delete);
         app.post("/api/hold-orders/{id}/resume", HoldOrderApiController::resume);
         app.post("/api/hold-orders/{id}/cancel", HoldOrderApiController::cancel);
     }
