@@ -38,6 +38,8 @@ class AuthorizationMiddlewareTest {
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "DELETE", "/api/promotions/1"));
         assertTrue(AuthorizationMiddleware.isAllowed("cashier", "GET", "/api/promotions"));
         assertTrue(AuthorizationMiddleware.isAllowed("cashier", "GET", "/api/promotions/1"));
+        // 试算不写库，收银员结账前需要用它展示优惠
+        assertTrue(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/promotions/quote"));
         // 挂单硬删与批量清理影响他人数据，仅管理员可用
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "DELETE", "/api/hold-orders/1"));
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/hold-orders/cleanup"));
@@ -126,6 +128,7 @@ class AuthorizationMiddlewareTest {
         assertTrue(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/members/10/recharge/"));
         assertTrue(AuthorizationMiddleware.isAllowed("cashier", "GET", "/api/invoices/seller-info/"));
         assertTrue(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/transactions/"));
+        assertTrue(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/promotions/quote/"));
 
         assertEquals("/", AuthorizationMiddleware.withoutTrailingSlash("/"));
         assertEquals("/", AuthorizationMiddleware.withoutTrailingSlash(""));

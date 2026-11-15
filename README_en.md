@@ -21,7 +21,7 @@ LiSuan Cashier System is a desktop POS cashier system built with JavaFX 17, cove
 | Products & Inventory | Product CRUD, unique names (duplicate barcodes allowed), stock alerts and quick restocking, inventory checks, CSV import, Excel/PDF export |
 | Members | Registration, lookup, recharge, points accumulation and automatic tier upgrades (Regular/Silver/Gold/Diamond), spending linked with returns |
 | Hold & Resume | Park the current cart and resume it later from both the desktop and touch POS; the REST API creates/lists/resumes/cancels holds and lets administrators clean up old records or delete them, with server-side totals, and cashiers can only access their own holds |
-| Promotions | Amount-off/percentage-off/coupons with automatic best-offer selection using the same pricing engine as checkout; REST API writes are limited to finance/admin |
+| Promotions | Amount-off/percentage-off/coupons with automatic best-offer selection using the same pricing engine as checkout; REST API writes are limited to finance/admin, with a read-only quote endpoint |
 | Purchasing | Suppliers, purchase orders and approvals, inbound stock and history, purchase reports |
 | Returns | Returns based on original transactions with reasons, item conditions, and refund methods; inventory is restored after approval and refunded via cash, balance, or points |
 | Reports | Transaction statistics plus purchasing/inventory/profit/return reports, with Excel and PDF export |

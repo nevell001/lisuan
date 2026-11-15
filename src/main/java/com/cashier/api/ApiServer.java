@@ -216,9 +216,10 @@ public class ApiServer {
     }
 
     private void registerPromotionRoutes() {
-        // 字面量路径 active 必须排在 /{id} 之前
+        // 字面量路径 active/quote 必须排在 /{id} 之前
         app.get("/api/promotions", PromotionApiController::list);
         app.get("/api/promotions/active", PromotionApiController::active);
+        app.post("/api/promotions/quote", PromotionApiController::quote);
         app.get("/api/promotions/{id}", PromotionApiController::get);
         app.post("/api/promotions", PromotionApiController::create);
         app.put("/api/promotions/{id}", PromotionApiController::update);

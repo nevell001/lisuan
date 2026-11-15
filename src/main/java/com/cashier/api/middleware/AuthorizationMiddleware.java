@@ -95,8 +95,9 @@ public final class AuthorizationMiddleware {
             // 资金统计与退款单列表属财务口径，收银员无需查看
             || path.equals("/api/payment/refunds")
             || path.startsWith("/api/payment/stats")
-            // 促销规则直接影响成交金额，写操作限 finance/admin；读接口仍对所有登录角色开放
-            || (path.startsWith("/api/promotions") && isMutating(method))
+            // 促销规则直接影响成交金额，写操作限 finance/admin；读接口与试算（quote）对所有登录角色开放
+            || (path.startsWith("/api/promotions") && isMutating(method)
+                && !path.equals("/api/promotions/quote"))
             || (path.startsWith("/api/reports/") && "GET".equals(method));
     }
 

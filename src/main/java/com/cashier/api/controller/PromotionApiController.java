@@ -2,6 +2,8 @@ package com.cashier.api.controller;
 
 import com.cashier.api.ApiMessages;
 import com.cashier.dao.DAOFactory;
+import com.cashier.model.CartItem;
+import com.cashier.model.Member;
 import com.cashier.model.PageResult;
 import com.cashier.model.Promotion;
 import com.cashier.service.PromotionRules;
@@ -13,6 +15,7 @@ import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
 
 import java.math.BigDecimal;
+import java.math.RoundingMode;
 import java.sql.SQLException;
 import java.sql.SQLIntegrityConstraintViolationException;
 import java.time.LocalDate;
@@ -90,6 +93,61 @@ public class PromotionApiController {
         } catch (SQLException e) {
             logger.error("获取有效促销失败", e);
             error(ctx, HttpStatus.INTERNAL_SERVER_ERROR, "api.promotion.list_failed");
+        }
+    }
+
+    /**
+     * POST /api/promotions/quote
+     *
+     * <p>按收银台同一口径试算：会员折扣先算，促销优惠按商品原价总额计算。
+     * 只读接口，不占用促销次数，也不校验库存（试算不产生副作用）。</p>
+     */
+    public static void quote(Context ctx) {
+        try {
+            QuoteRequest request = ApiRequest.parse(ctx, QuoteRequest.class);
+            if (request == null) {
+                error(ctx, HttpStatus.BAD_REQUEST, "api.common.bad_request");
+                return;
+            }
+            List<CartItem> cart = CartRequestBinder.bind(
+                ctx, request.items, false, CartRequestBinder.QUOTE);
+            if (cart == null) {
+                return;
+            }
+
+            Member member = null;
+            if (request.memberId != null) {
+                member = DAOFactory.getInstance().getMemberDAO().findById(request.memberId);
+                if (member == null) {
+                    error(ctx, HttpStatus.BAD_REQUEST,
+                        "api.promotion.quote.member_not_found", request.memberId);
+                    return;
+                }
+            }
+
+            BigDecimal total = TransactionService.cartTotal(cart).setScale(2, RoundingMode.HALF_UP);
+            BigDecimal memberDiscounted = TransactionService.calculateFinalAmount(cart, member);
+            Promotion promotion = TransactionService.selectBestPromotion(total);
+            BigDecimal finalAmount = TransactionService.calculateFinalAmount(cart, member, promotion);
+            // 用会员折后价与实付的差额作为促销优惠，保证 total - 会员优惠 - 促销优惠 = finalAmount
+            BigDecimal promotionDiscount = memberDiscounted.subtract(finalAmount)
+                .max(BigDecimal.ZERO).setScale(2, RoundingMode.HALF_UP);
+
+            QuoteView view = new QuoteView();
+            view.itemCount = cart.size();
+            view.totalAmount = total;
+            view.memberDiscountRate = member == null ? BigDecimal.TEN : member.getDiscount();
+            view.memberDiscountAmount = total.subtract(memberDiscounted)
+                .setScale(2, RoundingMode.HALF_UP);
+            view.promotionDiscount = promotionDiscount;
+            view.finalAmount = finalAmount;
+            if (promotion != null) {
+                view.appliedPromotion = appliedPromotionView(ctx, promotion);
+            }
+            ctx.json(body(view, null));
+        } catch (SQLException e) {
+            logger.error("试算促销优惠失败", e);
+            error(ctx, HttpStatus.INTERNAL_SERVER_ERROR, "api.promotion.quote.failed");
         }
     }
 
@@ -350,6 +408,18 @@ public class PromotionApiController {
         return view;
     }
 
+    private static AppliedPromotionView appliedPromotionView(Context ctx, Promotion promotion) {
+        AppliedPromotionView view = new AppliedPromotionView();
+        view.id = promotion.id;
+        view.promotionCode = promotion.promotionCode;
+        view.name = promotion.name;
+        view.type = PromotionRules.toCode(promotion.type);
+        view.typeName = typeName(ctx, promotion.type);
+        view.threshold = promotion.getThreshold();
+        view.discount = promotion.getDiscount();
+        return view;
+    }
+
     private static boolean isActive(Promotion promotion) {
         if (!promotion.enabled || promotion.startDate == null || promotion.endDate == null) {
             return false;
@@ -498,5 +568,31 @@ public class PromotionApiController {
         public Integer usageCount;
         public Integer maxUsage;
         public Boolean active;
+    }
+
+    public static class QuoteRequest {
+        public List<HoldOrderApiController.HoldItemRequest> items;
+        public Integer memberId;
+    }
+
+    public static class QuoteView {
+        public Integer itemCount;
+        public BigDecimal totalAmount;
+        /** 会员折扣值（10 表示不打折）。 */
+        public BigDecimal memberDiscountRate;
+        public BigDecimal memberDiscountAmount;
+        public AppliedPromotionView appliedPromotion;
+        public BigDecimal promotionDiscount;
+        public BigDecimal finalAmount;
+    }
+
+    public static class AppliedPromotionView {
+        public Integer id;
+        public String promotionCode;
+        public String name;
+        public String type;
+        public String typeName;
+        public BigDecimal threshold;
+        public BigDecimal discount;
     }
 }

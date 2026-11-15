@@ -16,7 +16,10 @@ import java.util.Map;
 import java.util.Set;
 
 /**
- * 把 REST 请求里的商品行装成购物车，并统一做商品/数量/库存校验。
+ * 把 REST 请求里的商品行装成购物车。
+ *
+ * <p>挂单与促销试算共用同一套基础校验，只有库存拦截按场景开关：挂单保存的是真实待取单，
+ * 必须拦住超库存；试算只回答"这单多少钱"，不产生副作用，也不应因库存不足失败。</p>
  */
 final class CartRequestBinder {
 
@@ -25,6 +28,10 @@ final class CartRequestBinder {
     static final Keys HOLD = new Keys(
         "api.hold.items_required", "api.hold.too_many_items", "api.hold.item_invalid",
         "api.hold.duplicate_item", "api.hold.product_not_found", "api.hold.stock_insufficient");
+    static final Keys QUOTE = new Keys(
+        "api.promotion.quote.items_required", "api.promotion.quote.too_many_items",
+        "api.promotion.quote.item_invalid", "api.promotion.quote.duplicate_item",
+        "api.promotion.quote.product_not_found", null);
 
     private CartRequestBinder() {
     }

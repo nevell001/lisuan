@@ -1,10 +1,16 @@
 package com.cashier.api.controller;
 
+import com.cashier.api.controller.HoldOrderApiController.HoldItemRequest;
+import com.cashier.api.controller.PromotionApiController.AppliedPromotionView;
 import com.cashier.api.controller.PromotionApiController.PromotionRequest;
 import com.cashier.api.controller.PromotionApiController.PromotionView;
+import com.cashier.api.controller.PromotionApiController.QuoteRequest;
+import com.cashier.api.controller.PromotionApiController.QuoteView;
 import com.cashier.api.support.TestContext;
 import com.cashier.dao.DAOFactory;
 import com.cashier.dao.PromotionDAORefactored;
+import com.cashier.model.Member;
+import com.cashier.model.Product;
 import com.cashier.model.Promotion;
 import com.cashier.util.DatabaseTestBase;
 import io.javalin.http.HandlerType;
@@ -14,8 +20,10 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.atomic.AtomicInteger;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -28,6 +36,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 class PromotionApiControllerTest extends DatabaseTestBase {
 
     private static final PromotionDAORefactored DAO = DAOFactory.getInstance().getPromotionDAO();
+    private static final AtomicInteger SEQ = new AtomicInteger();
 
     @SuppressWarnings("unchecked")
     private static Map<String, Object> body(TestContext ctx) {
@@ -256,6 +265,108 @@ class PromotionApiControllerTest extends DatabaseTestBase {
         TestContext again = delete(promotion.id);
         PromotionApiController.delete(again.context);
         assertEquals(HttpStatus.NOT_FOUND, again.status);
+    }
+
+    @Test
+    @DisplayName("试算按会员折扣 + 最优促销计价，不写库也不占用促销次数")
+    void quoteAppliesMemberAndBestPromotion() throws Exception {
+        Product product = insertProduct("50.00", 10);
+        Promotion promotion = insert("Q-R", "试算满减", "满减", new BigDecimal("100"),
+            new BigDecimal("10"), true, LocalDateTime.now().minusDays(1), LocalDateTime.now().plusDays(1));
+        Member member = insertMember("13900001111", new BigDecimal("9.5"));
+
+        QuoteRequest request = new QuoteRequest();
+        request.items = List.of(item(product.id, 2));
+        request.memberId = member.id;
+
+        TestContext ctx = post("/api/promotions/quote", request);
+        PromotionApiController.quote(ctx.context);
+
+        assertEquals(HttpStatus.OK, ctx.status);
+        QuoteView view = (QuoteView) body(ctx).get("data");
+        assertAmountEquals("100.00", view.totalAmount);
+        assertAmountEquals("9.5", view.memberDiscountRate);
+        assertAmountEquals("5.00", view.memberDiscountAmount);
+        assertAmountEquals("10.00", view.promotionDiscount);
+        assertAmountEquals("85.00", view.finalAmount);
+        assertEquals(1, view.itemCount);
+        assertEquals("REDUCTION", view.appliedPromotion.type);
+        assertNotNull(view.appliedPromotion.typeName);
+
+        Promotion saved = DAO.findById(promotion.id);
+        assertEquals(0, saved.usageCount, "试算不得占用促销次数");
+    }
+
+    @Test
+    @DisplayName("试算不校验库存；商品/会员参数错误时返回 400")
+    void quoteValidatesRequestWithoutStockCheck() throws Exception {
+        Product scarce = insertProduct("10.00", 1);
+
+        QuoteRequest beyondStock = new QuoteRequest();
+        beyondStock.items = List.of(item(scarce.id, 2));
+        TestContext stockCtx = post("/api/promotions/quote", beyondStock);
+        PromotionApiController.quote(stockCtx.context);
+        assertEquals(HttpStatus.OK, stockCtx.status, "试算只算钱，不因库存不足失败");
+
+        assertQuoteBadRequest(null);
+        assertQuoteBadRequest(new QuoteRequest());
+
+        QuoteRequest duplicate = new QuoteRequest();
+        duplicate.items = List.of(item(scarce.id, 1), item(scarce.id, 1));
+        assertQuoteBadRequest(duplicate);
+
+        QuoteRequest zeroQuantity = new QuoteRequest();
+        zeroQuantity.items = List.of(item(scarce.id, 0));
+        assertQuoteBadRequest(zeroQuantity);
+
+        QuoteRequest missingProduct = new QuoteRequest();
+        missingProduct.items = List.of(item(99999999, 1));
+        assertQuoteBadRequest(missingProduct);
+
+        QuoteRequest missingMember = new QuoteRequest();
+        missingMember.items = List.of(item(scarce.id, 1));
+        missingMember.memberId = 99999999;
+        assertQuoteBadRequest(missingMember);
+    }
+
+    private static void assertQuoteBadRequest(QuoteRequest request) {
+        TestContext ctx = post("/api/promotions/quote", request);
+        PromotionApiController.quote(ctx.context);
+        assertEquals(HttpStatus.BAD_REQUEST, ctx.status);
+    }
+
+    private static void assertAmountEquals(String expected, BigDecimal actual) {
+        assertEquals(0, new BigDecimal(expected).compareTo(actual), "expected " + expected + " but was " + actual);
+    }
+
+    private static HoldItemRequest item(int productId, int quantity) {
+        HoldItemRequest item = new HoldItemRequest();
+        item.productId = productId;
+        item.quantity = quantity;
+        return item;
+    }
+
+    private static Product insertProduct(String price, int quantity) throws Exception {
+        int seq = SEQ.incrementAndGet();
+        Product product = new Product(0, "QUOTE-API-" + seq, "试算接口商品" + seq,
+            Double.parseDouble(price), quantity, "测试分类", "QUOTE-API-BAR-" + seq, "件",
+            "描述", "品牌", "供应商", "规格", 0, 5.0);
+        assertTrue(DAOFactory.getInstance().getProductDAO().insert(product));
+        assertNotNull(product.id);
+        return product;
+    }
+
+    private static Member insertMember(String phone, BigDecimal discount) throws Exception {
+        Member member = new Member();
+        member.phone = phone;
+        member.name = "试算会员";
+        member.balance = BigDecimal.ZERO;
+        member.points = BigDecimal.ZERO;
+        member.level = "银卡";
+        member.discount = discount;
+        member.discountRate = discount;
+        assertTrue(DAOFactory.getInstance().getMemberDAO().insert(member));
+        return DAOFactory.getInstance().getMemberDAO().findByPhone(phone);
     }
 
     private static PromotionRequest validRequest(String name, String type) {
