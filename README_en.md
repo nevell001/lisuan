@@ -20,12 +20,14 @@ LiSuan Cashier System is a desktop POS cashier system built with JavaFX 17, cove
 | Touch POS | Exact-match scanning or typing adds items to the cart automatically (with success/not-found/low-stock sounds), one-tap language switch, shift and clock in the status bar, handover flow aligned with the desktop version |
 | Products & Inventory | Product CRUD, unique names (duplicate barcodes allowed), stock alerts and quick restocking, inventory checks, CSV import, Excel/PDF export |
 | Members | Registration, lookup, recharge, points accumulation and automatic tier upgrades (Regular/Silver/Gold/Diamond), spending linked with returns |
+| Hold & Resume | Park the current cart and resume it later from both the desktop and touch POS; the REST API creates/lists/resumes/cancels holds with server-side totals, and cashiers can only access their own holds |
+| Promotions | Amount-off/percentage-off/coupons with automatic best-offer selection using the same pricing engine as checkout; REST API writes are limited to finance/admin |
 | Purchasing | Suppliers, purchase orders and approvals, inbound stock and history, purchase reports |
 | Returns | Returns based on original transactions with reasons, item conditions, and refund methods; inventory is restored after approval and refunded via cash, balance, or points |
 | Reports | Transaction statistics plus purchasing/inventory/profit/return reports, with Excel and PDF export |
 | Users & Auditing | Administrator/Cashier/Accountant roles, BCrypt passwords, password reset and forced change on first login, audit logs |
 | Backup & Restore | Local backups (database/config/logs/invoices/business data), scheduled backups and retention policies; admin password required before restore; unimplemented cloud backup endpoints return 501 |
-| REST API | Javalin on port `8080`, 90+ routes plus `/ws/sync` WebSocket, token authentication, role authorization, rate limiting, and security headers |
+| REST API | Javalin on port `8080`, 100+ routes plus `/ws/sync` WebSocket, token authentication, role authorization, rate limiting, and security headers |
 | Hardware | ESC/POS thermal and network printing, printer discovery and status checks, USB HID scanners, payment QR codes |
 | i18n & Themes | Simplified Chinese/English/Traditional Chinese; LiSuan/Light/Dark themes; bundled Noto Sans CJK SC |
 
@@ -97,7 +99,7 @@ Discount formula: `amount * (tier discount / 10.0)`.
 
 ## REST API
 
-The API listens on port `8080` by default and registers 90+ HTTP routes plus the `/ws/sync` WebSocket endpoint, covering authentication, products, members, transactions, inventory, reports, settings, invoices, users, printing, payments, backup, i18n, and sync status.
+The API listens on port `8080` by default and registers 100+ HTTP routes plus the `/ws/sync` WebSocket endpoint, covering authentication, products, members, transactions, hold orders, promotions, inventory, reports, settings, invoices, users, printing, payments, backup, i18n, and sync status.
 
 Except for `/api/health`, `/api/auth/login`, and payment callbacks under `/api/payment/notify/*`, all API routes require authentication. Payment callbacks are invoked directly by channel servers and cannot carry a system token; their security relies on WeChat/Alipay signature verification.
 

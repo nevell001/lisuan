@@ -134,7 +134,7 @@ Controller (34 classes) → Service (15 classes) → DAO (29 instance DAOs) → 
      FXML Views              Business Logic    Data Access
 
 REST API Layer (v2.5.0):
-ApiController (14 classes) → Service Layer → DAO Layer
+ApiController (16 classes) → Service Layer → DAO Layer
         ↓
     WebSocket Sync (real-time)
 ```
@@ -193,6 +193,8 @@ ApiController (14 classes) → Service Layer → DAO Layer
 - `InvoiceApiController` - Invoice management (10 endpoints)
 - `PrintApiController` - Network printing (15 endpoints)
 - `BackupApiController` - Cloud backup (9 endpoints)
+- `HoldOrderApiController` - Hold orders: list/detail/create/resume/cancel (5 endpoints, ownership enforced)
+- `PromotionApiController` - Promotion CRUD + active list (6 endpoints, writes limited to finance/admin)
 - `I18nApiController` - Multi-language support (6 endpoints)
 - `UserApiController` - User management (admin only)
 - `SettingsApiController` - System settings
@@ -814,7 +816,7 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `mvn -Pui-tests -Dtest=SettingsControllerUITest test`，默认 `mvn verify` 排除）。
   **TD-041 已定稿（双字段）并实施**：REST API 的枚举字段返**稳定代码**、另给 `*Name` 返回按请求语言
   本地化的显示名；响应文案一律走 `ApiMessages.text(ctx, key, params)`（`?locale=` → `Accept-Language`
-  → 用户偏好，**不改进程语言**）。12 个 API 控制器的响应文案已全部迁完（198 个 `api.*` key × 4 份语言包），
+  → 用户偏好，**不改进程语言**）。14 个 API 控制器的响应文案已全部迁完（250 个 `api.*` key × 4 份语言包），
   门禁 `ApiLanguageContractPolicyTest` 用 `MIGRATED_CONTROLLERS` 棘轮：**新增响应文案必须写 key，
   不得再写死中文**；带占位符的文案用 `I18nManager.get(Locale, key, params)`（只给 `get(Locale,key)`
   会直接漏出 `{0}`）。日志/落库值/打印正文不属响应契约，不在此列
@@ -994,7 +996,7 @@ When working on files that still use the old `ProductDAO`, consider migrating th
   `equals`/`matches` 全串比对，多一个斜杠就整条跳过 → 收银员可退款、改会员折扣/等级/手机号、
   改开票方信息与支付配置（已用最小 Javalin 6.1.3 应用复现：`/api/members/1/` → HTTP 200，
   `//` → 404）。现在 `isAllowed` 入口先 `withoutTrailingSlash(path)`；
-  `AuthorizationMiddlewareTest.trailingSlashCannotBypassRoleGate` 覆盖 13 条受控路由 × {正常,`/`,`//`}。
+  `AuthorizationMiddlewareTest.trailingSlashCannotBypassRoleGate` 覆盖 16 条受控路由 × {正常,`/`,`//`}。
   **以后往这个类里加路径规则时不要绕过归一化**
 - **网关 HTTP 必须显式设超时，下单不得在 FX 线程**（TD-031）：`java.net.http` 默认**无限等待**，
   两个渠道 provider 都必须 `HttpClient.newBuilder().connectTimeout(...)` + 请求 `.timeout(...)`；
