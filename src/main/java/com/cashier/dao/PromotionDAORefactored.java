@@ -1,5 +1,6 @@
 package com.cashier.dao;
 
+import com.cashier.model.PageResult;
 import com.cashier.model.Promotion;
 
 import java.sql.Connection;
@@ -50,6 +51,48 @@ public class PromotionDAORefactored extends BaseDAO {
     public List<Promotion> findRecent(int limit) throws SQLException {
         return queryList("SELECT " + SELECT_COLUMNS +
             " FROM promotions ORDER BY id DESC LIMIT ?", PROMOTION_MAPPER, Math.max(1, limit));
+    }
+
+    /**
+     * 分页查询促销。
+     *
+     * @param legacyType 数据库中文类型，null 表示不限
+     * @param enabled    null 表示不限
+     * @param activeOnly true 时只返回启用且在有效期内的促销
+     */
+    public PageResult<Promotion> findPage(int pageNum, int pageSize, String legacyType,
+                                          Boolean enabled, boolean activeOnly) throws SQLException {
+        int safePage = Math.max(1, pageNum);
+        int safeSize = Math.max(1, pageSize);
+        List<Object> params = new ArrayList<>();
+        String where = buildWhere(legacyType, enabled, activeOnly, params);
+        long total = queryLong("SELECT COUNT(*) FROM promotions" + where, params.toArray());
+
+        params.add(safeSize);
+        params.add((safePage - 1) * safeSize);
+        List<Promotion> rows = queryList("SELECT " + SELECT_COLUMNS + " FROM promotions" + where
+            + " ORDER BY id DESC LIMIT ? OFFSET ?", PROMOTION_MAPPER, params.toArray());
+        return new PageResult<>(rows, safePage, safeSize, total);
+    }
+
+    private static String buildWhere(String legacyType, Boolean enabled, boolean activeOnly,
+                                     List<Object> params) {
+        StringBuilder where = new StringBuilder(" WHERE 1=1");
+        if (legacyType != null) {
+            where.append(" AND type = ?");
+            params.add(legacyType);
+        }
+        if (enabled != null) {
+            where.append(" AND enabled = ?");
+            params.add(enabled);
+        }
+        if (activeOnly) {
+            Timestamp now = Timestamp.valueOf(LocalDateTime.now());
+            where.append(" AND enabled = true AND start_date <= ? AND end_date >= ?");
+            params.add(now);
+            params.add(now);
+        }
+        return where.toString();
     }
 
     public Promotion findById(int id) throws SQLException {

@@ -161,6 +161,7 @@ public class ApiServer {
         registerProductRoutes();
         registerMemberRoutes();
         registerHoldOrderRoutes();
+        registerPromotionRoutes();
         registerTransactionRoutes();
         registerInventoryRoutes();
         registerReportRoutes();
@@ -209,6 +210,16 @@ public class ApiServer {
         app.post("/api/hold-orders", HoldOrderApiController::create);
         app.post("/api/hold-orders/{id}/resume", HoldOrderApiController::resume);
         app.post("/api/hold-orders/{id}/cancel", HoldOrderApiController::cancel);
+    }
+
+    private void registerPromotionRoutes() {
+        // 字面量路径 active 必须排在 /{id} 之前
+        app.get("/api/promotions", PromotionApiController::list);
+        app.get("/api/promotions/active", PromotionApiController::active);
+        app.get("/api/promotions/{id}", PromotionApiController::get);
+        app.post("/api/promotions", PromotionApiController::create);
+        app.put("/api/promotions/{id}", PromotionApiController::update);
+        app.delete("/api/promotions/{id}", PromotionApiController::delete);
     }
 
     private void registerTransactionRoutes() {

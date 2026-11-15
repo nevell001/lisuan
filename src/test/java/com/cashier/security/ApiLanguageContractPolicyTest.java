@@ -112,6 +112,7 @@ class ApiLanguageContractPolicyTest {
         "PaymentApiController.java",
         "PrintApiController.java",
         "ProductApiController.java",
+        "PromotionApiController.java",
         "ReportApiController.java",
         "SettingsApiController.java",
         "TransactionApiController.java"

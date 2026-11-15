@@ -32,6 +32,12 @@ class AuthorizationMiddlewareTest {
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "DELETE", "/api/products/10"));
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "PUT", "/api/inventory/10"));
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/invoices/manual"));
+        // 促销规则直接影响成交金额：写操作限 finance/admin，读接口仍对收银员开放
+        assertFalse(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/promotions"));
+        assertFalse(AuthorizationMiddleware.isAllowed("cashier", "PUT", "/api/promotions/1"));
+        assertFalse(AuthorizationMiddleware.isAllowed("cashier", "DELETE", "/api/promotions/1"));
+        assertTrue(AuthorizationMiddleware.isAllowed("cashier", "GET", "/api/promotions"));
+        assertTrue(AuthorizationMiddleware.isAllowed("cashier", "GET", "/api/promotions/1"));
         // 充值是收银台日常操作（顾客当面充卡），桌面端一直开放，2026-09 起 API 与之统一（TD-018）
         assertTrue(AuthorizationMiddleware.isAllowed("cashier", "POST", "/api/members/10/recharge"));
         assertFalse(AuthorizationMiddleware.isAllowed("cashier", "PUT", "/api/members/10"));
@@ -53,6 +59,10 @@ class AuthorizationMiddlewareTest {
         assertTrue(AuthorizationMiddleware.isAllowed("finance", "GET", "/api/payment/refunds"));
         assertTrue(AuthorizationMiddleware.isAllowed("finance", "POST", "/api/members/10/recharge"));
         assertTrue(AuthorizationMiddleware.isAllowed("finance", "PUT", "/api/members/10"));
+        // 促销写操作对财务开放（与退款、手工开票同一资金权限档位）
+        assertTrue(AuthorizationMiddleware.isAllowed("finance", "POST", "/api/promotions"));
+        assertTrue(AuthorizationMiddleware.isAllowed("finance", "PUT", "/api/promotions/1"));
+        assertTrue(AuthorizationMiddleware.isAllowed("finance", "DELETE", "/api/promotions/1"));
         assertFalse(AuthorizationMiddleware.isAllowed("finance", "PUT", "/api/settings/theme"));
         assertFalse(AuthorizationMiddleware.isAllowed("finance", "POST", "/api/backup/execute"));
         assertFalse(AuthorizationMiddleware.isAllowed("finance", "PUT", "/api/invoices/seller-info"));
@@ -87,6 +97,9 @@ class AuthorizationMiddlewareTest {
             {"DELETE", "/api/products/10"},
             {"PUT", "/api/inventory/10"},
             {"POST", "/api/printers/P1/cashdrawer"},
+            {"POST", "/api/promotions"},
+            {"PUT", "/api/promotions/1"},
+            {"DELETE", "/api/promotions/1"},
         };
         for (String[] route : cashierGated) {
             assertFalse(AuthorizationMiddleware.isAllowed("cashier", route[0], route[1]),
