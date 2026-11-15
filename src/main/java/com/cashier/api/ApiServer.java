@@ -38,7 +38,8 @@ public class ApiServer {
     private static final ApiServer INSTANCE = new ApiServer();
     private Javalin app;
     private int port = 8080;
-    private boolean running = false;
+    // 状态可能被启动/停止与状态查询不同线程读写（FX 线程启动、退出钩子停止）
+    private volatile boolean running = false;
     
     // Token 存储
     private final ConcurrentHashMap<String, TokenInfo> tokens = new ConcurrentHashMap<>();
@@ -59,7 +60,7 @@ public class ApiServer {
     /**
      * 启动 API 服务器
      */
-    public void start(int port) {
+    public synchronized void start(int port) {
         if (running) {
             logger.warn("API 服务器已在运行");
             return;
@@ -380,7 +381,7 @@ public class ApiServer {
     /**
      * 停止 API 服务器
      */
-    public void stop() {
+    public synchronized void stop() {
         if (app != null) {
             app.stop();
             running = false;
