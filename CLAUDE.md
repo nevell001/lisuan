@@ -423,10 +423,6 @@ public class YourControllerUITest extends DatabaseTestBase {
 - Use `UIOptimizer.runInBackground(...)`（查库→刷新界面）或 `UIOptimizer.loadAsync(Task, ...)` for background data loading
 - Virtualize large lists with `UIOptimizer.enableTableViewVirtualization(TableView)`（或 `createVirtualListView(int)`）
 
-**Query Optimization:**
-- Batch queries with `QueryOptimizer.batchQuery()`
-- 1000-item batch size for large ID sets
-
 **Batch Operations:**
 - Use `BatchOperationUtil` for bulk inserts/updates
 - JDBC batch processing with transaction management
@@ -698,7 +694,6 @@ The codebase is migrating from static `ProductDAO` to instance-based `ProductDAO
 - ✅ Completed: API Controllers (`ProductApiController`, `InventoryApiController`, `TransactionApiController`)
 - ✅ Completed: `CacheManager`, `ProductDataImporter`
 - ✅ Completed: `DataService`, `TransactionService`, `ReturnService`
-- ✅ Completed: `SyncBroadcastService`
 
 **Migration Pattern:**
 ```java
