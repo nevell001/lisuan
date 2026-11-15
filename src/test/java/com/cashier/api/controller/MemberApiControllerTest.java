@@ -15,6 +15,8 @@ import java.math.BigDecimal;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 class MemberApiControllerTest extends DatabaseTestBase {
@@ -170,6 +172,31 @@ class MemberApiControllerTest extends DatabaseTestBase {
         MemberApiController.create(ctx.context);
 
         assertEquals(HttpStatus.BAD_REQUEST, ctx.status);
+    }
+
+    @Test
+    @DisplayName("创建会员：手机号格式与更新接口一致（11 位数字，首尾空白归一）")
+    void createMemberValidatesPhone() throws Exception {
+        MemberApiController.MemberRequest invalid = new MemberApiController.MemberRequest();
+        invalid.phone = "1380000abc";
+        invalid.name = "非法手机号会员";
+        TestContext invalidCtx = new TestContext().withRequest(HandlerType.POST, "/api/members")
+            .withBody(invalid);
+        MemberApiController.create(invalidCtx.context);
+        assertEquals(HttpStatus.BAD_REQUEST, invalidCtx.status);
+        assertNull(memberDAO.findByPhone("1380000abc"));
+
+        MemberApiController.MemberRequest padded = new MemberApiController.MemberRequest();
+        padded.phone = " 13800000009 ";
+        padded.name = "带空格手机号会员";
+        TestContext okCtx = new TestContext().withRequest(HandlerType.POST, "/api/members")
+            .withBody(padded);
+        MemberApiController.create(okCtx.context);
+        assertEquals(HttpStatus.CREATED, okCtx.status);
+        // 落库的必须是归一化后的号码，否则按手机号查询会查不到
+        Member saved = memberDAO.findByPhone("13800000009");
+        assertNotNull(saved);
+        assertEquals("13800000009", saved.phone);
     }
 
     @Test

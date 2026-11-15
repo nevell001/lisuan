@@ -1,9 +1,12 @@
 package com.cashier.api.controller;
 
+import com.cashier.api.sync.SyncEventType;
+import com.cashier.api.sync.SyncManager;
 import com.cashier.dao.DAOFactory;
 import com.cashier.dao.ProductDAORefactored;
 import com.cashier.model.PageResult;
 import com.cashier.model.Product;
+import com.cashier.util.CacheManager;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
@@ -101,6 +104,18 @@ public class ProductApiController {
                        com.cashier.api.ApiMessages.text(ctx, "api.product.missing_field", "name")));
                 return;
             }
+            if (rejectNegativeValues(ctx, request)) {
+                return;
+            }
+            // 重名/重编号由 DAO 抛 SQLException 时只会落成 500，先查一次给出可行动的 409
+            if (productDAO.findByProductCode(request.productCode) != null) {
+                duplicate(ctx, "api.product.code_exists");
+                return;
+            }
+            if (productDAO.findByName(request.name) != null) {
+                duplicate(ctx, "api.product.name_exists");
+                return;
+            }
             
             Product product = new Product();
             // productCode 已在上方校验过非空，这里不再需要兜底
@@ -119,6 +134,11 @@ public class ProductApiController {
             product.cost = request.cost != null ? request.cost : BigDecimal.ZERO;
             
             productDAO.insert(product);
+            afterProductWrite(SyncEventType.PRODUCT_CREATED, Map.of(
+                "id", product.id,
+                "name", product.name,
+                "productCode", product.productCode != null ? product.productCode : ""
+            ));
             
             logger.info("创建商品: {} ({})", product.name, product.productCode);
             ctx.status(HttpStatus.CREATED)
@@ -154,6 +174,18 @@ public class ProductApiController {
                        com.cashier.api.ApiMessages.text(ctx, "api.product.not_found")));
                 return;
             }
+            if (request.name != null && request.name.isBlank()) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of("success", false, "message",
+                       com.cashier.api.ApiMessages.text(ctx, "api.product.missing_field", "name")));
+                return;
+            }
+            if (rejectNegativeValues(ctx, request)) {
+                return;
+            }
+            if (takenByOther(ctx, request.name, request.productCode, product.id)) {
+                return;
+            }
             
             applyProductUpdates(product, request);
             
@@ -165,6 +197,11 @@ public class ProductApiController {
                        com.cashier.api.ApiMessages.text(ctx, "api.product.update_conflict")));
                 return;
             }
+            afterProductWrite(SyncEventType.PRODUCT_UPDATED, Map.of(
+                "id", product.id,
+                "name", product.name,
+                "quantity", product.quantity
+            ));
             
             logger.info("更新商品: {} ({})", product.name, product.id);
             ctx.json(Map.of("success", true, "data", product, "message",
@@ -181,6 +218,59 @@ public class ProductApiController {
         updateTextFields(product, request);
         updateStockFields(product, request);
         updatePriceFields(product, request);
+    }
+
+    /** 价格/成本/库存不允许为负；命中时写好 400 并返回 true。 */
+    private static boolean rejectNegativeValues(Context ctx, ProductRequest request) {
+        String field = null;
+        if (request.price != null && request.price.signum() < 0) {
+            field = "price";
+        } else if (request.cost != null && request.cost.signum() < 0) {
+            field = "cost";
+        } else if (request.quantity != null && request.quantity < 0) {
+            field = "quantity";
+        } else if (request.minStock != null && request.minStock < 0) {
+            field = "minStock";
+        }
+        if (field == null) {
+            return false;
+        }
+        ctx.status(HttpStatus.BAD_REQUEST)
+           .json(Map.of("success", false, "message",
+               com.cashier.api.ApiMessages.text(ctx, "api.product.invalid_value", field)));
+        return true;
+    }
+
+    /** 更新时检查名称/编号是否已被其他商品占用；命中时写好 409 并返回 true。 */
+    private static boolean takenByOther(Context ctx, String name, String productCode, int selfId)
+            throws java.sql.SQLException {
+        if (name != null) {
+            Product existing = productDAO.findByName(name);
+            if (existing != null && existing.id != selfId) {
+                duplicate(ctx, "api.product.name_exists");
+                return true;
+            }
+        }
+        if (productCode != null) {
+            Product existing = productDAO.findByProductCode(productCode);
+            if (existing != null && existing.id != selfId) {
+                duplicate(ctx, "api.product.code_exists");
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private static void duplicate(Context ctx, String messageKey) {
+        ctx.status(HttpStatus.CONFLICT)
+           .json(Map.of("success", false, "message",
+               com.cashier.api.ApiMessages.text(ctx, messageKey)));
+    }
+
+    /** API 直接写 DAO，绕过了服务层的事件与缓存处理，这里补齐，避免其他终端/本地缓存看到旧数据。 */
+    private static void afterProductWrite(SyncEventType eventType, Map<String, Object> data) {
+        CacheManager.clearCache();
+        SyncManager.getInstance().broadcastSyncEvent(eventType, data);
     }
 
     private static void updateTextFields(Product product, ProductRequest request) {
@@ -222,6 +312,7 @@ public class ProductApiController {
             }
             
             productDAO.delete(id);
+            afterProductWrite(SyncEventType.PRODUCT_DELETED, Map.of("id", id));
             
             logger.info("删除商品: {} ({})", product.name, product.id);
             ctx.json(Map.of("success", true, "message",

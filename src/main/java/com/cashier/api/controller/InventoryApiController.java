@@ -1,9 +1,12 @@
 package com.cashier.api.controller;
 
+import com.cashier.api.sync.SyncEventType;
+import com.cashier.api.sync.SyncManager;
 import com.cashier.dao.DAOFactory;
 import com.cashier.dao.ProductDAORefactored;
 import com.cashier.model.PageResult;
 import com.cashier.model.Product;
+import com.cashier.util.CacheManager;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
@@ -99,6 +102,11 @@ public class InventoryApiController {
                        com.cashier.api.ApiMessages.text(ctx, "api.inventory.update_conflict")));
                 return;
             }
+            // 与 InventoryService 一致：本地缓存立即失效，并通知其他终端库存已变
+            CacheManager.clearCache();
+            SyncManager.getInstance().broadcastSyncEvent(
+                SyncEventType.INVENTORY_CHANGED,
+                Map.of("count", 1, "timestamp", System.currentTimeMillis()));
             
             logger.info("更新库存: {} -> {}", product.name, product.quantity);
             ctx.json(Map.of("success", true, "data", product, "message",

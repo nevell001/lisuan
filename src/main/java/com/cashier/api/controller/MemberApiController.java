@@ -98,9 +98,16 @@ public class MemberApiController {
                    .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.phone_required")));
                 return;
             }
+            // 与更新接口同一口径：11 位数字，避免建出后续无法按手机号查询/登录的会员
+            String phone = request.phone.trim();
+            if (!phone.matches("\\d{11}")) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.phone_invalid")));
+                return;
+            }
             
             // 检查是否已存在
-            Member existing = DAOFactory.getInstance().getMemberDAO().findByPhone(request.phone);
+            Member existing = DAOFactory.getInstance().getMemberDAO().findByPhone(phone);
             if (existing != null) {
                 ctx.status(HttpStatus.BAD_REQUEST)
                    .json(Map.of("success", false, "message", com.cashier.api.ApiMessages.text(ctx, "api.member.phone_exists")));
@@ -108,7 +115,7 @@ public class MemberApiController {
             }
             
             Member member = new Member();
-            member.phone = request.phone;
+            member.phone = phone;
             member.name = request.name != null ? request.name : "";
             member.level = "普通";
             member.discount = BigDecimal.TEN;
@@ -282,7 +289,7 @@ public class MemberApiController {
 
             boolean success = com.cashier.service.MemberService.recharge(
                 member, 
-                request.amount.doubleValue(), 
+                request.amount, 
                 "API", 
                 operatorName
             );

@@ -192,4 +192,82 @@ class ProductApiControllerTest extends DatabaseTestBase {
         assertEquals(HttpStatus.BAD_REQUEST, ctx.status);
         assertFalse((Boolean) response(ctx).get("success"));
     }
+
+    @Test
+    @DisplayName("创建商品：负价格/负库存返回 400，且不落库")
+    void createRejectsNegativeValues() throws Exception {
+        ProductApiController.ProductRequest negativePrice = new ProductApiController.ProductRequest();
+        negativePrice.productCode = "P-NEG-1";
+        negativePrice.name = "负价格商品";
+        negativePrice.price = new BigDecimal("-0.01");
+        TestContext priceCtx = new TestContext().withRequest(HandlerType.POST, "/api/products")
+            .withBody(negativePrice);
+        ProductApiController.create(priceCtx.context);
+        assertEquals(HttpStatus.BAD_REQUEST, priceCtx.status);
+        assertNull(DAOFactory.getInstance().getProductDAO().findByProductCode("P-NEG-1"));
+
+        ProductApiController.ProductRequest negativeStock = new ProductApiController.ProductRequest();
+        negativeStock.productCode = "P-NEG-2";
+        negativeStock.name = "负库存商品";
+        negativeStock.quantity = -5;
+        TestContext stockCtx = new TestContext().withRequest(HandlerType.POST, "/api/products")
+            .withBody(negativeStock);
+        ProductApiController.create(stockCtx.context);
+        assertEquals(HttpStatus.BAD_REQUEST, stockCtx.status);
+        assertNull(DAOFactory.getInstance().getProductDAO().findByProductCode("P-NEG-2"));
+    }
+
+    @Test
+    @DisplayName("创建商品：重名/重编号返回 409 而不是 500")
+    void createDuplicateReturnsConflict() throws Exception {
+        insertProduct("重名目标商品");
+
+        ProductApiController.ProductRequest duplicateName = new ProductApiController.ProductRequest();
+        duplicateName.productCode = "P-UNIQUE-1";
+        duplicateName.name = "重名目标商品";
+        TestContext nameCtx = new TestContext().withRequest(HandlerType.POST, "/api/products")
+            .withBody(duplicateName);
+        ProductApiController.create(nameCtx.context);
+        assertEquals(HttpStatus.CONFLICT, nameCtx.status);
+
+        ProductApiController.ProductRequest duplicateCode = new ProductApiController.ProductRequest();
+        duplicateCode.productCode = "P-重名目标商品";
+        duplicateCode.name = "另一个商品";
+        TestContext codeCtx = new TestContext().withRequest(HandlerType.POST, "/api/products")
+            .withBody(duplicateCode);
+        ProductApiController.create(codeCtx.context);
+        assertEquals(HttpStatus.CONFLICT, codeCtx.status);
+    }
+
+    @Test
+    @DisplayName("更新商品：改成已存在的名称返回 409，且原记录不变")
+    void updateToDuplicateNameReturnsConflict() throws Exception {
+        insertProduct("已占用名称");
+        Product target = insertProduct("待改名商品");
+
+        ProductApiController.ProductRequest request = new ProductApiController.ProductRequest();
+        request.name = "已占用名称";
+        TestContext ctx = new TestContext().withRequest(HandlerType.PUT, "/api/products/" + target.id)
+            .withPathParam("id", String.valueOf(target.id))
+            .withBody(request);
+        ProductApiController.update(ctx.context);
+
+        assertEquals(HttpStatus.CONFLICT, ctx.status);
+        assertEquals("待改名商品", DAOFactory.getInstance().getProductDAO().findById(target.id).name);
+    }
+
+    @Test
+    @DisplayName("更新商品：负成本返回 400")
+    void updateRejectsNegativeCost() throws Exception {
+        Product target = insertProduct("负成本商品");
+
+        ProductApiController.ProductRequest request = new ProductApiController.ProductRequest();
+        request.cost = new BigDecimal("-1");
+        TestContext ctx = new TestContext().withRequest(HandlerType.PUT, "/api/products/" + target.id)
+            .withPathParam("id", String.valueOf(target.id))
+            .withBody(request);
+        ProductApiController.update(ctx.context);
+
+        assertEquals(HttpStatus.BAD_REQUEST, ctx.status);
+    }
 }
