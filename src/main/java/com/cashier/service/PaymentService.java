@@ -18,8 +18,14 @@ import org.slf4j.Logger;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStream;
 import java.math.BigDecimal;
+import java.nio.file.AtomicMoveNotSupportedException;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.nio.file.attribute.PosixFilePermissions;
 import java.sql.SQLException;
 import java.util.Date;
 import java.util.EnumMap;
@@ -123,13 +129,56 @@ public final class PaymentService {
         props.setProperty("refund.reconcile.seconds", String.valueOf(nextConfig.refundReconcileSeconds));
         props.setProperty("refund.max.track.hours", String.valueOf(nextConfig.refundMaxTrackHours));
 
-        try (FileOutputStream fos = new FileOutputStream(file)) {
-            props.store(fos, "LiSuan payment configuration");
-        } catch (Exception e) {
-            throw new IllegalStateException("保存支付配置失败", e);
-        }
+        writeConfigAtomically(file, props);
 
         setConfig(nextConfig);
+    }
+
+    /**
+     * 先写同目录临时文件，落盘后再原子替换：写到一半崩溃不会留下半截配置，
+     * 且新文件只给当前用户读写（POSIX 600），商户私钥不再对同机其他账号可读。
+     *
+     * <p>包内可见是为了让测试能指向临时目录，避免覆盖开发机上真实的 {@code config/payment.properties}。</p>
+     */
+    static void writeConfigAtomically(File file, Properties props) {
+        Path target = file.toPath().toAbsolutePath();
+        Path dir = target.getParent();
+        if (dir == null) {
+            throw new IllegalStateException("支付配置路径没有父目录: " + target);
+        }
+        Path tmp = null;
+        try {
+            tmp = Files.createTempFile(dir, ".payment-", ".tmp");
+            try (OutputStream out = Files.newOutputStream(tmp)) {
+                props.store(out, "LiSuan payment configuration");
+            }
+            restrictToOwner(tmp);
+            try {
+                Files.move(tmp, target, StandardCopyOption.ATOMIC_MOVE, StandardCopyOption.REPLACE_EXISTING);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tmp, target, StandardCopyOption.REPLACE_EXISTING);
+            }
+            tmp = null;
+        } catch (IOException e) {
+            throw new IllegalStateException("保存支付配置失败", e);
+        } finally {
+            if (tmp != null) {
+                try {
+                    Files.deleteIfExists(tmp);
+                } catch (IOException e) {
+                    logger.warn("清理支付配置临时文件失败: {}", tmp, e);
+                }
+            }
+        }
+    }
+
+    private static void restrictToOwner(Path path) {
+        try {
+            Files.setPosixFilePermissions(path, PosixFilePermissions.fromString("rw-------"));
+        } catch (UnsupportedOperationException | IOException e) {
+            // Windows 等非 POSIX 文件系统没有 Unix 权限位，退化为依赖操作系统 ACL
+            logger.debug("无法设置支付配置文件权限: {}", path, e);
+        }
     }
 
     private static String safe(String value, String defaultValue) {
