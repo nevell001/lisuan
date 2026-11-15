@@ -396,6 +396,28 @@ public abstract class DatabaseTestBase {
             )
             """);
 
+        // 创建 hold_orders 表（挂单）
+        stmt.execute("""
+            CREATE TABLE IF NOT EXISTS hold_orders (
+                id INT PRIMARY KEY AUTO_INCREMENT,
+                order_number VARCHAR(50) UNIQUE NOT NULL,
+                user_id INT NOT NULL,
+                member_id INT,
+                member_name VARCHAR(100),
+                member_phone VARCHAR(20),
+                total_amount DECIMAL(10,2) DEFAULT 0,
+                discount_amount DECIMAL(10,2) DEFAULT 0,
+                final_amount DECIMAL(10,2) DEFAULT 0,
+                item_count INT DEFAULT 0,
+                items_json TEXT,
+                hold_date DATE NOT NULL,
+                hold_time TIME NOT NULL,
+                notes VARCHAR(500),
+                status INT DEFAULT 0,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            )
+            """);
+
         // 创建 settings 表（系统设置）
         stmt.execute("""
             CREATE TABLE IF NOT EXISTS settings (
@@ -657,6 +679,7 @@ public abstract class DatabaseTestBase {
             stmt.execute("DELETE FROM products");
             stmt.execute("DELETE FROM users");
             stmt.execute("DELETE FROM promotions");
+            stmt.execute("DELETE FROM hold_orders");
             stmt.execute("DELETE FROM return_reservations");
             stmt.execute("DELETE FROM return_order_items");
             stmt.execute("DELETE FROM return_orders");
@@ -669,6 +692,9 @@ public abstract class DatabaseTestBase {
             // 清空应用级缓存，防止测试之间的缓存污染
             try {
                 com.cashier.util.CacheManager.clearCache();
+                // 直接 DELETE 绕过了 PromotionDAO 的写入失效：不清定价缓存，
+                // 后续测试会选中已删除的促销，交易因促销次数更新失败而回 400
+                com.cashier.service.TransactionService.invalidatePromotionCache();
             } catch (Throwable t) {
                 logger.warn("清理缓存时发生异常: {}", t.getMessage());
             }
