@@ -469,7 +469,7 @@ public class Installer {
         }
         
         // Create database.properties
-        String dbUrl = String.format("jdbc:mysql://%s:%s/%s?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8",
+        String dbUrl = String.format("jdbc:mysql://%s:%s/%s?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=false&characterEncoding=UTF-8",
             dbHost, dbPort, DB_NAME);
         
         // 密码一律不写进 config/（发布门禁禁止 config/database.properties 出现 db.password），

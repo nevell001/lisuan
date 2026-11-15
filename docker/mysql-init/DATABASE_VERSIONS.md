@@ -213,7 +213,6 @@ SHOW TABLES;
 | 文件类型 | 命名格式 | 示例 |
 |---------|---------|------|
 | 完整初始化 | `00-init-complete.sql` | - |
-| Root 权限配置 | `00-grant-root-permissions.sql` | - |
 | 版本升级 | `v{version}-updates.sql` | `06-v2.4.1-updates.sql` |
 | 诊断修复 | `07-fix-{description}.sql` | `07-fix-transaction-items.sql` |
 
@@ -293,7 +292,6 @@ docker exec -i lisuan-mysql mysql -uroot -pYOUR_ROOT_PASSWORD lisuan_system < ba
 
 ```
 docker/mysql-init/
-├── 00-grant-root-permissions.sql          # Root 权限配置（Docker 初始化用）
 ├── 00-init-complete.sql                   # 完整初始化脚本（推荐用于全新安装）
 ├── 07-fix-transaction-items.sql           # 诊断修复脚本
 ├── 08-v2.4.3-product-name-unique.sql      # 商品名称唯一性约束升级脚本
@@ -304,6 +302,9 @@ docker/mysql-init/
 ├── 99-v2.6.0-hot-products.sql             # v2.6.0 products.is_hot 列
 └── DATABASE_VERSIONS.md                    # 本文档
 ```
+
+> ⚠️ 远程 root 授权脚本已移除：默认不对 root 开放远程访问。确需远程管理时请按最小权限手工授权，
+> 并在执行时从环境变量读取口令，不要使用仓库里的占位密码。
 
 **已删除的文件**（已被 `00-init-complete.sql` 整合）：
 - ❌ `01-create-user.sql`

@@ -3,7 +3,7 @@
 
 # 数据库连接 URL
 # 生产环境建议使用 sslMode=REQUIRED，开发环境可用 sslMode=PREFERRED
-db.url=jdbc:mysql://localhost:3306/lisuan_system?sslMode=REQUIRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+db.url=jdbc:mysql://localhost:3306/lisuan_system?sslMode=REQUIRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=false&characterEncoding=UTF-8
 
 # 数据库用户名
 db.username=lisuan

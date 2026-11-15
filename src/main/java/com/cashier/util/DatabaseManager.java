@@ -259,7 +259,7 @@ public class DatabaseManager {
             configFile.getParentFile().mkdirs();
 
             Properties props = new Properties();
-            props.setProperty(DatabaseConfigKeys.URL, "jdbc:mysql://localhost:3306/lisuan_system?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8");
+            props.setProperty(DatabaseConfigKeys.URL, "jdbc:mysql://localhost:3306/lisuan_system?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=false&characterEncoding=UTF-8");
             props.setProperty(DatabaseConfigKeys.USERNAME, "lisuan");
             // 安全提示：建议使用环境变量 CASHIER_DB_PASSWORD 存储密码，避免明文存储
             // Windows: set CASHIER_DB_PASSWORD=YourPassword

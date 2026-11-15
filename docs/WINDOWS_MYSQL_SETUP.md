@@ -151,7 +151,7 @@
 
 ```properties
 # 数据库连接配置
-db.url=jdbc:mysql://localhost:3306/lisuan_system?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+db.url=jdbc:mysql://localhost:3306/lisuan_system?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=false&characterEncoding=UTF-8
 db.username=lisuan
 # 推荐留空，并通过 CASHIER_DB_PASSWORD 环境变量提供
 db.password=

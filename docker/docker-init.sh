@@ -143,7 +143,7 @@ fi
 cat > config/database.properties << EOF
 # Database Configuration
 # Production deployments should provide the password through CASHIER_DB_PASSWORD.
-db.url=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8
+db.url=jdbc:mysql://${MYSQL_HOST}:${MYSQL_PORT}/${MYSQL_DATABASE}?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=false&characterEncoding=UTF-8
 db.username=${MYSQL_USER}
 db.password=
 db.pool.size=10

@@ -263,7 +263,7 @@ public class DatabaseConfigDialog {
 
         // Test actual database connection
         try {
-            String dbUrl = String.format("jdbc:mysql://%s:%s/?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true",
+            String dbUrl = String.format("jdbc:mysql://%s:%s/?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=false",
                     host, port);
             StringBuilder message = new StringBuilder();
             message.append("Database connection successful!\n\n");
@@ -371,7 +371,7 @@ public class DatabaseConfigDialog {
     }
 
     private boolean ensureDatabaseReady(DatabaseDialogInput input) throws SQLException {
-        String dbUrl = String.format("jdbc:mysql://%s:%s/?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true",
+        String dbUrl = String.format("jdbc:mysql://%s:%s/?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=false",
                 input.host(), input.port());
 
         try (Connection conn = DriverManager.getConnection(dbUrl, input.user(), input.pass())) {
@@ -416,7 +416,7 @@ public class DatabaseConfigDialog {
             Files.createDirectories(configDir);
         }
 
-        String fullDbUrl = String.format("jdbc:mysql://%s:%s/%s?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8",
+        String fullDbUrl = String.format("jdbc:mysql://%s:%s/%s?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=false&characterEncoding=UTF-8",
                 input.host(), input.port(), input.dbName());
 
         // 密码一律不写进 config/（发布门禁禁止 config/database.properties 出现 db.password），
@@ -516,7 +516,7 @@ public class DatabaseConfigDialog {
         }
 
         try (Connection conn = DriverManager.getConnection(
-                String.format("jdbc:mysql://%s:%s/%s?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true",
+                String.format("jdbc:mysql://%s:%s/%s?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=false",
                     host, port, dbName), user, pass)) {
 
             // Read and execute the script

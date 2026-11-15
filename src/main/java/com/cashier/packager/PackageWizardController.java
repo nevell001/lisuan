@@ -689,7 +689,7 @@ public class PackageWizardController {
         }
 
         File configFile = new File(configDir, DatabaseConfigKeys.DATABASE_PROPERTIES_FILE);
-        String url = String.format("jdbc:mysql://%s:%s/%s?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=true&characterEncoding=UTF-8",
+        String url = String.format("jdbc:mysql://%s:%s/%s?sslMode=PREFERRED&serverTimezone=Asia/Shanghai&allowPublicKeyRetrieval=false&characterEncoding=UTF-8",
                 dbHostField.getText().trim(),
                 dbPortField.getText().trim(),
                 dbNameField.getText().trim());
