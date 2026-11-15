@@ -10,6 +10,7 @@ import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
 import java.sql.Connection;
+import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.time.Instant;
@@ -34,6 +35,39 @@ class PaymentDAOTest extends DatabaseTestBase {
             stmt.execute("DELETE FROM refund_records");
             stmt.execute("DELETE FROM payment_orders");
         }
+    }
+
+    @Test
+    @DisplayName("建表迁移为支付/退款查询补齐索引，重复执行安全")
+    void testCreateTableEnsuresQueryIndexesIdempotently() throws SQLException {
+        // setUp 已建过一次表；再执行一次不能因为"索引已存在"失败
+        paymentDAO.createTable();
+
+        Set<String> paymentIndexes = indexNames("PAYMENT_ORDERS");
+        assertTrue(paymentIndexes.contains("IDX_PAYMENT_TRANSACTION"),
+            "payment_orders 缺 transaction_id 索引: " + paymentIndexes);
+        assertTrue(paymentIndexes.contains("IDX_STATUS_EXPIRE"),
+            "payment_orders 缺 (status, expire_time) 索引: " + paymentIndexes);
+
+        Set<String> refundIndexes = indexNames("REFUND_RECORDS");
+        assertTrue(refundIndexes.contains("IDX_REFUND_PAYMENT"),
+            "refund_records 缺 payment_id 索引: " + refundIndexes);
+        assertTrue(refundIndexes.contains("IDX_STATUS_CREATE"),
+            "refund_records 缺 (status, create_time) 索引: " + refundIndexes);
+    }
+
+    private static Set<String> indexNames(String table) throws SQLException {
+        Set<String> names = new HashSet<>();
+        try (Connection conn = DatabaseManager.getConnection();
+             ResultSet rs = conn.getMetaData().getIndexInfo(conn.getCatalog(), null, table, false, false)) {
+            while (rs.next()) {
+                String name = rs.getString("INDEX_NAME");
+                if (name != null) {
+                    names.add(name.toUpperCase());
+                }
+            }
+        }
+        return names;
     }
 
     @Test

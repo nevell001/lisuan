@@ -8,6 +8,7 @@ import org.slf4j.Logger;
 import java.math.BigDecimal;
 import java.security.SecureRandom;
 import java.sql.Connection;
+import java.sql.DatabaseMetaData;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -17,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicLong;
 
@@ -78,8 +80,64 @@ public class PaymentDAORefactored extends BaseDAO {
              Statement stmt = conn.createStatement()) {
             stmt.execute(sql);
             stmt.execute(refundSql);
+            // 二级索引：支付/退款表由本 DAO 惰性建表，DatabaseManager 的迁移覆盖不到
+            ensureIndex(conn, "payment_orders", "idx_payment_transaction", "transaction_id");
+            ensureIndex(conn, "payment_orders", "idx_status_expire", "status, expire_time");
+            ensureIndex(conn, "refund_records", "idx_refund_payment", "payment_id");
+            ensureIndex(conn, "refund_records", "idx_status_create", "status, create_time");
             logger.info("支付订单表创建成功");
         }
+    }
+
+    /** 幂等创建二级索引；先按当前库判重，生产（MySQL）与测试（H2）都能跑。 */
+    private static void ensureIndex(Connection conn, String table, String indexName, String columns)
+            throws SQLException {
+        if (indexExists(conn, table, indexName)) {
+            return;
+        }
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute("ALTER TABLE `" + table + "` ADD INDEX `" + indexName + "` (" + columns + ")");
+            logger.info("为 {} 表创建索引 {}（{}）", table, indexName, columns);
+        } catch (SQLException e) {
+            // 多实例同时启动时另一个实例可能已先建好（MySQL 1061 / H2 42111：索引已存在）
+            if (e.getErrorCode() == 1061 || e.getErrorCode() == 42111) {
+                return;
+            }
+            throw e;
+        }
+    }
+
+    private static boolean indexExists(Connection conn, String table, String indexName) throws SQLException {
+        DatabaseMetaData meta = conn.getMetaData();
+        String product = meta.getDatabaseProductName();
+        if (product != null && product.toLowerCase(Locale.ROOT).contains("mysql")) {
+            // 连接池里的连接可能被 DatabaseManager 用 USE 切过库，getCatalog() 仍是 URL 里的库，
+            // 用 DATABASE() 才能查到实际建表的 schema
+            String sql = "SELECT 1 FROM information_schema.statistics "
+                + "WHERE table_schema = DATABASE() AND table_name = ? AND index_name = ? LIMIT 1";
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
+                ps.setString(1, table);
+                ps.setString(2, indexName);
+                try (ResultSet rs = ps.executeQuery()) {
+                    return rs.next();
+                }
+            }
+        }
+        // H2 把未加引号的表名存成大写，MySQL 按建表时的小写存，两种写法都查一次
+        return indexExists(meta, conn.getCatalog(), table, indexName)
+            || indexExists(meta, conn.getCatalog(), table.toUpperCase(Locale.ROOT), indexName);
+    }
+
+    private static boolean indexExists(DatabaseMetaData meta, String catalog, String table, String indexName)
+            throws SQLException {
+        try (ResultSet rs = meta.getIndexInfo(catalog, null, table, false, false)) {
+            while (rs.next()) {
+                if (indexName.equalsIgnoreCase(rs.getString("INDEX_NAME"))) {
+                    return true;
+                }
+            }
+        }
+        return false;
     }
 
     public boolean insert(PaymentOrder order) throws SQLException {

@@ -323,9 +323,12 @@ public class DatabaseManager {
         try (Connection conn = getConnection();
              Statement stmt = conn.createStatement()) {
 
-            // 创建数据库（如果不存在）
-            stmt.execute("CREATE DATABASE IF NOT EXISTS lisuan_system CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
-            stmt.execute("USE lisuan_system");
+            // 创建数据库（如果不存在）。必须用 JDBC URL 里配置的库名，
+            // 否则自定义库（多门店/测试实例）会被静默切到 lisuan_system。
+            String quotedDatabase = "`" + getDatabaseNameFromUrl(dbUrl).replace("`", "``") + "`";
+            stmt.execute("CREATE DATABASE IF NOT EXISTS " + quotedDatabase
+                + " CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci");
+            stmt.execute("USE " + quotedDatabase);
             createTableUsers(stmt);
             createTableProducts(stmt);
             createTableMembers(stmt);
@@ -1292,6 +1295,10 @@ public class DatabaseManager {
             """);
         }
 
+        // 报表/对账查询的二级索引（老库迁移；新库 CREATE TABLE 已带同名索引时自动跳过）
+        ensureIndex(stmt, "return_orders", "idx_status_completed_date", "status, completed_date");
+        ensureIndex(stmt, "invoices", "idx_create_time", "create_time");
+
         logger.info("表结构检查完成");
     }
 
@@ -1389,6 +1396,27 @@ public class DatabaseManager {
             logger.info("为 {} 表添加 {} 字段", table, column);
             stmt.execute("ALTER TABLE `" + table + "` ADD COLUMN `" + column + "` " + definition);
         }
+    }
+
+    /** 索引不存在时才创建；表不存在时跳过（支付表等由各自 DAO 惰性建表）。 */
+    private static void ensureIndex(Statement stmt, String table, String indexName, String columns)
+            throws SQLException {
+        if (tableMissing(stmt, table)) {
+            return;
+        }
+        String sql = "SELECT COUNT(*) AS count FROM INFORMATION_SCHEMA.STATISTICS " +
+                     "WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = ? AND INDEX_NAME = ?";
+        try (PreparedStatement pstmt = stmt.getConnection().prepareStatement(sql)) {
+            pstmt.setString(1, table);
+            pstmt.setString(2, indexName);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next() && rs.getInt("count") > 0) {
+                    return;
+                }
+            }
+        }
+        logger.info("为 {} 表创建索引 {}（{}）", table, indexName, columns);
+        stmt.execute("ALTER TABLE `" + table + "` ADD INDEX `" + indexName + "` (" + columns + ")");
     }
 
     /**

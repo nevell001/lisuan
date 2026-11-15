@@ -1054,22 +1054,6 @@ CREATE TABLE IF NOT EXISTS hold_orders (
     INDEX idx_hold_date (hold_date)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
-CREATE TABLE IF NOT EXISTS invoice_items (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    invoice_id VARCHAR(50),
-    product_name VARCHAR(100),
-    specification VARCHAR(100),
-    unit VARCHAR(20),
-    quantity INT,
-    unit_price DECIMAL(10,2),
-    amount DECIMAL(10,2),
-    tax_rate DECIMAL(5,4),
-    tax_amount DECIMAL(10,2),
-    total_amount DECIMAL(10,2),
-    FOREIGN KEY (invoice_id) REFERENCES invoices(invoice_id) ON DELETE CASCADE,
-    INDEX idx_invoice (invoice_id)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
 CREATE TABLE IF NOT EXISTS invoices (
     invoice_id VARCHAR(50) PRIMARY KEY,
     invoice_code VARCHAR(20),
@@ -1103,6 +1087,23 @@ CREATE TABLE IF NOT EXISTS invoices (
     image_path VARCHAR(200),
     INDEX idx_transaction (transaction_id),
     INDEX idx_status (status)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- invoice_items 的外键引用 invoices，必须后建
+CREATE TABLE IF NOT EXISTS invoice_items (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    invoice_id VARCHAR(50),
+    product_name VARCHAR(100),
+    specification VARCHAR(100),
+    unit VARCHAR(20),
+    quantity INT,
+    unit_price DECIMAL(10,2),
+    amount DECIMAL(10,2),
+    tax_rate DECIMAL(5,4),
+    tax_amount DECIMAL(10,2),
+    total_amount DECIMAL(10,2),
+    FOREIGN KEY (invoice_id) REFERENCES invoices(invoice_id) ON DELETE CASCADE,
+    INDEX idx_invoice (invoice_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 CREATE TABLE IF NOT EXISTS login_attempts (
@@ -1159,6 +1160,85 @@ CREATE TABLE IF NOT EXISTS settings (
     description TEXT,
     updated_at BIGINT
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================
+-- 报表/对账查询索引（幂等：逐条判重）
+-- ============================================
+-- 支付、退款、退货、发票的列表/对账查询按这些列过滤或排序，数据量上来后无索引即全表扫描。
+-- Java 侧迁移（DatabaseManager 与 PaymentDAORefactored）会补同样的索引，这里保证
+-- Docker 首次初始化出来的库直接带上。
+
+SET @index_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payment_orders' AND INDEX_NAME = 'idx_payment_transaction'
+);
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE payment_orders ADD INDEX idx_payment_transaction (transaction_id)',
+    'SELECT "payment_orders.idx_payment_transaction index already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'payment_orders' AND INDEX_NAME = 'idx_status_expire'
+);
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE payment_orders ADD INDEX idx_status_expire (status, expire_time)',
+    'SELECT "payment_orders.idx_status_expire index already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'refund_records' AND INDEX_NAME = 'idx_refund_payment'
+);
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE refund_records ADD INDEX idx_refund_payment (payment_id)',
+    'SELECT "refund_records.idx_refund_payment index already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'refund_records' AND INDEX_NAME = 'idx_status_create'
+);
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE refund_records ADD INDEX idx_status_create (status, create_time)',
+    'SELECT "refund_records.idx_status_create index already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'return_orders' AND INDEX_NAME = 'idx_status_completed_date'
+);
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE return_orders ADD INDEX idx_status_completed_date (status, completed_date)',
+    'SELECT "return_orders.idx_status_completed_date index already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @index_exists = (
+    SELECT COUNT(*) FROM INFORMATION_SCHEMA.STATISTICS
+    WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'invoices' AND INDEX_NAME = 'idx_create_time'
+);
+SET @sql = IF(@index_exists = 0,
+    'ALTER TABLE invoices ADD INDEX idx_create_time (create_time)',
+    'SELECT "invoices.idx_create_time index already exists" AS message'
+);
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- ============================================
 -- 验证初始化完成
