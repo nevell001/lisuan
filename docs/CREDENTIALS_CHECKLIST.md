@@ -7,7 +7,7 @@
 ## 0. 优先级说明
 
 - **必填**：数据库、API 安全、至少一个支付通道（微信或支付宝）
-- **选配**：云备份（任选一种远端即可，也可仅本地备份）
+- **选配**：暂无（仅本地备份；云备份上传尚未接入，无需准备对象存储凭据）
 - 准备顺序建议：数据库 → API 安全 → 支付 → 备份
 
 ---
@@ -73,41 +73,11 @@
 | 支付模式 | `payment.mode` | `production`（生产）/ `mock`（测试）/ `disabled` |
 | 订单过期分钟 | `order.expire.minutes` | 默认 15 |
 
-## 4. 云备份（选配，任选一种）
+## 4. 云备份（暂未支持）
 
-凭据填写入口：应用「系统设置→备份设置」或直接写 `backup_config`；字段见代码 `BackupConfig`。
+当前版本仅支持本地备份；云存储上传适配器尚未接入，`PUT /api/backup/config` 对云配置字段或非 `LOCAL` 目标返回 **501**，`POST /api/backup/execute` 对云目标同样返回 **501**（不会生成备份记录）。
 
-### 阿里云 OSS
-| 凭据 | 字段 | 申请入口 |
-|---|---|---|
-| AccessKey ID / Secret | `aliyunAccessKey` / `aliyunSecretKey` | 阿里云 RAM 用户，仅授予 OSS 目标桶读写权限 |
-| Bucket / Endpoint / Region | `aliyunBucket` / `aliyunEndpoint` / `aliyunRegion` | OSS 控制台 |
-
-### 腾讯云 COS
-| 凭据 | 字段 | 申请入口 |
-|---|---|---|
-| SecretId / SecretKey | `tencentSecretId` / `tencentSecretKey` | 腾讯云 CAM 子账号 |
-| Bucket / Region | `tencentBucket` / `tencentRegion` | COS 控制台 |
-
-### 七牛云
-| 凭据 | 字段 | 申请入口 |
-|---|---|---|
-| AccessKey / SecretKey | `qiniuAccessKey` / `qiniuSecretKey` | 七牛控制台密钥管理 |
-| Bucket / Domain | `qiniuBucket` / `qiniuDomain` | 七牛空间 |
-
-### AWS S3
-| 凭据 | 字段 | 申请入口 |
-|---|---|---|
-| AccessKey / SecretKey | `awsAccessKey` / `awsSecretKey` | AWS IAM 用户，最小权限策略 |
-| Bucket / Region | `awsBucket` / `awsRegion` | S3 控制台 |
-
-### FTP / WebDAV（自建或 NAS）
-| 凭据 | 字段 | 说明 |
-|---|---|---|
-| FTP 主机/端口/用户/密码/路径 | `ftpHost` / `ftpPort` / `ftpUser` / `ftpPassword` / `ftpPath` | 专用备份账号，禁 root |
-| WebDAV URL/用户/密码/路径 | `webdavUrl` / `webdavUser` / `webdavPassword` / `webdavPath` | 支持 HTTPS 的 WebDAV |
-
-验证：触发一次手动备份，确认远端文件出现、大小与本地一致；再做一次恢复演练。
+因此上线**无需**准备阿里云 OSS、腾讯云 COS、七牛云、AWS S3、FTP/WebDAV 凭据；请使用本地备份并做好备份目录的异地留存。
 
 ## 5. 其他
 
@@ -119,7 +89,7 @@
 
 ## 6. 密钥轮换与备份
 
-- 每半年轮换：`TOKEN_SECRET`、支付 API v3 密钥、应用私钥、云存储 SecretKey
+- 每半年轮换：`TOKEN_SECRET`、支付 API v3 密钥、应用私钥
 - 私钥/密钥首次配置后离线备份一份（加密压缩），注明用途与日期
 - 凭据发生疑似泄露时，先轮换再排查，禁止把旧凭据留在配置文件中
 

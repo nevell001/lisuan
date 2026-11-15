@@ -52,58 +52,6 @@ public class BackupConfig {
      */
     public Date nextBackupTime;
     
-    // ========== 云存储配置 ==========
-    
-    /**
-     * 阿里云OSS配置
-     */
-    public String aliyunEndpoint;
-    public String aliyunBucket;
-    public String aliyunAccessKey;
-    public String aliyunSecretKey;
-    public String aliyunRegion;
-    
-    /**
-     * 腾讯云COS配置
-     */
-    public String tencentRegion;
-    public String tencentBucket;
-    public String tencentSecretId;
-    public String tencentSecretKey;
-    
-    /**
-     * 七牛云配置
-     */
-    public String qiniuDomain;
-    public String qiniuBucket;
-    public String qiniuAccessKey;
-    public String qiniuSecretKey;
-    
-    /**
-     * AWS S3配置
-     */
-    public String awsRegion;
-    public String awsBucket;
-    public String awsAccessKey;
-    public String awsSecretKey;
-    
-    /**
-     * FTP配置
-     */
-    public String ftpHost;
-    public int ftpPort;
-    public String ftpUser;
-    public String ftpPassword;
-    public String ftpPath;
-    
-    /**
-     * WebDAV配置
-     */
-    public String webdavUrl;
-    public String webdavUser;
-    public String webdavPassword;
-    public String webdavPath;
-    
     /**
      * 本地备份路径
      */

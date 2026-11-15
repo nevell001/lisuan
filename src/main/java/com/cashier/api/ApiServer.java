@@ -136,9 +136,10 @@ public class ApiServer {
         // 注册路由
         registerRoutes();
 
-        // 异常详情只写入服务端日志，所有 5xx 响应统一隐藏内部实现信息。
+        // 异常详情只写入服务端日志，5xx 响应统一隐藏内部实现信息。
+        // 501 例外：它是"功能尚未接入"的明确业务响应（如云备份），提示必须保留给调用方。
         app.after(ctx -> {
-            if (ctx.statusCode() >= 500) {
+            if (ctx.statusCode() >= 500 && ctx.statusCode() != 501) {
                 ctx.json(Map.of("success", false, "message", "服务器内部错误"));
             }
         });

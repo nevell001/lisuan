@@ -23,7 +23,7 @@ import java.util.zip.*;
 
 /**
  * 备份服务
- * 支持本地备份和云存储上传
+ * 支持本地备份；云存储上传适配器尚未接入
  */
 public class BackupService {
     private static final Logger logger = LoggerFactoryUtil.getLogger(BackupService.class);

@@ -20,7 +20,7 @@ import java.util.*;
 import java.util.stream.Collectors;
 
 /**
- * 云备份 REST API 控制器
+ * 备份 REST API 控制器（云存储上传尚未接入，相关配置与目标返回 501）
  */
 public class BackupApiController {
     private static final Logger logger = LoggerFactoryUtil.getLogger(BackupApiController.class);
@@ -29,6 +29,15 @@ public class BackupApiController {
     private static final int DEFAULT_BACKUP_LIST_LIMIT = 20;
     private static final int MAX_BACKUP_LIST_LIMIT = 200;
     private static final String DEFAULT_BACKUP_DIR = "backups";
+
+    // 云存储上传适配器尚未接入：这些字段既不会落库也不会生效，必须明确拒绝而不是回“保存成功”
+    private static final List<String> UNSUPPORTED_CLOUD_FIELDS = List.of(
+        "aliyunEndpoint", "aliyunBucket", "aliyunAccessKey", "aliyunSecretKey", "aliyunRegion",
+        "tencentRegion", "tencentBucket", "tencentSecretId", "tencentSecretKey",
+        "qiniuDomain", "qiniuBucket", "qiniuAccessKey", "qiniuSecretKey",
+        "awsRegion", "awsBucket", "awsAccessKey", "awsSecretKey",
+        "ftpHost", "ftpPort", "ftpUser", "ftpPassword", "ftpPath",
+        "webdavUrl", "webdavUser", "webdavPassword", "webdavPath");
     
     /**
      * 执行备份
@@ -58,6 +67,12 @@ public class BackupApiController {
                 BackupRecord.BackupContentType.valueOf(contentTypeStr);
             BackupRecord.BackupTarget target = 
                 BackupRecord.BackupTarget.fromString(targetStr);
+            if (target != BackupRecord.BackupTarget.LOCAL) {
+                // 云上传适配器未接入：直接 501，避免落一条注定失败的备份记录
+                logger.warn("拒绝云备份请求: target={}（上传适配器未接入）", target);
+                cloudNotSupported(ctx);
+                return;
+            }
             
             // 异步执行备份
             BackupRecord record = BackupService.executeBackup(contentType, target, operator);
@@ -303,10 +318,11 @@ public class BackupApiController {
                 ));
                 return;
             }
+            if (rejectUnsupportedCloudConfig(ctx, body)) {
+                return;
+            }
             BackupConfig config = BackupService.getConfig();
             applyBasicBackupConfig(body, config);
-            applyAliyunConfig(body, config);
-            applyTencentConfig(body, config);
             BackupService.updateConfig(config);
             
             ctx.json(Map.of(
@@ -347,22 +363,40 @@ public class BackupApiController {
         }
     }
 
-    private static void applyAliyunConfig(Map<?, ?> body, BackupConfig config) {
-        config.aliyunEndpoint = getStringIfPresent(body, "aliyunEndpoint", config.aliyunEndpoint);
-        config.aliyunBucket = getStringIfPresent(body, "aliyunBucket", config.aliyunBucket);
-        config.aliyunAccessKey = getStringIfPresent(body, "aliyunAccessKey", config.aliyunAccessKey);
-        config.aliyunSecretKey = getStringIfPresent(body, "aliyunSecretKey", config.aliyunSecretKey);
+    /**
+     * 云存储上传尚未接入：带值的云配置字段或非本地 target 一律回 501。
+     *
+     * <p>之前接口把这些字段照单全收并回“保存成功”，但 DAO 根本不持久化它们，
+     * 客户端重启后发现配置全丢；非本地 target 虽会落库，后续备份却必然失败。</p>
+     *
+     * @return 已写好 501 响应时返回 true
+     */
+    private static boolean rejectUnsupportedCloudConfig(Context ctx, Map<?, ?> body) {
+        for (String field : UNSUPPORTED_CLOUD_FIELDS) {
+            Object value = body.get(field);
+            if (value != null && !value.toString().isBlank()) {
+                logger.warn("拒绝保存云备份配置: 字段 {}（上传适配器未接入）", field);
+                cloudNotSupported(ctx);
+                return true;
+            }
+        }
+        if (body.containsKey("target")) {
+            BackupRecord.BackupTarget target =
+                BackupRecord.BackupTarget.fromString(getString(body, "target", null));
+            if (target != BackupRecord.BackupTarget.LOCAL) {
+                logger.warn("拒绝保存云备份目标: {}", target);
+                cloudNotSupported(ctx);
+                return true;
+            }
+        }
+        return false;
     }
 
-    private static void applyTencentConfig(Map<?, ?> body, BackupConfig config) {
-        config.tencentRegion = getStringIfPresent(body, "tencentRegion", config.tencentRegion);
-        config.tencentBucket = getStringIfPresent(body, "tencentBucket", config.tencentBucket);
-        config.tencentSecretId = getStringIfPresent(body, "tencentSecretId", config.tencentSecretId);
-        config.tencentSecretKey = getStringIfPresent(body, "tencentSecretKey", config.tencentSecretKey);
-    }
-
-    private static String getStringIfPresent(Map<?, ?> body, String key, String currentValue) {
-        return body.containsKey(key) ? getString(body, key, null) : currentValue;
+    private static void cloudNotSupported(Context ctx) {
+        ctx.status(501).json(Map.of(
+            "success", false,
+            "error", com.cashier.api.ApiMessages.text(ctx, "api.backup.cloud_not_supported")
+        ));
     }
     
     /**
@@ -447,11 +481,8 @@ public class BackupApiController {
         data.put("lastBackupTime", config.lastBackupTime != null ? config.lastBackupTime.toString() : null);
         data.put("nextBackupTime", config.nextBackupTime != null ? config.nextBackupTime.toString() : null);
         
-        // 云存储配置（隐藏密钥）
-        data.put("aliyunBucket", config.aliyunBucket);
-        data.put("tencentBucket", config.tencentBucket);
-        data.put("qiniuBucket", config.qiniuBucket);
-        data.put("awsBucket", config.awsBucket);
+        // 云存储上传适配器尚未接入，不返回云配置字段，并用显式能力标记告知客户端
+        data.put("cloudUploadSupported", false);
         
         return data;
     }
