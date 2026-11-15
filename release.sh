@@ -101,7 +101,7 @@ if [ -f "$API_CONFIG" ] && grep -q '^api.enabled=true' "$API_CONFIG"; then
 
     if [ "${#TOKEN_SECRET_VALUE}" -lt 32 ] \
         || [ "$TOKEN_SECRET_VALUE" = "default_secret_key" ] \
-        || echo "$TOKEN_SECRET_VALUE" | grep -E 'REPLACE_|change_this|your_secret' > /dev/null 2>&1; then
+        || echo "$TOKEN_SECRET_VALUE" | grep -E 'CHANGE_ME|change_me|REPLACE_|change_this|your_secret' > /dev/null 2>&1; then
         echo "✗ API 已开启，但 TOKEN_SECRET 不安全"
         exit 1
     fi

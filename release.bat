@@ -142,7 +142,7 @@ if defined API_ENABLED (
         echo ERROR: API enabled but TOKEN_SECRET uses the default value
         exit /b 1
     )
-    echo !TOKEN_SECRET_VALUE! | findstr /I /C:"REPLACE_" /C:"change_this" /C:"your_secret" >nul
+    echo !TOKEN_SECRET_VALUE! | findstr /I /C:"CHANGE_ME" /C:"REPLACE_" /C:"change_this" /C:"your_secret" >nul
     if not errorlevel 1 (
         echo ERROR: API enabled but TOKEN_SECRET contains placeholder
         exit /b 1
