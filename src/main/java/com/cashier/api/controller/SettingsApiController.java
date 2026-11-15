@@ -7,6 +7,7 @@ import io.javalin.http.HttpStatus;
 import org.slf4j.Logger;
 
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.Map;
 
 /**
@@ -39,6 +40,22 @@ public class SettingsApiController {
             return false;
         }
         return true;
+    }
+
+    /**
+     * 日志脱敏：密钥类设置只记录长度，避免以后接入 SMTP/云存储凭据后把明文写进日志。
+     * 返回给客户端的响应不受影响（那是调用方自己提交的值）。
+     */
+    static String maskValue(String key, String value) {
+        if (value == null) {
+            return "null";
+        }
+        String lowerKey = key == null ? "" : key.toLowerCase(Locale.ROOT);
+        boolean sensitive = lowerKey.contains("secret")
+            || lowerKey.contains("password")
+            || lowerKey.contains("token")
+            || lowerKey.endsWith("key");
+        return sensitive ? "***[len=" + value.length() + "]" : value;
     }
 
     /**
@@ -116,14 +133,14 @@ public class SettingsApiController {
 
             // 写失败必须如实报错：之前吞掉异常回 success，调用方以为设置生效了
             if (!DAOFactory.getInstance().getSystemSettingsDAO().setSetting(key, value)) {
-                logger.error("设置未保存: {} = {}", key, value);
+                logger.error("设置未保存: {} = {}", key, maskValue(key, value));
                 ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
                    .json(Map.of("success", false, "message",
                        com.cashier.api.ApiMessages.text(ctx, "api.settings.not_saved")));
                 return;
             }
 
-            logger.info("设置已更新: {} = {}", key, value);
+            logger.info("设置已更新: {} = {}", key, maskValue(key, value));
             ctx.json(Map.of("success", true, "key", key, "value", value, "message",
                 com.cashier.api.ApiMessages.text(ctx, "api.settings.saved")));
         } catch (Exception e) {

@@ -125,4 +125,14 @@ class SettingsApiControllerTest extends DatabaseTestBase {
         SettingsApiController.delete(againCtx.context);
         assertEquals(HttpStatus.NOT_FOUND, againCtx.status);
     }
+
+    @Test
+    @DisplayName("日志脱敏：密钥类设置只输出长度，普通设置原样")
+    void sensitiveValuesAreMasked() {
+        assertEquals("***[len=12]", SettingsApiController.maskValue("wechat.api.key", "123456789012"));
+        assertEquals("***[len=5]", SettingsApiController.maskValue("smtp.password", "abcde"));
+        assertEquals("***[len=4]", SettingsApiController.maskValue("TOKEN", "abcd"));
+        assertEquals("dark", SettingsApiController.maskValue("theme", "dark"));
+        assertEquals("null", SettingsApiController.maskValue("theme", null));
+    }
 }
