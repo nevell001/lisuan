@@ -4,8 +4,11 @@ import com.cashier.api.ApiServer;
 import com.cashier.i18n.I18nKeys;
 
 import com.cashier.dao.DAOFactory;
+import com.cashier.dao.UserDAORefactored;
 import com.cashier.i18n.I18nManager;
 import com.cashier.model.User;
+import com.cashier.service.UserPolicy;
+import com.cashier.util.PasswordPolicy;
 import com.cashier.util.PasswordUtil;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
@@ -244,6 +247,7 @@ public class UserController {
      * @param user 要编辑的用户，null表示添加新用户
      */
     private void showUserDialog(User user) {
+        PasswordPolicy.Settings passwordPolicy = PasswordPolicy.load();
         Dialog<User> dialog = new Dialog<>();
         dialog.setTitle(user == null ? com.cashier.i18n.I18nManager.getInstance().get("user.add") : com.cashier.i18n.I18nManager.getInstance().get("runtime.user_edit"));
         dialog.setHeaderText(null);
@@ -341,6 +345,10 @@ public class UserController {
         grid.add(nameField, 1, 3);
         grid.add(createUserFormLabel(com.cashier.i18n.I18nManager.getInstance().get("runtime.role")), 0, 4);
         grid.add(roleComboBox, 1, 4);
+        Label passwordHint = new Label(I18nManager.getInstance().get(
+            passwordPolicy.hintKey(), passwordPolicy.minLength()));
+        passwordHint.getStyleClass().addAll("text-muted", "caption-text");
+        grid.add(passwordHint, 1, 5);
 
         content.getChildren().addAll(titleLabel, grid);
         dialog.getDialogPane().setContent(content);
@@ -351,20 +359,23 @@ public class UserController {
         dialog.getDialogPane().lookupButton(okButtonType).getStyleClass().addAll("primary-button", "button-normal");
         dialog.getDialogPane().lookupButton(cancelButtonType).getStyleClass().addAll("secondary-button", "button-normal");
 
-        // 新建用户必须填口令：留空会写入"空口令"的 BCrypt 哈希 —— 桌面登录页会拦下空口令
-        // （看着像没配好），而 REST 登录会放行，等于造了一个空口令账号（TD 审计 F7）。
-        // 编辑用户留空表示"不改口令"，所以只在新建时校验。
+        // 新建用户必须填口令，且口令要满足系统密码策略；编辑用户留空表示"不改口令"，
+        // 但填了新口令同样要满足策略。留空写入空口令哈希的问题见 TD 审计 F7。
         Button okButton = (Button) dialog.getDialogPane().lookupButton(okButtonType);
-        if (user == null) {
-            Runnable validateNewUserPassword = () -> okButton.setDisable(
-                passwordField.getText().trim().isEmpty() || usernameField.getText().trim().isEmpty());
-            passwordField.textProperty().addListener((obs, oldVal, newVal) -> validateNewUserPassword.run());
-            usernameField.textProperty().addListener((obs, oldVal, newVal) -> validateNewUserPassword.run());
-            validateNewUserPassword.run();
-        }
+        Runnable validatePassword = () -> {
+            String password = passwordField.getText().trim();
+            boolean passwordOk = user == null
+                ? !password.isEmpty() && passwordPolicy.isValid(password)
+                : password.isEmpty() || passwordPolicy.isValid(password);
+            okButton.setDisable(usernameField.getText().trim().isEmpty() || !passwordOk);
+        };
+        passwordField.textProperty().addListener((obs, oldVal, newVal) -> validatePassword.run());
+        usernameField.textProperty().addListener((obs, oldVal, newVal) -> validatePassword.run());
+        validatePassword.run();
 
         dialog.setResultConverter(dialogButton -> dialogButton == okButtonType
-            ? buildUserFromDialog(user, autoIdCheckBox, idField, usernameField, passwordField, nameField, roleComboBox)
+            ? buildUserFromDialog(user, autoIdCheckBox, idField, usernameField, passwordField, nameField,
+                roleComboBox, passwordPolicy)
             : null);
 
         dialog.showAndWait().ifPresent(result -> saveUserDialogResult(result, user == null));
@@ -377,7 +388,8 @@ public class UserController {
             TextField usernameField,
             PasswordField passwordField,
             TextField nameField,
-            ComboBox<String> roleComboBox) {
+            ComboBox<String> roleComboBox,
+            PasswordPolicy.Settings passwordPolicy) {
 
         User newUser = existingUser != null ? existingUser : new User();
         if (!applyManualUserIdIfNeeded(newUser, existingUser, autoIdCheckBox, idField)) {
@@ -395,11 +407,15 @@ public class UserController {
             return null;
         }
         if (!passwordInput.isEmpty()) {
+            if (!passwordPolicy.isValid(passwordInput)) {
+                return null;
+            }
             newUser.password = PasswordUtil.hashPassword(passwordInput);
         }
 
         newUser.name = nameField.getText().trim();
-        newUser.role = roleComboBox.getSelectionModel().getSelectedItem();
+        String role = roleComboBox.getSelectionModel().getSelectedItem();
+        newUser.role = UserPolicy.isValidRole(role) ? role : UserPolicy.DEFAULT_ROLE;
         return newUser;
     }
 
@@ -447,9 +463,19 @@ public class UserController {
     }
 
     private void updateExistingUser(User result) throws SQLException {
+        UserDAORefactored userDAO = DAOFactory.getInstance().getUserDAO();
         // 记录变更前的状态，用于判断是否需要作废该用户的 API token
-        User before = DAOFactory.getInstance().getUserDAO().findById(result.id);
-        if (DAOFactory.getInstance().getUserDAO().update(result)) {
+        User before = userDAO.findById(result.id);
+        // 编辑对话框可以改角色：把最后一个启用管理员降级会锁死用户管理，必须在落库前拦下
+        if (before != null
+            && UserPolicy.wouldRemoveLastActiveAdmin(before, result.role, result.active, userDAO)) {
+            result.role = before.role;
+            result.active = before.active;
+            showError(I18nManager.getInstance().get(I18nKeys.Runtime.LAST_ADMIN_PROTECTED));
+            loadUsers();
+            return;
+        }
+        if (userDAO.update(result)) {
             if (before != null
                 && (result.active != before.active
                     || !java.util.Objects.equals(result.role, before.role)
@@ -523,9 +549,16 @@ public class UserController {
         }
         User selected = userTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
-            // 不允许删除admin用户
-            if ("admin".equals(selected.username)) {
-                showError(com.cashier.i18n.I18nManager.getInstance().get("runtime.admin_delete_forbidden"));
+            UserDAORefactored userDAO = DAOFactory.getInstance().getUserDAO();
+            try {
+                // 最后一个启用管理员删掉就没人能管理用户/设置了
+                if (UserPolicy.isActiveAdmin(selected) && userDAO.countActiveAdmins() <= 1) {
+                    showError(I18nManager.getInstance().get(I18nKeys.Runtime.LAST_ADMIN_PROTECTED));
+                    return;
+                }
+            } catch (SQLException e) {
+                logger.error("校验最后管理员失败", e);
+                showError(I18nManager.getInstance().get("runtime.operation_failed"));
                 return;
             }
 
@@ -536,7 +569,7 @@ public class UserController {
 
             if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
                 try {
-                    if (DAOFactory.getInstance().getUserDAO().deleteByUsername(selected.username)) {
+                    if (userDAO.deleteByUsername(selected.username)) {
                         audit("USER_DELETED", selected.username);
                         users.remove(selected.username);
                         loadUsers();
@@ -563,6 +596,7 @@ public class UserController {
         }
         User selected = userTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
+            PasswordPolicy.Settings passwordPolicy = PasswordPolicy.load();
             // 自定义密码重置对话框，使用 PasswordField 防止明文显示
             Dialog<String> dialog = new Dialog<>();
             dialog.setTitle(com.cashier.i18n.I18nManager.getInstance().get("password_reset.title"));
@@ -581,7 +615,8 @@ public class UserController {
 
             PasswordField newPasswordField = new PasswordField();
             PasswordField confirmPasswordField = new PasswordField();
-            Label hintLabel = new Label(I18nManager.getInstance().get("runtime.password_hint_min6"));
+            Label hintLabel = new Label(I18nManager.getInstance().get(
+                passwordPolicy.hintKey(), passwordPolicy.minLength()));
             hintLabel.getStyleClass().add("hint-label");
 
             grid.add(new Label(I18nManager.getInstance().get("runtime.enter_new_password")), 0, 0);
@@ -596,9 +631,9 @@ public class UserController {
             // OK 按钮在输入校验前禁用
             dialog.getDialogPane().lookupButton(ButtonType.OK).setDisable(true);
             newPasswordField.textProperty().addListener((obs, oldVal, newVal) ->
-                validatePasswordFields(newPasswordField, confirmPasswordField, dialog));
+                validatePasswordFields(newPasswordField, confirmPasswordField, dialog, passwordPolicy));
             confirmPasswordField.textProperty().addListener((obs, oldVal, newVal) ->
-                validatePasswordFields(newPasswordField, confirmPasswordField, dialog));
+                validatePasswordFields(newPasswordField, confirmPasswordField, dialog, passwordPolicy));
 
             dialog.setResultConverter(button -> {
                 if (button == ButtonType.OK) {
@@ -608,9 +643,12 @@ public class UserController {
             });
 
             dialog.showAndWait().ifPresent(newPassword -> {
-                // 二次校验
-                if (newPassword.length() < 6) {
-                    showError(I18nManager.getInstance().get("runtime.password_too_short"));
+                // 二次校验（对话框内已拦过一次，这里 fail-closed）
+                PasswordPolicy.Violation violation = passwordPolicy.check(newPassword);
+                if (violation != null) {
+                    showError(I18nManager.getInstance().get(violation
+                        == PasswordPolicy.Violation.NEEDS_LETTER_AND_DIGIT
+                        ? I18nKeys.Runtime.PASSWORD_COMPLEXITY_REQUIRED : "runtime.password_too_short"));
                     return;
                 }
 
@@ -649,9 +687,9 @@ public class UserController {
     /**
      * 校验密码输入字段
      */
-    private void validatePasswordFields(PasswordField newPwd, PasswordField confirmPwd, Dialog<?> dialog) {
-        boolean valid = !newPwd.getText().trim().isEmpty()
-            && newPwd.getText().trim().length() >= 6
+    private void validatePasswordFields(PasswordField newPwd, PasswordField confirmPwd, Dialog<?> dialog,
+                                        PasswordPolicy.Settings passwordPolicy) {
+        boolean valid = passwordPolicy.isValid(newPwd.getText().trim())
             && newPwd.getText().equals(confirmPwd.getText());
         dialog.getDialogPane().lookupButton(ButtonType.OK).setDisable(!valid);
     }
@@ -704,9 +742,16 @@ public class UserController {
         }
         User selected = userTable.getSelectionModel().getSelectedItem();
         if (selected != null) {
-            // 不允许禁用admin用户
-            if ("admin".equals(selected.username)) {
-                showError(com.cashier.i18n.I18nManager.getInstance().get("runtime.admin_disable_forbidden"));
+            UserDAORefactored userDAO = DAOFactory.getInstance().getUserDAO();
+            try {
+                // 最后一个启用管理员被禁用后同样没人能管理用户/设置了
+                if (UserPolicy.isActiveAdmin(selected) && userDAO.countActiveAdmins() <= 1) {
+                    showError(I18nManager.getInstance().get(I18nKeys.Runtime.LAST_ADMIN_PROTECTED));
+                    return;
+                }
+            } catch (SQLException e) {
+                logger.error("校验最后管理员失败", e);
+                showError(I18nManager.getInstance().get("runtime.operation_failed"));
                 return;
             }
 
@@ -718,7 +763,7 @@ public class UserController {
             if (alert.showAndWait().orElse(ButtonType.CANCEL) == ButtonType.OK) {
                 selected.active = false;
                 try {
-                if (DAOFactory.getInstance().getUserDAO().update(selected)) {
+                if (userDAO.update(selected)) {
                     // 禁用后立即作废该用户已签发的全部 API token（辞退/停用场景）
                     ApiServer.getInstance().invalidateUserTokens(selected.id);
                     audit("USER_DEACTIVATED", selected.username);

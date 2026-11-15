@@ -68,6 +68,13 @@ public class UserDAORefactored extends BaseDAO {
         return queryLong("SELECT COUNT(*) FROM users");
     }
 
+    /**
+     * 启用状态的管理员数量，用于"最后一个管理员"保护。
+     */
+    public long countActiveAdmins() throws SQLException {
+        return queryLong("SELECT COUNT(*) FROM users WHERE role = 'admin' AND active = 1");
+    }
+
     public boolean insert(User user) throws SQLException {
         if (user.id > 0) {
             return executeUpdate(

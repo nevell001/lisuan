@@ -2,9 +2,9 @@ package com.cashier;
 
 import com.cashier.i18n.I18nManager;
 import com.cashier.model.User;
-import com.cashier.service.DataService;
 import com.cashier.service.FirstRunSetupService;
 import com.cashier.util.LoggerFactoryUtil;
+import com.cashier.util.PasswordPolicy;
 import com.cashier.util.ThemeUtils;
 import javafx.event.ActionEvent;
 import javafx.geometry.Insets;
@@ -20,7 +20,6 @@ import javafx.stage.Modality;
 import javafx.stage.Window;
 import org.slf4j.Logger;
 
-import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -28,14 +27,12 @@ import java.util.Optional;
  *
  * <p>替代原来的两条不靠谱路径——应用自建随机密码（javaw 启动看不到控制台，用户拿不到密码）
  * 和 SQL 种子里的 admin/admin123（公开弱口令）。校验规则与登录页的"首次登录改密"
- * 对话框保持一致：长度取系统设置 {@code passwordMinLength}，复杂度开关取
+ * 对话框共用 {@link PasswordPolicy}：长度取系统设置 {@code passwordMinLength}，复杂度开关取
  * {@code passwordComplexity}，要求的字符类型同样只认"字母 + 数字"。</p>
  */
 public final class FirstRunSetupDialog {
 
     private static final Logger logger = LoggerFactoryUtil.getLogger(FirstRunSetupDialog.class);
-
-    private static final int DEFAULT_MIN_PASSWORD_LENGTH = 6;
 
     private FirstRunSetupDialog() {
     }
@@ -46,20 +43,8 @@ public final class FirstRunSetupDialog {
      * @return 创建成功的用户；用户取消/关闭窗口时为空
      */
     public static Optional<User> showAndWait(Window owner) {
-        int parsedMinLength = DEFAULT_MIN_PASSWORD_LENGTH;
-        boolean parsedComplexity = true;
-        try {
-            Map<String, String> settings = DataService.loadSettings();
-            parsedMinLength = Integer.parseInt(
-                settings.getOrDefault("passwordMinLength", String.valueOf(DEFAULT_MIN_PASSWORD_LENGTH)));
-            parsedComplexity = Boolean.parseBoolean(settings.getOrDefault("passwordComplexity", "true"));
-        } catch (Exception e) {
-            // 设置读不出来就用默认策略，不能因为读设置失败把用户挡在向导里
-            logger.warn("读取密码策略失败，使用默认值", e);
-        }
-        // 定稿成 final：校验 lambda 会捕获这两个值
-        final int minPasswordLength = parsedMinLength;
-        final boolean requireComplexity = parsedComplexity;
+        // 设置读不出来时用默认策略，不能因为读设置失败把用户挡在向导里
+        PasswordPolicy.Settings passwordPolicy = PasswordPolicy.load();
 
         Dialog<User> dialog = new Dialog<>();
         dialog.setTitle(I18nManager.getInstance().get("firstrun.title"));
@@ -84,10 +69,9 @@ public final class FirstRunSetupDialog {
         PasswordField confirmField = new PasswordField();
         confirmField.setPromptText(I18nManager.getInstance().get("firstrun.confirm_password"));
 
-        String policyKey = requireComplexity
-            ? "firstrun.password_policy_complexity" : "firstrun.password_policy";
+        String policyKey = passwordPolicy.hintKey();
         Label policyLabel = new Label(
-            I18nManager.getInstance().get(policyKey, minPasswordLength));
+            I18nManager.getInstance().get(policyKey, passwordPolicy.minLength()));
         policyLabel.getStyleClass().addAll("text-muted", "caption-text");
 
         Label errorLabel = new Label();
@@ -122,11 +106,8 @@ public final class FirstRunSetupDialog {
             String password = passwordField.getText();
             String confirm = confirmField.getText();
             boolean valid = !usernameField.getText().isBlank()
-                && password.length() >= minPasswordLength
+                && passwordPolicy.isValid(password)
                 && password.equals(confirm);
-            if (valid && requireComplexity) {
-                valid = password.matches(".*[a-zA-Z].*") && password.matches(".*\\d.*");
-            }
             createButton.setDisable(!valid);
         };
         usernameField.textProperty().addListener((obs, oldVal, newVal) -> validate.run());

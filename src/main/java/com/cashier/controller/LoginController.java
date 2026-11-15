@@ -8,6 +8,7 @@ import com.cashier.dao.DAOFactory;
 import com.cashier.i18n.I18nManager;
 import com.cashier.model.User;
 import com.cashier.service.DataService;
+import com.cashier.util.PasswordPolicy;
 import com.cashier.util.PasswordUtil;
 import com.cashier.util.StatusBarManager;
 import org.slf4j.Logger;
@@ -20,8 +21,6 @@ import javafx.fxml.FXML;
 import javafx.scene.control.*;
 import javafx.scene.layout.VBox;
 import javafx.util.Duration;
-
-import java.util.Map;
 
 /**
  * 登录控制器
@@ -194,10 +193,8 @@ public class LoginController {
      */
     private void showPasswordChangeDialog(com.cashier.model.User user) {
         try {
-            // 读取系统密码策略配置
-            Map<String, String> settings = DataService.loadSettings();
-            int minPasswordLength = Integer.parseInt(settings.getOrDefault("passwordMinLength", "6"));
-            boolean requireComplexity = Boolean.parseBoolean(settings.getOrDefault("passwordComplexity", "true"));
+            // 读取系统密码策略配置（与首次运行向导、用户管理共用同一实现）
+            PasswordPolicy.Settings passwordPolicy = PasswordPolicy.load();
 
             // 创建对话框
             javafx.scene.control.Dialog<ButtonType> dialog = new javafx.scene.control.Dialog<>();
@@ -224,11 +221,9 @@ public class LoginController {
             grid.add(confirmPasswordField, 1, 1);
 
             // 根据系统配置动态生成密码要求提示
-            String hint = "密码要求：至少" + minPasswordLength + "位字符";
-            if (requireComplexity) {
-                hint += "，需包含字母和数字";
-            }
-            javafx.scene.control.Label hintLabel = new javafx.scene.control.Label(hint);
+            javafx.scene.control.Label hintLabel = new javafx.scene.control.Label(
+                com.cashier.i18n.I18nManager.getInstance().get(
+                    passwordPolicy.hintKey(), passwordPolicy.minLength()));
             hintLabel.getStyleClass().addAll("text-muted", "caption-text");
             grid.add(hintLabel, 1, 2);
 
@@ -248,13 +243,8 @@ public class LoginController {
             Runnable validate = () -> {
                 String newPassword = newPasswordField.getText();
                 String confirmPassword = confirmPasswordField.getText();
-                boolean valid = newPassword.length() >= minPasswordLength && newPassword.equals(confirmPassword);
-                if (requireComplexity && valid) {
-                    boolean hasLetter = newPassword.matches(".*[a-zA-Z].*");
-                    boolean hasDigit = newPassword.matches(".*\\d.*");
-                    valid = hasLetter && hasDigit;
-                }
-                okButton.setDisable(!valid);
+                okButton.setDisable(!(passwordPolicy.isValid(newPassword)
+                    && newPassword.equals(confirmPassword)));
             };
 
             newPasswordField.textProperty().addListener((obs, oldVal, newVal) -> validate.run());

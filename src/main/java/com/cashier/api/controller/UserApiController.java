@@ -1,9 +1,12 @@
 package com.cashier.api.controller;
 
+import com.cashier.api.ApiMessages;
 import com.cashier.api.ApiServer;
 import com.cashier.dao.DAOFactory;
 import com.cashier.model.PageResult;
 import com.cashier.model.User;
+import com.cashier.service.UserPolicy;
+import com.cashier.util.PasswordPolicy;
 import com.cashier.util.PasswordUtil;
 import io.javalin.http.Context;
 import io.javalin.http.HttpStatus;
@@ -118,6 +121,20 @@ public class UserApiController {
                    .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE, "密码不能为空"));
                 return;
             }
+            if (request.role != null && !UserPolicy.isValidRole(request.role)) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE,
+                       ApiMessages.text(ctx, "api.user.role_invalid")));
+                return;
+            }
+            PasswordPolicy.Settings passwordPolicy = PasswordPolicy.load();
+            PasswordPolicy.Violation violation = passwordPolicy.check(request.password);
+            if (violation != null) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE,
+                       passwordViolationMessage(ctx, violation, passwordPolicy)));
+                return;
+            }
 
             // 检查用户名是否已存在
             if (DAOFactory.getInstance().getUserDAO().findByUsername(request.username) != null) {
@@ -130,7 +147,7 @@ public class UserApiController {
             user.username = request.username;
             user.password = PasswordUtil.hashPassword(request.password);
             user.name = request.name != null ? request.name : request.username;
-            user.role = request.role != null ? request.role : "cashier";
+            user.role = request.role != null ? request.role : UserPolicy.DEFAULT_ROLE;
             user.email = request.email != null ? request.email : "";
             user.active = Objects.requireNonNullElse(request.active, true);
             
@@ -169,13 +186,38 @@ public class UserApiController {
                    .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE, "用户不存在"));
                 return;
             }
-            
-            if (request.name != null) user.name = request.name;
+
+            if (request.role != null && !UserPolicy.isValidRole(request.role)) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE,
+                       ApiMessages.text(ctx, "api.user.role_invalid")));
+                return;
+            }
+
+            String newRole = request.role != null ? request.role : user.role;
+            boolean newActive = request.active != null ? request.active : user.active;
+            if (UserPolicy.wouldRemoveLastActiveAdmin(
+                    user, newRole, newActive, DAOFactory.getInstance().getUserDAO())) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE,
+                       ApiMessages.text(ctx, "api.user.last_admin_protected")));
+                return;
+            }
+
             // 空白口令视为"不修改"，避免把 "   " 哈希成一个可用凭据
             boolean passwordChanged = request.password != null && !request.password.isBlank();
             if (passwordChanged) {
+                PasswordPolicy.Settings passwordPolicy = PasswordPolicy.load();
+                PasswordPolicy.Violation violation = passwordPolicy.check(request.password);
+                if (violation != null) {
+                    ctx.status(HttpStatus.BAD_REQUEST)
+                       .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE,
+                           passwordViolationMessage(ctx, violation, passwordPolicy)));
+                    return;
+                }
                 user.password = PasswordUtil.hashPassword(request.password);
             }
+            if (request.name != null) user.name = request.name;
             boolean roleChanged = request.role != null && !request.role.equals(user.role);
             if (roleChanged) user.role = request.role;
             if (request.email != null) user.email = request.email;
@@ -223,7 +265,15 @@ public class UserApiController {
                    .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE, "不能删除自己的账号"));
                 return;
             }
-            
+
+            if (UserPolicy.isActiveAdmin(user)
+                && DAOFactory.getInstance().getUserDAO().countActiveAdmins() <= 1) {
+                ctx.status(HttpStatus.BAD_REQUEST)
+                   .json(Map.of(KEY_SUCCESS, false, KEY_MESSAGE,
+                       ApiMessages.text(ctx, "api.user.last_admin_protected")));
+                return;
+            }
+
             DAOFactory.getInstance().getUserDAO().delete(id);
             
             // 删除用户后作废其已签发的全部 token
@@ -238,6 +288,13 @@ public class UserApiController {
         }
     }
     
+    private static String passwordViolationMessage(
+            Context ctx, PasswordPolicy.Violation violation, PasswordPolicy.Settings policy) {
+        String key = violation == PasswordPolicy.Violation.NEEDS_LETTER_AND_DIGIT
+            ? "api.user.password_complexity" : "api.user.password_too_short";
+        return ApiMessages.text(ctx, key, policy.minLength());
+    }
+
     /**
      * 用户请求DTO
      */

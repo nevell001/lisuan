@@ -212,10 +212,12 @@ public final class I18nKeys {
         public static final String INVALID_DATE_RANGE = "runtime.invalid_date_range";
         public static final String INVENTORY_CHECK_ALREADY_COMPLETED = "runtime.inventory_check_already_completed";
         public static final String IN_DEVELOPMENT_TITLE = "runtime.in_development_title";
+        public static final String LAST_ADMIN_PROTECTED = "runtime.last_admin_protected";
         public static final String NO_ACTIVE_SHIFT = "runtime.no_active_shift";
         public static final String ORDER_INFO = "runtime.order_info";
         public static final String PAYMENT_ALIPAY = "runtime.payment.alipay";
         public static final String PAYMENT_AMOUNT_HINT = "runtime.payment_amount_hint";
+        public static final String PASSWORD_COMPLEXITY_REQUIRED = "runtime.password_complexity_required";
         public static final String PAYMENT_CARD = "runtime.payment.card";
         public static final String PAYMENT_CASH = "runtime.payment.cash";
         public static final String PAYMENT_WECHAT = "runtime.payment.wechat";
